@@ -17,6 +17,8 @@
 node_modules/
 .pnpm-store/
 .husky/_/
+.devcontainer/devcontainer-lock.json
+dotnet/
 dist/
 coverage/
 playwright-report/

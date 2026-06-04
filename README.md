@@ -43,6 +43,9 @@ pnpm check
 The default quality gate runs formatting, restore, build, fast test categories,
 and pack. Infrastructure-backed integration tests are intentionally separate.
 
+Pull request titles must follow Conventional Commits because squash merges use
+the PR title as the release-relevant commit message.
+
 ## Publishing
 
 Release Please manages the central package version in `Directory.Build.props`,

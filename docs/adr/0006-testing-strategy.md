@@ -8,7 +8,7 @@ Date: 2026-06-04
 
 Bondstone is a reusable infrastructure library. Its tests need to protect
 behavior that matters to consumers: public contracts, package boundaries,
-durable persistence behavior, transport behavior, tracing/correlation behavior,
+durable persistence behavior, transport behavior, tracing/causation behavior,
 and module/service extraction assumptions.
 
 Some parts of the library are pure logic and should be tested with fast unit
@@ -35,7 +35,7 @@ ambient developer machine state.
 Avoid tests whose only meaningful assertion is that a method called another
 method. Interaction assertions are allowed when the interaction itself is the
 observable contract, but tests should generally assert outcomes, persisted
-state, emitted messages, error behavior, trace/correlation data, or documented
+state, emitted messages, error behavior, trace/causation data, or documented
 side effects.
 
 Use test doubles for simple collaborators when they keep the test focused.
@@ -84,7 +84,8 @@ infrastructure-backed integration checks.
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) lists the repository
   package-script verification entrypoints.
 - Application evidence: Initial test projects, category-filtered commands, CI
-  wiring, and the first neutral `Unit` tests exist.
+  wiring, and neutral `Unit` tests for message identity, trace context, and
+  durable command send results exist.
 - Pending or deferred: Broader neutral fixtures and infrastructure-backed
   integration checks remain future work.
 

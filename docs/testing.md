@@ -10,7 +10,7 @@ Tests should protect behavior that matters to consumers:
 - package boundaries;
 - durable persistence behavior;
 - transport behavior;
-- tracing and correlation behavior;
+- tracing and causation behavior;
 - module and service extraction assumptions.
 
 Use unit tests for relevant logic and behavior that can be verified without
@@ -19,7 +19,7 @@ external infrastructure.
 Avoid tests whose only meaningful assertion is that a method called another
 method. Interaction assertions are acceptable when the interaction itself is
 the observable contract, but tests should generally assert outcomes, persisted
-state, emitted messages, error behavior, trace/correlation data, or documented
+state, emitted messages, error behavior, trace/causation data, or documented
 side effects.
 
 Use test doubles for simple collaborators when they keep the test focused.
@@ -83,5 +83,6 @@ application exists.
 
 This testing strategy is accepted and documented. Initial empty test projects,
 category-filtered commands, and CI wiring exist. The first neutral `Unit`
-tests cover core message identity registry behavior. Broader neutral fixtures
-and infrastructure-backed checks remain future application work.
+tests cover core message identity registry behavior and durable command
+send result value semantics. Broader neutral fixtures and infrastructure-backed
+checks remain future application work.

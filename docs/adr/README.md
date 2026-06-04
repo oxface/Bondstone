@@ -129,7 +129,8 @@ Use this mapping as a starting point:
   - [AGENTS.md](../../AGENTS.md)
 - Runtime positioning, package architecture, provider strategy, transport
   strategy, compatibility, and service extraction:
-  - [docs/architecture.md](../architecture.md)
+  - [docs/architecture/README.md](../architecture/README.md)
+  - [docs/architecture/messaging.md](../architecture/messaging.md)
   - [docs/extraction.md](../extraction.md)
   - [AGENTS.md](../../AGENTS.md)
 - Verification entrypoints, test categories, sample expectations, and

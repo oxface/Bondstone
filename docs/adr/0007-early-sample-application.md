@@ -86,7 +86,7 @@ explicit and repeatable.
 - Stable docs: Current sample direction is described in
   [docs/samples.md](../samples.md), with related testing and architecture
   context in [docs/testing.md](../testing.md) and
-  [docs/architecture.md](../architecture.md).
+  [docs/architecture/README.md](../architecture/README.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) points agents to sample
   guidance before adding or changing samples.
 - Application evidence: Sample direction is documented.
@@ -96,6 +96,7 @@ explicit and repeatable.
 ## Verification
 
 Read back [docs/samples.md](../samples.md),
-[docs/testing.md](../testing.md), [docs/architecture.md](../architecture.md),
+[docs/testing.md](../testing.md),
+[docs/architecture/README.md](../architecture/README.md),
 [docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). A runnable
 sample smoke path remains pending.

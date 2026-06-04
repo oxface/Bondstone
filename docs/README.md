@@ -9,8 +9,8 @@ duplicating durable rules.
 
 - [adr/README.md](adr/README.md) defines the ADR workflow, statuses, and how
   ADR decisions are applied into stable docs and agent instructions.
-- [architecture.md](architecture.md) records current runtime positioning and
-  durable module-boundary architecture.
+- [architecture/README.md](architecture/README.md) records current runtime
+  positioning and durable module-boundary architecture.
 - [extraction.md](extraction.md) records the slow layered extraction strategy.
 - [handover.md](handover.md) contains a continuation prompt for future
   Bondstone workspace sessions.

@@ -6,10 +6,10 @@ Date: 2026-06-04
 
 ## Context
 
-Bondstone starts from modular-monolith infrastructure: explicit module
-boundaries, in-process command handling, EF Core backed module persistence,
-stable message identities, durable outbox/inbox behavior, and transport
-adapters.
+Bondstone starts from historical modular-monolith infrastructure that included
+explicit module boundaries, in-process command handling, EF Core backed module
+persistence, stable message identities, durable outbox/inbox behavior, and
+transport adapters.
 
 The library should remain useful when a modular monolith grows and one module
 needs independent scalability, deployment, or operational isolation. It should
@@ -100,18 +100,21 @@ local sample orchestration host.
   are asynchronous outbox-delivered messages, not a replacement for ordinary
   in-process `.Contracts` calls or generic mediator/message-bus dispatch.
 - Stable docs: Current architecture positioning is described in
-  [docs/architecture.md](../architecture.md).
+  [docs/architecture/README.md](../architecture/README.md), with messaging
+  rules in [docs/architecture/messaging.md](../architecture/messaging.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad changes to public API, provider support, transport support, or durable
   behavior.
-- Application evidence: The first extracted core slice includes stable message
-  identity contracts, durable command markers, and registry behavior.
+- Application evidence: The first extracted core slices include stable message
+  identity contracts, durable command markers, registry behavior, message trace
+  context, durable command send contracts, and send result semantics.
 - Pending or deferred: Samples and integration tests that exercise
   modular-monolith and service-split usage remain pending.
 
 ## Verification
 
-Read back [docs/architecture.md](../architecture.md),
+Read back [docs/architecture/README.md](../architecture/README.md),
+[docs/architecture/messaging.md](../architecture/messaging.md),
 [docs/extraction.md](../extraction.md), [docs/README.md](../README.md), and
 [AGENTS.md](../../AGENTS.md). Executable sample or integration tests that
 exercise modular-monolith and service-split usage remain pending.

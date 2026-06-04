@@ -1,7 +1,7 @@
 # Bondstone
 
-Bondstone is a .NET library for durable module boundaries, in-process command
-handling, EF Core backed inbox/outbox persistence, and transport adapters.
+Bondstone is a .NET library for durable module boundaries, durable command
+sending, EF Core backed inbox/outbox persistence, and transport adapters.
 
 The repository is currently in early extraction shape: documentation, ADRs,
 repo tooling, package projects, test projects, CI, and NuGet release plumbing
@@ -23,7 +23,8 @@ All packages initially target `net10.0` and share one coordinated version.
 
 - [docs/README.md](docs/README.md) is the durable documentation index.
 - [docs/adr/README.md](docs/adr/README.md) explains the ADR workflow.
-- [docs/architecture.md](docs/architecture.md) records runtime positioning.
+- [docs/architecture/README.md](docs/architecture/README.md) records runtime
+  positioning.
 - [docs/extraction.md](docs/extraction.md) records the slow extraction plan.
 - [docs/packaging.md](docs/packaging.md) records package and release policy.
 - [docs/testing.md](docs/testing.md) records test categories and verification.

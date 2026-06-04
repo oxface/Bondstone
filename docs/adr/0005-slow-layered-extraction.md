@@ -39,7 +39,7 @@ direction, tests, docs, and migration risks.
 Prefer this broad extraction order unless a later ADR changes it:
 
 1. Core abstractions and low-dependency primitives.
-2. Command and messaging contracts.
+2. Durable command and messaging contracts.
 3. Message identity and registration behavior.
 4. EF Core-neutral persistence abstractions and entities.
 5. PostgreSQL provider behavior.
@@ -85,18 +85,22 @@ being the primary consumer after Bondstone packaging and samples mature.
   constraint.
 - Stable docs: Current extraction rules are described in
   [docs/extraction.md](../extraction.md), with architecture context in
-  [docs/architecture.md](../architecture.md).
+  [docs/architecture/README.md](../architecture/README.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) directs agents to follow
   the slow extraction strategy before moving or rewriting source.
-- Application evidence: The first `Bondstone` core slice has begun with stable
-  message identity contracts and registry behavior plus neutral unit tests.
-- Pending or deferred: Command dispatch, EF Core persistence, PostgreSQL
-  provider behavior, Rebus transport behavior, integration tests, and samples
-  remain future extraction work.
+- Application evidence: The first `Bondstone` core slices include stable
+  message identity contracts, registry behavior, message trace context, durable
+  command send contracts, send result semantics, and neutral unit tests.
+- Pending or deferred: Durable command operation reading, `send and wait`
+  behavior, trace context and causation propagation, retry policy, EF Core
+  persistence, PostgreSQL provider behavior, Rebus transport behavior,
+  integration tests, and samples remain future extraction work.
 
 ## Verification
 
 Read back [docs/extraction.md](../extraction.md),
-[docs/architecture.md](../architecture.md), [docs/README.md](../README.md),
-and [AGENTS.md](../../AGENTS.md). Executable verification will happen
-incrementally through focused build/test/doc checks on each moved slice.
+[docs/architecture/README.md](../architecture/README.md),
+[docs/architecture/messaging.md](../architecture/messaging.md),
+[docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Executable
+verification will happen incrementally through focused build/test/doc checks on
+each moved slice.

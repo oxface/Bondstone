@@ -69,6 +69,11 @@ Every ADR skill must enforce this flow:
 ADRs should answer why the decision exists. Stable docs should answer how the
 repository currently works.
 
+ADR application notes should describe the durable current contract, stable docs,
+agent guidance, evidence, and deferred work. They should not try to preserve an
+exhaustive list of changed source files, because source files, workflow files,
+and package metadata move as the repository evolves.
+
 ## Skill Shape
 
 Each skill should live at:

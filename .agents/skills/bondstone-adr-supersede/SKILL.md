@@ -34,7 +34,7 @@ ADR should replace it.
    application has begun or completed. If no suitable doc exists, create the
    smallest useful doc or record the missing doc in [docs/README.md](../../../docs/README.md).
 9. Update affected AGENTS files and skills so agents follow the new rule.
-10. Update `Applied To` and `Verification` in the new ADR.
+10. Update `Application Notes` and `Verification` in the new ADR.
 
 ## Output
 

@@ -63,20 +63,24 @@ before changing an ADR. If no stable doc exists yet, the workflow should create
 the smallest suitable doc, record planned docs, or explicitly mark application
 as pending, partial, or deferred.
 
-## Applied To
+### 2026-06-04: Application Notes Instead Of File Manifests
 
-- Code: Not applicable.
-- Stable docs:
-  - [docs/README.md](../README.md)
-  - [docs/adr/README.md](README.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-  - [.agents/skills/AGENTS.md](../../.agents/skills/AGENTS.md)
-- Skills:
-  - [.agents/skills/bondstone-adr-create/SKILL.md](../../.agents/skills/bondstone-adr-create/SKILL.md)
-  - [.agents/skills/bondstone-adr-update/SKILL.md](../../.agents/skills/bondstone-adr-update/SKILL.md)
-  - [.agents/skills/bondstone-adr-supersede/SKILL.md](../../.agents/skills/bondstone-adr-supersede/SKILL.md)
-  - [.agents/skills/bondstone-adr-archive/SKILL.md](../../.agents/skills/bondstone-adr-archive/SKILL.md)
+ADR application notes should describe durable current contracts, stable docs,
+agent guidance, evidence, and deferred work. ADRs should not try to preserve an
+exhaustive list of touched source or workflow files because those files move,
+split, and disappear while the decision remains.
+
+## Application Notes
+
+- Current contract: ADR-led maintenance remains the repository workflow for
+  durable technical decisions. Stable docs carry the current operating rules.
+- Stable docs: ADR workflow and documentation model are described in
+  [docs/adr/README.md](README.md) and [docs/README.md](../README.md).
+- Agent guidance: Root and skill-scoped agent instructions make ADR work
+  discoverable before broad technical changes.
+- Application evidence: Repository ADR workflow skills exist for creating,
+  updating, superseding, and archiving ADRs.
+- Pending or deferred: None for the ADR workflow itself.
 
 ## Verification
 

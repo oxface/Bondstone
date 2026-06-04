@@ -76,12 +76,13 @@ What are we deciding?
 
 What becomes easier, harder, constrained, or intentionally deferred?
 
-## Applied To
+## Application Notes
 
-- Code:
+- Current contract:
 - Stable docs:
-- Agent instructions:
-- Skills:
+- Agent guidance:
+- Application evidence:
+- Pending or deferred:
 
 ## Verification
 
@@ -140,12 +141,15 @@ Use this mapping as a starting point:
 ## Applying ADRs
 
 Every accepted ADR must be reflected in stable docs unless it has no current
-operational effect. Use `Applied To` to list the files touched or explain why
-none were needed.
+operational effect. Use `Application Notes` to describe the durable current
+contract, the stable docs and agent guidance that carry that contract, and any
+application evidence or deferred work. Do not treat ADRs as an exhaustive
+source-file manifest; code files, workflow files, and package metadata move too
+often for historical ADRs to stay accurate at that level.
 
 When an accepted ADR is not fully applied, set `Application` to `Pending`,
 `In Progress`, `Partially Applied`, or `Deferred`, and state what remains in
-`Consequences`, `Applied To`, or `Verification`.
+`Consequences`, `Application Notes`, or `Verification`.
 
 Examples:
 

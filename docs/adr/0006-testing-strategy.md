@@ -74,22 +74,19 @@ protect implementation wiring or depend on consumer-specific modules.
 Repository verification has a clear split between fast default checks and
 infrastructure-backed integration checks.
 
-## Applied To
+## Application Notes
 
-- Code:
-  - [tests/Bondstone.Tests/Bondstone.Tests.csproj](../../tests/Bondstone.Tests/Bondstone.Tests.csproj)
-  - [tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj](../../tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj)
-  - [tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj](../../tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj)
-  - [tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj](../../tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj)
-  - [package.json](../../package.json)
-  - [.github/workflows/verify.yml](../../.github/workflows/verify.yml)
-  - [AGENTS.md](../../AGENTS.md)
-- Stable docs:
-  - [docs/testing.md](../testing.md)
-  - [docs/README.md](../README.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-- Skills: Not applicable.
+- Current contract: Tests protect consumer-facing behavior, use `Unit`,
+  `Application`, and `Integration` categories, and keep infrastructure-backed
+  checks outside the default fast gate.
+- Stable docs: Current test categories, verification entrypoints, and
+  integration-test guidance are described in [docs/testing.md](../testing.md).
+- Agent guidance: Root [AGENTS.md](../../AGENTS.md) lists the repository
+  package-script verification entrypoints.
+- Application evidence: Initial test projects, category-filtered commands, CI
+  wiring, and the first neutral `Unit` tests exist.
+- Pending or deferred: Broader neutral fixtures and infrastructure-backed
+  integration checks remain future work.
 
 ## Verification
 

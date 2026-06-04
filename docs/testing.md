@@ -82,5 +82,6 @@ application exists.
 ## Application State
 
 This testing strategy is accepted and documented. Initial empty test projects,
-category-filtered commands, and CI wiring exist. Real tests, neutral fixtures,
+category-filtered commands, and CI wiring exist. The first neutral `Unit`
+tests cover core message identity registry behavior. Broader neutral fixtures
 and infrastructure-backed checks remain future application work.

@@ -28,6 +28,34 @@ because a module moves from in-process composition to a separate service.
 - Service extraction should be a supported evolution path, not a separate
   rewrite story.
 
+## Command Boundaries
+
+`IDurableCommand` is reserved for asynchronous commands accepted for durable
+outbox delivery. It is not the general in-process command abstraction for every
+module call.
+
+Direct in-process calls between modules can use consumer-owned `.Contracts`
+references without Bondstone mediation. Bondstone should add in-process command
+or dispatch abstractions only when they protect a durable boundary concern such
+as outbox persistence, inbox handling, tracing, or service-extraction
+continuity.
+
+Bondstone should avoid generic mediator or message-bus APIs for ordinary
+in-process calls. They often hide call graphs, weaken discoverability, add
+reflection or dispatch overhead, and provide little durable-boundary value when
+normal typed contracts are sufficient.
+
+## Message Identity Names
+
+Bondstone keeps durable message identity strings free-form for compatibility
+with existing systems and consumer naming policies. It should not derive
+identities from CLR names.
+
+Docs, tests, and samples should prefer lowercase dotted identities with an
+explicit version suffix. A good default shape is
+`{module}.{aggregate}.{message}.v{major}`, such as
+`sales.customer.registered.v1`.
+
 ## Package Architecture
 
 The initial package split is documented in [packaging.md](packaging.md).
@@ -45,5 +73,7 @@ support, and deployment packaging remain undecided.
 
 ## Application State
 
-This architecture direction is accepted and documented. Source extraction,
-samples, and service-split verification remain future application work.
+This architecture direction is accepted and documented. The first source
+extraction slice now includes stable message identity contracts and registry
+behavior in `Bondstone`. Broader source extraction, samples, and service-split
+verification remain future application work.

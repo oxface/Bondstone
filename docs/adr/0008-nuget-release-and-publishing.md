@@ -85,25 +85,20 @@ publication.
 If consumers later need independent package versions, package-specific release
 configuration must be accepted in a later ADR.
 
-## Applied To
+## Application Notes
 
-- Code:
-  - [Directory.Build.props](../../Directory.Build.props)
-  - [Directory.Packages.props](../../Directory.Packages.props)
-  - [package.json](../../package.json)
-  - [pnpm-workspace.yaml](../../pnpm-workspace.yaml)
-  - [.github/workflows/verify.yml](../../.github/workflows/verify.yml)
-  - [.github/workflows/release-please.yml](../../.github/workflows/release-please.yml)
-  - [.github/workflows/publish-nuget.yml](../../.github/workflows/publish-nuget.yml)
-  - [.github/release-please-config.json](../../.github/release-please-config.json)
-  - [.github/.release-please-manifest.json](../../.github/.release-please-manifest.json)
-  - [AGENTS.md](../../AGENTS.md)
-- Stable docs:
-  - [docs/packaging.md](../packaging.md)
-  - [docs/repository.md](../repository.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-- Skills: Not applicable.
+- Current contract: Release Please owns coordinated package versioning through
+  central MSBuild metadata, and NuGet publishing targets nuget.org through
+  trusted publishing from GitHub release events.
+- Stable docs: Current versioning, package metadata, and publishing rules are
+  described in [docs/packaging.md](../packaging.md), with workflow context in
+  [docs/repository.md](../repository.md).
+- Agent guidance: Root [AGENTS.md](../../AGENTS.md) points agents to packaging
+  docs before release or publishing changes.
+- Application evidence: CI, Release Please, and NuGet publish workflow are
+  configured, and real nuget.org publication has succeeded.
+- Pending or deferred: Independent package versioning and GitHub Packages
+  publication remain deferred unless a later ADR accepts them.
 
 ## Verification
 

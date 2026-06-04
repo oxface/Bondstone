@@ -1,8 +1,8 @@
 # 0004 Positioning And Service Extraction Path
 
-Status: Accepted
+Status: Amended
 Application: Partially Applied
-Date: 2026-06-03
+Date: 2026-06-04
 
 ## Context
 
@@ -46,6 +46,28 @@ principles:
 - Service extraction should be a supported evolution path, not a separate
   rewrite story.
 
+## Amendments
+
+### 2026-06-04: Durable Commands Are Not General In-Process Commands
+
+`IDurableCommand` is reserved for asynchronous commands accepted for durable
+outbox delivery. Direct in-process module calls can use consumer-owned
+`.Contracts` references without Bondstone mediation.
+
+Bondstone should not import or recreate a general in-process command bus or
+generic mediator/message-bus abstraction unless a later sample or ADR shows
+that such an abstraction protects a durable boundary concern such as outbox
+persistence, inbox handling, tracing, or service-extraction continuity.
+
+Generic in-process message buses often hide call graphs, weaken
+discoverability, add reflection or dispatch overhead, and provide little value
+when normal typed `.Contracts` references are sufficient.
+
+Durable message identity strings remain free-form for compatibility with
+existing systems and consumer naming policies. Docs, tests, and samples should
+prefer lowercase dotted identities with an explicit version suffix, such as
+`{module}.{aggregate}.{message}.v{major}`.
+
 ## Consequences
 
 Bondstone should avoid becoming only an in-process mediator abstraction or only
@@ -60,24 +82,36 @@ separately deployed service usage.
 Some features that would be convenient in only one deployment style may be
 rejected or isolated behind adapters to keep the extraction path coherent.
 
+General in-process command dispatch and generic mediator/message-bus APIs
+remain outside the current extraction target. This keeps package API pressure
+focused on durable messaging and module boundary continuity instead of
+replacing ordinary project references between module contract packages.
+
 This ADR does not decide exact sample names, orchestration technology, broker
 support, or deployment packaging. Later
 [ADR 0007](0007-early-sample-application.md) accepts Aspire as the preferred
 local sample orchestration host.
 
-## Applied To
+## Application Notes
 
-- Code: Pending. Source extraction has not started yet.
-- Stable docs:
-  - [docs/architecture.md](../architecture.md)
-  - [docs/README.md](../README.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-- Skills: Not applicable.
+- Current contract: Bondstone is positioned as a library for durable module
+  boundaries that supports modular monoliths first and preserves a path to
+  service extraction and microservice internal durability. Durable commands
+  are asynchronous outbox-delivered messages, not a replacement for ordinary
+  in-process `.Contracts` calls or generic mediator/message-bus dispatch.
+- Stable docs: Current architecture positioning is described in
+  [docs/architecture.md](../architecture.md).
+- Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
+  broad changes to public API, provider support, transport support, or durable
+  behavior.
+- Application evidence: The first extracted core slice includes stable message
+  identity contracts, durable command markers, and registry behavior.
+- Pending or deferred: Samples and integration tests that exercise
+  modular-monolith and service-split usage remain pending.
 
 ## Verification
 
 Read back [docs/architecture.md](../architecture.md),
-[docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Executable
-sample or integration tests that exercise modular-monolith and service-split
-usage remain pending.
+[docs/extraction.md](../extraction.md), [docs/README.md](../README.md), and
+[AGENTS.md](../../AGENTS.md). Executable sample or integration tests that
+exercise modular-monolith and service-split usage remain pending.

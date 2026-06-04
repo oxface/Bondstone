@@ -78,18 +78,20 @@ library infrastructure.
 Aspire adds sample-maintenance cost, but it keeps multi-process sample startup
 explicit and repeatable.
 
-## Applied To
+## Application Notes
 
-- Code: Pending. Sample projects and runnable smoke paths have not been
+- Current contract: Samples should stay small, exercise Bondstone behavior, and
+  use Aspire as the preferred local orchestration host when orchestration is
+  needed.
+- Stable docs: Current sample direction is described in
+  [docs/samples.md](../samples.md), with related testing and architecture
+  context in [docs/testing.md](../testing.md) and
+  [docs/architecture.md](../architecture.md).
+- Agent guidance: Root [AGENTS.md](../../AGENTS.md) points agents to sample
+  guidance before adding or changing samples.
+- Application evidence: Sample direction is documented.
+- Pending or deferred: Sample projects and runnable smoke paths have not been
   created yet.
-- Stable docs:
-  - [docs/samples.md](../samples.md)
-  - [docs/testing.md](../testing.md)
-  - [docs/architecture.md](../architecture.md)
-  - [docs/README.md](../README.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-- Skills: Not applicable.
 
 ## Verification
 

@@ -78,16 +78,21 @@ reveals an API or dependency flaw.
 The current consumer repository may need substantial adaptation or may stop
 being the primary consumer after Bondstone packaging and samples mature.
 
-## Applied To
+## Application Notes
 
-- Code: Pending. Source extraction has not started yet.
-- Stable docs:
-  - [docs/extraction.md](../extraction.md)
-  - [docs/architecture.md](../architecture.md)
-  - [docs/README.md](../README.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-- Skills: Not applicable.
+- Current contract: Bondstone source is extracted slowly by coherent slices,
+  and the historical repository is source material rather than a compatibility
+  constraint.
+- Stable docs: Current extraction rules are described in
+  [docs/extraction.md](../extraction.md), with architecture context in
+  [docs/architecture.md](../architecture.md).
+- Agent guidance: Root [AGENTS.md](../../AGENTS.md) directs agents to follow
+  the slow extraction strategy before moving or rewriting source.
+- Application evidence: The first `Bondstone` core slice has begun with stable
+  message identity contracts and registry behavior plus neutral unit tests.
+- Pending or deferred: Command dispatch, EF Core persistence, PostgreSQL
+  provider behavior, Rebus transport behavior, integration tests, and samples
+  remain future extraction work.
 
 ## Verification
 

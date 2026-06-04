@@ -30,7 +30,7 @@ small enough to review:
 Prefer this broad extraction order unless a later ADR changes it:
 
 1. Core abstractions and low-dependency primitives.
-2. Command and messaging contracts.
+2. Durable command and messaging contracts.
 3. Message identity and registration behavior.
 4. EF Core-neutral persistence abstractions and entities.
 5. PostgreSQL provider behavior.
@@ -52,5 +52,11 @@ of an explicit migration step.
 
 ## Application State
 
-This extraction strategy is accepted and documented. Source movement has not
-started yet.
+This extraction strategy is accepted and documented. The first `Bondstone`
+core slice has started with stable message identity contracts and the message
+type registry. Durable command dispatch, EF Core persistence, PostgreSQL
+provider behavior, Rebus transport behavior, integration tests, and samples
+remain future extraction work. General in-process module calls are not an
+extraction target unless a later ADR or sample exposes a durable boundary need.
+Do not extract the historical generic mediator/message-bus layer as a default
+Bondstone feature.

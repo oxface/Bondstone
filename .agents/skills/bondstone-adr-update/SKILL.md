@@ -14,7 +14,8 @@ explicit amendment that does not replace the decision.
 - [docs/README.md](../../../docs/README.md)
 - [docs/adr/README.md](../../../docs/adr/README.md)
 - The ADR being updated
-- Stable docs, AGENTS files, and skills listed in the ADR's `Applied To`
+- Stable docs, AGENTS files, and skills named by the ADR's `Application Notes`
+  or by the durable-doc mapping
 
 ## Workflow
 
@@ -36,7 +37,7 @@ explicit amendment that does not replace the decision.
    is `Applied` or `Partially Applied`. If no suitable doc exists, create the
    smallest useful doc or record the missing doc in [docs/README.md](../../../docs/README.md).
 8. Apply agent-facing effects into relevant AGENTS files or skills.
-9. Update `Applied To` and `Verification`.
+9. Update `Application Notes` and `Verification`.
 
 ## Output
 

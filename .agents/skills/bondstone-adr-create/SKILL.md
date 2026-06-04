@@ -33,7 +33,9 @@ Use this skill when a durable technical decision needs a new ADR.
    AGENTS files or skills unless the application state explains why it is
    pending or deferred. If no suitable doc exists, create the smallest useful
    doc or record the missing doc in [docs/README.md](../../../docs/README.md).
-9. Fill `Applied To` with changed files, pending files, or a short explanation.
+9. Fill `Application Notes` with the durable current contract, stable docs,
+   agent guidance, application evidence, and any pending or deferred work. Do
+   not maintain an exhaustive changed-file list in the ADR.
 10. Fill `Verification` with docs checks, command checks, or why executable
     verification is not relevant.
 

@@ -61,22 +61,19 @@ maintenance cost.
 Publishing multiple packages requires coordinated versioning and release
 automation.
 
-## Applied To
+## Application Notes
 
-- Code:
-  - [Bondstone.slnx](../../Bondstone.slnx)
-  - [Directory.Build.props](../../Directory.Build.props)
-  - [Directory.Packages.props](../../Directory.Packages.props)
-  - [src/Bondstone/Bondstone.csproj](../../src/Bondstone/Bondstone.csproj)
-  - [src/Bondstone.EntityFrameworkCore/Bondstone.EntityFrameworkCore.csproj](../../src/Bondstone.EntityFrameworkCore/Bondstone.EntityFrameworkCore.csproj)
-  - [src/Bondstone.EntityFrameworkCore.Postgres/Bondstone.EntityFrameworkCore.Postgres.csproj](../../src/Bondstone.EntityFrameworkCore.Postgres/Bondstone.EntityFrameworkCore.Postgres.csproj)
-  - [src/Bondstone.Transport.Rebus/Bondstone.Transport.Rebus.csproj](../../src/Bondstone.Transport.Rebus/Bondstone.Transport.Rebus.csproj)
-- Stable docs:
-  - [docs/packaging.md](../packaging.md)
-  - [docs/README.md](../README.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-- Skills: Not applicable.
+- Current contract: Initial packages target `net10.0`, package IDs match
+  project names, and package dependencies flow from core to provider and
+  transport adapters.
+- Stable docs: Current package IDs, target framework, dependency direction, and
+  versioning rules are described in [docs/packaging.md](../packaging.md).
+- Agent guidance: Root [AGENTS.md](../../AGENTS.md) points agents to packaging
+  docs before package-boundary or framework changes.
+- Application evidence: Initial package projects are included in the solution
+  and package metadata is centrally managed.
+- Pending or deferred: Real implementation remains incomplete, and wider target
+  framework support is deferred to a later compatibility ADR.
 
 ## Verification
 

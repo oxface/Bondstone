@@ -47,11 +47,11 @@ Use NuGet trusted publishing for package publication. The workflow requests a
 GitHub OIDC token, exchanges it through `NuGet/login@v1` for a short-lived
 NuGet API key, and uses that temporary key for `dotnet nuget push`.
 
-Release Please should use `RELEASE_PLEASE_TOKEN` when configured. Use a GitHub
-App token or personal access token for that secret when Release Please-created
-releases must trigger the separate publish workflow. The workflow may fall back
-to the default workflow token, but that fallback is not sufficient for
-triggering downstream workflows from the release it creates.
+Release Please must use `RELEASE_PLEASE_TOKEN`. Use a GitHub App token or
+personal access token for that secret because Release Please-created releases
+must trigger the separate publish workflow. Do not fall back to GitHub's
+default workflow token; it can create the release without triggering downstream
+workflows from that release.
 
 Use centralized package and build metadata in:
 

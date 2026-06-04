@@ -55,8 +55,8 @@ through workflow dispatch for the selected ref.
 
 Required repository setup:
 
-- `RELEASE_PLEASE_TOKEN` recommended so Release Please-created releases can
-  trigger the separate publish workflow.
+- `RELEASE_PLEASE_TOKEN` so Release Please-created releases can trigger the
+  separate publish workflow.
 - `NUGET_USER` repository variable with the nuget.org username or organization
   profile name used by trusted publishing.
 - NuGet trusted publishing policy for `.github/workflows/publish-nuget.yml`.

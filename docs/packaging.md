@@ -70,9 +70,9 @@ GitHub repository variable containing the nuget.org username or organization
 profile name used for the trusted publishing policy.
 
 Configure `RELEASE_PLEASE_TOKEN` with a GitHub App token or personal access
-token when Release Please-created releases must trigger the separate publish
-workflow. Without that token, GitHub's default workflow token may create the
-release without triggering downstream workflows.
+token. This token is required because Release Please-created releases must
+trigger the separate publish workflow. GitHub's default workflow token can
+create the release without triggering downstream workflows.
 
 Real publish verification is pending until a release, trusted publishing
 policy, and `NUGET_USER` repository variable exist.

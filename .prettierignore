@@ -1,0 +1,14 @@
+.agents/
+node_modules/
+.pnpm-store/
+.husky/_/
+artifacts/
+bin/
+obj/
+coverage/
+*.log
+*.tmp
+.env*
+CHANGELOG.md
+pnpm-lock.yaml
+*.code-workspace

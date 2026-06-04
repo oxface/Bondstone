@@ -49,7 +49,8 @@ packages.
 
 Use root `package.json`, pnpm, Husky, commitlint, Prettier, and lightweight
 script orchestration for repository hygiene. The pre-commit hook runs Prettier
-and re-stages formatted files. It does not run tests.
+and re-stages formatted files. It does not run tests. Release-generated files
+such as `CHANGELOG.md` are excluded from Prettier.
 
 Pull request titles must follow Conventional Commits. This supports squash
 merging, Release Please, and readable release history even when individual

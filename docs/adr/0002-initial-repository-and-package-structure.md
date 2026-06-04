@@ -63,7 +63,7 @@ into the library packages.
 Use root `package.json`, pnpm, Husky, commitlint, Prettier, and lightweight
 script orchestration for repository hygiene. Do not add frontend/browser tooling
 such as Playwright unless an accepted sample or documentation ADR creates a
-real need for it.
+real need for it. Exclude release-generated changelog output from Prettier.
 
 Require semantic pull request titles using Conventional Commits. Squash merges
 should use the PR title as the release-relevant commit message, so the PR title
@@ -107,6 +107,7 @@ package scripts.
   - [global.json](../../global.json)
   - [package.json](../../package.json)
   - [pnpm-workspace.yaml](../../pnpm-workspace.yaml)
+  - [.prettierignore](../../.prettierignore)
   - [.devcontainer/devcontainer.json](../../.devcontainer/devcontainer.json)
   - [.github/workflows/verify.yml](../../.github/workflows/verify.yml)
   - [.github/workflows/semantic-pr-title.yml](../../.github/workflows/semantic-pr-title.yml)

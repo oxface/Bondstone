@@ -1,0 +1,38 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <IsPackable>false</IsPackable>
+    <VersionPrefix>0.0.0</VersionPrefix> <!-- x-release-please-version -->
+    <VersionSuffix Condition="'$(GITHUB_ACTIONS)' != 'true'">local</VersionSuffix>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>Bondstone contributors</Authors>
+    <Company>Bondstone contributors</Company>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/oxface/Bondstone</PackageProjectUrl>
+    <PackageTags>dotnet;modular-monolith;outbox;inbox;messaging</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/oxface/Bondstone</RepositoryUrl>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>

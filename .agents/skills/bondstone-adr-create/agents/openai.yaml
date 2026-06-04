@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bondstone ADR Create"
+  short_description: "Create a new Bondstone architecture decision record."
+  default_prompt: "Use $bondstone-adr-create to create a new ADR and apply accepted decisions into stable docs."

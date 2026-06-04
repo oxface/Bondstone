@@ -1,0 +1,38 @@
+{
+  "name": "bondstone",
+  "private": true,
+  "packageManager": "pnpm@10.33.4",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.33.4 <11"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^24.15.0",
+      "onFail": "download"
+    }
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky",
+    "security:audit": "pnpm audit --audit-level low",
+    "backend:restore": "dotnet restore Bondstone.slnx",
+    "backend:build": "dotnet build Bondstone.slnx --configuration Release --no-restore",
+    "backend:test": "pnpm backend:test:fast",
+    "backend:test:fast": "dotnet test Bondstone.slnx --configuration Release --no-build --filter \"Category=Unit|Category=Application\"",
+    "backend:test:integration": "dotnet test Bondstone.slnx --configuration Release --no-build --filter \"Category=Integration\"",
+    "backend:test:all": "dotnet test Bondstone.slnx --configuration Release --no-build",
+    "backend:pack": "dotnet pack Bondstone.slnx --configuration Release --no-build --output artifacts/packages",
+    "check": "pnpm format:check && pnpm backend:restore && pnpm backend:build && pnpm backend:test && pnpm backend:pack",
+    "verify": "pnpm check"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.0.1",
+    "@commitlint/config-conventional": "21.0.1",
+    "husky": "9.1.7",
+    "prettier": "3.8.3"
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bondstone ADR Supersede"
+  short_description: "Replace an old Bondstone ADR with a new current decision."
+  default_prompt: "Use $bondstone-adr-supersede to supersede an ADR and update docs, AGENTS files, and skills."

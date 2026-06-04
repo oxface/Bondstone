@@ -1,0 +1,16 @@
+{
+  "packages": {
+    ".": {
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "path": "Directory.Build.props",
+          "type": "xml",
+          "xpath": "/Project/PropertyGroup/VersionPrefix"
+        }
+      ],
+      "package-name": "Bondstone",
+      "release-type": "simple"
+    }
+  }
+}

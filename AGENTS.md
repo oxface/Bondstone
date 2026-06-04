@@ -1,0 +1,105 @@
+# Agent Index
+
+This repository is the maintenance home for Bondstone, a .NET library for
+durable module boundaries, in-process command handling, EF Core backed
+inbox/outbox persistence, and transport adapters.
+
+Start with:
+
+- [README.md](README.md) when it exists for package purpose, install examples,
+  and verification entrypoints.
+- [docs/README.md](docs/README.md) when it exists for durable developer and
+  architecture documentation.
+- [docs/adr/README.md](docs/adr/README.md) when it exists before creating,
+  updating, superseding, or archiving ADRs.
+- [docs/extraction.md](docs/extraction.md) before moving or rewriting
+  Bondstone source from an existing repository.
+- [docs/testing.md](docs/testing.md) before moving or writing tests.
+- [docs/samples.md](docs/samples.md) before adding or changing sample
+  applications.
+- [.agents/skills/AGENTS.md](.agents/skills/AGENTS.md) before adding or
+  changing repository agent skills.
+
+## Operating Rules
+
+- Do not vibe-code. Read the relevant docs and implementation first, state the
+  intended change, then make the smallest coherent edit.
+- Implement gradually. Prefer narrow, reviewable steps over broad rewrites, and
+  verify each risky step before expanding scope.
+- Do not run git commit and push directly. You can use status and diff commands
+  freely.
+- Do not overwrite or revert user changes. Work with the current files and ask
+  when local edits make the requested change ambiguous.
+- Keep generated artifacts, packed packages, temporary sample outputs, coverage,
+  and build artifacts out of committed source unless the user explicitly asks to
+  preserve them.
+
+## Repository Direction
+
+- Target .NET 10 unless an accepted ADR changes the target framework policy.
+- NuGet package IDs should match project names unless an accepted ADR records a
+  different packaging decision.
+- Use coordinated package versioning and NuGet release automation according to
+  [docs/packaging.md](docs/packaging.md).
+- Extract source slowly according to [docs/extraction.md](docs/extraction.md).
+  Do not bulk-copy Bondstone code or preserve the current consumer repository
+  as a compatibility constraint.
+- Source, tests, docs, repository automation, and samples should be arranged
+  for library maintenance, while avoiding validation and frontend/browser
+  tooling that Bondstone does not need.
+- Product behavior, domain examples, sample services, and runtime integration
+  scenarios belong in samples or tests, not in core library packages.
+
+## Architecture Direction
+
+- Bondstone should support modular monoliths first, including a low-friction
+  path for splitting modules into services when a module needs independent
+  deployment or scalability.
+- Bondstone should also be usable in microservice setups that need internal
+  durability, inbox/outbox processing, stable message identities, and
+  provider-owned transport adapters.
+- Durable behavior, public API shape, package boundaries, provider support,
+  transport support, migration strategy, and compatibility policy require ADRs
+  before broad implementation.
+- Durable decisions recorded in ADRs must be applied into stable developer docs
+  and agent instructions. ADRs are the decision trail; stable docs are the
+  current operating contract.
+
+## ADR And Planning Rules
+
+- Do not use SDD/spec-driven product workflow for Bondstone library work unless
+  an accepted ADR introduces it for a bounded purpose.
+- Before editing code or automation, check whether ADR work is required when a
+  change affects public API, package boundaries, target frameworks, provider or
+  transport support, migration policy, compatibility, release/publishing,
+  sample architecture, repository workflow, or agent harness behavior.
+- Use ADRs for durable technical decisions. Prefer small ADRs with a clear
+  status, application state, context, decision, consequences, and links to
+  applied docs.
+- Updating, superseding, archiving, or removing an ADR must preserve the
+  decision trail and update the stable docs and agent instructions that depend
+  on it.
+- Reusable ADR workflows must become repository skills under `.agents/skills`.
+  Start with skills for creating ADRs, updating ADRs, superseding ADRs, and
+  archiving/removing ADRs.
+
+## Common Commands
+
+Prefer the repository package scripts when available:
+
+- `pnpm check`
+- `pnpm verify`
+- `pnpm backend:restore`
+- `pnpm backend:build`
+- `pnpm backend:test`
+- `pnpm backend:test:integration`
+- `pnpm backend:pack`
+
+The direct .NET equivalents are:
+
+- `dotnet restore Bondstone.slnx`
+- `dotnet build Bondstone.slnx --configuration Release --no-restore`
+- `dotnet test Bondstone.slnx --configuration Release --no-build --filter "Category=Unit|Category=Application"`
+- `dotnet pack Bondstone.slnx --configuration Release --no-build`
+
+Keep CI, Husky hooks, and docs aligned with the package-script entrypoints.

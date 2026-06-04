@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bondstone ADR Update"
+  short_description: "Update an existing Bondstone ADR without losing decision history."
+  default_prompt: "Use $bondstone-adr-update to amend or clarify an existing ADR and apply the current rule into docs."

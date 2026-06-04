@@ -46,6 +46,12 @@ This replaces loose correlation-id parameters for cross-layer tracing.
 It is separate from distributed tracing: trace context follows the workflow,
 while causation points to the direct message parent when one exists.
 
+Durable operation tracking is represented by `DurableOperationState`,
+`DurableOperationStatus`, and `IDurableOperationReader`. The reader returns
+`null` when an operation id is unknown. Operation states are persistence-neutral
+read models that expose a `Status` enum and do not define polling, timeout,
+result deserialization, or `send and wait` behavior.
+
 `DurableMessageEnvelope` represents the persistence- and transport-neutral
 shape of a durable message before EF Core entities, provider claiming, or
 transport headers are involved. Command envelopes require a target module;
@@ -63,7 +69,7 @@ transport, or samples prove a durable need.
 
 Deferred durable-command work remains tracked:
 
-- operation status reading and any `send and wait` helper;
+- any `send and wait` helper and timeout/polling policy;
 - trace context and causation propagation rules;
 - retry, max-attempt, and dead-letter policy ownership;
 - deeper partition-key ordering and scaling semantics;

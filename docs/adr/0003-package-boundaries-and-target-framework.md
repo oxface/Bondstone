@@ -70,15 +70,17 @@ automation.
   versioning rules are described in [docs/packaging.md](../packaging.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) points agents to packaging
   docs before package-boundary or framework changes.
-- Application evidence: Initial package projects are included in the solution
-  and package metadata is centrally managed.
-- Pending or deferred: Real implementation remains incomplete, and wider target
-  framework support is deferred to a later compatibility ADR.
+- Application evidence: Initial package projects are included in the solution,
+  package metadata is centrally managed, `Bondstone` contains initial core
+  messaging and persistence contracts, and `Bondstone.EntityFrameworkCore`
+  contains initial provider-neutral persistence entity mappings.
+- Pending or deferred: PostgreSQL provider behavior, Rebus transport behavior,
+  integration tests, samples, and wider target framework support remain
+  deferred.
 
 ## Verification
 
 Read back [docs/packaging.md](../packaging.md),
 [docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Ran
-`pnpm verify`, which covered restore, build, test, and pack for the empty
-package scaffold. Real implementation and package API verification remain
-pending.
+`pnpm check`, which covered formatting, restore, build, fast tests, and pack
+for the current package implementation.

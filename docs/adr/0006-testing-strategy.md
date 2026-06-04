@@ -85,7 +85,9 @@ infrastructure-backed integration checks.
   package-script verification entrypoints.
 - Application evidence: Initial test projects, category-filtered commands, CI
   wiring, and neutral `Unit` tests for message identity, trace context, and
-  durable command send results and envelopes exist.
+  durable command send results, operation state/status semantics, envelopes,
+  persistence records, outbox dispatch state, and EF Core entity mappings
+  exist.
 - Pending or deferred: Broader neutral fixtures and infrastructure-backed
   integration checks remain future work.
 
@@ -93,6 +95,6 @@ infrastructure-backed integration checks.
 
 Read back [docs/testing.md](../testing.md),
 [docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Ran
-`pnpm verify`; the empty test projects build and execute through `dotnet test`.
-Real tests, neutral fixtures, and infrastructure-backed integration checks
-remain pending.
+`pnpm check`; formatting, restore, build, fast `Unit`/`Application` tests, and
+packaging pass. Broader neutral fixtures and infrastructure-backed integration
+checks remain pending.

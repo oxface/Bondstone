@@ -46,6 +46,8 @@ Each step should do at least one of these:
 - create or update ADRs when design tension appears;
 - identify package, new-consumer compatibility, or service-extraction
   questions before moving further.
+- record intentional source terminology or API renames in the tactical
+  extraction plan while the slice is active.
 
 Avoid destructive edits in the current consumer repository unless they are part
 of an explicit migration step.
@@ -54,11 +56,13 @@ of an explicit migration step.
 
 This extraction strategy is accepted and documented. The first `Bondstone`
 core slice has started with stable message identity contracts and the message
-type registry, durable command send contracts, and durable message envelopes.
-Durable command operation reading, `send and wait` behavior, trace context and
-causation propagation, retry policy, EF Core persistence, PostgreSQL provider
-behavior, Rebus transport behavior, integration tests, and samples remain
-future extraction work. General in-process module calls are not an extraction
-target unless a later ADR or sample exposes a durable boundary need. Do not
-extract the historical generic mediator/message-bus layer as a default
-Bondstone feature.
+type registry, durable command send contracts, durable operation read
+contracts, durable message envelopes, and initial persistence-neutral outbox
+and inbox contracts, including operation-state storage. EF Core
+provider-neutral entities and model mappings have started. `Send and wait`
+behavior, trace context and causation propagation, retry policy, EF Core store
+implementations, PostgreSQL provider behavior, Rebus transport behavior,
+integration tests, and samples remain future extraction work. General
+in-process module calls are not an extraction target unless a later ADR or
+sample exposes a durable boundary need. Do not extract the historical generic
+mediator/message-bus layer as a default Bondstone feature.

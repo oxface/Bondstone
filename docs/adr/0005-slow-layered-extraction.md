@@ -85,24 +85,29 @@ being the primary consumer after Bondstone packaging and samples mature.
   constraint.
 - Stable docs: Current extraction rules are described in
   [docs/extraction.md](../extraction.md), with architecture context in
-  [docs/architecture/README.md](../architecture/README.md).
+  [docs/architecture/README.md](../architecture/README.md) and current
+  persistence context in
+  [docs/architecture/persistence.md](../architecture/persistence.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) directs agents to follow
   the slow extraction strategy before moving or rewriting source.
 - Application evidence: The first `Bondstone` core slices include stable
   message identity contracts, registry behavior, message trace context, durable
-  command send contracts, durable message envelopes, send result semantics, and
-  neutral unit tests.
-- Pending or deferred: Durable command operation reading, `send and wait`
-  behavior, trace context and causation propagation, envelope content
-  type/header expansion, retry policy, EF Core persistence, PostgreSQL provider
-  behavior, Rebus transport behavior, integration tests, and samples remain
-  future extraction work.
+  command send contracts, durable operation read contracts, durable message
+  envelopes, persistence-neutral outbox/inbox and operation state store
+  contracts, provider-neutral outbox dispatch state, send result semantics, and
+  neutral unit tests. EF Core provider-neutral entity mappings have started.
+- Pending or deferred: `Send and wait` behavior, trace context and causation
+  propagation, envelope content type/header expansion, retry policy, EF Core
+  store implementations, PostgreSQL provider behavior, Rebus transport behavior,
+  integration tests, and samples remain future extraction work.
 
 ## Verification
 
 Read back [docs/extraction.md](../extraction.md),
 [docs/architecture/README.md](../architecture/README.md),
 [docs/architecture/messaging.md](../architecture/messaging.md),
-[docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Executable
-verification will happen incrementally through focused build/test/doc checks on
-each moved slice.
+[docs/architecture/persistence.md](../architecture/persistence.md),
+[docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Ran
+`pnpm check`; formatting, restore, build, fast `Unit`/`Application` tests, and
+packaging pass for the current extracted slices. Further extraction will
+continue to use focused build/test/doc checks.

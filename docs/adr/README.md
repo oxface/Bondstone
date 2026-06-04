@@ -131,6 +131,7 @@ Use this mapping as a starting point:
   strategy, compatibility, and service extraction:
   - [docs/architecture/README.md](../architecture/README.md)
   - [docs/architecture/messaging.md](../architecture/messaging.md)
+  - [docs/architecture/persistence.md](../architecture/persistence.md)
   - [docs/extraction.md](../extraction.md)
   - [AGENTS.md](../../AGENTS.md)
 - Verification entrypoints, test categories, sample expectations, and

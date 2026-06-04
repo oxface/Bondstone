@@ -32,6 +32,8 @@ because a module moves from in-process composition to a separate service.
 
 - [messaging.md](messaging.md) records durable command, message identity, and
   messaging-boundary rules.
+- [persistence.md](persistence.md) records persistence-neutral outbox and inbox
+  boundary rules.
 
 ## Related Docs
 

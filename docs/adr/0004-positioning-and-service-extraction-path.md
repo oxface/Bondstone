@@ -101,14 +101,18 @@ local sample orchestration host.
   in-process `.Contracts` calls or generic mediator/message-bus dispatch.
 - Stable docs: Current architecture positioning is described in
   [docs/architecture/README.md](../architecture/README.md), with messaging
-  rules in [docs/architecture/messaging.md](../architecture/messaging.md).
+  rules in [docs/architecture/messaging.md](../architecture/messaging.md) and
+  persistence rules in
+  [docs/architecture/persistence.md](../architecture/persistence.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad changes to public API, provider support, transport support, or durable
   behavior.
 - Application evidence: The first extracted core slices include stable message
   identity contracts, durable command markers, registry behavior, message trace
-  context, durable command send contracts, durable message envelopes, and send
-  result semantics.
+  context, durable command send contracts, durable operation read contracts,
+  durable message envelopes, persistence-neutral outbox/inbox and operation
+  state store contracts, provider-neutral outbox dispatch state, and send
+  result semantics. EF Core provider-neutral entity mappings have started.
 - Pending or deferred: Samples and integration tests that exercise
   modular-monolith and service-split usage remain pending.
 
@@ -116,6 +120,8 @@ local sample orchestration host.
 
 Read back [docs/architecture/README.md](../architecture/README.md),
 [docs/architecture/messaging.md](../architecture/messaging.md),
+[docs/architecture/persistence.md](../architecture/persistence.md),
 [docs/extraction.md](../extraction.md), [docs/README.md](../README.md), and
-[AGENTS.md](../../AGENTS.md). Executable sample or integration tests that
-exercise modular-monolith and service-split usage remain pending.
+[AGENTS.md](../../AGENTS.md). Ran `pnpm check` for the current extracted core
+slices. Executable sample or integration tests that exercise modular-monolith
+and service-split usage remain pending.

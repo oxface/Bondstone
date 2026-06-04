@@ -81,9 +81,11 @@ application exists.
 
 ## Application State
 
-This testing strategy is accepted and documented. Initial empty test projects,
-category-filtered commands, and CI wiring exist. The first neutral `Unit`
-tests cover core message identity registry behavior and durable command
-send result, message trace context, and durable message envelope value
-semantics. Broader neutral fixtures and infrastructure-backed checks remain
-future application work.
+This testing strategy is accepted and documented. Initial test projects,
+category-filtered commands, and CI wiring exist. The current neutral `Unit`
+tests cover core message identity registry behavior, durable command send
+result semantics, message trace context, durable operation state/status
+semantics, durable message envelope validation, and persistence record and
+dispatch-state validation. EF Core unit tests cover entity-to-core mapping and
+provider-neutral model metadata. Broader neutral fixtures and
+infrastructure-backed checks remain future application work.

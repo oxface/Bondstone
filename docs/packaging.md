@@ -87,6 +87,9 @@ and release-management cost.
 ## Application State
 
 The package boundary, target framework, coordinated versioning, and release
-automation direction are accepted and scaffolded. Initial empty packages have
-been published to nuget.org. Package implementation remains future application
-work.
+automation direction are accepted and scaffolded. Initial packages have been
+published to nuget.org. `Bondstone` contains initial core messaging and
+persistence contracts, and `Bondstone.EntityFrameworkCore` contains initial
+provider-neutral persistence entity mappings. PostgreSQL provider behavior,
+Rebus transport behavior, integration tests, and samples remain future package
+implementation work.

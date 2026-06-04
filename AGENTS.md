@@ -1,8 +1,8 @@
 # Agent Index
 
 This repository is the maintenance home for Bondstone, a .NET library for
-durable module boundaries, in-process command handling, EF Core backed
-inbox/outbox persistence, and transport adapters.
+durable module boundaries, durable command sending, EF Core backed inbox/outbox
+persistence, and transport adapters.
 
 Start with:
 
@@ -58,6 +58,10 @@ Start with:
 - Bondstone should also be usable in microservice setups that need internal
   durability, inbox/outbox processing, stable message identities, and
   provider-owned transport adapters.
+- Do not extract a generic mediator or message-bus layer as a default
+  Bondstone feature. Durable command sending is for asynchronous outbox
+  delivery; ordinary in-process module calls can use typed `.Contracts`
+  references.
 - Durable behavior, public API shape, package boundaries, provider support,
   transport support, migration strategy, and compatibility policy require ADRs
   before broad implementation.

@@ -107,7 +107,8 @@ local sample orchestration host.
   behavior.
 - Application evidence: The first extracted core slices include stable message
   identity contracts, durable command markers, registry behavior, message trace
-  context, durable command send contracts, and send result semantics.
+  context, durable command send contracts, durable message envelopes, and send
+  result semantics.
 - Pending or deferred: Samples and integration tests that exercise
   modular-monolith and service-split usage remain pending.
 

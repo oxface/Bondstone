@@ -46,12 +46,30 @@ This replaces loose correlation-id parameters for cross-layer tracing.
 It is separate from distributed tracing: trace context follows the workflow,
 while causation points to the direct message parent when one exists.
 
+`DurableMessageEnvelope` represents the persistence- and transport-neutral
+shape of a durable message before EF Core entities, provider claiming, or
+transport headers are involved. Command envelopes require a target module;
+event envelopes do not specify one. Envelope metadata remains explicit:
+operation ids, trace context, causation, partition key, payload, and optional
+metadata are stored as separate boundary fields instead of being inferred from
+CLR names or transport details.
+
+Future envelope fields remain open. Content type is the most likely next
+addition if Bondstone needs to support non-JSON payloads or make JSON explicit.
+Neutral headers may be added if multiple adapters need cross-cutting metadata
+that does not deserve a first-class field. Scheduling, TTL, priority, reply-to,
+tenant id, and transport-native headers should stay deferred until persistence,
+transport, or samples prove a durable need.
+
 Deferred durable-command work remains tracked:
 
 - operation status reading and any `send and wait` helper;
 - trace context and causation propagation rules;
 - retry, max-attempt, and dead-letter policy ownership;
-- partition-key ordering and scaling semantics;
+- deeper partition-key ordering and scaling semantics;
+- content type or neutral header support if adapters need it;
+- scheduling, TTL, priority, reply-to, tenant, or transport-native metadata if
+  a later durable scenario justifies it;
 - EF Core outbox persistence and transaction integration.
 
 ## Message Identity Names

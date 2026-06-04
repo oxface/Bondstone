@@ -14,6 +14,6 @@ navigable as extraction proceeds.
 
 The architecture direction is accepted and documented. The first source
 extraction slices now include stable message identity contracts, registry
-behavior, and durable command send contracts in `Bondstone`. Broader source
-extraction, samples, and service-split verification remain future application
-work.
+behavior, durable command send contracts, and durable message envelopes in
+`Bondstone`. Broader source extraction, samples, and service-split verification
+remain future application work.

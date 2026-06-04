@@ -85,7 +85,7 @@ infrastructure-backed integration checks.
   package-script verification entrypoints.
 - Application evidence: Initial test projects, category-filtered commands, CI
   wiring, and neutral `Unit` tests for message identity, trace context, and
-  durable command send results exist.
+  durable command send results and envelopes exist.
 - Pending or deferred: Broader neutral fixtures and infrastructure-backed
   integration checks remain future work.
 

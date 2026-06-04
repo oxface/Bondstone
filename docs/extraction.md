@@ -54,11 +54,11 @@ of an explicit migration step.
 
 This extraction strategy is accepted and documented. The first `Bondstone`
 core slice has started with stable message identity contracts and the message
-type registry plus durable command send contracts. Durable command
-operation reading, `send and wait` behavior, trace context and causation
-propagation, retry policy, EF Core persistence, PostgreSQL provider behavior,
-Rebus transport behavior, integration tests, and samples remain future
-extraction work. General in-process module calls are not an extraction target
-unless a later ADR or sample exposes a durable boundary need. Do not extract
-the historical generic mediator/message-bus layer as a default Bondstone
-feature.
+type registry, durable command send contracts, and durable message envelopes.
+Durable command operation reading, `send and wait` behavior, trace context and
+causation propagation, retry policy, EF Core persistence, PostgreSQL provider
+behavior, Rebus transport behavior, integration tests, and samples remain
+future extraction work. General in-process module calls are not an extraction
+target unless a later ADR or sample exposes a durable boundary need. Do not
+extract the historical generic mediator/message-bus layer as a default
+Bondstone feature.

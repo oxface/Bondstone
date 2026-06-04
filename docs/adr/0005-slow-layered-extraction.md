@@ -90,11 +90,13 @@ being the primary consumer after Bondstone packaging and samples mature.
   the slow extraction strategy before moving or rewriting source.
 - Application evidence: The first `Bondstone` core slices include stable
   message identity contracts, registry behavior, message trace context, durable
-  command send contracts, send result semantics, and neutral unit tests.
+  command send contracts, durable message envelopes, send result semantics, and
+  neutral unit tests.
 - Pending or deferred: Durable command operation reading, `send and wait`
-  behavior, trace context and causation propagation, retry policy, EF Core
-  persistence, PostgreSQL provider behavior, Rebus transport behavior,
-  integration tests, and samples remain future extraction work.
+  behavior, trace context and causation propagation, envelope content
+  type/header expansion, retry policy, EF Core persistence, PostgreSQL provider
+  behavior, Rebus transport behavior, integration tests, and samples remain
+  future extraction work.
 
 ## Verification
 

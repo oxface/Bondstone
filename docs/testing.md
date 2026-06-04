@@ -84,5 +84,6 @@ application exists.
 This testing strategy is accepted and documented. Initial empty test projects,
 category-filtered commands, and CI wiring exist. The first neutral `Unit`
 tests cover core message identity registry behavior and durable command
-send result value semantics. Broader neutral fixtures and infrastructure-backed
-checks remain future application work.
+send result, message trace context, and durable message envelope value
+semantics. Broader neutral fixtures and infrastructure-backed checks remain
+future application work.

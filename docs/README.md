@@ -12,6 +12,8 @@ duplicating durable rules.
 - [architecture/README.md](architecture/README.md) records current runtime
   positioning and durable module-boundary architecture.
 - [extraction.md](extraction.md) records the slow layered extraction strategy.
+- [extraction-plan.md](extraction-plan.md) tracks the current tactical
+  extraction backlog.
 - [handover.md](handover.md) contains a continuation prompt for future
   Bondstone workspace sessions.
 - [packaging.md](packaging.md) records current package IDs, target framework,

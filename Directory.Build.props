@@ -8,7 +8,7 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <IsPackable>false</IsPackable>
-    <VersionPrefix>0.0.0</VersionPrefix> <!-- x-release-please-version -->
+    <VersionPrefix>1.0.0</VersionPrefix> <!-- x-release-please-version -->
     <VersionSuffix Condition="'$(GITHUB_ACTIONS)' != 'true'">local</VersionSuffix>
   </PropertyGroup>
 
@@ -33,6 +33,6 @@
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
-    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/" />
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/"/>
   </ItemGroup>
 </Project>

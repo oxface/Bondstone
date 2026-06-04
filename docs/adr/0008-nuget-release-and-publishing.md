@@ -1,7 +1,7 @@
 # 0008 NuGet Release And Publishing
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-04
 
 ## Context
@@ -39,7 +39,8 @@ ref for first-publication or recovery use. The workflow should:
 - build in Release configuration;
 - run the default test suite;
 - pack the package projects with symbols;
-- publish `.nupkg` files to NuGet using a repository secret;
+- publish `.nupkg` files to NuGet using a short-lived key from trusted
+  publishing;
 - publish every `.nupkg` produced by the solution pack step;
 - not publish `.snupkg` files separately unless NuGet tooling requires it.
 
@@ -65,6 +66,10 @@ asset rule.
 The root `package.json` is repository tooling only. It is not an npm package
 and must stay private.
 
+Publish to nuget.org only. Do not publish to GitHub Packages unless a later ADR
+accepts a separate need for GitHub Packages visibility or private/internal
+package flows.
+
 ## Consequences
 
 All initial packages will share one version number. This keeps release
@@ -73,9 +78,9 @@ coordination simple while package boundaries are still settling.
 Release Please does not decide package contents. The `.csproj` files and
 central MSBuild props decide what is packed.
 
-Publishing cannot be fully verified until the NuGet trusted publishing policy,
-`NUGET_USER` repository variable, Release Please token, and a real release
-exist. CI can still verify restore, build, test, and pack before that.
+Publishing to nuget.org has been verified through the trusted-publishing
+workflow. CI continues to verify restore, build, test, and pack before release
+publication.
 
 If consumers later need independent package versions, package-specific release
 configuration must be accepted in a later ADR.
@@ -103,6 +108,5 @@ configuration must be accepted in a later ADR.
 ## Verification
 
 Read back the changed docs and workflow files. Ran `pnpm verify`, which covered
-formatting, restore, build, test, and pack. Real NuGet publish verification
-remains pending until a release, trusted publishing policy, and required
-repository variables exist.
+formatting, restore, build, test, and pack. Verified NuGet publication through
+the trusted-publishing workflow.

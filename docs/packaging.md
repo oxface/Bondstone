@@ -49,7 +49,7 @@ publish workflow.
 
 The NuGet publish workflow runs when a GitHub release is published. It also
 supports manual dispatch for recovery or first-publication use; manual dispatch
-publishes the version recorded in `version.txt` at the selected ref.
+publishes the version recorded in `Directory.Build.props` at the selected ref.
 
 The publish workflow packs `Bondstone.slnx` and publishes every `.nupkg`
 created under `artifacts/packages`. Any future packable package project that is
@@ -64,8 +64,12 @@ Publishing uses GitHub Actions with NuGet trusted publishing. The workflow uses
 GitHub OIDC through `NuGet/login@v1` to obtain a short-lived NuGet API key
 instead of storing a long-lived `NUGET_API_KEY` secret.
 
-The repository must configure a NuGet trusted publishing policy for
-`.github/workflows/publish-nuget.yml`. The workflow expects `NUGET_USER` as a
+The repository publishes to nuget.org only. GitHub Packages is not a current
+target because nuget.org is the normal public .NET package registry and avoids
+GitHub Packages authentication/source setup for consumers.
+
+The repository configures a NuGet trusted publishing policy for
+`.github/workflows/publish-nuget.yml`. The workflow uses `NUGET_USER` as a
 GitHub repository variable containing the nuget.org username or organization
 profile name used for the trusted publishing policy.
 
@@ -74,8 +78,8 @@ token. This token is required because Release Please-created releases must
 trigger the separate publish workflow. GitHub's default workflow token can
 create the release without triggering downstream workflows.
 
-Real publish verification is pending until a release, trusted publishing
-policy, and `NUGET_USER` repository variable exist.
+Real publish verification has succeeded. Published packages appear on
+nuget.org, not GitHub Packages.
 
 Independent package versioning is deferred until a later ADR accepts the need
 and release-management cost.
@@ -83,6 +87,6 @@ and release-management cost.
 ## Application State
 
 The package boundary, target framework, coordinated versioning, and release
-automation direction are accepted. Empty project files and initial automation
-are scaffolded, while package implementation and real NuGet publishing remain
-future application work.
+automation direction are accepted and scaffolded. Initial empty packages have
+been published to nuget.org. Package implementation remains future application
+work.

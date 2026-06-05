@@ -1,3 +1,5 @@
+using Bondstone.EntityFrameworkCore.Outbox;
+using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -10,6 +12,23 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
     : IDurableOutboxDispatchRecorder
     where TDbContext : DbContext
 {
+    private static readonly string MessageIdColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.MessageId);
+    private static readonly string StatusColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.Status);
+    private static readonly string NextAttemptAtUtcColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.NextAttemptAtUtc);
+    private static readonly string DispatchedAtUtcColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.DispatchedAtUtc);
+    private static readonly string FailedAtUtcColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.FailedAtUtc);
+    private static readonly string FailureReasonColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.FailureReason);
+    private static readonly string ClaimedByColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.ClaimedBy);
+    private static readonly string ClaimedUntilUtcColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.ClaimedUntilUtc);
+
     private readonly string _tableName = PostgreSqlOutboxTableIdentifier.BuildTableName(schema);
 
     public async ValueTask<bool> MarkDispatchedAsync(
@@ -25,17 +44,17 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
             $$"""
             UPDATE {{_tableName}}
             SET
-                "Status" = @dispatched,
-                "NextAttemptAtUtc" = NULL,
-                "DispatchedAtUtc" = @dispatchedAtUtc,
-                "FailedAtUtc" = NULL,
-                "FailureReason" = NULL,
-                "ClaimedBy" = NULL,
-                "ClaimedUntilUtc" = NULL
-            WHERE "MessageId" = @messageId
-            AND "Status" = @processing
-            AND "ClaimedBy" = @claimedBy
-            AND "ClaimedUntilUtc" >= @dispatchedAtUtc
+                {{StatusColumn}} = @dispatched,
+                {{NextAttemptAtUtcColumn}} = NULL,
+                {{DispatchedAtUtcColumn}} = @dispatchedAtUtc,
+                {{FailedAtUtcColumn}} = NULL,
+                {{FailureReasonColumn}} = NULL,
+                {{ClaimedByColumn}} = NULL,
+                {{ClaimedUntilUtcColumn}} = NULL
+            WHERE {{MessageIdColumn}} = @messageId
+            AND {{StatusColumn}} = @processing
+            AND {{ClaimedByColumn}} = @claimedBy
+            AND {{ClaimedUntilUtcColumn}} >= @dispatchedAtUtc
             """;
 
         int rowCount = await context.Database.ExecuteSqlRawAsync(
@@ -76,17 +95,17 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
             $$"""
             UPDATE {{_tableName}}
             SET
-                "Status" = @pending,
-                "NextAttemptAtUtc" = @nextAttemptAtUtc,
-                "DispatchedAtUtc" = NULL,
-                "FailedAtUtc" = @failedAtUtc,
-                "FailureReason" = @failureReason,
-                "ClaimedBy" = NULL,
-                "ClaimedUntilUtc" = NULL
-            WHERE "MessageId" = @messageId
-            AND "Status" = @processing
-            AND "ClaimedBy" = @claimedBy
-            AND "ClaimedUntilUtc" >= @failedAtUtc
+                {{StatusColumn}} = @pending,
+                {{NextAttemptAtUtcColumn}} = @nextAttemptAtUtc,
+                {{DispatchedAtUtcColumn}} = NULL,
+                {{FailedAtUtcColumn}} = @failedAtUtc,
+                {{FailureReasonColumn}} = @failureReason,
+                {{ClaimedByColumn}} = NULL,
+                {{ClaimedUntilUtcColumn}} = NULL
+            WHERE {{MessageIdColumn}} = @messageId
+            AND {{StatusColumn}} = @processing
+            AND {{ClaimedByColumn}} = @claimedBy
+            AND {{ClaimedUntilUtcColumn}} >= @failedAtUtc
             """;
 
         int rowCount = await context.Database.ExecuteSqlRawAsync(
@@ -120,17 +139,17 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
             $$"""
             UPDATE {{_tableName}}
             SET
-                "Status" = @deadLettered,
-                "NextAttemptAtUtc" = NULL,
-                "DispatchedAtUtc" = NULL,
-                "FailedAtUtc" = @failedAtUtc,
-                "FailureReason" = @failureReason,
-                "ClaimedBy" = NULL,
-                "ClaimedUntilUtc" = NULL
-            WHERE "MessageId" = @messageId
-            AND "Status" = @processing
-            AND "ClaimedBy" = @claimedBy
-            AND "ClaimedUntilUtc" >= @failedAtUtc
+                {{StatusColumn}} = @deadLettered,
+                {{NextAttemptAtUtcColumn}} = NULL,
+                {{DispatchedAtUtcColumn}} = NULL,
+                {{FailedAtUtcColumn}} = @failedAtUtc,
+                {{FailureReasonColumn}} = @failureReason,
+                {{ClaimedByColumn}} = NULL,
+                {{ClaimedUntilUtcColumn}} = NULL
+            WHERE {{MessageIdColumn}} = @messageId
+            AND {{StatusColumn}} = @processing
+            AND {{ClaimedByColumn}} = @claimedBy
+            AND {{ClaimedUntilUtcColumn}} >= @failedAtUtc
             """;
 
         int rowCount = await context.Database.ExecuteSqlRawAsync(

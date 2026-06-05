@@ -1,6 +1,7 @@
 using Bondstone.EntityFrameworkCore.Inbox;
 using Bondstone.EntityFrameworkCore.Operations;
 using Bondstone.EntityFrameworkCore.Outbox;
+using Bondstone.EntityFrameworkCore.Postgres.Inbox;
 using Bondstone.EntityFrameworkCore.Postgres.Outbox;
 using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Messaging;
@@ -197,6 +198,118 @@ public sealed class PostgreSqlPersistenceTests(PostgreSqlFixture fixture)
 
             await transaction.RollbackToSavepointAsync("before_duplicate");
             context.ChangeTracker.Clear();
+
+            var outboxWriter = new EntityFrameworkCoreDurableOutboxWriter<PostgreSqlTestDbContext>(
+                context,
+                new FixedTimeProvider(DateTimeOffset.Parse("2026-06-04T00:00:05+00:00")));
+            await outboxWriter.WriteAsync(envelope);
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+
+        await using PostgreSqlTestDbContext verificationContext = CreateContext();
+        Assert.Equal(1, await verificationContext.Set<InboxMessageEntity>().CountAsync());
+        Assert.Equal(envelope.MessageId, await verificationContext
+            .Set<OutboxMessageEntity>()
+            .Select(static entity => entity.MessageId)
+            .SingleAsync());
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task InboxRegistrar_WhenRecordDoesNotExist_RegistersInboxRecord()
+    {
+        await ResetDatabaseAsync();
+        DurableInboxRecord record = CreateInboxRecord();
+
+        await using PostgreSqlTestDbContext context = CreateContext();
+        var registrar = new PostgreSqlDurableInboxRegistrar<PostgreSqlTestDbContext>(context);
+
+        DurableInboxRegistrationResult result = await registrar.RegisterAsync(record);
+
+        Assert.Equal(DurableInboxRegistrationStatus.Registered, result.Status);
+        Assert.True(result.IsRegistered);
+        Assert.False(result.IsDuplicate);
+        Assert.Equal(record, result.Record);
+        Assert.Equal(1, await context.Set<InboxMessageEntity>().CountAsync());
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task InboxRegistrar_WhenRecordAlreadyExists_ReturnsAlreadyReceived()
+    {
+        await ResetDatabaseAsync();
+        DurableInboxRecord record = CreateInboxRecord();
+
+        await using (PostgreSqlTestDbContext setupContext = CreateContext())
+        {
+            var registrar = new PostgreSqlDurableInboxRegistrar<PostgreSqlTestDbContext>(setupContext);
+            await registrar.RegisterAsync(record);
+        }
+
+        await using PostgreSqlTestDbContext context = CreateContext();
+        var duplicateRegistrar = new PostgreSqlDurableInboxRegistrar<PostgreSqlTestDbContext>(context);
+
+        DurableInboxRegistrationResult result = await duplicateRegistrar.RegisterAsync(
+            new DurableInboxRecord(
+                record.Key,
+                DateTimeOffset.Parse("2026-06-04T00:05:00+00:00")));
+
+        Assert.Equal(DurableInboxRegistrationStatus.AlreadyReceived, result.Status);
+        Assert.False(result.IsRegistered);
+        Assert.True(result.IsDuplicate);
+        Assert.Equal(record, result.Record);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task InboxRegistrar_WhenRecordAlreadyProcessed_ReturnsAlreadyProcessed()
+    {
+        await ResetDatabaseAsync();
+        DurableInboxRecord record = CreateInboxRecord();
+        DateTimeOffset processedAtUtc = DateTimeOffset.Parse("2026-06-04T00:03:00+00:00");
+
+        await using (PostgreSqlTestDbContext setupContext = CreateContext())
+        {
+            var registrar = new PostgreSqlDurableInboxRegistrar<PostgreSqlTestDbContext>(setupContext);
+            await registrar.RegisterAsync(record);
+            var store = new EntityFrameworkCoreDurableInboxStore<PostgreSqlTestDbContext>(setupContext);
+            await store.MarkProcessedAsync(record.Key, processedAtUtc);
+            await setupContext.SaveChangesAsync();
+        }
+
+        await using PostgreSqlTestDbContext context = CreateContext();
+        var duplicateRegistrar = new PostgreSqlDurableInboxRegistrar<PostgreSqlTestDbContext>(context);
+
+        DurableInboxRegistrationResult result = await duplicateRegistrar.RegisterAsync(record);
+
+        Assert.Equal(DurableInboxRegistrationStatus.AlreadyProcessed, result.Status);
+        Assert.True(result.IsDuplicate);
+        Assert.Equal(processedAtUtc, result.Record.ProcessedAtUtc);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task InboxRegistrar_WhenDuplicateInsideTransaction_DoesNotAbortTransaction()
+    {
+        await ResetDatabaseAsync();
+        DurableInboxRecord record = CreateInboxRecord();
+        DurableMessageEnvelope envelope = CreateEnvelope(Guid.Parse("ec35d211-1ed2-4fd5-98a1-383114a9fb81"));
+
+        await using (PostgreSqlTestDbContext setupContext = CreateContext())
+        {
+            var registrar = new PostgreSqlDurableInboxRegistrar<PostgreSqlTestDbContext>(setupContext);
+            await registrar.RegisterAsync(record);
+        }
+
+        await using (PostgreSqlTestDbContext context = CreateContext())
+        await using (Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction =
+            await context.Database.BeginTransactionAsync())
+        {
+            var registrar = new PostgreSqlDurableInboxRegistrar<PostgreSqlTestDbContext>(context);
+            DurableInboxRegistrationResult result = await registrar.RegisterAsync(record);
+
+            Assert.Equal(DurableInboxRegistrationStatus.AlreadyReceived, result.Status);
 
             var outboxWriter = new EntityFrameworkCoreDurableOutboxWriter<PostgreSqlTestDbContext>(
                 context,
@@ -701,15 +814,20 @@ public sealed class PostgreSqlPersistenceTests(PostgreSqlFixture fixture)
         await using ServiceProvider serviceProvider = services.BuildServiceProvider();
         await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
         IDurableOutboxWriter writer = scope.ServiceProvider.GetRequiredService<IDurableOutboxWriter>();
+        IDurableInboxRegistrar inboxRegistrar = scope.ServiceProvider.GetRequiredService<IDurableInboxRegistrar>();
         IDurableOutboxClaimer claimer = scope.ServiceProvider.GetRequiredService<IDurableOutboxClaimer>();
         PostgreSqlSchemaTestDbContext context =
             scope.ServiceProvider.GetRequiredService<PostgreSqlSchemaTestDbContext>();
         IDurableOutboxDispatchRecorder dispatchStore =
             scope.ServiceProvider.GetRequiredService<IDurableOutboxDispatchRecorder>();
         DurableMessageEnvelope envelope = CreateEnvelope(Guid.Parse("55f93286-f946-481c-9651-2834dd2a253d"));
+        DurableInboxRecord inboxRecord = CreateInboxRecord();
 
+        DurableInboxRegistrationResult inboxResult = await inboxRegistrar.RegisterAsync(inboxRecord);
         await writer.WriteAsync(envelope);
         await context.SaveChangesAsync();
+
+        Assert.Equal(DurableInboxRegistrationStatus.Registered, inboxResult.Status);
 
         IReadOnlyList<DurableOutboxRecord> records = await claimer.ClaimAsync(
             "dispatcher-1",

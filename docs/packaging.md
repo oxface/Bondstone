@@ -95,6 +95,7 @@ entity mappings, outbox writer, inbox store, and operation state store.
 `Bondstone.EntityFrameworkCore.Postgres` has started with PostgreSQL
 dependencies, provider-specific registration and constraint/unique-violation
 classification helpers, PostgreSQL outbox claiming, PostgreSQL outbox dispatch
-lifecycle updates, and Testcontainers-backed integration tests. Broader
-PostgreSQL provider behavior, Rebus transport behavior, additional integration
-tests, and samples remain future package implementation work.
+lifecycle updates, PostgreSQL inbox registration, and Testcontainers-backed
+integration tests. Broader PostgreSQL provider behavior, Rebus transport
+behavior, additional integration tests, and samples remain future package
+implementation work.

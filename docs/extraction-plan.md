@@ -75,6 +75,12 @@ ADRs for durable technical decisions.
   - retry scheduling after failure
   - dead-letter outcome recording
   - stale claimant and expired lease rejection
+- PostgreSQL inbox registration:
+  - provider-neutral `IDurableInboxRegistrar` contract
+  - `DurableInboxRegistrationResult`
+  - newly registered, already received, and already processed outcomes
+  - transaction-safe duplicate registration
+  - schema-aware service registration
 - Architecture docs split into topic pages under `docs/architecture/`.
 - Neutral unit tests cover message identity registration, trace context capture,
   durable command send result semantics, durable operation state/status
@@ -91,7 +97,8 @@ ADRs for durable technical decisions.
   duplicate inbox inserts, `FOR UPDATE SKIP LOCKED` outbox row selection
   against a real database, and public PostgreSQL outbox claim behavior
   including scheduled rows and schema-aware service registration. They also
-  cover PostgreSQL outbox dispatch lifecycle outcomes.
+  cover PostgreSQL outbox dispatch lifecycle outcomes and public PostgreSQL
+  inbox registration outcomes.
 
 ## Active Rename Notes
 
@@ -109,8 +116,8 @@ adding broader provider APIs.
 
 Candidate concepts:
 
-- provider-owned inbox duplicate-result orchestration built around the verified
-  PostgreSQL savepoint behavior;
+- inbox handle-once orchestration around user handler execution and processed
+  markers;
 - outbox lease renewal, retry-delay calculation, max-attempt policy,
   dead-letter routing, and stale-claim recovery orchestration built around the
   shared claim lease state and verified PostgreSQL claim and lifecycle
@@ -157,7 +164,8 @@ Verification:
 - Partition-key ordering and scaling semantics.
 - Outbox dispatcher loop, transport send implementation, lease renewal,
   stale-claim recovery, retry-delay calculation, and max-attempt semantics.
-- Inbox duplicate-result orchestration across real database providers.
+- Inbox handler execution, processed-marker orchestration, receive-side retry
+  policy, and transport acknowledgement coordination.
 - Bondstone-owned migration helpers or provider-specific migration
   conventions.
 - Operation-state transition policy and optimistic concurrency.

@@ -76,12 +76,14 @@ tests expose the shape those APIs need.
   operation-state updates, outbox claim lease columns, savepoint rollback after
   duplicate inbox inserts, `FOR UPDATE SKIP LOCKED` outbox selection behavior,
   scheduled pending outbox claim behavior, schema-aware claiming registration,
-  and provider registration. PostgreSQL service registration and
+  public inbox registration outcomes, and provider registration. PostgreSQL
+  service registration and
   unique-violation exception classification helpers exist. Constraint names
   live with the provider-neutral EF mappings; constants are exposed only where
   another package needs reuse.
-- Pending or deferred: Migration helpers, public inbox duplicate-result
-  orchestration, lease renewal, retry-delay calculation, max-attempt policy,
+- Pending or deferred: Migration helpers, inbox handler execution,
+  processed-marker orchestration, receive-side retry, transport
+  acknowledgement, lease renewal, retry-delay calculation, max-attempt policy,
   dead-letter routing, operation-state concurrency, and samples remain future
   work.
 

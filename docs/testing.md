@@ -108,4 +108,7 @@ claiming for due rows, scheduled pending rows, locked-row skipping, expired
 lease reclaim, active lease exclusion, validation, and schema-aware service
 registration. They also cover PostgreSQL outbox dispatch success, retry
 scheduling, dead-letter outcomes, stale-claimant rejection, and expired-lease
-rejection. Broader neutral fixtures remain future application work.
+rejection. Public PostgreSQL inbox registration tests cover newly registered,
+already received, already processed, transaction-safe duplicate registration,
+and schema-aware registration outcomes. Broader neutral fixtures remain future
+application work.

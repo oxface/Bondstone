@@ -1,4 +1,5 @@
 using Bondstone.EntityFrameworkCore.Persistence;
+using Bondstone.EntityFrameworkCore.Postgres.Inbox;
 using Bondstone.EntityFrameworkCore.Postgres.Outbox;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,10 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
         services.AddDbContext<TDbContext>(optionsBuilder =>
             optionsBuilder.UseNpgsql(connectionString, configureNpgsql));
         services.AddBondstoneEntityFrameworkCorePersistence<TDbContext>();
+        services.TryAddScoped<IDurableInboxRegistrar>(serviceProvider =>
+            new PostgreSqlDurableInboxRegistrar<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>(),
+                schema));
         services.TryAddScoped<IDurableOutboxClaimer>(serviceProvider =>
             new PostgreSqlDurableOutboxClaimer<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>(),

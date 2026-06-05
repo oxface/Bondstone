@@ -48,10 +48,11 @@ shapes that preserve the core contract fields:
 - inbox message deduplication key and processing timestamps;
 - durable operation state fields.
 
-Provider-neutral EF mappings own stable primary-key names for the Bondstone
-tables. Provider packages can use those names when interpreting provider
-exceptions, but the constraints are not PostgreSQL-only concepts. Expose
-constraint-name constants only when another package needs to reuse them.
+Provider-neutral EF mappings own stable table, column, and primary-key names
+for the Bondstone tables. Provider packages can use those names when building
+provider-specific SQL or interpreting provider exceptions, but the persisted
+shape is not a PostgreSQL-only concept. Expose name constants only when another
+package needs to reuse them.
 
 Migrations are consumer-owned for now. Bondstone provides model mappings and
 documentation; application modules or samples generate and apply migrations in
@@ -98,16 +99,18 @@ abstractions, and inbox handle-once orchestration remain deferred.
   broad changes to provider support, migration policy, package boundaries, or
   durable behavior.
 - Application evidence: Core persistence contracts exist. Initial EF Core
-  entities, model mappings, service-registration helper, outbox writer, inbox
-  store, operation state store, mapping tests, metadata tests, registration
-  tests, fast store behavior tests, and PostgreSQL integration tests for real
-  provider schema, transaction, unique-constraint, and registration-helper
-  behavior, plus inbox processed-state, operation-state, outbox claim lease
-  columns, savepoint rollback, and `FOR UPDATE SKIP LOCKED` behavior, exist.
-- Pending or deferred: Inbox duplicate-result orchestration,
-  retry-delay calculation, max-attempt policy, dead-letter routing, migration
-  helpers, additional provider-specific lifecycle implementations, additional
-  integration tests, and samples remain future work.
+  entities, canonical table/column/constraint names, model mappings,
+  service-registration helper, outbox writer, inbox store, operation state
+  store, mapping tests, metadata tests, registration tests, fast store behavior
+  tests, and PostgreSQL integration tests for real provider schema,
+  transaction, unique-constraint, and registration-helper behavior, plus inbox
+  processed-state, operation-state, outbox claim lease columns, savepoint
+  rollback, and `FOR UPDATE SKIP LOCKED` behavior, exist.
+- Pending or deferred: Inbox handler execution and processed-marker
+  orchestration, receive-side retry, retry-delay calculation, max-attempt
+  policy, dead-letter routing, migration helpers, additional provider-specific
+  lifecycle implementations, additional integration tests, and samples remain
+  future work.
 
 ## Verification
 

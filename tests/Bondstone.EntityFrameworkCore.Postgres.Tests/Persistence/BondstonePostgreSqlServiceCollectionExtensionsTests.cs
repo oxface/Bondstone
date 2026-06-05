@@ -50,6 +50,7 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
                 && descriptor.ImplementationFactory is not null
                 && descriptor.Lifetime == ServiceLifetime.Scoped);
         AssertContainsScopedFactory<IDurableOutboxWriter>(services);
+        AssertContainsScopedFactory<IDurableInboxRegistrar>(services);
         AssertContainsScopedFactory<IDurableOutboxClaimer>(services);
         AssertContainsScopedFactory<IDurableOutboxDispatchRecorder>(services);
         AssertContainsScoped<IDurableInboxStore>(services);

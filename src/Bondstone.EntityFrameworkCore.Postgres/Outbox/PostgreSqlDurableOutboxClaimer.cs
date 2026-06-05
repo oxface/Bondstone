@@ -1,4 +1,5 @@
 using Bondstone.EntityFrameworkCore.Outbox;
+using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -12,6 +13,21 @@ public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
     : IDurableOutboxClaimer
     where TDbContext : DbContext
 {
+    private static readonly string MessageIdColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.MessageId);
+    private static readonly string StatusColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.Status);
+    private static readonly string AttemptCountColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.AttemptCount);
+    private static readonly string NextAttemptAtUtcColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.NextAttemptAtUtc);
+    private static readonly string StoredAtUtcColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.StoredAtUtc);
+    private static readonly string ClaimedByColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.ClaimedBy);
+    private static readonly string ClaimedUntilUtcColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.ClaimedUntilUtc);
+
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     private readonly string _tableName = PostgreSqlOutboxTableIdentifier.BuildTableName(schema);
 
@@ -47,29 +63,29 @@ public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
         string sql =
             $$"""
             WITH candidates AS (
-                SELECT "MessageId"
+                SELECT {{MessageIdColumn}}
                 FROM {{_tableName}}
                 WHERE (
-                    "Status" = @pending
-                    AND ("NextAttemptAtUtc" IS NULL OR "NextAttemptAtUtc" <= @nowUtc)
+                    {{StatusColumn}} = @pending
+                    AND ({{NextAttemptAtUtcColumn}} IS NULL OR {{NextAttemptAtUtcColumn}} <= @nowUtc)
                 )
                 OR (
-                    "Status" = @processing
-                    AND "ClaimedUntilUtc" IS NOT NULL
-                    AND "ClaimedUntilUtc" <= @nowUtc
+                    {{StatusColumn}} = @processing
+                    AND {{ClaimedUntilUtcColumn}} IS NOT NULL
+                    AND {{ClaimedUntilUtcColumn}} <= @nowUtc
                 )
-                ORDER BY "StoredAtUtc", "MessageId"
+                ORDER BY {{StoredAtUtcColumn}}, {{MessageIdColumn}}
                 FOR UPDATE SKIP LOCKED
                 LIMIT @maxCount
             )
             UPDATE {{_tableName}} AS message
             SET
-                "Status" = @processing,
-                "AttemptCount" = message."AttemptCount" + 1,
-                "ClaimedBy" = @claimedBy,
-                "ClaimedUntilUtc" = @claimedUntilUtc
+                {{StatusColumn}} = @processing,
+                {{AttemptCountColumn}} = message.{{AttemptCountColumn}} + 1,
+                {{ClaimedByColumn}} = @claimedBy,
+                {{ClaimedUntilUtcColumn}} = @claimedUntilUtc
             FROM candidates
-            WHERE message."MessageId" = candidates."MessageId"
+            WHERE message.{{MessageIdColumn}} = candidates.{{MessageIdColumn}}
             RETURNING message.*
             """;
 

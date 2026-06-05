@@ -75,9 +75,12 @@ processing leases. PostgreSQL registration passes the mapped schema to
 provider-owned SQL when a non-default schema is configured. A narrow
 `IDurableOutboxDispatchRecorder` contract now has a PostgreSQL implementation for
 recording dispatch success, retry scheduling, and dead-letter outcomes after a
-claimed delivery attempt. Dispatcher loops, transport send implementation,
+claimed delivery attempt. A narrow `IDurableInboxRegistrar` contract now has a
+PostgreSQL implementation for idempotent receive-side registration and
+duplicate classification. Dispatcher loops, transport send implementation,
 lease renewal, retry-delay calculation, max-attempt policy, stale-claim
-recovery, dead-letter routing, and broader transport behavior remain future
+recovery, dead-letter routing, inbox handler orchestration, receive-side retry,
+transport acknowledgement, and broader transport behavior remain future
 extraction work. General in-process module calls are not an extraction target
 unless a later ADR or sample exposes a durable boundary need. Do not extract
 the historical generic mediator/message-bus layer as a default Bondstone

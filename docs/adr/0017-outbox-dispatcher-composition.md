@@ -93,13 +93,13 @@ Consumers still need an inbox or idempotent handlers.
   broad durable behavior, provider support, transport support, or migration
   policy changes.
 - Application evidence: Core dispatcher contract and implementation, transport
-  contract, dispatch result, neutral unit tests, and PostgreSQL integration
-  tests using real claim, lease renewal, and dispatch recording with a fake
-  transport are applied.
-- Pending or deferred: Hosted worker registration, polling options, minimum
-  message age, route or destination circuit breaking, dead-letter routing,
-  archiving, stale-claim sweeps, and Rebus transport implementation remain
-  future work.
+  contract, dispatch result, neutral unit tests, PostgreSQL integration tests
+  using real claim, lease renewal, and dispatch recording with a fake
+  transport, Rebus outgoing command transport, and neutral hosted outbox
+  worker registration are applied.
+- Pending or deferred: Minimum message age, route or destination circuit
+  breaking, dead-letter routing, archiving, stale-claim sweeps, cleanup
+  workers, and additional transport adapters remain future work.
 
 ## Verification
 
@@ -108,6 +108,5 @@ Read back [docs/architecture/persistence.md](../architecture/persistence.md),
 [docs/extraction.md](../extraction.md), and
 [docs/extraction-plan.md](../extraction-plan.md). Ran no-restore build,
 targeted unit tests, targeted PostgreSQL integration tests, fast tests, pack,
-format check, diff check, and `pnpm backend:test:integration`. Fresh restore
-for the PostgreSQL provider dependency graph still times out and is tracked in
-the tactical extraction plan as a checkpoint issue.
+format check, diff check, and `pnpm backend:test:integration`. Later
+checkpoint verification restored the default `pnpm check` gate.

@@ -100,7 +100,7 @@ Deferred durable-command work remains tracked:
 - content type or neutral header support if adapters need it;
 - scheduling, TTL, priority, reply-to, tenant, or transport-native metadata if
   a later durable scenario justifies it;
-- hosted worker registration and transport integration.
+- hosted worker, receive adapter, and transport integration.
 
 ## Message Identity Names
 

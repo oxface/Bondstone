@@ -53,6 +53,7 @@ dispatching one batch when called. It composes claiming, per-record lease
 renewal, transport send, failure decision, and outcome recording. It is not a
 hosted service and does not own polling, leader election, singleton sweeper
 coordination, route circuit breaking, archiving, or dead-letter routing.
+Hosted worker composition lives outside core in `Bondstone.Hosting`.
 
 ## Inbox
 

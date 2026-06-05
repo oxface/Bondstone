@@ -32,6 +32,7 @@ because a module moves from in-process composition to a separate service.
 
 - [messaging.md](messaging.md) records durable command, message identity, and
   messaging-boundary rules.
+- [hosting.md](hosting.md) records reusable hosted worker composition rules.
 - [persistence.md](persistence.md) is the persistence entrypoint.
 - [persistence-core.md](persistence-core.md) records provider-neutral durable
   persistence contracts.

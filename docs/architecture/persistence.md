@@ -39,9 +39,8 @@ The current contracts intentionally do not decide:
 - a public unit-of-work abstraction;
 - Bondstone-owned migration helpers or provider-specific migration
   conventions;
-- hosted outbox worker loops, transport adapter implementations, stale-claim
-  recovery, dead-letter routing, configuration binding, or hosted worker
-  registration;
+- stale-claim recovery, dead-letter routing, cleanup/maintenance workers, or
+  advanced worker configuration;
 - inbox handler discovery, stale receive recovery, receive retry policy, and
   transport acknowledgement coordination;
 - module identity scopes, domain-event capture, and higher-level transaction

@@ -101,6 +101,21 @@ ADRs for durable technical decisions.
   - Bondstone-owned Rebus wire envelope for durable command payloads
   - Bondstone identity headers and W3C trace header mapping
   - DI registration for outgoing Rebus outbox transport
+- Neutral hosted outbox worker:
+  - `DurableOutboxWorker` hosted-service loop over
+    `IDurableOutboxDispatcher`
+  - worker id, lease duration, batch size, polling interval, and failure delay
+    options
+  - immediate backlog draining while rows are claimed
+  - failure logging and delayed retry after unexpected dispatch failures
+  - DI registration in `Bondstone.Hosting` for the worker and default
+    dispatcher composition
+- Fluent composition guardrails:
+  - core `AddBondstone` builder
+  - outbox persistence, transport, dispatcher, and worker capability tracking
+  - PostgreSQL, Rebus, and Hosting builder extension methods
+  - validation that hosted or dispatcher-based outbox processing has both
+    persistence and transport capability
 - PostgreSQL inbox registration:
   - provider-neutral `IDurableInboxRegistrar` contract
   - `DurableInboxRegistrationResult`
@@ -138,9 +153,11 @@ ADRs for durable technical decisions.
   including scheduled rows and schema-aware service registration. They also
   cover PostgreSQL outbox dispatch lifecycle outcomes, public PostgreSQL inbox
   registration outcomes, and dispatcher composition against real PostgreSQL
-  claim, lease renewal, and outcome-recording behavior. Rebus unit tests cover
-  outgoing command transport routing, wire envelope mapping, header mapping,
-  unsupported event envelopes, destination resolution, and DI registration.
+  claim, lease renewal, and outcome-recording behavior. Hosting unit tests
+  cover hosted worker options, hosted worker loop behavior, DI registration,
+  and builder guardrails. Rebus unit tests cover outgoing command transport
+  routing, wire envelope mapping, header mapping, unsupported event envelopes,
+  destination resolution, builder transport registration, and DI registration.
 
 ## Active Rename Notes
 
@@ -158,17 +175,12 @@ broader provider APIs.
 
 Candidate concepts:
 
-- outbox stale-claim recovery orchestration and hosted worker composition built
-  around the shared claim lease state, lease renewal, failure decision policy,
-  dispatcher, outgoing Rebus command transport, and verified PostgreSQL claim
-  and lifecycle implementations;
+- outbox stale-claim recovery orchestration or advanced worker policy only
+  after the neutral outbox worker has real sample or transport-backed usage;
 - inbox handler discovery, receive retry policy, stale receive recovery,
   transport acknowledgement coordination, module identity scopes, and
   higher-level transaction helper APIs only if required by real transport or
-  sample behavior;
-- fresh `dotnet restore` timeout investigation for the PostgreSQL provider
-  dependency graph; no-restore build/test/pack and integration tests pass from
-  current restored assets.
+  sample behavior.
 
 Worker design notes:
 
@@ -222,7 +234,8 @@ Verification:
 - Dispatcher configuration binding, advanced retry policy, and dead-letter
   routing ownership.
 - Partition-key ordering and scaling semantics.
-- Hosted outbox worker loop and stale-claim recovery.
+- Stale-claim recovery, cleanup/maintenance workers, and advanced hosted
+  worker policy.
 - Inbox handler discovery, stale receive recovery, receive-side retry policy,
   transport acknowledgement coordination, module identity scopes, and
   higher-level transaction helper APIs.

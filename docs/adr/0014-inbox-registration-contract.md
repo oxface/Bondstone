@@ -109,6 +109,4 @@ Also verified the applied slice with:
 - `pnpm format:check`
 - `git diff --check`
 
-Fresh `dotnet restore` / `pnpm check` remains deferred because restore is
-currently timing out around the PostgreSQL project in this environment; the
-slice was verified against already restored assets.
+Later checkpoint verification restored the default `pnpm check` gate.

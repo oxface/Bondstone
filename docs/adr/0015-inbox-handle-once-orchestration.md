@@ -120,6 +120,4 @@ with:
 - `pnpm backend:test:integration`
 - `dotnet pack Bondstone.slnx --configuration Release --no-build --output artifacts/packages`
 
-Fresh `dotnet restore` / `pnpm check` remains deferred because restore has
-been timing out around the PostgreSQL project in this environment; the slice
-was verified against already restored assets.
+Later checkpoint verification restored the default `pnpm check` gate.

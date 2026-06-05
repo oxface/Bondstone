@@ -69,6 +69,7 @@ this adapter verifies outgoing transport behavior and header mapping only.
 
 - [0003 Package Boundaries And Target Framework](0003-package-boundaries-and-target-framework.md)
 - [0017 Outbox Dispatcher Composition](0017-outbox-dispatcher-composition.md)
+- [0020 Neutral Hosted Worker Package](0020-neutral-hosted-worker-package.md)
 
 ## Application Notes
 
@@ -82,10 +83,11 @@ this adapter verifies outgoing transport behavior and header mapping only.
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad transport support changes.
 - Application evidence: Outgoing Rebus command transport, destination
-  resolution, wire envelope, header mapping, and unit tests are applied.
+  resolution, wire envelope, header mapping, transport-only registration, and
+  unit tests are applied.
 - Pending or deferred: Rebus event publish/subscribe, receive-side inbox
-  integration, Rebus handler discovery, hosted worker registration, and
-  transport-level integration tests remain future work.
+  integration, Rebus handler discovery, and transport-level integration tests
+  remain future work.
 
 ## Verification
 

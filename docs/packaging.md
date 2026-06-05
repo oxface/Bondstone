@@ -15,6 +15,7 @@ evaluates demand and maintenance cost.
 Ship one NuGet package per initial project. Package IDs match project names:
 
 - `Bondstone`
+- `Bondstone.Hosting`
 - `Bondstone.EntityFrameworkCore`
 - `Bondstone.EntityFrameworkCore.Postgres`
 - `Bondstone.Transport.Rebus`
@@ -25,15 +26,25 @@ Use this dependency direction:
 
 ```text
 Bondstone
+Bondstone.Hosting -> Bondstone
 Bondstone.EntityFrameworkCore -> Bondstone
-Bondstone.EntityFrameworkCore.Postgres -> Bondstone.EntityFrameworkCore
+Bondstone.EntityFrameworkCore.Postgres -> Bondstone.EntityFrameworkCore, Bondstone
 Bondstone.Transport.Rebus -> Bondstone
 ```
 
-Provider-specific packages contain provider-specific behavior only.
+Provider-specific packages contain provider-specific behavior only. A provider
+package may also reference `Bondstone` directly for shared builder extension
+methods when its normal provider dependency already reaches core transitively.
 Transport-specific packages contain transport adapter behavior only.
+Reusable hosted worker composition belongs in `Bondstone.Hosting`.
 Core domain, command, messaging, and module abstractions stay in `Bondstone`
 unless a later ADR defines a narrower package split.
+
+`Bondstone` owns the lightweight `AddBondstone` service-composition builder.
+Provider, transport, and hosting packages add extension methods to that
+builder while preserving the dependency direction above. The builder is a
+guardrail for common host setup, not a replacement for lower-level
+registration methods needed by advanced consumers and tests.
 
 ## Version And Dependency Management
 

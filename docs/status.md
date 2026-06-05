@@ -20,8 +20,11 @@ Current implemented surface includes:
 - PostgreSQL provider registration, duplicate classification, inbox
   registration, outbox claiming, outbox lease renewal, and outbox dispatch
   recording;
+- neutral hosted outbox worker composition over `IDurableOutboxDispatcher`;
 - Rebus outgoing command transport for claimed outbox records, including
-  destination resolution, wire-envelope mapping, and durable header mapping.
+  destination resolution, wire-envelope mapping, and durable header mapping;
+- lightweight `AddBondstone` composition builder with outbox capability
+  validation for hosted or dispatcher-based processing.
 
 ## Verification Surface
 
@@ -34,23 +37,23 @@ Current automated coverage includes:
   transactions, savepoints, unique constraints, inbox registration, outbox
   claiming, outbox lease renewal, outbox dispatch recording,
   outbox dispatcher composition, EF persistence-scope behavior, and
-  schema-aware provider registration.
+  schema-aware provider registration;
+- hosting unit tests for outbox worker options, hosted worker loop behavior,
+  DI registration, and builder guardrails;
 - Rebus unit tests for outgoing command transport routing, wire-envelope
   mapping, durable headers, trace headers, unsupported event envelopes,
   destination resolution, and DI registration.
 
-The default quality gate remains `pnpm check`. In this environment, fresh
-restore has been timing out around the PostgreSQL project, so recent slices
-have been verified with no-restore build/test/pack commands and
-`pnpm backend:test:integration` against already restored assets.
+The default quality gate remains `pnpm check`. The current tree passes the
+default gate. Integration tests remain separate and should be run for provider
+behavior changes.
 
 ## Deferred Work
 
 Deferred extraction work includes:
 
-- hosted outbox worker loop;
-- stale-claim recovery, dead-letter routing, dispatcher configuration, and
-  hosted worker registration;
+- stale-claim recovery, dead-letter routing, cleanup/maintenance workers, and
+  advanced dispatcher or worker configuration;
 - inbox handler discovery, receive retry policy, stale receive recovery, and
   transport acknowledgement coordination;
 - module identity scopes, domain-event capture, and higher-level transaction

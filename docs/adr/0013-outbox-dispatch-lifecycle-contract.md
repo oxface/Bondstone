@@ -114,6 +114,5 @@ Read back [docs/architecture/persistence.md](../architecture/persistence.md),
 tests for dispatch success, retry scheduling, dead-lettering, stale owner
 rejection, expired lease rejection, validation, and schema-aware registration.
 Ran neutral failure-policy unit tests, formatting, no-restore build, fast
-tests, pack, and `pnpm backend:test:integration`. Fresh restore for the
-PostgreSQL provider dependency graph still times out and is tracked in the
-tactical extraction plan as a checkpoint issue.
+tests, pack, and `pnpm backend:test:integration`. Later checkpoint
+verification restored the default `pnpm check` gate.

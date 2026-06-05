@@ -1,3 +1,4 @@
+using Bondstone.Configuration;
 using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
@@ -58,6 +59,27 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         AssertContainsScoped<IDurableInboxStore>(services);
         AssertContainsScoped<IDurableOperationStateStore>(services);
         AssertContainsScopedFactory<IDurableOperationReader>(services);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UsePostgreSqlPersistence_WhenUsedInBondstoneBuilder_RegistersStoresAndMarksCapability()
+    {
+        var services = new ServiceCollection();
+        var persistenceWasMarked = false;
+
+        services.AddBondstone(builder =>
+        {
+            builder.UsePostgreSqlPersistence<PostgreSqlTestDbContext>(
+                "Host=localhost;Database=bondstone");
+
+            persistenceWasMarked = builder.Outbox.HasPersistenceProvider;
+        });
+
+        Assert.True(persistenceWasMarked);
+        AssertContainsScopedFactory<IDurableOutboxClaimer>(services);
+        AssertContainsScopedFactory<IDurableOutboxLeaseRenewer>(services);
+        AssertContainsScopedFactory<IDurableOutboxDispatchRecorder>(services);
     }
 
     private static void AssertContainsScoped<TService>(

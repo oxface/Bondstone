@@ -38,8 +38,18 @@ The adapter does not set Rebus' type header to the Bondstone message identity.
 Rebus serializers use that header for CLR type deserialization; Bondstone's
 stable message identity is carried separately.
 
+## Hosted Outbox Worker
+
+Reusable hosted worker composition lives in `Bondstone.Hosting`, not in the
+Rebus transport package. Rebus provides the `IDurableOutboxTransport`
+implementation; the neutral hosting worker calls `IDurableOutboxDispatcher`
+and sends through whichever transport adapter the application registered.
+
 ## Deferred Rebus Work
 
 Deferred Rebus work includes receive-side inbox integration, handler
-discovery, event publish/subscribe semantics, transport-level integration
-tests, and hosted outbox worker registration.
+discovery, event publish/subscribe semantics, and transport-level integration
+tests. Route or destination circuit breaking, stale-claim recovery sweeps,
+dead-letter routing, and worker metrics are hosting or persistence decisions,
+not Rebus package responsibilities unless a later ADR accepts a
+transport-specific policy.

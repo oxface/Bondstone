@@ -95,10 +95,17 @@ being the primary consumer after Bondstone packaging and samples mature.
   command send contracts, durable operation read contracts, durable message
   envelopes, persistence-neutral outbox/inbox and operation state store
   contracts, provider-neutral outbox dispatch state, send result semantics, and
-  neutral unit tests. EF Core provider-neutral entity mappings have started.
+  neutral unit tests. EF Core provider-neutral entity mappings, registration
+  helper, outbox writer, inbox store, and operation state store have started.
+  PostgreSQL integration tests have started with Testcontainers-backed
+  verification of those EF mappings and stores against PostgreSQL. PostgreSQL
+  provider registration and constraint/unique-violation classification helpers
+  exist. PostgreSQL savepoint rollback and `FOR UPDATE SKIP LOCKED` primitives
+  have been verified for future inbox and outbox APIs. Outbox dispatch state
+  includes claim lease fields.
 - Pending or deferred: `Send and wait` behavior, trace context and causation
-  propagation, envelope content type/header expansion, retry policy, EF Core
-  store implementations, PostgreSQL provider behavior, Rebus transport behavior,
+  propagation, envelope content type/header expansion, retry policy,
+  broader PostgreSQL provider behavior, Rebus transport behavior, additional
   integration tests, and samples remain future extraction work.
 
 ## Verification

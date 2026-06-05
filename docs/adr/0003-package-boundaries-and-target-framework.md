@@ -73,10 +73,13 @@ automation.
 - Application evidence: Initial package projects are included in the solution,
   package metadata is centrally managed, `Bondstone` contains initial core
   messaging and persistence contracts, and `Bondstone.EntityFrameworkCore`
-  contains initial provider-neutral persistence entity mappings.
-- Pending or deferred: PostgreSQL provider behavior, Rebus transport behavior,
-  integration tests, samples, and wider target framework support remain
-  deferred.
+  contains initial provider-neutral persistence entity mappings, outbox writer,
+  inbox store, and operation state store. `Bondstone.EntityFrameworkCore.Postgres`
+  has started with PostgreSQL dependencies, provider registration,
+  constraint/unique-violation classification, and integration tests.
+- Pending or deferred: Broader PostgreSQL provider behavior, Rebus transport
+  behavior, additional integration tests, samples, and wider target framework
+  support remain deferred.
 
 ## Verification
 

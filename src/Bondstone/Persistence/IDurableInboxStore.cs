@@ -6,7 +6,7 @@ public interface IDurableInboxStore
         DurableInboxMessageKey key,
         CancellationToken cancellationToken = default);
 
-    ValueTask<bool> TryAddAsync(
+    ValueTask AddAsync(
         DurableInboxRecord record,
         CancellationToken cancellationToken = default);
 

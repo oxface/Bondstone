@@ -26,7 +26,9 @@ public sealed class OutboxMessageEntity
         DateTimeOffset? nextAttemptAtUtc,
         DateTimeOffset? dispatchedAtUtc,
         DateTimeOffset? failedAtUtc,
-        string? failureReason)
+        string? failureReason,
+        string? claimedBy,
+        DateTimeOffset? claimedUntilUtc)
     {
         MessageId = messageId;
         MessageKind = messageKind;
@@ -49,6 +51,8 @@ public sealed class OutboxMessageEntity
         DispatchedAtUtc = dispatchedAtUtc;
         FailedAtUtc = failedAtUtc;
         FailureReason = failureReason;
+        ClaimedBy = claimedBy;
+        ClaimedUntilUtc = claimedUntilUtc;
     }
 
     private OutboxMessageEntity()
@@ -97,6 +101,10 @@ public sealed class OutboxMessageEntity
 
     public string? FailureReason { get; private set; }
 
+    public string? ClaimedBy { get; private set; }
+
+    public DateTimeOffset? ClaimedUntilUtc { get; private set; }
+
     public static OutboxMessageEntity FromRecord(DurableOutboxRecord record)
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -125,7 +133,9 @@ public sealed class OutboxMessageEntity
             dispatchState.NextAttemptAtUtc,
             dispatchState.DispatchedAtUtc,
             dispatchState.FailedAtUtc,
-            dispatchState.FailureReason);
+            dispatchState.FailureReason,
+            dispatchState.ClaimedBy,
+            dispatchState.ClaimedUntilUtc);
     }
 
     public DurableOutboxRecord ToRecord()
@@ -154,7 +164,9 @@ public sealed class OutboxMessageEntity
             NextAttemptAtUtc,
             DispatchedAtUtc,
             FailedAtUtc,
-            FailureReason);
+            FailureReason,
+            ClaimedBy,
+            ClaimedUntilUtc);
 
         return new DurableOutboxRecord(envelope, StoredAtUtc, dispatchState);
     }

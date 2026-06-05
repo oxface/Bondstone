@@ -89,7 +89,12 @@ and release-management cost.
 The package boundary, target framework, coordinated versioning, and release
 automation direction are accepted and scaffolded. Initial packages have been
 published to nuget.org. `Bondstone` contains initial core messaging and
-persistence contracts, and `Bondstone.EntityFrameworkCore` contains initial
-provider-neutral persistence entity mappings. PostgreSQL provider behavior,
-Rebus transport behavior, integration tests, and samples remain future package
+persistence contracts without Microsoft.Extensions package dependencies, and
+`Bondstone.EntityFrameworkCore` contains initial provider-neutral persistence
+entity mappings, outbox writer, inbox store, and operation state store.
+`Bondstone.EntityFrameworkCore.Postgres` has started with PostgreSQL
+dependencies, provider-specific registration and constraint/unique-violation
+classification helpers, PostgreSQL outbox claiming, and Testcontainers-backed
+integration tests. Broader PostgreSQL provider behavior, Rebus transport
+behavior, additional integration tests, and samples remain future package
 implementation work.

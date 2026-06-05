@@ -53,13 +53,38 @@ ADRs for durable technical decisions.
   - inbox message entity and configuration
   - operation state entity and configuration
   - `ApplyBondstonePersistence`
+  - `AddBondstoneEntityFrameworkCorePersistence<TDbContext>`
+- EF Core store implementations:
+  - outbox writer
+  - inbox store
+  - operation state store
+- PostgreSQL provider helpers:
+  - `AddBondstonePostgreSqlPersistence<TDbContext>`
+  - `PostgreSqlPersistenceExceptionClassifier`
+  - `PostgreSqlDurableOutboxClaimer<TDbContext>`
+- PostgreSQL outbox claiming:
+  - provider-neutral `IDurableOutboxClaimer` contract
+  - PostgreSQL `FOR UPDATE SKIP LOCKED` claim implementation
+  - scheduled pending row eligibility
+  - expired processing lease reclaim
+  - active processing lease exclusion
+  - schema-aware service registration
 - Architecture docs split into topic pages under `docs/architecture/`.
 - Neutral unit tests cover message identity registration, trace context capture,
   durable command send result semantics, durable operation state/status
   semantics, durable message envelope validation, and persistence record and
   dispatch-state validation.
-- EF Core unit tests cover entity-to-core mapping and provider-neutral model
-  metadata.
+- EF Core unit tests cover entity-to-core mapping, provider-neutral model
+  metadata, provider-neutral service registration, outbox writer staging, inbox
+  store staging, and operation state store behavior.
+- PostgreSQL integration tests cover provider-neutral EF Core schema creation
+  against PostgreSQL, outbox transaction commit/rollback behavior, and inbox
+  duplicate unique-constraint behavior. They also cover PostgreSQL registration
+  helper behavior, primary-key constraint names, inbox processed timestamps,
+  operation-state updates, outbox claim lease columns, savepoint rollback after
+  duplicate inbox inserts, `FOR UPDATE SKIP LOCKED` outbox row selection
+  against a real database, and public PostgreSQL outbox claim behavior
+  including scheduled rows and schema-aware service registration.
 
 ## Active Rename Notes
 
@@ -72,29 +97,37 @@ ADRs for durable technical decisions.
 
 ## Next Candidate Slice
 
-Continue persistence extraction without provider-specific behavior.
+Continue PostgreSQL provider extraction with real database verification before
+adding broader provider APIs.
 
 Candidate concepts:
 
-- implement EF Core outbox writer, inbox store, and operation state store
-  against the current entities;
-- unit-of-work or module persistence boundary only if required by outbox
-  atomicity.
+- provider-owned inbox duplicate-result orchestration built around the verified
+  PostgreSQL savepoint behavior;
+- outbox dispatch acknowledgement, lease renewal, retry, dead-letter, and
+  stale-claim recovery semantics built around the shared claim lease state and
+  verified PostgreSQL claim implementation;
+- unit-of-work or module persistence boundary only if required by real
+  transaction and savepoint behavior.
 
 Review pressure:
 
 - Keep EF Core package concerns out of `Bondstone` unless they are pure public
   contracts.
-- Avoid provider-specific locking, claiming, SQL, schema, and migration details.
+- Keep provider-specific locking, claiming, SQL, schema, and migration details
+  inside provider packages.
 - Preserve atomic source-state-plus-outbox semantics without recreating a
   generic mediator.
-- Create or amend an ADR if persistence boundaries imply a public unit-of-work
-  or migration policy.
+- Create or amend an ADR before introducing public conflict, claiming, leasing,
+  unit-of-work, or migration-helper APIs.
 
 Verification:
 
-- Add neutral unit tests for value semantics and required-field validation.
-- Run `pnpm check`.
+- Add Testcontainers-backed PostgreSQL `Integration` tests for provider
+  behavior.
+- Run `pnpm check` for the default gate and
+  `pnpm backend:test:integration` or targeted integration tests for provider
+  behavior.
 
 ## Deferred Work
 
@@ -108,14 +141,15 @@ Verification:
   a later durable scenario justifies it.
 - Retry, max-attempt, and dead-letter policy ownership.
 - Partition-key ordering and scaling semantics.
-- Outbox claiming, leases, and transport acknowledgement semantics.
-- EF Core store implementations and DbContext registration helpers.
+- Outbox dispatch acknowledgement, lease renewal, stale-claim recovery, retry,
+  and transport failure semantics.
+- Inbox duplicate-result orchestration across real database providers.
 - Bondstone-owned migration helpers or provider-specific migration
   conventions.
 - Operation-state transition policy and optimistic concurrency.
-- PostgreSQL claiming, locking, and provider-specific behavior.
+- Provider-specific dispatch behavior beyond PostgreSQL claiming.
 - Rebus transport adapter behavior.
-- Integration tests with neutral Bondstone fixtures.
+- Additional integration tests with neutral Bondstone fixtures.
 - Samples validating modular-monolith and service-split usage.
 
 ## ADR Checkpoints
@@ -127,7 +161,8 @@ necessary:
 - operation-state transition policy beyond the current store contract;
 - inbox/outbox entity shape and migration policy;
 - retry/dead-letter ownership;
-- provider-specific locking or claiming strategy;
+- provider-specific locking or claiming strategy beyond the current
+  PostgreSQL claim contract;
 - transport header contract;
 - sample topology or service-extraction workflow.
 

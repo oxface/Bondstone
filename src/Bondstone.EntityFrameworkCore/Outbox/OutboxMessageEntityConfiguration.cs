@@ -13,11 +13,14 @@ public sealed class OutboxMessageEntityConfiguration(string? schema = null)
     public const int PartitionKeyMaxLength = 512;
     public const int StatusMaxLength = 32;
     public const int FailureReasonMaxLength = 2048;
+    public const int ClaimedByMaxLength = 256;
 
     public void Configure(EntityTypeBuilder<OutboxMessageEntity> builder)
     {
         builder.ToTable("outbox_messages", schema);
-        builder.HasKey(x => x.MessageId);
+        builder
+            .HasKey(x => x.MessageId)
+            .HasName("PK_outbox_messages");
 
         builder.Property(x => x.MessageId).IsRequired();
         builder.Property(x => x.MessageKind).HasConversion<string>().HasMaxLength(StatusMaxLength).IsRequired();
@@ -40,8 +43,11 @@ public sealed class OutboxMessageEntityConfiguration(string? schema = null)
         builder.Property(x => x.DispatchedAtUtc);
         builder.Property(x => x.FailedAtUtc);
         builder.Property(x => x.FailureReason).HasMaxLength(FailureReasonMaxLength);
+        builder.Property(x => x.ClaimedBy).HasMaxLength(ClaimedByMaxLength);
+        builder.Property(x => x.ClaimedUntilUtc);
 
         builder.HasIndex(x => new { x.Status, x.NextAttemptAtUtc, x.StoredAtUtc });
+        builder.HasIndex(x => new { x.Status, x.ClaimedUntilUtc });
         builder.HasIndex(x => x.MessageTypeName);
         builder.HasIndex(x => x.DurableOperationId);
     }

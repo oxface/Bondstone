@@ -44,6 +44,12 @@ public sealed class InboxMessageEntity
             record.ProcessedAtUtc);
     }
 
+    public void MarkProcessed(DateTimeOffset processedAtUtc)
+    {
+        DurableInboxRecord processed = ToRecord().MarkProcessed(processedAtUtc);
+        ProcessedAtUtc = processed.ProcessedAtUtc;
+    }
+
     public DurableInboxRecord ToRecord()
     {
         return new DurableInboxRecord(

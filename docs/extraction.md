@@ -59,10 +59,22 @@ core slice has started with stable message identity contracts and the message
 type registry, durable command send contracts, durable operation read
 contracts, durable message envelopes, and initial persistence-neutral outbox
 and inbox contracts, including operation-state storage. EF Core
-provider-neutral entities and model mappings have started. `Send and wait`
-behavior, trace context and causation propagation, retry policy, EF Core store
-implementations, PostgreSQL provider behavior, Rebus transport behavior,
-integration tests, and samples remain future extraction work. General
-in-process module calls are not an extraction target unless a later ADR or
-sample exposes a durable boundary need. Do not extract the historical generic
-mediator/message-bus layer as a default Bondstone feature.
+provider-neutral entities, model mappings, registration helpers, and store
+implementations have started. `Send and wait` behavior, trace context and
+causation propagation, retry policy, broader PostgreSQL provider behavior,
+Rebus transport behavior, additional integration tests, and samples remain
+future extraction work. PostgreSQL integration tests have started with
+Testcontainers-backed verification of the provider-neutral EF Core mappings and
+stores against a real database, plus provider-specific registration and
+constraint/unique-violation classification helpers. PostgreSQL savepoint
+rollback and `FOR UPDATE SKIP LOCKED` primitives have been verified for future
+inbox and outbox APIs. Outbox dispatch state includes provider-neutral claim
+lease fields, and a narrow `IDurableOutboxClaimer` contract now has a
+PostgreSQL implementation for claiming due rows, scheduled rows, and expired
+processing leases. PostgreSQL registration passes the mapped schema to
+provider-owned claiming SQL when a non-default schema is configured. Dispatcher
+loops, dispatch acknowledgement, lease renewal, retry/dead-letter policy,
+stale-claim recovery, and broader transport behavior remain future extraction
+work. General in-process module calls are not an extraction target unless a
+later ADR or sample exposes a durable boundary need. Do not extract the
+historical generic mediator/message-bus layer as a default Bondstone feature.

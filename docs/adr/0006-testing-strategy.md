@@ -60,6 +60,21 @@ The default repository quality gate runs `Unit` and `Application` tests.
 `Integration` tests must have explicit commands because they can require Docker
 or another container runtime.
 
+## Amendments
+
+### 2026-06-04: EF Core InMemory Is Not Persistence Verification
+
+EF Core InMemory tests are acceptable only for fast package-local checks of
+entity mapping, change tracking, and boundaries such as "does not call
+SaveChanges". They must not be treated as proof of relational persistence
+semantics.
+
+Tests for database behavior, including PostgreSQL behavior, unique
+constraints, transactions, savepoints, locking, indexing, SQL generation,
+migration compatibility, inbox deduplication races, outbox claiming, or
+retry/dead-letter transitions, must be `Integration` tests backed by
+Testcontainers or an equivalent real provider fixture.
+
 ## Consequences
 
 The test suite may be heavier than a pure unit-test suite, especially around
@@ -87,14 +102,21 @@ infrastructure-backed integration checks.
   wiring, and neutral `Unit` tests for message identity, trace context, and
   durable command send results, operation state/status semantics, envelopes,
   persistence records, outbox dispatch state, and EF Core entity mappings
-  exist.
-- Pending or deferred: Broader neutral fixtures and infrastructure-backed
-  integration checks remain future work.
+  exist. Fast `Application` tests cover EF change-tracker staging boundaries.
+  PostgreSQL Testcontainers `Integration` tests cover initial EF Core schema,
+  transaction, unique-constraint, and registration-helper behavior against a
+  real database. EF Core metadata tests cover mapped primary-key names. Fast
+  PostgreSQL `Unit` tests cover unique-violation classification and
+  registration guard behavior.
+- Pending or deferred: Broader neutral fixtures and additional
+  infrastructure-backed integration checks remain future work.
 
 ## Verification
 
 Read back [docs/testing.md](../testing.md),
 [docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Ran
 `pnpm check`; formatting, restore, build, fast `Unit`/`Application` tests, and
-packaging pass. Broader neutral fixtures and infrastructure-backed integration
-checks remain pending.
+packaging pass. Targeted PostgreSQL `Integration` tests pass for the provider
+schema, primary-key constraint, transaction, duplicate-conflict,
+inbox processed-state, operation-state, registration, outbox claim lease
+columns, savepoint rollback, and `FOR UPDATE SKIP LOCKED` slices.

@@ -17,7 +17,9 @@ public sealed class DurableOutboxDispatchStateTests
             attemptCount: 2,
             nextAttemptAtUtc,
             failedAtUtc: failedAtUtc,
-            failureReason: " failed once ");
+            failureReason: " failed once ",
+            claimedBy: " dispatcher-1 ",
+            claimedUntilUtc: DateTimeOffset.Parse("2026-06-04T00:02:00+00:00"));
 
         Assert.Equal(DurableOutboxStatus.Failed, state.Status);
         Assert.Equal(2, state.AttemptCount);
@@ -25,6 +27,8 @@ public sealed class DurableOutboxDispatchStateTests
         Assert.Null(state.DispatchedAtUtc);
         Assert.Equal(failedAtUtc, state.FailedAtUtc);
         Assert.Equal(" failed once ", state.FailureReason);
+        Assert.Equal("dispatcher-1", state.ClaimedBy);
+        Assert.Equal(DateTimeOffset.Parse("2026-06-04T00:02:00+00:00"), state.ClaimedUntilUtc);
     }
 
     [Fact]
@@ -39,6 +43,8 @@ public sealed class DurableOutboxDispatchStateTests
         Assert.Null(state.DispatchedAtUtc);
         Assert.Null(state.FailedAtUtc);
         Assert.Null(state.FailureReason);
+        Assert.Null(state.ClaimedBy);
+        Assert.Null(state.ClaimedUntilUtc);
     }
 
     [Fact]
@@ -89,16 +95,40 @@ public sealed class DurableOutboxDispatchStateTests
         Assert.Equal("dispatchedAtUtc", exception.ParamName);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Constructor_WhenClaimedByIsSetWithoutClaimedUntil_Throws()
+    {
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            () => CreateState(claimedBy: "worker-1"));
+
+        Assert.Equal("claimedUntilUtc", exception.ParamName);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Constructor_WhenClaimedUntilIsSetWithoutClaimedBy_Throws()
+    {
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            () => CreateState(claimedUntilUtc: DateTimeOffset.Parse("2026-06-04T00:02:00+00:00")));
+
+        Assert.Equal("claimedBy", exception.ParamName);
+    }
+
     private static DurableOutboxDispatchState CreateState(
         DurableOutboxStatus status = DurableOutboxStatus.Pending,
         int attemptCount = 0,
         DateTimeOffset? nextAttemptAtUtc = null,
-        DateTimeOffset? dispatchedAtUtc = null)
+        DateTimeOffset? dispatchedAtUtc = null,
+        string? claimedBy = null,
+        DateTimeOffset? claimedUntilUtc = null)
     {
         return new DurableOutboxDispatchState(
             status,
             attemptCount,
             nextAttemptAtUtc,
-            dispatchedAtUtc);
+            dispatchedAtUtc,
+            claimedBy: claimedBy,
+            claimedUntilUtc: claimedUntilUtc);
     }
 }

@@ -6,13 +6,16 @@ namespace Bondstone.EntityFrameworkCore.Inbox;
 public sealed class InboxMessageEntityConfiguration(string? schema = null)
     : IEntityTypeConfiguration<InboxMessageEntity>
 {
+    public const string PrimaryKeyName = "PK_inbox_messages";
     public const int ModuleNameMaxLength = 128;
     public const int HandlerIdentityMaxLength = 512;
 
     public void Configure(EntityTypeBuilder<InboxMessageEntity> builder)
     {
         builder.ToTable("inbox_messages", schema);
-        builder.HasKey(x => new { x.ModuleName, x.MessageId, x.HandlerIdentity });
+        builder
+            .HasKey(x => new { x.ModuleName, x.MessageId, x.HandlerIdentity })
+            .HasName(PrimaryKeyName);
 
         builder.Property(x => x.MessageId).IsRequired();
         builder.Property(x => x.ModuleName).HasMaxLength(ModuleNameMaxLength).IsRequired();

@@ -21,10 +21,15 @@ public sealed class BondstoneModelBuilderExtensionsTests
 
         Assert.Equal("bondstone", entityType.GetSchema());
         Assert.Equal("outbox_messages", entityType.GetTableName());
-        Assert.Equal(nameof(OutboxMessageEntity.MessageId), Assert.Single(entityType.FindPrimaryKey()!.Properties).Name);
+        IMutableKey primaryKey = entityType.FindPrimaryKey()!;
+        Assert.Equal("PK_outbox_messages", primaryKey.GetName());
+        Assert.Equal(nameof(OutboxMessageEntity.MessageId), Assert.Single(primaryKey.Properties).Name);
         Assert.Equal(
             OutboxMessageEntityConfiguration.MessageTypeNameMaxLength,
             entityType.FindProperty(nameof(OutboxMessageEntity.MessageTypeName))!.GetMaxLength());
+        Assert.Equal(
+            OutboxMessageEntityConfiguration.ClaimedByMaxLength,
+            entityType.FindProperty(nameof(OutboxMessageEntity.ClaimedBy))!.GetMaxLength());
         Assert.Contains(
             entityType.GetIndexes(),
             index => index.Properties.Select(static property => property.Name).SequenceEqual(
@@ -32,6 +37,13 @@ public sealed class BondstoneModelBuilderExtensionsTests
                 nameof(OutboxMessageEntity.Status),
                 nameof(OutboxMessageEntity.NextAttemptAtUtc),
                 nameof(OutboxMessageEntity.StoredAtUtc),
+            ]));
+        Assert.Contains(
+            entityType.GetIndexes(),
+            index => index.Properties.Select(static property => property.Name).SequenceEqual(
+            [
+                nameof(OutboxMessageEntity.Status),
+                nameof(OutboxMessageEntity.ClaimedUntilUtc),
             ]));
     }
 
@@ -44,13 +56,15 @@ public sealed class BondstoneModelBuilderExtensionsTests
             ?? throw new InvalidOperationException("Inbox entity type was not configured.");
 
         Assert.Equal("inbox_messages", entityType.GetTableName());
+        IMutableKey primaryKey = entityType.FindPrimaryKey()!;
+        Assert.Equal(InboxMessageEntityConfiguration.PrimaryKeyName, primaryKey.GetName());
         Assert.Equal(
             [
                 nameof(InboxMessageEntity.ModuleName),
                 nameof(InboxMessageEntity.MessageId),
                 nameof(InboxMessageEntity.HandlerIdentity),
             ],
-            entityType.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
+            primaryKey.Properties.Select(static property => property.Name).ToArray());
         Assert.Equal(
             InboxMessageEntityConfiguration.HandlerIdentityMaxLength,
             entityType.FindProperty(nameof(InboxMessageEntity.HandlerIdentity))!.GetMaxLength());
@@ -65,9 +79,11 @@ public sealed class BondstoneModelBuilderExtensionsTests
             ?? throw new InvalidOperationException("Operation state entity type was not configured.");
 
         Assert.Equal("operation_states", entityType.GetTableName());
+        IMutableKey primaryKey = entityType.FindPrimaryKey()!;
+        Assert.Equal("PK_operation_states", primaryKey.GetName());
         Assert.Equal(
             nameof(OperationStateEntity.DurableOperationId),
-            Assert.Single(entityType.FindPrimaryKey()!.Properties).Name);
+            Assert.Single(primaryKey.Properties).Name);
         Assert.Equal(
             OperationStateEntityConfiguration.StatusMaxLength,
             entityType.FindProperty(nameof(OperationStateEntity.Status))!.GetMaxLength());

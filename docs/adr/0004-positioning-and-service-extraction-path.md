@@ -112,7 +112,8 @@ local sample orchestration host.
   context, durable command send contracts, durable operation read contracts,
   durable message envelopes, persistence-neutral outbox/inbox and operation
   state store contracts, provider-neutral outbox dispatch state, and send
-  result semantics. EF Core provider-neutral entity mappings have started.
+  result semantics. EF Core provider-neutral entity mappings, outbox writer,
+  inbox store, and operation state store have started.
 - Pending or deferred: Samples and integration tests that exercise
   modular-monolith and service-split usage remain pending.
 

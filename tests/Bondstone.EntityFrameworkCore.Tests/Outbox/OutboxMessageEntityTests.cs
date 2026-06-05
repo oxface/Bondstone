@@ -36,6 +36,8 @@ public sealed class OutboxMessageEntityTests
         Assert.Equal(record.DispatchState.DispatchedAtUtc, entity.DispatchedAtUtc);
         Assert.Equal(record.DispatchState.FailedAtUtc, entity.FailedAtUtc);
         Assert.Equal(record.DispatchState.FailureReason, entity.FailureReason);
+        Assert.Equal(record.DispatchState.ClaimedBy, entity.ClaimedBy);
+        Assert.Equal(record.DispatchState.ClaimedUntilUtc, entity.ClaimedUntilUtc);
     }
 
     [Fact]
@@ -74,7 +76,9 @@ public sealed class OutboxMessageEntityTests
             attemptCount: 2,
             nextAttemptAtUtc: DateTimeOffset.Parse("2026-06-04T00:01:00+00:00"),
             failedAtUtc: DateTimeOffset.Parse("2026-06-04T00:00:30+00:00"),
-            failureReason: "failed once");
+            failureReason: "failed once",
+            claimedBy: "dispatcher-1",
+            claimedUntilUtc: DateTimeOffset.Parse("2026-06-04T00:02:00+00:00"));
 
         return new DurableOutboxRecord(
             envelope,

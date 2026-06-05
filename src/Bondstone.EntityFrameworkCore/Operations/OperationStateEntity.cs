@@ -44,6 +44,22 @@ public sealed class OperationStateEntity
             state.FailureReason);
     }
 
+    public void ApplyState(DurableOperationState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        if (state.DurableOperationId != DurableOperationId)
+        {
+            throw new InvalidOperationException(
+                "Cannot apply operation state for a different durable operation id.");
+        }
+
+        Status = state.Status;
+        UpdatedAtUtc = state.UpdatedAtUtc;
+        ResultPayload = state.ResultPayload;
+        FailureReason = state.FailureReason;
+    }
+
     public DurableOperationState ToState()
     {
         return new DurableOperationState(

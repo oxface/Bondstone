@@ -8,7 +8,9 @@ public sealed record DurableOutboxDispatchState
         DateTimeOffset? nextAttemptAtUtc = null,
         DateTimeOffset? dispatchedAtUtc = null,
         DateTimeOffset? failedAtUtc = null,
-        string? failureReason = null)
+        string? failureReason = null,
+        string? claimedBy = null,
+        DateTimeOffset? claimedUntilUtc = null)
     {
         if (!Enum.IsDefined(status))
         {
@@ -26,6 +28,7 @@ public sealed record DurableOutboxDispatchState
         ValidateUtcTimestamp(nextAttemptAtUtc, nameof(nextAttemptAtUtc), "Next-attempt timestamp");
         ValidateUtcTimestamp(dispatchedAtUtc, nameof(dispatchedAtUtc), "Dispatched timestamp");
         ValidateUtcTimestamp(failedAtUtc, nameof(failedAtUtc), "Failed timestamp");
+        ValidateUtcTimestamp(claimedUntilUtc, nameof(claimedUntilUtc), "Claim lease expiration timestamp");
 
         Status = status;
         AttemptCount = attemptCount;
@@ -35,6 +38,24 @@ public sealed record DurableOutboxDispatchState
         FailureReason = string.IsNullOrWhiteSpace(failureReason)
             ? null
             : failureReason;
+        ClaimedBy = string.IsNullOrWhiteSpace(claimedBy)
+            ? null
+            : claimedBy.Trim();
+        ClaimedUntilUtc = claimedUntilUtc;
+
+        if (ClaimedBy is not null && ClaimedUntilUtc is null)
+        {
+            throw new ArgumentException(
+                "Claim lease expiration is required when claim owner is provided.",
+                nameof(claimedUntilUtc));
+        }
+
+        if (ClaimedBy is null && ClaimedUntilUtc is not null)
+        {
+            throw new ArgumentException(
+                "Claim owner is required when claim lease expiration is provided.",
+                nameof(claimedBy));
+        }
     }
 
     public static DurableOutboxDispatchState Pending { get; } = new(
@@ -52,6 +73,10 @@ public sealed record DurableOutboxDispatchState
     public DateTimeOffset? FailedAtUtc { get; }
 
     public string? FailureReason { get; }
+
+    public string? ClaimedBy { get; }
+
+    public DateTimeOffset? ClaimedUntilUtc { get; }
 
     private static void ValidateUtcTimestamp(
         DateTimeOffset? value,

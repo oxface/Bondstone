@@ -52,6 +52,15 @@ Integration tests that require external infrastructure should use
 Testcontainers or an equivalent explicit test dependency instead of ambient
 developer machine state.
 
+EF Core InMemory tests are allowed only for fast package-local checks of
+entity mapping, change-tracker behavior, and "does not call SaveChanges"
+boundaries. They are not persistence-semantics tests. Anything that depends on
+real database behavior, including PostgreSQL behavior, unique constraints,
+transactions, savepoints, locking, indexing, SQL generation, migration
+compatibility, inbox deduplication races, outbox claiming, or retry/dead-letter
+state transitions, must be an `Integration` test backed by Testcontainers or
+an equivalent real provider fixture.
+
 Keep tests grouped by package or integration boundary so they reveal package
 ownership and extraction seams.
 
@@ -87,5 +96,14 @@ tests cover core message identity registry behavior, durable command send
 result semantics, message trace context, durable operation state/status
 semantics, durable message envelope validation, and persistence record and
 dispatch-state validation. EF Core unit tests cover entity-to-core mapping and
-provider-neutral model metadata. Broader neutral fixtures and
-infrastructure-backed checks remain future application work.
+provider-neutral model metadata, plus fast `Application` tests for EF
+change-tracker staging boundaries. Infrastructure-backed checks have started
+with PostgreSQL Testcontainers tests for EF Core schema creation, transaction
+commit/rollback, inbox unique-constraint behavior, and PostgreSQL registration
+helper behavior. These tests also cover PostgreSQL primary-key constraint
+names, inbox processed timestamps, operation-state updates, savepoint rollback
+after duplicate inbox inserts, outbox claim lease columns,
+`FOR UPDATE SKIP LOCKED` outbox row selection, and public PostgreSQL outbox
+claiming for due rows, scheduled pending rows, locked-row skipping, expired
+lease reclaim, active lease exclusion, validation, and schema-aware service
+registration. Broader neutral fixtures remain future application work.

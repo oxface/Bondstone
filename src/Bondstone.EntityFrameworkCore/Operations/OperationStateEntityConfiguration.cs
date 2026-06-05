@@ -11,7 +11,9 @@ public sealed class OperationStateEntityConfiguration(string? schema = null)
     public void Configure(EntityTypeBuilder<OperationStateEntity> builder)
     {
         builder.ToTable("operation_states", schema);
-        builder.HasKey(x => x.DurableOperationId);
+        builder
+            .HasKey(x => x.DurableOperationId)
+            .HasName("PK_operation_states");
 
         builder.Property(x => x.DurableOperationId).IsRequired();
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(StatusMaxLength).IsRequired();

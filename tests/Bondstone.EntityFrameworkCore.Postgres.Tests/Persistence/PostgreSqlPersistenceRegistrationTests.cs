@@ -62,6 +62,8 @@ public sealed partial class PostgreSqlPersistenceTests
         IEntityFrameworkCorePersistenceScope persistenceScope =
             scope.ServiceProvider.GetRequiredService<IEntityFrameworkCorePersistenceScope>();
         IDurableOutboxClaimer claimer = scope.ServiceProvider.GetRequiredService<IDurableOutboxClaimer>();
+        IDurableOutboxLeaseRenewer leaseRenewer =
+            scope.ServiceProvider.GetRequiredService<IDurableOutboxLeaseRenewer>();
         PostgreSqlSchemaTestDbContext context =
             scope.ServiceProvider.GetRequiredService<PostgreSqlSchemaTestDbContext>();
         IDurableOutboxDispatchRecorder dispatchStore =
@@ -99,6 +101,13 @@ public sealed partial class PostgreSqlPersistenceTests
         Assert.Equal(DurableOutboxStatus.Processing, record.DispatchState.Status);
         Assert.Equal("dispatcher-1", record.DispatchState.ClaimedBy);
         Assert.Equal(claimTimeUtc.AddMinutes(5), record.DispatchState.ClaimedUntilUtc);
+
+        bool renewed = await leaseRenewer.RenewAsync(
+            envelope.MessageId,
+            "dispatcher-1",
+            TimeSpan.FromMinutes(10));
+
+        Assert.True(renewed);
 
         bool dispatched = await dispatchStore.MarkDispatchedAsync(
             envelope.MessageId,

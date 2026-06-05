@@ -82,7 +82,8 @@ Deferred durable-command work remains tracked:
 
 - any `send and wait` helper and timeout/polling policy;
 - trace context and causation propagation rules;
-- retry, max-attempt, and dead-letter policy ownership;
+- dispatcher configuration, advanced retry policy, and dead-letter routing
+  ownership;
 - inbox handler discovery, receive retry policy, stale receive recovery, and
   transport acknowledgement coordination;
 - deeper partition-key ordering and scaling semantics;

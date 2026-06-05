@@ -42,6 +42,11 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
                 serviceProvider.GetRequiredService<TDbContext>(),
                 serviceProvider.GetService<TimeProvider>(),
                 schema));
+        services.TryAddScoped<IDurableOutboxLeaseRenewer>(serviceProvider =>
+            new PostgreSqlDurableOutboxLeaseRenewer<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>(),
+                serviceProvider.GetService<TimeProvider>(),
+                schema));
         services.TryAddScoped<IDurableOutboxDispatchRecorder>(serviceProvider =>
             new PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>(),

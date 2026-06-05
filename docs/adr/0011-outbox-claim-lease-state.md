@@ -1,6 +1,6 @@
 # 0011 Outbox Claim Lease State
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-05
 
@@ -56,11 +56,31 @@ become eligible and how attempt counts are incremented, but later dispatcher
 APIs must still decide how failures schedule retries and when messages become
 dead-lettered.
 
+## Amendment 2026-06-05: Lease Renewal Boundary
+
+Bondstone now defines a provider-neutral `IDurableOutboxLeaseRenewer` contract.
+The contract renews the lease for one claimed outbox message when the row is
+still `Processing`, still owned by the supplied claimant, and still inside the
+active lease at the provider's current time.
+
+Renewal accepts a message id, stable `claimedBy` worker identity, and positive
+lease duration. Implementations extend `ClaimedUntilUtc` to current provider
+time plus the requested duration and return `true` only when the row was
+updated. Missing rows, rows owned by another worker, non-processing rows, and
+expired leases return `false`.
+
+This boundary exists so long-running delivery attempts can keep ownership
+without holding a database transaction open. It does not dispatch messages,
+renew batches, recover stale claims, schedule retries, dead-letter messages,
+route dead letters, or start hosted workers.
+
 ## Application Notes
 
 - Current contract: Outbox dispatch state carries optional claim ownership and
   lease expiration fields. EF Core maps those fields provider-neutrally, and
   provider claim implementations write them when a row is claimed.
+  `IDurableOutboxLeaseRenewer` renews active claim leases for a single claimed
+  row.
 - Stable docs: Current persistence rules are described in
   [docs/architecture/persistence.md](../architecture/persistence.md), with
   extraction state in [docs/extraction.md](../extraction.md) and
@@ -68,12 +88,13 @@ dead-lettered.
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad durable behavior, provider support, or migration policy changes.
 - Application evidence: Core dispatch state, EF mappings, EF metadata tests,
-  PostgreSQL schema tests, and PostgreSQL outbox claimer tests include claim
-  lease fields.
+  PostgreSQL schema tests, PostgreSQL outbox claimer tests, and PostgreSQL
+  lease-renewal tests include claim lease fields and renewal behavior.
 - Pending or deferred: Dispatch loops, transport send implementation, lease
-  renewal, retry-delay calculation, max-attempt policy, stale claim recovery,
-  dead-letter routing, additional provider implementations, and migration
-  helpers remain future work.
+  batch renewal, stale claim recovery, dead-letter routing, dispatcher
+  configuration, additional provider implementations, and migration helpers
+  remain future work. Basic retry versus dead-letter failure decisions are now
+  covered by ADR 0013.
 
 ## Verification
 
@@ -81,4 +102,6 @@ Read back [docs/architecture/persistence.md](../architecture/persistence.md),
 [docs/extraction.md](../extraction.md), and
 [docs/extraction-plan.md](../extraction-plan.md). Ran `pnpm check` and
 `pnpm backend:test:integration`; default and integration checks pass after
-applying the claim lease state.
+applying the claim lease state. Later verification for the lease-renewal
+amendment ran no-restore build, targeted PostgreSQL unit/integration tests,
+fast tests, pack, format check, diff check, and `pnpm backend:test:integration`.

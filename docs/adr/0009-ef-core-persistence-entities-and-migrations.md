@@ -123,10 +123,11 @@ orchestration remain deferred.
   transaction behavior, exist.
 - Pending or deferred: Inbox handler discovery, receive-side retry, stale
   receive recovery, transport acknowledgement, module identity scopes,
-  higher-level transaction helper APIs, retry-delay calculation, max-attempt
-  policy, dead-letter routing, migration helpers, additional provider-specific
-  lifecycle implementations, additional integration tests, and samples remain
-  future work.
+  higher-level transaction helper APIs, dead-letter routing, dispatcher
+  configuration, migration helpers, additional provider-specific lifecycle
+  implementations, additional integration tests, and samples remain future
+  work. Basic retry versus dead-letter failure decisions are now covered by
+  ADR 0013.
 
 ## Verification
 

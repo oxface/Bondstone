@@ -11,6 +11,8 @@ The PostgreSQL package owns:
 - PostgreSQL duplicate/unique-violation classification;
 - PostgreSQL inbox registration using `INSERT ... ON CONFLICT DO NOTHING`;
 - PostgreSQL outbox claiming using `FOR UPDATE SKIP LOCKED`;
+- PostgreSQL outbox lease renewal using claim-owner and lease-aware `UPDATE`
+  statements;
 - PostgreSQL outbox dispatch outcome recording using claim-owner and
   lease-aware `UPDATE` statements.
 
@@ -23,6 +25,9 @@ tables.
 `PostgreSqlDurableOutboxClaimer<TDbContext>` claims due pending rows and
 expired processing rows, writes claim lease state, respects scheduled pending
 rows, and returns claimed records.
+
+`PostgreSqlDurableOutboxLeaseRenewer<TDbContext>` extends the claim lease for
+one active processing row when the claimant still owns an unexpired lease.
 
 `PostgreSqlDurableOutboxDispatchRecorder<TDbContext>` records dispatch success,
 retry scheduling, and dead-letter outcomes only when the row is still
@@ -50,6 +55,8 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
 - `FOR UPDATE SKIP LOCKED` selection;
 - outbox claiming for due rows, scheduled rows, locked-row skipping, expired
   lease reclaim, and active lease exclusion;
+- outbox lease renewal for active claims, wrong owners, expired leases, and
+  non-processing rows;
 - outbox dispatch success, retry, dead-letter, stale claimant, and expired
   lease outcomes;
 - schema-aware provider registration and composition with the EF persistence
@@ -58,8 +65,7 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
 ## Deferred PostgreSQL Work
 
 Deferred PostgreSQL work includes migration helpers, provider-specific payload
-storage such as `jsonb`, lease renewal, retry-delay calculation, max-attempt
-policy, dispatcher loops, dead-letter routing, stale-claim recovery, receive
-retry policy, stale receive recovery, transport acknowledgement, and
-higher-level module identity or transaction helpers above the EF persistence
-scope.
+storage such as `jsonb`, dispatcher loops, dead-letter routing, stale-claim
+recovery, receive retry policy, stale receive recovery, transport
+acknowledgement, and higher-level module identity or transaction helpers above
+the EF persistence scope.

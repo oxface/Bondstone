@@ -69,12 +69,22 @@ ADRs for durable technical decisions.
   - expired processing lease reclaim
   - active processing lease exclusion
   - schema-aware service registration
+- Outbox lease renewal:
+  - provider-neutral `IDurableOutboxLeaseRenewer` contract
+  - PostgreSQL claim-owner and lease-aware renewal implementation
+  - active claim renewal, wrong-owner rejection, expired-lease rejection, and
+    non-processing row rejection
 - PostgreSQL outbox dispatch lifecycle:
   - provider-neutral `IDurableOutboxDispatchRecorder` contract
   - dispatch success recording
   - retry scheduling after failure
   - dead-letter outcome recording
   - stale claimant and expired lease rejection
+- Outbox failure decision policy:
+  - provider-neutral `IDurableOutboxFailurePolicy` contract
+  - default `DurableOutboxFailurePolicy`
+  - deterministic retry versus dead-letter decisions from attempt count,
+    maximum attempts, retry delays, and failure timestamp
 - PostgreSQL inbox registration:
   - provider-neutral `IDurableInboxRegistrar` contract
   - `DurableInboxRegistrationResult`
@@ -129,10 +139,9 @@ adding broader provider APIs.
 
 Candidate concepts:
 
-- outbox lease renewal, retry-delay calculation, max-attempt policy,
-  dead-letter routing, and stale-claim recovery orchestration built around the
-  shared claim lease state and verified PostgreSQL claim and lifecycle
-  implementations;
+- outbox stale-claim recovery orchestration and dispatcher composition built
+  around the shared claim lease state, lease renewal, failure decision policy,
+  and verified PostgreSQL claim and lifecycle implementations;
 - inbox handler discovery, receive retry policy, stale receive recovery,
   transport acknowledgement coordination, module identity scopes, and
   higher-level transaction helper APIs only if required by real transport or
@@ -140,6 +149,23 @@ Candidate concepts:
 - fresh `dotnet restore` timeout investigation for the PostgreSQL provider
   dependency graph; no-restore build/test/pack and integration tests pass from
   current restored assets.
+
+Worker design notes:
+
+- Default to competitive workers that claim rows with provider-specific
+  skip-locked or equivalent semantics. Do not require leader election or a
+  singleton sweeper until load testing or real usage proves the need.
+- Keep the first outbox dispatcher as a plain composable class before adding
+  hosted-service registration.
+- Outbox workers should compose the existing primitives: claimer, lease
+  renewer, transport sender, failure policy, and dispatch recorder.
+- Consider Brighter-style worker options when the dispatcher ADR is written:
+  polling interval, batch size, lease duration, worker identity, and minimum
+  message age.
+- Keep archiving and cleanup separate from dispatch. Consider route or
+  destination circuit breaking only after transport routing exists.
+- Keep at-least-once delivery explicit. Consumers must use an inbox or
+  idempotent handlers because duplicate sends remain possible.
 
 Review pressure:
 
@@ -173,10 +199,11 @@ Verification:
 - PostgreSQL `jsonb` payload mapping if provider-specific payload storage
   becomes useful; keep generic EF mappings provider-neutral unless an ADR
   accepts the cross-provider migration cost.
-- Retry-delay calculation, max-attempt, and dead-letter routing ownership.
+- Dispatcher configuration binding, advanced retry policy, and dead-letter
+  routing ownership.
 - Partition-key ordering and scaling semantics.
-- Outbox dispatcher loop, transport send implementation, lease renewal,
-  stale-claim recovery, retry-delay calculation, and max-attempt semantics.
+- Outbox dispatcher loop, transport send implementation, and stale-claim
+  recovery.
 - Inbox handler discovery, stale receive recovery, receive-side retry policy,
   transport acknowledgement coordination, module identity scopes, and
   higher-level transaction helper APIs.
@@ -196,7 +223,7 @@ necessary:
 - public API changes to durable send/result/trace contracts;
 - operation-state transition policy beyond the current store contract;
 - inbox/outbox entity shape and migration policy;
-- retry/dead-letter ownership;
+- advanced retry policy, dead-letter routing, or dispatcher ownership;
 - provider-specific locking or claiming strategy beyond the current
   PostgreSQL claim contract;
 - transport header contract;

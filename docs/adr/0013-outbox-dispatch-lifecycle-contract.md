@@ -1,6 +1,6 @@
 # 0013 Outbox Dispatch Lifecycle Contract
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-05
 
@@ -65,11 +65,31 @@ Retry delay calculation, max-attempt policy, lease renewal, dispatcher loops,
 and dead-letter routing remain deliberately deferred. A future dispatcher can
 compose those policies around this recorder.
 
+## Amendment 2026-06-05: Failure Decision Policy
+
+Bondstone now defines a small provider-neutral failure decision policy around
+the dispatch recorder. The policy decides whether a failed claimed outbox
+record should be retried or dead-lettered from the current attempt count,
+maximum attempts, retry delay sequence, failure reason, and failure timestamp.
+
+This is still not a dispatcher. The policy does not claim rows, send transport
+messages, renew leases, record database updates, route dead letters, discover
+handlers, or register background workers. Future dispatchers and transport
+adapters can compose the policy with `IDurableOutboxDispatchRecorder`.
+
+The default policy uses five maximum attempts and the initial retry delay
+sequence `0s`, `10s`, `1m`, `5m`, and `15m`. Consumers that need different
+behavior can construct the policy with explicit `maxAttempts` and
+`retryDelays` parameters. A later ADR is still required before introducing
+configuration binding, hosted dispatchers, transport-specific retry behavior,
+or dead-letter routing.
+
 ## Application Notes
 
 - Current contract: `IDurableOutboxDispatchRecorder` records dispatch success,
   retry scheduling, and dead-letter outcomes for currently claimed outbox
-  rows.
+  rows. `IDurableOutboxFailurePolicy` and `DurableOutboxFailurePolicy` decide
+  retry versus dead-letter after a failed claimed delivery attempt.
 - Stable docs: Current persistence rules are described in
   [docs/architecture/persistence.md](../architecture/persistence.md), with
   extraction state in [docs/extraction.md](../extraction.md) and
@@ -78,11 +98,12 @@ compose those policies around this recorder.
   broad durable behavior, provider support, or migration policy changes.
 - Application evidence: Core dispatch lifecycle contract, PostgreSQL
   implementation, PostgreSQL service registration, and Testcontainers-backed
-  lifecycle tests are applied.
+  lifecycle tests are applied. Core failure decision policy and neutral unit
+  tests are applied.
 - Pending or deferred: Dispatcher loops, transport send implementation,
-  retry-delay calculation, max-attempt policy, lease renewal, stale claim
-  recovery orchestration, dead-letter routing, provider implementations beyond
-  PostgreSQL, and migration helpers remain future work.
+  stale claim recovery orchestration, dead-letter routing, configuration
+  binding, provider implementations beyond PostgreSQL, and migration helpers
+  remain future work. Lease renewal is covered by ADR 0011.
 
 ## Verification
 
@@ -91,7 +112,7 @@ Read back [docs/architecture/persistence.md](../architecture/persistence.md),
 [docs/extraction-plan.md](../extraction-plan.md). Ran targeted PostgreSQL
 tests for dispatch success, retry scheduling, dead-lettering, stale owner
 rejection, expired lease rejection, validation, and schema-aware registration.
-Ran formatting, no-restore build, fast tests, pack, and
-`pnpm backend:test:integration`. Fresh restore for the PostgreSQL provider
-dependency graph still times out and is tracked in the tactical extraction
-plan as a checkpoint issue.
+Ran neutral failure-policy unit tests, formatting, no-restore build, fast
+tests, pack, and `pnpm backend:test:integration`. Fresh restore for the
+PostgreSQL provider dependency graph still times out and is tracked in the
+tactical extraction plan as a checkpoint issue.

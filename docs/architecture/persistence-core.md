@@ -25,10 +25,23 @@ ownership and lease expiry, and increment attempt count at claim time. The
 claim boundary does not dispatch messages, acknowledge transport delivery,
 renew leases, schedule retries, dead-letter messages, or clean up stale work.
 
+`IDurableOutboxLeaseRenewer` extends the active lease for one claimed outbox
+message. Implementations update the lease only when the row is still
+`Processing`, still owned by the supplied claimant, and still inside the active
+lease. The renewal boundary does not claim rows, renew batches, dispatch
+messages, recover stale claims, or schedule retries.
+
 `IDurableOutboxDispatchRecorder` records the result of a claimed delivery
 attempt. It records dispatch success, schedules retry after a failure, or marks
 a claimed row as dead-lettered. These updates are claim-owner and lease-time
 aware.
+
+`IDurableOutboxFailurePolicy` decides whether a failed claimed delivery attempt
+should be retried or dead-lettered. The default
+`DurableOutboxFailurePolicy` uses a maximum-attempt threshold and retry delay
+sequence to produce a deterministic `DurableOutboxFailureDecision`. It is a
+pure policy and does not claim rows, send transport messages, update
+persistence, renew leases, route dead letters, or register background workers.
 
 ## Inbox
 

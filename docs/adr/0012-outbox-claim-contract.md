@@ -71,9 +71,10 @@ choose equivalent SQL or locking strategies later.
   pending rows, locked-row skipping, expired lease reclaim, active lease
   exclusion, and schema-aware registration.
 - Pending or deferred: Dispatch loops, transport send implementation,
-  lease renewal, retry-delay calculation, max-attempt policy, stale claim
-  recovery, dead-letter routing, provider implementations beyond PostgreSQL,
-  and migration helpers remain future work.
+  stale claim recovery, dead-letter routing, dispatcher configuration,
+  provider implementations beyond PostgreSQL, and migration helpers remain
+  future work. Lease renewal is now covered by ADR 0011, and basic retry versus
+  dead-letter failure decisions are now covered by ADR 0013.
 
 ## Verification
 

@@ -39,9 +39,9 @@ The current contracts intentionally do not decide:
 - a public unit-of-work abstraction;
 - Bondstone-owned migration helpers or provider-specific migration
   conventions;
-- outbox dispatcher loops, transport send implementation, lease renewal,
-  retry-delay policy, max-attempt policy, stale-claim recovery, or dead-letter
-  routing;
+- outbox dispatcher loops, transport send implementation, stale-claim
+  recovery, dead-letter routing, configuration binding, or hosted worker
+  registration;
 - inbox handler discovery, stale receive recovery, receive retry policy, and
   transport acknowledgement coordination;
 - module identity scopes, domain-event capture, and higher-level transaction

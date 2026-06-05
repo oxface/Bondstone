@@ -98,9 +98,10 @@ tests expose the shape those APIs need.
   another package needs reuse.
 - Pending or deferred: Migration helpers, inbox handler discovery, receive-side
   retry, stale receive recovery, transport acknowledgement, module identity
-  scopes, higher-level transaction helper APIs, lease renewal, retry-delay
-  calculation, max-attempt policy, dead-letter routing, operation-state
-  concurrency, and samples remain future work.
+  scopes, higher-level transaction helper APIs, stale-claim recovery,
+  dead-letter routing, dispatcher configuration, operation-state concurrency,
+  and samples remain future work. Lease renewal is now covered by ADR 0011, and
+  basic retry versus dead-letter failure decisions are now covered by ADR 0013.
 
 ## Verification
 

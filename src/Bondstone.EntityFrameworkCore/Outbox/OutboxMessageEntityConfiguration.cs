@@ -6,6 +6,7 @@ namespace Bondstone.EntityFrameworkCore.Outbox;
 public sealed class OutboxMessageEntityConfiguration(string? schema = null)
     : IEntityTypeConfiguration<OutboxMessageEntity>
 {
+    public const string TableName = "outbox_messages";
     public const int MessageTypeNameMaxLength = 256;
     public const int ModuleNameMaxLength = 128;
     public const int TraceParentMaxLength = 128;
@@ -17,7 +18,7 @@ public sealed class OutboxMessageEntityConfiguration(string? schema = null)
 
     public void Configure(EntityTypeBuilder<OutboxMessageEntity> builder)
     {
-        builder.ToTable("outbox_messages", schema);
+        builder.ToTable(TableName, schema);
         builder
             .HasKey(x => x.MessageId)
             .HasName("PK_outbox_messages");

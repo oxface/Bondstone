@@ -72,9 +72,13 @@ inbox and outbox APIs. Outbox dispatch state includes provider-neutral claim
 lease fields, and a narrow `IDurableOutboxClaimer` contract now has a
 PostgreSQL implementation for claiming due rows, scheduled rows, and expired
 processing leases. PostgreSQL registration passes the mapped schema to
-provider-owned claiming SQL when a non-default schema is configured. Dispatcher
-loops, dispatch acknowledgement, lease renewal, retry/dead-letter policy,
-stale-claim recovery, and broader transport behavior remain future extraction
-work. General in-process module calls are not an extraction target unless a
-later ADR or sample exposes a durable boundary need. Do not extract the
-historical generic mediator/message-bus layer as a default Bondstone feature.
+provider-owned SQL when a non-default schema is configured. A narrow
+`IDurableOutboxDispatchRecorder` contract now has a PostgreSQL implementation for
+recording dispatch success, retry scheduling, and dead-letter outcomes after a
+claimed delivery attempt. Dispatcher loops, transport send implementation,
+lease renewal, retry-delay calculation, max-attempt policy, stale-claim
+recovery, dead-letter routing, and broader transport behavior remain future
+extraction work. General in-process module calls are not an extraction target
+unless a later ADR or sample exposes a durable boundary need. Do not extract
+the historical generic mediator/message-bus layer as a default Bondstone
+feature.

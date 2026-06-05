@@ -70,9 +70,10 @@ choose equivalent SQL or locking strategies later.
   tests are applied. Tests cover validation, pending due rows, scheduled
   pending rows, locked-row skipping, expired lease reclaim, active lease
   exclusion, and schema-aware registration.
-- Pending or deferred: Dispatch loops, transport acknowledgement,
-  lease renewal, retry/dead-letter policy, stale claim recovery, provider
-  implementations beyond PostgreSQL, and migration helpers remain future work.
+- Pending or deferred: Dispatch loops, transport send implementation,
+  lease renewal, retry-delay calculation, max-attempt policy, stale claim
+  recovery, dead-letter routing, provider implementations beyond PostgreSQL,
+  and migration helpers remain future work.
 
 ## Verification
 

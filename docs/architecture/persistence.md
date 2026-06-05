@@ -20,6 +20,15 @@ count at claim time. The claim boundary does not dispatch messages,
 acknowledge transport delivery, renew leases, schedule retries, dead-letter
 messages, or clean up stale work.
 
+`IDurableOutboxDispatchRecorder` is the core outcome boundary for claimed outbox
+messages after a transport delivery attempt. It records dispatch success,
+schedules retry after a failure, or marks a claimed row as dead-lettered. These
+updates are claim-owner and lease-time aware: providers update a row only when
+it is still `Processing`, still owned by the supplied claimant, and still
+inside the active claim lease. Retry scheduling moves a row back to `Pending`
+with `NextAttemptAtUtc`; retry-delay calculation and max-attempt policy remain
+outside this contract.
+
 `DurableOutboxRecord` is a persistence-neutral record for a stored envelope,
 the UTC time it was stored, and its current `DurableOutboxDispatchState`.
 
@@ -57,7 +66,9 @@ does not enforce transition rules, concurrency tokens, or timeout behavior.
 `Bondstone.EntityFrameworkCore` owns provider-neutral EF Core entity classes
 and model mappings for outbox, inbox, and operation-state persistence. Entity
 classes use an `Entity` suffix to keep EF persistence implementation separate
-from core records and states.
+from core records and states. The provider-neutral EF mappings own canonical
+Bondstone table names and shared model limits; provider packages adapt those
+names to their SQL dialect instead of redefining them.
 
 `ApplyBondstonePersistence` applies the generic EF Core mappings to a
 consumer-owned `ModelBuilder`. Consumers own migrations for now; Bondstone
@@ -97,8 +108,11 @@ schema creation, transaction commit/rollback, and inbox uniqueness. It also
 owns the first outbox claim implementation:
 `PostgreSqlDurableOutboxClaimer<TDbContext>` claims due pending rows and
 expired processing rows with `FOR UPDATE SKIP LOCKED`, writes claim lease
-state, respects scheduled pending rows, and returns the claimed records. Public
-PostgreSQL registration is available through
+state, respects scheduled pending rows, and returns the claimed records.
+`PostgreSqlDurableOutboxDispatchRecorder<TDbContext>` records claim-owner and
+lease-aware dispatch success, retry scheduling, and dead-letter outcomes with
+PostgreSQL `UPDATE` statements. Public PostgreSQL registration is available
+through
 `AddBondstonePostgreSqlPersistence<TDbContext>`, which configures Npgsql for a
 consumer-owned DbContext and composes the provider-neutral Bondstone EF
 registrations. When the consumer maps Bondstone persistence to a non-default
@@ -108,9 +122,14 @@ primary-key names for the Bondstone tables; only names that need cross-package
 reuse should be exposed as constants. `PostgreSqlPersistenceExceptionClassifier`
 recognizes Npgsql unique-constraint violations, including inbox-message
 duplicate violations against those mapped constraints, for provider-aware
-orchestration code. PostgreSQL migration-helper, lease renewal, dispatch
-acknowledgement, retry/dead-letter policy, and inbox duplicate-result
-orchestration APIs remain deferred.
+orchestration code. PostgreSQL migration-helper, lease renewal, retry-delay
+calculation, max-attempt policy, dispatcher loops, dead-letter routing, and
+inbox duplicate-result orchestration APIs remain deferred.
+
+Provider-specific storage optimizations, such as PostgreSQL `jsonb` payload
+columns, are not part of the current generic EF model. If a provider later
+adds such features, they must remain opt-in or be covered by an ADR because
+they can make cross-provider database migration more expensive.
 
 PostgreSQL integration tests verify two provider primitives that future public
 APIs can build on: duplicate inbox inserts can be rolled back to a savepoint
@@ -120,6 +139,9 @@ other. They also verify that the public PostgreSQL outbox claimer claims due
 rows, writes lease state, skips locked rows, reclaims expired processing rows,
 ignores active processing leases, respects scheduled pending rows, and works
 through schema-aware service registration.
+They also verify that the public PostgreSQL outbox dispatch recorder marks
+claimed rows as dispatched, schedules retry, marks dead-lettered rows, rejects
+stale claimants, and rejects outcomes after the claim lease expires.
 
 ## Deferred Persistence Decisions
 
@@ -128,8 +150,8 @@ The current core contracts intentionally do not decide:
 - a public unit-of-work abstraction;
 - Bondstone-owned migration helpers or provider-specific migration
   conventions;
-- outbox dispatcher loops, dispatch acknowledgement, lease renewal,
-  retry-delay policy, or dead-letter ownership;
+- outbox dispatcher loops, transport send implementation, lease renewal,
+  retry-delay policy, max-attempt policy, or dead-letter routing;
 - inbox handle-once orchestration across a user handler and processed marker;
 - inbox duplicate-result orchestration across real database providers;
 - operation-state transition policy or optimistic concurrency;

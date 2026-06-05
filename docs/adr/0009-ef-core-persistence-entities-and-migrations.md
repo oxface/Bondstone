@@ -105,9 +105,9 @@ abstractions, and inbox handle-once orchestration remain deferred.
   behavior, plus inbox processed-state, operation-state, outbox claim lease
   columns, savepoint rollback, and `FOR UPDATE SKIP LOCKED` behavior, exist.
 - Pending or deferred: Inbox duplicate-result orchestration,
-  retry/dead-letter policy, migration helpers, additional provider-specific
-  claiming implementations, additional integration tests, and samples remain
-  future work.
+  retry-delay calculation, max-attempt policy, dead-letter routing, migration
+  helpers, additional provider-specific lifecycle implementations, additional
+  integration tests, and samples remain future work.
 
 ## Verification
 

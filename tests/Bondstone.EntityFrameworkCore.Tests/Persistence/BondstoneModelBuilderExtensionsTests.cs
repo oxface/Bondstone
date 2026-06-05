@@ -20,7 +20,7 @@ public sealed class BondstoneModelBuilderExtensionsTests
             ?? throw new InvalidOperationException("Outbox entity type was not configured.");
 
         Assert.Equal("bondstone", entityType.GetSchema());
-        Assert.Equal("outbox_messages", entityType.GetTableName());
+        Assert.Equal(OutboxMessageEntityConfiguration.TableName, entityType.GetTableName());
         IMutableKey primaryKey = entityType.FindPrimaryKey()!;
         Assert.Equal("PK_outbox_messages", primaryKey.GetName());
         Assert.Equal(nameof(OutboxMessageEntity.MessageId), Assert.Single(primaryKey.Properties).Name);

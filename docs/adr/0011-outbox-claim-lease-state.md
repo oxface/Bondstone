@@ -70,9 +70,10 @@ dead-lettered.
 - Application evidence: Core dispatch state, EF mappings, EF metadata tests,
   PostgreSQL schema tests, and PostgreSQL outbox claimer tests include claim
   lease fields.
-- Pending or deferred: Dispatch loops, dispatch acknowledgement, lease
-  renewal, retry/dead-letter policy, stale claim recovery, additional provider
-  implementations, and migration helpers remain future work.
+- Pending or deferred: Dispatch loops, transport send implementation, lease
+  renewal, retry-delay calculation, max-attempt policy, stale claim recovery,
+  dead-letter routing, additional provider implementations, and migration
+  helpers remain future work.
 
 ## Verification
 

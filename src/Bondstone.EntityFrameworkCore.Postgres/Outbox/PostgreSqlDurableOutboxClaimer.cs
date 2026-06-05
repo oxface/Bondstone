@@ -13,7 +13,7 @@ public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
     where TDbContext : DbContext
 {
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
-    private readonly string _tableName = BuildTableName(schema);
+    private readonly string _tableName = PostgreSqlOutboxTableIdentifier.BuildTableName(schema);
 
     public async ValueTask<IReadOnlyList<DurableOutboxRecord>> ClaimAsync(
         string claimedBy,
@@ -99,17 +99,5 @@ public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
         }
 
         return claimedBy.Trim();
-    }
-
-    private static string BuildTableName(string? schema)
-    {
-        return string.IsNullOrWhiteSpace(schema)
-            ? QuoteIdentifier("outbox_messages")
-            : $"{QuoteIdentifier(schema.Trim())}.{QuoteIdentifier("outbox_messages")}";
-    }
-
-    private static string QuoteIdentifier(string value)
-    {
-        return "\"" + value.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
     }
 }

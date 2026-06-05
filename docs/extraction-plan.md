@@ -69,6 +69,12 @@ ADRs for durable technical decisions.
   - expired processing lease reclaim
   - active processing lease exclusion
   - schema-aware service registration
+- PostgreSQL outbox dispatch lifecycle:
+  - provider-neutral `IDurableOutboxDispatchRecorder` contract
+  - dispatch success recording
+  - retry scheduling after failure
+  - dead-letter outcome recording
+  - stale claimant and expired lease rejection
 - Architecture docs split into topic pages under `docs/architecture/`.
 - Neutral unit tests cover message identity registration, trace context capture,
   durable command send result semantics, durable operation state/status
@@ -84,7 +90,8 @@ ADRs for durable technical decisions.
   operation-state updates, outbox claim lease columns, savepoint rollback after
   duplicate inbox inserts, `FOR UPDATE SKIP LOCKED` outbox row selection
   against a real database, and public PostgreSQL outbox claim behavior
-  including scheduled rows and schema-aware service registration.
+  including scheduled rows and schema-aware service registration. They also
+  cover PostgreSQL outbox dispatch lifecycle outcomes.
 
 ## Active Rename Notes
 
@@ -104,11 +111,15 @@ Candidate concepts:
 
 - provider-owned inbox duplicate-result orchestration built around the verified
   PostgreSQL savepoint behavior;
-- outbox dispatch acknowledgement, lease renewal, retry, dead-letter, and
-  stale-claim recovery semantics built around the shared claim lease state and
-  verified PostgreSQL claim implementation;
+- outbox lease renewal, retry-delay calculation, max-attempt policy,
+  dead-letter routing, and stale-claim recovery orchestration built around the
+  shared claim lease state and verified PostgreSQL claim and lifecycle
+  implementations;
 - unit-of-work or module persistence boundary only if required by real
   transaction and savepoint behavior.
+- fresh `dotnet restore` timeout investigation for the PostgreSQL provider
+  dependency graph; no-restore build/test/pack and integration tests pass from
+  current restored assets.
 
 Review pressure:
 
@@ -139,10 +150,13 @@ Verification:
 - Neutral envelope headers if multiple adapters need cross-cutting metadata.
 - Scheduling, TTL, priority, reply-to, tenant, or transport-native metadata if
   a later durable scenario justifies it.
-- Retry, max-attempt, and dead-letter policy ownership.
+- PostgreSQL `jsonb` payload mapping if provider-specific payload storage
+  becomes useful; keep generic EF mappings provider-neutral unless an ADR
+  accepts the cross-provider migration cost.
+- Retry-delay calculation, max-attempt, and dead-letter routing ownership.
 - Partition-key ordering and scaling semantics.
-- Outbox dispatch acknowledgement, lease renewal, stale-claim recovery, retry,
-  and transport failure semantics.
+- Outbox dispatcher loop, transport send implementation, lease renewal,
+  stale-claim recovery, retry-delay calculation, and max-attempt semantics.
 - Inbox duplicate-result orchestration across real database providers.
 - Bondstone-owned migration helpers or provider-specific migration
   conventions.

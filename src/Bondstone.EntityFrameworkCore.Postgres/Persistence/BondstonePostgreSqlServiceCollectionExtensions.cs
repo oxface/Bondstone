@@ -32,6 +32,10 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
                 serviceProvider.GetRequiredService<TDbContext>(),
                 serviceProvider.GetService<TimeProvider>(),
                 schema));
+        services.TryAddScoped<IDurableOutboxDispatchRecorder>(serviceProvider =>
+            new PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>(),
+                schema));
 
         return services;
     }

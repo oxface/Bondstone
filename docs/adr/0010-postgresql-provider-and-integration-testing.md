@@ -53,9 +53,9 @@ semantics. Fast `Unit` and `Application` tests continue to cover pure mapping
 and change-tracker staging boundaries only.
 
 Higher-level conflict handling, savepoint usage, operation-state concurrency,
-lease renewal, retry-delay policy, dead-letter ownership, and migration helper
-design remain deferred until real PostgreSQL tests expose the shape those APIs
-need.
+lease renewal, retry-delay calculation, max-attempt policy, dead-letter
+routing, and migration helper design remain deferred until real PostgreSQL
+tests expose the shape those APIs need.
 
 ## Application Notes
 
@@ -81,8 +81,9 @@ need.
   live with the provider-neutral EF mappings; constants are exposed only where
   another package needs reuse.
 - Pending or deferred: Migration helpers, public inbox duplicate-result
-  orchestration, lease renewal, dispatch acknowledgement, retry/dead-letter
-  policy, operation-state concurrency, and samples remain future work.
+  orchestration, lease renewal, retry-delay calculation, max-attempt policy,
+  dead-letter routing, operation-state concurrency, and samples remain future
+  work.
 
 ## Verification
 

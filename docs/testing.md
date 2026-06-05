@@ -106,4 +106,6 @@ after duplicate inbox inserts, outbox claim lease columns,
 `FOR UPDATE SKIP LOCKED` outbox row selection, and public PostgreSQL outbox
 claiming for due rows, scheduled pending rows, locked-row skipping, expired
 lease reclaim, active lease exclusion, validation, and schema-aware service
-registration. Broader neutral fixtures remain future application work.
+registration. They also cover PostgreSQL outbox dispatch success, retry
+scheduling, dead-letter outcomes, stale-claimant rejection, and expired-lease
+rejection. Broader neutral fixtures remain future application work.

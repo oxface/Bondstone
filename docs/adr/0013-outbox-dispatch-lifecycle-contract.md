@@ -100,10 +100,11 @@ or dead-letter routing.
   implementation, PostgreSQL service registration, and Testcontainers-backed
   lifecycle tests are applied. Core failure decision policy and neutral unit
   tests are applied.
-- Pending or deferred: Dispatcher loops, transport send implementation,
+- Pending or deferred: Hosted worker loops, transport adapter implementations,
   stale claim recovery orchestration, dead-letter routing, configuration
   binding, provider implementations beyond PostgreSQL, and migration helpers
-  remain future work. Lease renewal is covered by ADR 0011.
+  remain future work. Lease renewal is covered by ADR 0011, and plain
+  dispatcher composition is covered by ADR 0017.
 
 ## Verification
 

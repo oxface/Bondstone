@@ -85,6 +85,22 @@ ADRs for durable technical decisions.
   - default `DurableOutboxFailurePolicy`
   - deterministic retry versus dead-letter decisions from attempt count,
     maximum attempts, retry delays, and failure timestamp
+- Outbox dispatcher composition:
+  - provider-neutral `IDurableOutboxDispatcher` contract
+  - provider-neutral `IDurableOutboxTransport` contract
+  - default plain `DurableOutboxDispatcher` class for one claimed batch
+  - `DurableOutboxDispatchResult` count summary
+  - composition of claimer, lease renewer, transport sender, failure policy,
+    and dispatch recorder
+  - PostgreSQL integration coverage for success, retry, and dead-letter
+    outcomes with real provider persistence and fake transport
+- Rebus outgoing command transport:
+  - `RebusDurableOutboxTransport` implementation of
+    `IDurableOutboxTransport`
+  - target-module to Rebus destination-address resolution
+  - Bondstone-owned Rebus wire envelope for durable command payloads
+  - Bondstone identity headers and W3C trace header mapping
+  - DI registration for outgoing Rebus outbox transport
 - PostgreSQL inbox registration:
   - provider-neutral `IDurableInboxRegistrar` contract
   - `DurableInboxRegistrationResult`
@@ -120,8 +136,11 @@ ADRs for durable technical decisions.
   duplicate inbox inserts, `FOR UPDATE SKIP LOCKED` outbox row selection
   against a real database, and public PostgreSQL outbox claim behavior
   including scheduled rows and schema-aware service registration. They also
-  cover PostgreSQL outbox dispatch lifecycle outcomes and public PostgreSQL
-  inbox registration outcomes.
+  cover PostgreSQL outbox dispatch lifecycle outcomes, public PostgreSQL inbox
+  registration outcomes, and dispatcher composition against real PostgreSQL
+  claim, lease renewal, and outcome-recording behavior. Rebus unit tests cover
+  outgoing command transport routing, wire envelope mapping, header mapping,
+  unsupported event envelopes, destination resolution, and DI registration.
 
 ## Active Rename Notes
 
@@ -134,14 +153,15 @@ ADRs for durable technical decisions.
 
 ## Next Candidate Slice
 
-Continue PostgreSQL provider extraction with real database verification before
-adding broader provider APIs.
+Continue worker and transport extraction with real verification before adding
+broader provider APIs.
 
 Candidate concepts:
 
-- outbox stale-claim recovery orchestration and dispatcher composition built
+- outbox stale-claim recovery orchestration and hosted worker composition built
   around the shared claim lease state, lease renewal, failure decision policy,
-  and verified PostgreSQL claim and lifecycle implementations;
+  dispatcher, outgoing Rebus command transport, and verified PostgreSQL claim
+  and lifecycle implementations;
 - inbox handler discovery, receive retry policy, stale receive recovery,
   transport acknowledgement coordination, module identity scopes, and
   higher-level transaction helper APIs only if required by real transport or
@@ -155,11 +175,10 @@ Worker design notes:
 - Default to competitive workers that claim rows with provider-specific
   skip-locked or equivalent semantics. Do not require leader election or a
   singleton sweeper until load testing or real usage proves the need.
-- Keep the first outbox dispatcher as a plain composable class before adding
-  hosted-service registration.
+- Keep hosted-service registration separate from the plain outbox dispatcher.
 - Outbox workers should compose the existing primitives: claimer, lease
   renewer, transport sender, failure policy, and dispatch recorder.
-- Consider Brighter-style worker options when the dispatcher ADR is written:
+- Consider Brighter-style worker options when the hosted worker ADR is written:
   polling interval, batch size, lease duration, worker identity, and minimum
   message age.
 - Keep archiving and cleanup separate from dispatch. Consider route or
@@ -182,6 +201,7 @@ Verification:
 
 - Add Testcontainers-backed PostgreSQL `Integration` tests for provider
   behavior.
+- Add Rebus unit or transport-backed tests for adapter behavior.
 - Run `pnpm check` for the default gate and
   `pnpm backend:test:integration` or targeted integration tests for provider
   behavior.
@@ -202,8 +222,7 @@ Verification:
 - Dispatcher configuration binding, advanced retry policy, and dead-letter
   routing ownership.
 - Partition-key ordering and scaling semantics.
-- Outbox dispatcher loop, transport send implementation, and stale-claim
-  recovery.
+- Hosted outbox worker loop and stale-claim recovery.
 - Inbox handler discovery, stale receive recovery, receive-side retry policy,
   transport acknowledgement coordination, module identity scopes, and
   higher-level transaction helper APIs.
@@ -211,7 +230,7 @@ Verification:
   conventions.
 - Operation-state transition policy and optimistic concurrency.
 - Provider-specific dispatch behavior beyond PostgreSQL claiming.
-- Rebus transport adapter behavior.
+- Rebus receive-side inbox integration and event publish/subscribe behavior.
 - Additional integration tests with neutral Bondstone fixtures.
 - Samples validating modular-monolith and service-split usage.
 

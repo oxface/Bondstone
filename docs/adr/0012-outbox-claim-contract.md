@@ -70,11 +70,12 @@ choose equivalent SQL or locking strategies later.
   tests are applied. Tests cover validation, pending due rows, scheduled
   pending rows, locked-row skipping, expired lease reclaim, active lease
   exclusion, and schema-aware registration.
-- Pending or deferred: Dispatch loops, transport send implementation,
+- Pending or deferred: Hosted worker loops, transport adapter implementations,
   stale claim recovery, dead-letter routing, dispatcher configuration,
   provider implementations beyond PostgreSQL, and migration helpers remain
-  future work. Lease renewal is now covered by ADR 0011, and basic retry versus
-  dead-letter failure decisions are now covered by ADR 0013.
+  future work. Lease renewal is now covered by ADR 0011, basic retry versus
+  dead-letter failure decisions are now covered by ADR 0013, and plain
+  dispatcher composition is covered by ADR 0017.
 
 ## Verification
 

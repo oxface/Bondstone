@@ -54,8 +54,8 @@ of an explicit migration step.
 
 ## Current Status
 
-This extraction strategy is accepted and documented. Core, EF Core, and
-PostgreSQL slices have started and are tracked in
+This extraction strategy is accepted and documented. Core, EF Core,
+PostgreSQL, and Rebus transport slices have started and are tracked in
 [status.md](status.md) and [extraction-plan.md](extraction-plan.md).
 
 General in-process module calls are not an extraction target unless a later ADR

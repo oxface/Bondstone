@@ -39,6 +39,8 @@ because a module moves from in-process composition to a separate service.
   store, and persistence-scope rules.
 - [persistence-postgresql.md](persistence-postgresql.md) records PostgreSQL
   provider behavior.
+- [transport-rebus.md](transport-rebus.md) records Rebus transport adapter
+  behavior.
 
 ## Related Docs
 

@@ -59,6 +59,8 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
   non-processing rows;
 - outbox dispatch success, retry, dead-letter, stale claimant, and expired
   lease outcomes;
+- outbox dispatcher composition using real PostgreSQL claim, lease renewal,
+  and dispatch outcome recording with fake transport success and failure;
 - schema-aware provider registration and composition with the EF persistence
   scope.
 

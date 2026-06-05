@@ -64,6 +64,31 @@ public sealed class MessageTraceContextTests
         }
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void TryGetW3CTraceId_WhenTraceParentIsValid_ReturnsTraceId()
+    {
+        var traceContext = new MessageTraceContext(
+            "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00");
+
+        bool parsed = traceContext.TryGetW3CTraceId(out string? traceId);
+
+        Assert.True(parsed);
+        Assert.Equal("4bf92f3577b34da6a3ce929d0e0e4736", traceId);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void TryGetW3CTraceId_WhenTraceParentIsInvalid_ReturnsFalse()
+    {
+        var traceContext = new MessageTraceContext("not-a-traceparent");
+
+        bool parsed = traceContext.TryGetW3CTraceId(out string? traceId);
+
+        Assert.False(parsed);
+        Assert.Null(traceId);
+    }
+
     private static ActivityListener CreateActivityListener(string sourceName)
     {
         var listener = new ActivityListener

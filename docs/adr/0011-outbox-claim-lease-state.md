@@ -90,11 +90,11 @@ route dead letters, or start hosted workers.
 - Application evidence: Core dispatch state, EF mappings, EF metadata tests,
   PostgreSQL schema tests, PostgreSQL outbox claimer tests, and PostgreSQL
   lease-renewal tests include claim lease fields and renewal behavior.
-- Pending or deferred: Dispatch loops, transport send implementation, lease
-  batch renewal, stale claim recovery, dead-letter routing, dispatcher
+- Pending or deferred: Hosted worker loops, transport adapter implementations,
+  lease batch renewal, stale claim recovery, dead-letter routing, dispatcher
   configuration, additional provider implementations, and migration helpers
   remain future work. Basic retry versus dead-letter failure decisions are now
-  covered by ADR 0013.
+  covered by ADR 0013, and plain dispatcher composition is covered by ADR 0017.
 
 ## Verification
 

@@ -40,7 +40,10 @@ tracking can provide it explicitly.
 `traceContext` carries distributed tracing metadata, such as W3C `traceparent`,
 `tracestate`, and baggage. It can be captured from `Activity.Current` in normal
 .NET execution and can be mapped to or from transport adapters such as Rebus.
-This replaces loose correlation-id parameters for cross-layer tracing.
+`MessageTraceContext` exposes W3C trace-id parsing through .NET
+`ActivityContext` APIs so transport adapters do not need handwritten
+traceparent parsers. This replaces loose correlation-id parameters for
+cross-layer tracing.
 
 `causationId` identifies the immediate Bondstone message that caused the send.
 It is separate from distributed tracing: trace context follows the workflow,
@@ -71,6 +74,12 @@ operation ids, trace context, causation, partition key, payload, and optional
 metadata are stored as separate boundary fields instead of being inferred from
 CLR names or transport details.
 
+`Bondstone.Transport.Rebus` currently maps outgoing command envelopes to Rebus
+explicit routing sends. The adapter preserves Bondstone message identity in
+Bondstone-specific headers and maps trace context to W3C transport headers.
+Receive-side Rebus inbox integration and event publish/subscribe remain
+deferred.
+
 Future envelope fields remain open. Content type is the most likely next
 addition if Bondstone needs to support non-JSON payloads or make JSON explicit.
 Neutral headers may be added if multiple adapters need cross-cutting metadata
@@ -84,13 +93,14 @@ Deferred durable-command work remains tracked:
 - trace context and causation propagation rules;
 - dispatcher configuration, advanced retry policy, and dead-letter routing
   ownership;
+- transport-specific receive adapters and publish/subscribe behavior;
 - inbox handler discovery, receive retry policy, stale receive recovery, and
   transport acknowledgement coordination;
 - deeper partition-key ordering and scaling semantics;
 - content type or neutral header support if adapters need it;
 - scheduling, TTL, priority, reply-to, tenant, or transport-native metadata if
   a later durable scenario justifies it;
-- EF Core outbox persistence and transaction integration.
+- hosted worker registration and transport integration.
 
 ## Message Identity Names
 

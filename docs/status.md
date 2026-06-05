@@ -13,12 +13,15 @@ Current implemented surface includes:
 - core persistence records and boundaries for outbox, inbox, operation state,
   outbox claiming, outbox lease renewal, outbox dispatch recording, inbox
   registration, and delegate-based inbox handle-once execution, plus
-  provider-neutral outbox failure decisions;
+  provider-neutral outbox failure decisions and plain outbox dispatch
+  composition;
 - provider-neutral EF Core entity mappings, outbox writer, inbox store,
   operation state store, and EF persistence scope;
 - PostgreSQL provider registration, duplicate classification, inbox
   registration, outbox claiming, outbox lease renewal, and outbox dispatch
-  recording.
+  recording;
+- Rebus outgoing command transport for claimed outbox records, including
+  destination resolution, wire-envelope mapping, and durable header mapping.
 
 ## Verification Surface
 
@@ -30,7 +33,11 @@ Current automated coverage includes:
 - PostgreSQL Testcontainers integration tests for real schema creation,
   transactions, savepoints, unique constraints, inbox registration, outbox
   claiming, outbox lease renewal, outbox dispatch recording,
-  EF persistence-scope behavior, and schema-aware provider registration.
+  outbox dispatcher composition, EF persistence-scope behavior, and
+  schema-aware provider registration.
+- Rebus unit tests for outgoing command transport routing, wire-envelope
+  mapping, durable headers, trace headers, unsupported event envelopes,
+  destination resolution, and DI registration.
 
 The default quality gate remains `pnpm check`. In this environment, fresh
 restore has been timing out around the PostgreSQL project, so recent slices
@@ -41,15 +48,14 @@ have been verified with no-restore build/test/pack commands and
 
 Deferred extraction work includes:
 
-- outbox dispatcher loop and transport send implementation;
+- hosted outbox worker loop;
 - stale-claim recovery, dead-letter routing, dispatcher configuration, and
   hosted worker registration;
 - inbox handler discovery, receive retry policy, stale receive recovery, and
   transport acknowledgement coordination;
 - module identity scopes, domain-event capture, and higher-level transaction
   helpers above the EF persistence scope;
-- transport adapters, starting with Rebus after the dispatcher boundary is
-  stable;
+- Rebus receive-side inbox integration and event publish/subscribe behavior;
 - provider-specific payload storage such as PostgreSQL `jsonb`, migration
   helpers, broader provider support, samples, and additional integration
   fixtures.

@@ -1,6 +1,6 @@
 namespace Bondstone.Utility;
 
-internal static class StringExtensions
+public static class StringExtensions
 {
     public static string? NormalizeOptional(this string? value)
     {

@@ -43,6 +43,17 @@ sequence to produce a deterministic `DurableOutboxFailureDecision`. It is a
 pure policy and does not claim rows, send transport messages, update
 persistence, renew leases, route dead letters, or register background workers.
 
+`IDurableOutboxTransport` is the minimal transport boundary for sending a
+claimed `DurableOutboxRecord`. Transport adapters own routing, serialization,
+broker-specific acknowledgement, and transport-native behavior.
+
+`IDurableOutboxDispatcher` is the dispatch boundary. The default
+`DurableOutboxDispatcher` implementation is a plain composable class for
+dispatching one batch when called. It composes claiming, per-record lease
+renewal, transport send, failure decision, and outcome recording. It is not a
+hosted service and does not own polling, leader election, singleton sweeper
+coordination, route circuit breaking, archiving, or dead-letter routing.
+
 ## Inbox
 
 `DurableInboxMessageKey` identifies receive-side deduplication by stable

@@ -21,6 +21,25 @@ public sealed record MessageTraceContext
 
     public string? Baggage { get; }
 
+    public bool TryGetW3CTraceId(out string? traceId)
+    {
+        traceId = null;
+
+        if (!ActivityContext.TryParse(TraceParent, TraceState, out ActivityContext activityContext))
+        {
+            return false;
+        }
+
+        string parsedTraceId = activityContext.TraceId.ToHexString();
+        if (parsedTraceId.All(static character => character == '0'))
+        {
+            return false;
+        }
+
+        traceId = parsedTraceId;
+        return true;
+    }
+
     public static MessageTraceContext? CaptureCurrent()
     {
         Activity? activity = Activity.Current;

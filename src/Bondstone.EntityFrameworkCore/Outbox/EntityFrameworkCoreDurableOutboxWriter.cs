@@ -14,7 +14,7 @@ public sealed class EntityFrameworkCoreDurableOutboxWriter<TDbContext>(
 
     public ValueTask WriteAsync(
         DurableMessageEnvelope envelope,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(envelope);
 

@@ -6,5 +6,5 @@ public interface IDurableOutboxWriter
 {
     ValueTask WriteAsync(
         DurableMessageEnvelope envelope,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 }

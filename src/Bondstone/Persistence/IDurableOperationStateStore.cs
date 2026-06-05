@@ -6,5 +6,5 @@ public interface IDurableOperationStateStore : IDurableOperationReader
 {
     ValueTask SaveAsync(
         DurableOperationState state,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 }

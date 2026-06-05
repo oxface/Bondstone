@@ -6,7 +6,7 @@ public interface IDurableOutboxDispatchRecorder
         Guid messageId,
         string claimedBy,
         DateTimeOffset dispatchedAtUtc,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 
     ValueTask<bool> ScheduleRetryAsync(
         Guid messageId,
@@ -14,12 +14,12 @@ public interface IDurableOutboxDispatchRecorder
         string failureReason,
         DateTimeOffset failedAtUtc,
         DateTimeOffset nextAttemptAtUtc,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 
     ValueTask<bool> MarkDeadLetteredAsync(
         Guid messageId,
         string claimedBy,
         string failureReason,
         DateTimeOffset failedAtUtc,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 }

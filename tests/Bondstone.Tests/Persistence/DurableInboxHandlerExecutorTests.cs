@@ -229,7 +229,7 @@ public sealed class DurableInboxHandlerExecutorTests
 
         public ValueTask<DurableInboxRegistrationResult> RegisterAsync(
             DurableInboxRecord record,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             Record = record;
             return ValueTask.FromResult(result);
@@ -246,14 +246,14 @@ public sealed class DurableInboxHandlerExecutorTests
 
         public ValueTask<DurableInboxRecord?> GetAsync(
             DurableInboxMessageKey key,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             return ValueTask.FromResult<DurableInboxRecord?>(null);
         }
 
         public ValueTask AddAsync(
             DurableInboxRecord record,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             return ValueTask.CompletedTask;
         }
@@ -261,7 +261,7 @@ public sealed class DurableInboxHandlerExecutorTests
         public ValueTask MarkProcessedAsync(
             DurableInboxMessageKey key,
             DateTimeOffset processedAtUtc,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             if (MarkProcessedException is not null)
             {

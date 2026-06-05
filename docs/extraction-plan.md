@@ -135,6 +135,11 @@ ADRs for durable technical decisions.
     primitives
   - PostgreSQL verification for commit, rollback, and existing transaction
     ownership
+- Cross-package AddBondstone host wiring smoke test:
+  - preferred fluent composition with PostgreSQL persistence, Rebus transport,
+    and hosted outbox worker
+  - scoped dispatcher graph resolution without requiring live PostgreSQL or
+    broker infrastructure
 - Architecture docs split into topic pages under `docs/architecture/`.
 - Neutral unit tests cover message identity registration, trace context capture,
   durable command send result semantics, durable operation state/status

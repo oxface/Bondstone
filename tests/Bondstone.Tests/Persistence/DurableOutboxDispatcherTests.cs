@@ -125,10 +125,10 @@ public sealed class DurableOutboxDispatcherTests
     [Trait("Category", "Unit")]
     public async Task DispatchAsync_WhenCancellationIsRequested_RethrowsCancellation()
     {
-        using var cancellationTokenSource = new CancellationTokenSource();
-        await cancellationTokenSource.CancelAsync();
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
         DurableOutboxRecord record = CreateRecord(Guid.Parse("b23f236b-722c-4a91-b03e-75e658e8f3d9"));
-        var transport = new FakeTransport { Exception = new OperationCanceledException(cancellationTokenSource.Token) };
+        var transport = new FakeTransport { Exception = new OperationCanceledException(cts.Token) };
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
             new FakeLeaseRenewer(),
@@ -138,7 +138,7 @@ public sealed class DurableOutboxDispatcherTests
             async () => await dispatcher.DispatchAsync(
                 "dispatcher-1",
                 TimeSpan.FromMinutes(5),
-                cancellationToken: cancellationTokenSource.Token));
+                ct: cts.Token));
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public sealed class DurableOutboxDispatcherTests
             string claimedBy,
             TimeSpan leaseDuration,
             int maxCount = 100,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             ClaimedByValues.Add(claimedBy);
             return ValueTask.FromResult(records);
@@ -219,7 +219,7 @@ public sealed class DurableOutboxDispatcherTests
             Guid messageId,
             string claimedBy,
             TimeSpan leaseDuration,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             RenewedMessageIds.Add(messageId);
             return ValueTask.FromResult(RenewResult);
@@ -234,7 +234,7 @@ public sealed class DurableOutboxDispatcherTests
 
         public ValueTask SendAsync(
             DurableOutboxRecord record,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             if (Exception is not null)
             {
@@ -262,7 +262,7 @@ public sealed class DurableOutboxDispatcherTests
             Guid messageId,
             string claimedBy,
             DateTimeOffset dispatchedAtUtc,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             DispatchedMessageIds.Add(messageId);
             return ValueTask.FromResult(RecordResult);
@@ -274,7 +274,7 @@ public sealed class DurableOutboxDispatcherTests
             string failureReason,
             DateTimeOffset failedAtUtc,
             DateTimeOffset nextAttemptAtUtc,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             RetryMessageIds.Add(messageId);
             FailureReasons.Add(failureReason);
@@ -286,7 +286,7 @@ public sealed class DurableOutboxDispatcherTests
             string claimedBy,
             string failureReason,
             DateTimeOffset failedAtUtc,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             DeadLetteredMessageIds.Add(messageId);
             FailureReasons.Add(failureReason);

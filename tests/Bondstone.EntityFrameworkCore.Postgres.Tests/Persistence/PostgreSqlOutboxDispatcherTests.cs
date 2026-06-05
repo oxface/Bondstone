@@ -180,7 +180,7 @@ public sealed partial class PostgreSqlPersistenceTests
 
         public ValueTask SendAsync(
             DurableOutboxRecord record,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             _messageIds.Add(record.Envelope.MessageId);
             return ValueTask.CompletedTask;
@@ -191,7 +191,7 @@ public sealed partial class PostgreSqlPersistenceTests
     {
         public ValueTask SendAsync(
             DurableOutboxRecord record,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             throw exception;
         }

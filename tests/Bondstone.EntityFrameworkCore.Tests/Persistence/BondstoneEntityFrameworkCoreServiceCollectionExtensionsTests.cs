@@ -86,14 +86,14 @@ public sealed class BondstoneEntityFrameworkCoreServiceCollectionExtensionsTests
     {
         public ValueTask<DurableInboxRecord?> GetAsync(
             DurableInboxMessageKey key,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             throw new NotSupportedException();
         }
 
         public ValueTask AddAsync(
             DurableInboxRecord record,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             throw new NotSupportedException();
         }
@@ -101,7 +101,7 @@ public sealed class BondstoneEntityFrameworkCoreServiceCollectionExtensionsTests
         public ValueTask MarkProcessedAsync(
             DurableInboxMessageKey key,
             DateTimeOffset processedAtUtc,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             throw new NotSupportedException();
         }

@@ -49,6 +49,8 @@ Start with:
   tooling that Bondstone does not need.
 - Product behavior, domain examples, sample services, and runtime integration
   scenarios belong in samples or tests, not in core library packages.
+- Use `ct` for `CancellationToken` parameters in C# source and tests according
+  to [docs/repository.md](docs/repository.md).
 
 ## Architecture Direction
 

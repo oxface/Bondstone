@@ -35,7 +35,7 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
         Guid messageId,
         string claimedBy,
         DateTimeOffset dispatchedAtUtc,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         string normalizedClaimedBy = NormalizeClaimedBy(claimedBy);
         ValidateUtcTimestamp(dispatchedAtUtc, nameof(dispatchedAtUtc), "Dispatched timestamp");
@@ -66,7 +66,7 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
                 new NpgsqlParameter("processing", DurableOutboxStatus.Processing.ToString()),
                 new NpgsqlParameter("claimedBy", normalizedClaimedBy),
             ],
-            cancellationToken);
+            ct);
 
         return rowCount == 1;
     }
@@ -77,7 +77,7 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
         string failureReason,
         DateTimeOffset failedAtUtc,
         DateTimeOffset nextAttemptAtUtc,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         string normalizedClaimedBy = NormalizeClaimedBy(claimedBy);
         string normalizedFailureReason = NormalizeFailureReason(failureReason);
@@ -119,7 +119,7 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
                 new NpgsqlParameter("processing", DurableOutboxStatus.Processing.ToString()),
                 new NpgsqlParameter("claimedBy", normalizedClaimedBy),
             ],
-            cancellationToken);
+            ct);
 
         return rowCount == 1;
     }
@@ -129,7 +129,7 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
         string claimedBy,
         string failureReason,
         DateTimeOffset failedAtUtc,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         string normalizedClaimedBy = NormalizeClaimedBy(claimedBy);
         string normalizedFailureReason = NormalizeFailureReason(failureReason);
@@ -162,7 +162,7 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
                 new NpgsqlParameter("processing", DurableOutboxStatus.Processing.ToString()),
                 new NpgsqlParameter("claimedBy", normalizedClaimedBy),
             ],
-            cancellationToken);
+            ct);
 
         return rowCount == 1;
     }

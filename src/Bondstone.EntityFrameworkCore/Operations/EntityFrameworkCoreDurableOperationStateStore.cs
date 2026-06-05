@@ -11,24 +11,24 @@ public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext>(
 {
     public async ValueTask<DurableOperationState?> GetStateAsync(
         Guid durableOperationId,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         OperationStateEntity? entity = await context
             .Set<OperationStateEntity>()
-            .FindAsync([durableOperationId], cancellationToken);
+            .FindAsync([durableOperationId], ct);
 
         return entity?.ToState();
     }
 
     public async ValueTask SaveAsync(
         DurableOperationState state,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(state);
 
         OperationStateEntity? existing = await context
             .Set<OperationStateEntity>()
-            .FindAsync([state.DurableOperationId], cancellationToken);
+            .FindAsync([state.DurableOperationId], ct);
 
         if (existing is null)
         {

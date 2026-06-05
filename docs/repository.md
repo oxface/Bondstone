@@ -82,6 +82,13 @@ Use Release Please for release pull requests, changelog updates, GitHub
 releases, and tags. Use GitHub Actions for package verification and NuGet
 publishing from release events or explicit manual dispatch.
 
+## C# Conventions
+
+Use `ct` as the standard parameter and local variable name for
+`CancellationToken` values in Bondstone C# source and tests. This convention
+applies to public APIs as well as implementations because C# parameter names
+are visible to named-argument callers.
+
 ## Current Status
 
 This structure is accepted. Current package implementation and verification

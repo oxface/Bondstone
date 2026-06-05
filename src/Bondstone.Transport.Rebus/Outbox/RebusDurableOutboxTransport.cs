@@ -12,10 +12,10 @@ public sealed class RebusDurableOutboxTransport(
 {
     public async ValueTask SendAsync(
         DurableOutboxRecord record,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
-        cancellationToken.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         DurableMessageEnvelope envelope = record.Envelope;
         if (envelope.MessageKind != MessageKind.Command)

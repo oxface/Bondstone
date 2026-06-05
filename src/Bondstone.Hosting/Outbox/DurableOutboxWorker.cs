@@ -14,16 +14,16 @@ public sealed class DurableOutboxWorker(
 {
     private readonly DurableOutboxWorkerOptions _options = GetValidatedOptions(options);
 
-    public override Task StartAsync(CancellationToken cancellationToken)
+    public override Task StartAsync(CancellationToken ct)
     {
         ValidateDispatcherRegistration();
 
-        return base.StartAsync(cancellationToken);
+        return base.StartAsync(ct);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
             DurableOutboxDispatchResult? result = null;
 
@@ -37,9 +37,9 @@ public sealed class DurableOutboxWorker(
                     _options.WorkerId,
                     _options.LeaseDuration,
                     _options.BatchSize,
-                    stoppingToken);
+                    ct);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 break;
             }
@@ -50,26 +50,26 @@ public sealed class DurableOutboxWorker(
                     "Durable outbox worker {WorkerId} failed while dispatching a batch.",
                     _options.WorkerId);
 
-                await DelayAsync(_options.FailureDelay, stoppingToken);
+                await DelayAsync(_options.FailureDelay, ct);
                 continue;
             }
 
             if (result.ClaimedCount == 0)
             {
-                await DelayAsync(_options.PollingInterval, stoppingToken);
+                await DelayAsync(_options.PollingInterval, ct);
             }
         }
     }
 
     private static async Task DelayAsync(
         TimeSpan delay,
-        CancellationToken cancellationToken)
+        CancellationToken ct)
     {
         try
         {
-            await Task.Delay(delay, cancellationToken);
+            await Task.Delay(delay, ct);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
         }
     }

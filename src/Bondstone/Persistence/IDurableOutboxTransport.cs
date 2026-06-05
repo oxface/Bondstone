@@ -4,5 +4,5 @@ public interface IDurableOutboxTransport
 {
     ValueTask SendAsync(
         DurableOutboxRecord record,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 }

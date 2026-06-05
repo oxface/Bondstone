@@ -6,5 +6,5 @@ public interface IDurableOutboxDispatcher
         string claimedBy,
         TimeSpan leaseDuration,
         int maxCount = 100,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 }

@@ -35,7 +35,7 @@ public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
         string claimedBy,
         TimeSpan leaseDuration,
         int maxCount = 100,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         string normalizedClaimedBy = NormalizeClaimedBy(claimedBy);
 
@@ -100,7 +100,7 @@ public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
                 new NpgsqlParameter("claimedBy", normalizedClaimedBy),
                 new NpgsqlParameter("claimedUntilUtc", claimedUntilUtc))
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .ToListAsync(ct);
 
         return entities
             .Select(static entity => entity.ToRecord())

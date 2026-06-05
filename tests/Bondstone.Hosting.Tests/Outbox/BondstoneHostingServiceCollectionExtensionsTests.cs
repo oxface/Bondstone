@@ -107,7 +107,7 @@ public sealed class BondstoneHostingServiceCollectionExtensionsTests
             string claimedBy,
             TimeSpan leaseDuration,
             int maxCount = 100,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             return ValueTask.FromResult(new DurableOutboxDispatchResult(0, 0, 0, 0, 0));
         }

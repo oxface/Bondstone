@@ -8,7 +8,7 @@ public interface IDurableCommandSender
     ValueTask<DurableCommandSendResult> SendAsync<TCommand>(
         TCommand command,
         string targetModule,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
         where TCommand : IDurableCommand;
 
     ValueTask<DurableCommandSendResult> SendAsync<TCommand>(
@@ -18,6 +18,6 @@ public interface IDurableCommandSender
         Guid? durableOperationId = null,
         MessageTraceContext? traceContext = null,
         Guid? causationId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
         where TCommand : IDurableCommand;
 }

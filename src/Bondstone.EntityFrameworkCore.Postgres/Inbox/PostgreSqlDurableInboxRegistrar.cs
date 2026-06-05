@@ -32,7 +32,7 @@ public sealed class PostgreSqlDurableInboxRegistrar<TDbContext>(
 
     public async ValueTask<DurableInboxRegistrationResult> RegisterAsync(
         DurableInboxRecord record,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 
@@ -92,7 +92,7 @@ public sealed class PostgreSqlDurableInboxRegistrar<TDbContext>(
 
         if (originalState != ConnectionState.Open)
         {
-            await connection.OpenAsync(cancellationToken);
+            await connection.OpenAsync(ct);
         }
 
         try
@@ -108,9 +108,9 @@ public sealed class PostgreSqlDurableInboxRegistrar<TDbContext>(
                 "processedAtUtc",
                 record.ProcessedAtUtc is null ? DBNull.Value : record.ProcessedAtUtc));
 
-            await using DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+            await using DbDataReader reader = await command.ExecuteReaderAsync(ct);
 
-            if (!await reader.ReadAsync(cancellationToken))
+            if (!await reader.ReadAsync(ct))
             {
                 throw new InvalidOperationException("Inbox registration did not return a record.");
             }

@@ -29,7 +29,7 @@ public sealed class PostgreSqlDurableOutboxLeaseRenewer<TDbContext>(
         Guid messageId,
         string claimedBy,
         TimeSpan leaseDuration,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         string normalizedClaimedBy = NormalizeClaimedBy(claimedBy);
 
@@ -63,7 +63,7 @@ public sealed class PostgreSqlDurableOutboxLeaseRenewer<TDbContext>(
                 new NpgsqlParameter("claimedBy", normalizedClaimedBy),
                 new NpgsqlParameter("nowUtc", nowUtc),
             ],
-            cancellationToken);
+            ct);
 
         return rowCount == 1;
     }

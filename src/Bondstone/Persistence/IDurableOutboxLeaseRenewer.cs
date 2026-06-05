@@ -6,5 +6,5 @@ public interface IDurableOutboxLeaseRenewer
         Guid messageId,
         string claimedBy,
         TimeSpan leaseDuration,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 }

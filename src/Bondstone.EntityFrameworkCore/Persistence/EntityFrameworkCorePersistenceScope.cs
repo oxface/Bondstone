@@ -11,7 +11,7 @@ public sealed class EntityFrameworkCorePersistenceScope<TDbContext>(TDbContext c
 
     public async ValueTask ExecuteAsync(
         Func<IEntityFrameworkCorePersistenceScope, CancellationToken, ValueTask> operation,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(operation);
 
@@ -21,38 +21,38 @@ public sealed class EntityFrameworkCorePersistenceScope<TDbContext>(TDbContext c
                 await operation(scope, ct);
                 return true;
             },
-            cancellationToken);
+            ct);
     }
 
     public async ValueTask<TResult> ExecuteAsync<TResult>(
         Func<IEntityFrameworkCorePersistenceScope, CancellationToken, ValueTask<TResult>> operation,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(operation);
 
         if (_context.Database.CurrentTransaction is not null)
         {
-            return await operation(this, cancellationToken);
+            return await operation(this, ct);
         }
 
         await using IDbContextTransaction transaction =
-            await _context.Database.BeginTransactionAsync(cancellationToken);
+            await _context.Database.BeginTransactionAsync(ct);
 
         try
         {
-            TResult result = await operation(this, cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            TResult result = await operation(this, ct);
+            await transaction.CommitAsync(ct);
             return result;
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await transaction.RollbackAsync(ct);
             throw;
         }
     }
 
-    public async ValueTask SaveChangesAsync(CancellationToken cancellationToken = default)
+    public async ValueTask SaveChangesAsync(CancellationToken ct = default)
     {
-        await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesAsync(ct);
     }
 }

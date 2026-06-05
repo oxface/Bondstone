@@ -4,14 +4,14 @@ public interface IDurableInboxStore
 {
     ValueTask<DurableInboxRecord?> GetAsync(
         DurableInboxMessageKey key,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 
     ValueTask AddAsync(
         DurableInboxRecord record,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 
     ValueTask MarkProcessedAsync(
         DurableInboxMessageKey key,
         DateTimeOffset processedAtUtc,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 }

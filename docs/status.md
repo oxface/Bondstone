@@ -43,6 +43,9 @@ Current automated coverage includes:
 - Rebus unit tests for outgoing command transport routing, wire-envelope
   mapping, durable headers, trace headers, unsupported event envelopes,
   destination resolution, and DI registration.
+- a cross-package application smoke test for preferred `AddBondstone`
+  composition with PostgreSQL persistence, Rebus transport, and the hosted
+  outbox worker.
 
 The default quality gate remains `pnpm check`. The current tree passes the
 default gate. Integration tests remain separate and should be run for provider

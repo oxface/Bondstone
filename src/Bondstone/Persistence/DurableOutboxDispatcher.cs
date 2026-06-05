@@ -17,7 +17,7 @@ public sealed class DurableOutboxDispatcher(
         string claimedBy,
         TimeSpan leaseDuration,
         int maxCount = 100,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
         string normalizedClaimedBy = claimedBy.NormalizeRequired(nameof(claimedBy), "Claim owner");
 
@@ -41,7 +41,7 @@ public sealed class DurableOutboxDispatcher(
             normalizedClaimedBy,
             leaseDuration,
             maxCount,
-            cancellationToken);
+            ct);
 
         var dispatchedCount = 0;
         var retryScheduledCount = 0;
@@ -54,7 +54,7 @@ public sealed class DurableOutboxDispatcher(
                 record.Envelope.MessageId,
                 normalizedClaimedBy,
                 leaseDuration,
-                cancellationToken);
+                ct);
 
             if (!renewed)
             {
@@ -64,9 +64,9 @@ public sealed class DurableOutboxDispatcher(
 
             try
             {
-                await transport.SendAsync(record, cancellationToken);
+                await transport.SendAsync(record, ct);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 throw;
             }
@@ -81,7 +81,7 @@ public sealed class DurableOutboxDispatcher(
                     record,
                     normalizedClaimedBy,
                     decision,
-                    cancellationToken);
+                    ct);
 
                 if (!recorded)
                 {
@@ -103,7 +103,7 @@ public sealed class DurableOutboxDispatcher(
                 record.Envelope.MessageId,
                 normalizedClaimedBy,
                 _timeProvider.GetUtcNow(),
-                cancellationToken);
+                ct);
 
             if (dispatched)
             {
@@ -127,7 +127,7 @@ public sealed class DurableOutboxDispatcher(
         DurableOutboxRecord record,
         string claimedBy,
         DurableOutboxFailureDecision decision,
-        CancellationToken cancellationToken)
+        CancellationToken ct)
     {
         if (decision.ShouldRetry)
         {
@@ -137,7 +137,7 @@ public sealed class DurableOutboxDispatcher(
                 decision.FailureReason,
                 decision.FailedAtUtc,
                 decision.NextAttemptAtUtc!.Value,
-                cancellationToken);
+                ct);
         }
 
         return await dispatchRecorder.MarkDeadLetteredAsync(
@@ -145,7 +145,7 @@ public sealed class DurableOutboxDispatcher(
             claimedBy,
             decision.FailureReason,
             decision.FailedAtUtc,
-            cancellationToken);
+            ct);
     }
 
     private static string CreateFailureReason(Exception exception)

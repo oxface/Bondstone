@@ -6,5 +6,5 @@ public interface IDurableInboxHandlerExecutor
         DurableInboxRecord record,
         Func<CancellationToken, ValueTask> handler,
         Func<CancellationToken, ValueTask> commit,
-        CancellationToken cancellationToken = default);
+        CancellationToken ct = default);
 }

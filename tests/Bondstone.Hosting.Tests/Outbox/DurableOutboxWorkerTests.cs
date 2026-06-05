@@ -141,7 +141,7 @@ public sealed class DurableOutboxWorkerTests
             string claimedBy,
             TimeSpan leaseDuration,
             int maxCount = 100,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             lock (_syncRoot)
             {
@@ -162,7 +162,7 @@ public sealed class DurableOutboxWorkerTests
 
         public async Task WaitForCallCountAsync(
             int expectedCallCount,
-            CancellationToken cancellationToken)
+            CancellationToken ct)
         {
             while (true)
             {
@@ -174,7 +174,7 @@ public sealed class DurableOutboxWorkerTests
                     }
                 }
 
-                await Task.Delay(TimeSpan.FromMilliseconds(1), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(1), ct);
             }
         }
     }

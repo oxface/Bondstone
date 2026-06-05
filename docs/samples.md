@@ -51,7 +51,8 @@ exercise Bondstone behavior, such as:
 Aspire is a local sample orchestration choice. It is not a deployment platform
 decision for Bondstone packages.
 
-## Application State
+## Current Status
 
 This sample direction is accepted and documented. Sample projects and runnable
-smoke paths have not been created yet.
+smoke paths remain deferred; current extraction status is summarized in
+[status.md](status.md).

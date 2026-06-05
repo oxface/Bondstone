@@ -1,6 +1,6 @@
 # 0010 PostgreSQL Provider And Integration Testing
 
-Status: Accepted
+Status: Amended
 Application: Partially Applied
 Date: 2026-06-04
 
@@ -43,6 +43,20 @@ The first PostgreSQL slice should prove the current EF Core store
 implementations against PostgreSQL without introducing a public unit-of-work,
 dispatcher, migration helper, or claiming API.
 
+## Amendment 2026-06-05
+
+ADR 0015 adds a provider-neutral inbox handler executor in `Bondstone`.
+`Bondstone.EntityFrameworkCore.Postgres` may compose that executor through its
+service registration after registering PostgreSQL inbox registration and the
+provider-neutral EF inbox store. PostgreSQL still does not own transport
+acknowledgement, receive retry policy, stale receive recovery, handler
+discovery, or a public unit-of-work abstraction.
+
+ADR 0016 adds an EF-specific persistence scope in
+`Bondstone.EntityFrameworkCore`. The PostgreSQL package composes it through the
+generic EF registration and verifies its transaction behavior against
+PostgreSQL.
+
 ## Consequences
 
 PostgreSQL-specific concerns stay out of the core and provider-neutral EF Core
@@ -76,16 +90,17 @@ tests expose the shape those APIs need.
   operation-state updates, outbox claim lease columns, savepoint rollback after
   duplicate inbox inserts, `FOR UPDATE SKIP LOCKED` outbox selection behavior,
   scheduled pending outbox claim behavior, schema-aware claiming registration,
-  public inbox registration outcomes, and provider registration. PostgreSQL
-  service registration and
+  public inbox registration outcomes, neutral inbox handler executor
+  composition with the EF persistence scope, EF persistence-scope transaction
+  behavior, and provider registration. PostgreSQL service registration and
   unique-violation exception classification helpers exist. Constraint names
   live with the provider-neutral EF mappings; constants are exposed only where
   another package needs reuse.
-- Pending or deferred: Migration helpers, inbox handler execution,
-  processed-marker orchestration, receive-side retry, transport
-  acknowledgement, lease renewal, retry-delay calculation, max-attempt policy,
-  dead-letter routing, operation-state concurrency, and samples remain future
-  work.
+- Pending or deferred: Migration helpers, inbox handler discovery, receive-side
+  retry, stale receive recovery, transport acknowledgement, module identity
+  scopes, higher-level transaction helper APIs, lease renewal, retry-delay
+  calculation, max-attempt policy, dead-letter routing, operation-state
+  concurrency, and samples remain future work.
 
 ## Verification
 
@@ -98,3 +113,10 @@ behavior. PostgreSQL tests also verify outbox claim lease columns, savepoint
 rollback after inbox duplicates, `FOR UPDATE SKIP LOCKED` row selection, and
 the public PostgreSQL outbox claimer behavior including scheduled rows and
 schema-aware registration.
+
+For the 2026-06-05 amendment, read back
+[docs/architecture/persistence.md](../architecture/persistence.md),
+[docs/testing.md](../testing.md), and
+[docs/adr/0015-inbox-handle-once-orchestration.md](0015-inbox-handle-once-orchestration.md).
+The applied PostgreSQL service-composition slice was verified by the ADR 0015
+command set.

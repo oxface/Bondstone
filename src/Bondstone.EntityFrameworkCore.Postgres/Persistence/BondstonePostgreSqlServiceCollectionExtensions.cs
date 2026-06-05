@@ -32,6 +32,11 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
             new PostgreSqlDurableInboxRegistrar<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>(),
                 schema));
+        services.TryAddScoped<IDurableInboxHandlerExecutor>(serviceProvider =>
+            new DurableInboxHandlerExecutor(
+                serviceProvider.GetRequiredService<IDurableInboxRegistrar>(),
+                serviceProvider.GetRequiredService<IDurableInboxStore>(),
+                serviceProvider.GetService<TimeProvider>()));
         services.TryAddScoped<IDurableOutboxClaimer>(serviceProvider =>
             new PostgreSqlDurableOutboxClaimer<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>(),

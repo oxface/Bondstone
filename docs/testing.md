@@ -88,27 +88,10 @@ Additional test entrypoints are:
 Samples may become end-to-end and smoke-test targets when the sample
 application exists.
 
-## Application State
+## Current Status
 
 This testing strategy is accepted and documented. Initial test projects,
-category-filtered commands, and CI wiring exist. The current neutral `Unit`
-tests cover core message identity registry behavior, durable command send
-result semantics, message trace context, durable operation state/status
-semantics, durable message envelope validation, and persistence record and
-dispatch-state validation. EF Core unit tests cover entity-to-core mapping and
-provider-neutral model metadata, plus fast `Application` tests for EF
-change-tracker staging boundaries. Infrastructure-backed checks have started
-with PostgreSQL Testcontainers tests for EF Core schema creation, transaction
-commit/rollback, inbox unique-constraint behavior, and PostgreSQL registration
-helper behavior. These tests also cover PostgreSQL primary-key constraint
-names, inbox processed timestamps, operation-state updates, savepoint rollback
-after duplicate inbox inserts, outbox claim lease columns,
-`FOR UPDATE SKIP LOCKED` outbox row selection, and public PostgreSQL outbox
-claiming for due rows, scheduled pending rows, locked-row skipping, expired
-lease reclaim, active lease exclusion, validation, and schema-aware service
-registration. They also cover PostgreSQL outbox dispatch success, retry
-scheduling, dead-letter outcomes, stale-claimant rejection, and expired-lease
-rejection. Public PostgreSQL inbox registration tests cover newly registered,
-already received, already processed, transaction-safe duplicate registration,
-and schema-aware registration outcomes. Broader neutral fixtures remain future
-application work.
+category-filtered commands, and CI wiring exist. Current test coverage is
+summarized in [status.md](status.md). Keep this document focused on testing
+policy and command entrypoints; keep the tactical list of currently covered
+slices in the status and extraction-plan docs.

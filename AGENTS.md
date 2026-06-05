@@ -80,6 +80,10 @@ Start with:
 - Use ADRs for durable technical decisions. Prefer small ADRs with a clear
   status, application state, context, decision, consequences, and links to
   applied docs.
+- Treat accepted ADR decision content as append-only. Do not rewrite accepted
+  `Context`, `Decision`, or `Consequences` except for mechanical fixes; add a
+  dated amendment for compatible clarification, or supersede when the decision
+  changes.
 - Updating, superseding, archiving, or removing an ADR must preserve the
   decision trail and update the stable docs and agent instructions that depend
   on it.

@@ -81,11 +81,24 @@ ADRs for durable technical decisions.
   - newly registered, already received, and already processed outcomes
   - transaction-safe duplicate registration
   - schema-aware service registration
+- Inbox handle-once orchestration:
+  - provider-neutral `IDurableInboxHandlerExecutor` contract
+  - `DurableInboxHandleResult`
+  - delegate-based handler execution for newly registered records
+  - explicit caller-supplied commit boundary
+  - conservative skip for already received or already processed rows
+- EF Core persistence scope:
+  - provider-neutral EF `IEntityFrameworkCorePersistenceScope` contract
+  - transaction start/join behavior for consumer-owned DbContexts
+  - explicit `SaveChangesAsync` commit delegate for lower-level durable
+    primitives
+  - PostgreSQL verification for commit, rollback, and existing transaction
+    ownership
 - Architecture docs split into topic pages under `docs/architecture/`.
 - Neutral unit tests cover message identity registration, trace context capture,
   durable command send result semantics, durable operation state/status
-  semantics, durable message envelope validation, and persistence record and
-  dispatch-state validation.
+  semantics, durable message envelope validation, persistence record and
+  dispatch-state validation, and inbox handle-once control flow.
 - EF Core unit tests cover entity-to-core mapping, provider-neutral model
   metadata, provider-neutral service registration, outbox writer staging, inbox
   store staging, and operation state store behavior.
@@ -116,14 +129,14 @@ adding broader provider APIs.
 
 Candidate concepts:
 
-- inbox handle-once orchestration around user handler execution and processed
-  markers;
 - outbox lease renewal, retry-delay calculation, max-attempt policy,
   dead-letter routing, and stale-claim recovery orchestration built around the
   shared claim lease state and verified PostgreSQL claim and lifecycle
   implementations;
-- unit-of-work or module persistence boundary only if required by real
-  transaction and savepoint behavior.
+- inbox handler discovery, receive retry policy, stale receive recovery,
+  transport acknowledgement coordination, module identity scopes, and
+  higher-level transaction helper APIs only if required by real transport or
+  sample behavior;
 - fresh `dotnet restore` timeout investigation for the PostgreSQL provider
   dependency graph; no-restore build/test/pack and integration tests pass from
   current restored assets.
@@ -164,8 +177,9 @@ Verification:
 - Partition-key ordering and scaling semantics.
 - Outbox dispatcher loop, transport send implementation, lease renewal,
   stale-claim recovery, retry-delay calculation, and max-attempt semantics.
-- Inbox handler execution, processed-marker orchestration, receive-side retry
-  policy, and transport acknowledgement coordination.
+- Inbox handler discovery, stale receive recovery, receive-side retry policy,
+  transport acknowledgement coordination, module identity scopes, and
+  higher-level transaction helper APIs.
 - Bondstone-owned migration helpers or provider-specific migration
   conventions.
 - Operation-state transition policy and optimistic concurrency.

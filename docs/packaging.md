@@ -84,18 +84,10 @@ nuget.org, not GitHub Packages.
 Independent package versioning is deferred until a later ADR accepts the need
 and release-management cost.
 
-## Application State
+## Current Status
 
 The package boundary, target framework, coordinated versioning, and release
 automation direction are accepted and scaffolded. Initial packages have been
-published to nuget.org. `Bondstone` contains initial core messaging and
-persistence contracts without Microsoft.Extensions package dependencies, and
-`Bondstone.EntityFrameworkCore` contains initial provider-neutral persistence
-entity mappings, outbox writer, inbox store, and operation state store.
-`Bondstone.EntityFrameworkCore.Postgres` has started with PostgreSQL
-dependencies, provider-specific registration and constraint/unique-violation
-classification helpers, PostgreSQL outbox claiming, PostgreSQL outbox dispatch
-lifecycle updates, PostgreSQL inbox registration, and Testcontainers-backed
-integration tests. Broader PostgreSQL provider behavior, Rebus transport
-behavior, additional integration tests, and samples remain future package
-implementation work.
+published to nuget.org. Current package implementation state is summarized in
+[status.md](status.md). Keep this document focused on package boundaries,
+dependency direction, versioning, and publishing rules.

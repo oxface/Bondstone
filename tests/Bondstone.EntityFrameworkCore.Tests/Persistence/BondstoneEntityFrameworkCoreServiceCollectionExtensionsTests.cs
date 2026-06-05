@@ -38,6 +38,9 @@ public sealed class BondstoneEntityFrameworkCoreServiceCollectionExtensionsTests
             IDurableOperationStateStore,
             EntityFrameworkCoreDurableOperationStateStore<EntityFrameworkCoreTestDbContext>>(services);
         AssertContainsScopedFactory<IDurableOperationReader>(services);
+        AssertContainsScoped<
+            IEntityFrameworkCorePersistenceScope,
+            EntityFrameworkCorePersistenceScope<EntityFrameworkCoreTestDbContext>>(services);
     }
 
     [Fact]

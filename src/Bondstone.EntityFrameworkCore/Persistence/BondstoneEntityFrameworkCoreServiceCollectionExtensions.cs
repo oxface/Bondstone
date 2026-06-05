@@ -25,6 +25,9 @@ public static class BondstoneEntityFrameworkCoreServiceCollectionExtensions
         services.TryAddScoped<IDurableOperationStateStore, EntityFrameworkCoreDurableOperationStateStore<TDbContext>>();
         services.TryAddScoped<IDurableOperationReader>(serviceProvider =>
             serviceProvider.GetRequiredService<IDurableOperationStateStore>());
+        services.TryAddScoped<
+            IEntityFrameworkCorePersistenceScope,
+            EntityFrameworkCorePersistenceScope<TDbContext>>();
 
         return services;
     }

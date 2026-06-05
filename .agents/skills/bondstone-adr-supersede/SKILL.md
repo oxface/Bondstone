@@ -25,7 +25,8 @@ ADR should replace it.
 3. Mark the old ADR status as `Superseded`.
 4. Set the old ADR application state to `Not Applicable` unless it still
    describes residual applied state that must be migrated.
-5. Add a link from the old ADR to the new ADR.
+5. Add a link from the old ADR to the new ADR without rewriting the old
+   accepted `Context`, `Decision`, or `Consequences` sections.
 6. Set the new ADR application state to match reality: `Applied`, `Pending`,
    `In Progress`, `Partially Applied`, or `Deferred`.
 7. Identify affected durable docs, AGENTS files, and skills using the mapping

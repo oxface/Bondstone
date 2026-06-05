@@ -35,6 +35,34 @@ deleting it.
 Do not silently rewrite the meaning of an accepted ADR. Add amendments or
 supersede it.
 
+## Change Discipline
+
+ADRs have different edit rules depending on status:
+
+- `Proposed` ADRs are review drafts. Their `Context`, `Decision`, and
+  `Consequences` may be edited freely until accepted or rejected.
+- `Rejected` ADRs should preserve the rejected option and reason. Only
+  mechanical typo, formatting, or broken-link fixes should be made after
+  rejection unless a dated note clarifies the rejection.
+- `Accepted` and `Amended` ADRs are append-only for decision content. Do not
+  rewrite `Context`, `Decision`, or `Consequences` except for mechanical typo,
+  formatting, or broken-link fixes that do not change meaning.
+- `Applied` ADRs are the strictest accepted ADRs. Change them only by adding a
+  dated amendment, superseding them, archiving them, updating
+  `Application Notes` or `Verification`, or making mechanical fixes.
+- `Partially Applied`, `Pending`, `In Progress`, or `Deferred` ADRs may update
+  application evidence and pending-work notes as reality changes, but accepted
+  decision content remains append-only.
+- Put cross-ADR follow-up into a dated amendment, `Application Notes`, or a
+  `Related Decisions` section. Do not insert new decision history into the
+  original accepted decision text.
+- Use `Amended` only for compatible clarification or incremental narrowing.
+  Use `Superseded` when a later decision replaces or contradicts the old one.
+
+Stable docs carry the current operating contract. ADRs preserve the decision
+trail. If keeping an old ADR "current" would require rewriting history, update
+stable docs and add an amendment or superseding ADR instead.
+
 ## Application States
 
 Status tracks the decision lifecycle. Application tracks whether the decision
@@ -76,6 +104,11 @@ What are we deciding?
 
 What becomes easier, harder, constrained, or intentionally deferred?
 
+## Related Decisions
+
+- Optional links to ADRs that this decision depends on, amends, narrows, or
+  supersedes.
+
 ## Application Notes
 
 - Current contract:
@@ -100,9 +133,12 @@ When creating, updating, superseding, or archiving an ADR:
    decision.
 3. Make the ADR change with explicit `Status`, `Application`, and decision
    trail.
-4. Apply the current accepted rule into stable docs.
-5. Apply agent-facing effects into relevant AGENTS files or skills.
-6. Report verification and any deliberately deferred docs.
+4. Preserve accepted ADR history according to the change-discipline rules:
+   append dated amendments for compatible clarifications, and supersede when a
+   decision changes.
+5. Apply the current accepted rule into stable docs.
+6. Apply agent-facing effects into relevant AGENTS files or skills.
+7. Report verification and any deliberately deferred docs.
 
 ## Affected Durable Docs
 
@@ -132,6 +168,9 @@ Use this mapping as a starting point:
   - [docs/architecture/README.md](../architecture/README.md)
   - [docs/architecture/messaging.md](../architecture/messaging.md)
   - [docs/architecture/persistence.md](../architecture/persistence.md)
+  - [docs/architecture/persistence-core.md](../architecture/persistence-core.md)
+  - [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md)
+  - [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md)
   - [docs/extraction.md](../extraction.md)
   - [AGENTS.md](../../AGENTS.md)
 - Verification entrypoints, test categories, sample expectations, and
@@ -152,6 +191,11 @@ often for historical ADRs to stay accurate at that level.
 When an accepted ADR is not fully applied, set `Application` to `Pending`,
 `In Progress`, `Partially Applied`, or `Deferred`, and state what remains in
 `Consequences`, `Application Notes`, or `Verification`.
+
+For accepted ADRs, prefer updating `Application Notes`, `Verification`, or a
+dated amendment over editing original decision sections. Preserve historical
+`Context`, `Decision`, and `Consequences` text unless the edit is purely
+mechanical.
 
 Examples:
 

@@ -27,16 +27,18 @@ Use this skill when a durable technical decision needs a new ADR.
    consequences.
 6. Identify affected durable docs, AGENTS files, and skills using the mapping
    in [docs/adr/README.md](../../../docs/adr/README.md).
-7. If status is `Accepted`, set `Application` to match reality:
+7. Add `Related Decisions` when this ADR depends on, narrows, amends, or
+   supersedes prior ADRs.
+8. If status is `Accepted`, set `Application` to match reality:
    `Applied`, `Pending`, `In Progress`, `Partially Applied`, or `Deferred`.
-8. For accepted ADRs, apply the current rule into stable docs and any affected
+9. For accepted ADRs, apply the current rule into stable docs and any affected
    AGENTS files or skills unless the application state explains why it is
    pending or deferred. If no suitable doc exists, create the smallest useful
    doc or record the missing doc in [docs/README.md](../../../docs/README.md).
-9. Fill `Application Notes` with the durable current contract, stable docs,
+10. Fill `Application Notes` with the durable current contract, stable docs,
    agent guidance, application evidence, and any pending or deferred work. Do
    not maintain an exhaustive changed-file list in the ADR.
-10. Fill `Verification` with docs checks, command checks, or why executable
+11. Fill `Verification` with docs checks, command checks, or why executable
     verification is not relevant.
 
 ## Output

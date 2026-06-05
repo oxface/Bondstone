@@ -1,6 +1,6 @@
 # 0009 EF Core Persistence Entities And Migrations
 
-Status: Accepted
+Status: Amended
 Application: Partially Applied
 Date: 2026-06-04
 
@@ -65,6 +65,19 @@ not call `SaveChangesAsync`; caller-owned DbContext transactions or module
 unit-of-work code commit source state, outbox messages, and operation state
 atomically.
 
+## Amendment 2026-06-05
+
+ADR 0015 adds a provider-neutral `IDurableInboxHandlerExecutor` in `Bondstone`.
+The generic EF Core package still does not own handler execution, transaction
+helper APIs, transport acknowledgement, retry policy, or a public unit-of-work
+abstraction. EF Core stores continue to stage data, while the handle-once
+executor requires a caller-supplied commit delegate.
+
+ADR 0016 adds the first EF-specific persistence scope. The EF Core package now
+owns `IEntityFrameworkCorePersistenceScope` as a transaction and explicit
+`SaveChangesAsync` companion for lower-level durable primitives. Higher-level
+module identity scopes and public unit-of-work abstractions remain deferred.
+
 ## Consequences
 
 The EF Core package can implement persistence without importing PostgreSQL
@@ -83,7 +96,8 @@ Provider-specific packages still need ADR review before adding locking,
 claiming, SQL, or migration conventions.
 
 Retry policy, dead-letter ownership, lease semantics, public unit-of-work
-abstractions, and inbox handle-once orchestration remain deferred.
+abstractions, higher-level transaction helper APIs, and transport-level inbox
+orchestration remain deferred.
 
 ## Application Notes
 
@@ -105,9 +119,11 @@ abstractions, and inbox handle-once orchestration remain deferred.
   tests, and PostgreSQL integration tests for real provider schema,
   transaction, unique-constraint, and registration-helper behavior, plus inbox
   processed-state, operation-state, outbox claim lease columns, savepoint
-  rollback, and `FOR UPDATE SKIP LOCKED` behavior, exist.
-- Pending or deferred: Inbox handler execution and processed-marker
-  orchestration, receive-side retry, retry-delay calculation, max-attempt
+  rollback, `FOR UPDATE SKIP LOCKED` behavior, and EF persistence-scope
+  transaction behavior, exist.
+- Pending or deferred: Inbox handler discovery, receive-side retry, stale
+  receive recovery, transport acknowledgement, module identity scopes,
+  higher-level transaction helper APIs, retry-delay calculation, max-attempt
   policy, dead-letter routing, migration helpers, additional provider-specific
   lifecycle implementations, additional integration tests, and samples remain
   future work.
@@ -119,3 +135,8 @@ Read back [docs/architecture/persistence.md](../architecture/persistence.md),
 [docs/packaging.md](../packaging.md), and [AGENTS.md](../../AGENTS.md). Ran
 `pnpm check`; formatting, restore, build, fast tests, and pack pass for the
 current EF Core entity/mapping slice.
+
+For the 2026-06-05 amendment, read back
+[docs/architecture/persistence.md](../architecture/persistence.md) and
+[docs/adr/0015-inbox-handle-once-orchestration.md](0015-inbox-handle-once-orchestration.md).
+The applied handle-once slice was verified by the ADR 0015 command set.

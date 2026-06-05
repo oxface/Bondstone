@@ -52,36 +52,12 @@ Each step should do at least one of these:
 Avoid destructive edits in the current consumer repository unless they are part
 of an explicit migration step.
 
-## Application State
+## Current Status
 
-This extraction strategy is accepted and documented. The first `Bondstone`
-core slice has started with stable message identity contracts and the message
-type registry, durable command send contracts, durable operation read
-contracts, durable message envelopes, and initial persistence-neutral outbox
-and inbox contracts, including operation-state storage. EF Core
-provider-neutral entities, model mappings, registration helpers, and store
-implementations have started. `Send and wait` behavior, trace context and
-causation propagation, retry policy, broader PostgreSQL provider behavior,
-Rebus transport behavior, additional integration tests, and samples remain
-future extraction work. PostgreSQL integration tests have started with
-Testcontainers-backed verification of the provider-neutral EF Core mappings and
-stores against a real database, plus provider-specific registration and
-constraint/unique-violation classification helpers. PostgreSQL savepoint
-rollback and `FOR UPDATE SKIP LOCKED` primitives have been verified for future
-inbox and outbox APIs. Outbox dispatch state includes provider-neutral claim
-lease fields, and a narrow `IDurableOutboxClaimer` contract now has a
-PostgreSQL implementation for claiming due rows, scheduled rows, and expired
-processing leases. PostgreSQL registration passes the mapped schema to
-provider-owned SQL when a non-default schema is configured. A narrow
-`IDurableOutboxDispatchRecorder` contract now has a PostgreSQL implementation for
-recording dispatch success, retry scheduling, and dead-letter outcomes after a
-claimed delivery attempt. A narrow `IDurableInboxRegistrar` contract now has a
-PostgreSQL implementation for idempotent receive-side registration and
-duplicate classification. Dispatcher loops, transport send implementation,
-lease renewal, retry-delay calculation, max-attempt policy, stale-claim
-recovery, dead-letter routing, inbox handler orchestration, receive-side retry,
-transport acknowledgement, and broader transport behavior remain future
-extraction work. General in-process module calls are not an extraction target
-unless a later ADR or sample exposes a durable boundary need. Do not extract
-the historical generic mediator/message-bus layer as a default Bondstone
-feature.
+This extraction strategy is accepted and documented. Core, EF Core, and
+PostgreSQL slices have started and are tracked in
+[status.md](status.md) and [extraction-plan.md](extraction-plan.md).
+
+General in-process module calls are not an extraction target unless a later ADR
+or sample exposes a durable boundary need. Do not extract the historical
+generic mediator/message-bus layer as a default Bondstone feature.

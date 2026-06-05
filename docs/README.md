@@ -21,6 +21,8 @@ duplicating durable rules.
 - [repository.md](repository.md) records current repository layout and tooling
   direction.
 - [samples.md](samples.md) records current sample application direction.
+- [status.md](status.md) summarizes current extraction, verification, and
+  deferred implementation state.
 - [testing.md](testing.md) records current testing direction.
 
 ## Documentation Model

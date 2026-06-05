@@ -1,6 +1,6 @@
 # 0014 Inbox Registration Contract
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-05
 
@@ -47,6 +47,16 @@ inbox row, and marking it processed. Handler execution, processed-marker
 orchestration, receive-side retry behavior, transport acknowledgement, and
 domain unit-of-work policy remain future decisions.
 
+## Amendment 2026-06-05
+
+ADR 0015 applies the first narrow handler-execution decision:
+`IDurableInboxHandlerExecutor` composes registration, a caller-supplied handler
+delegate, processed-marker staging, and a caller-supplied commit delegate. The
+registration contract in this ADR remains registration-only. Handler discovery,
+receive-side retry behavior, transport acknowledgement, stale receive recovery,
+module identity scopes, and higher-level transaction helper APIs remain future
+decisions.
+
 ## Consequences
 
 Duplicate inbox detection becomes an explicit public result instead of an
@@ -56,10 +66,11 @@ The PostgreSQL implementation can avoid poisoning the surrounding transaction
 on duplicate registration because it uses `ON CONFLICT DO NOTHING` instead of
 failing inserts.
 
-The contract is intentionally registration-only. A future inbox handler
-pipeline must still decide when the handler runs, how processed markers are
-saved atomically with handler state, how failures are retried, and how
-transport acknowledgement is coordinated.
+The contract is intentionally registration-only. ADR 0015 defines the first
+narrow delegate-based handle-once executor. A future inbox or transport
+pipeline must still decide how handlers are discovered, how failures are
+retried, how stale unprocessed rows are recovered, and how transport
+acknowledgement is coordinated.
 
 ## Application Notes
 
@@ -75,10 +86,10 @@ transport acknowledgement is coordinated.
 - Application evidence: Core inbox registration contract, PostgreSQL
   implementation, PostgreSQL service registration, and Testcontainers-backed
   registration tests are applied.
-- Pending or deferred: Inbox handler pipeline, handler execution,
-  processed-marker orchestration, receive-side retry policy, transport
-  acknowledgement, provider implementations beyond PostgreSQL, and migration
-  helpers remain future work.
+- Pending or deferred: Inbox handler discovery, receive-side retry policy,
+  stale receive recovery, transport acknowledgement, module identity scopes,
+  higher-level transaction helper APIs, provider implementations beyond
+  PostgreSQL, and migration helpers remain future work.
 
 ## Verification
 

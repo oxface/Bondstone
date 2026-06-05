@@ -82,9 +82,8 @@ Use Release Please for release pull requests, changelog updates, GitHub
 releases, and tags. Use GitHub Actions for package verification and NuGet
 publishing from release events or explicit manual dispatch.
 
-## Application State
+## Current Status
 
-This structure is accepted and partially scaffolded. Root tooling, initial
-source projects, initial test projects, solution structure, devcontainer, and
-GitHub automation exist. Samples, real package implementation, and richer
-integration-test infrastructure remain future application work.
+This structure is accepted. Current package implementation and verification
+state is summarized in [status.md](status.md). Keep this document focused on
+repository layout, local tooling, CI, and release automation.

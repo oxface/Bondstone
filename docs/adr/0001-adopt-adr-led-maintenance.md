@@ -70,10 +70,21 @@ agent guidance, evidence, and deferred work. ADRs should not try to preserve an
 exhaustive list of touched source or workflow files because those files move,
 split, and disappear while the decision remains.
 
+### 2026-06-05: Accepted ADR Immutability
+
+Accepted ADR decision content is append-only. After acceptance, do not rewrite
+`Context`, `Decision`, or `Consequences` except for mechanical typo, formatting,
+or broken-link fixes that do not change meaning. Compatible clarifications must
+be added as dated amendments and marked `Amended` when material. Replacing or
+reversing a decision requires superseding ADRs. `Application Notes` and
+`Verification` may be updated to reflect current evidence and application
+state, but historical decision text should remain traceable.
+
 ## Application Notes
 
 - Current contract: ADR-led maintenance remains the repository workflow for
-  durable technical decisions. Stable docs carry the current operating rules.
+  durable technical decisions. Accepted ADR decision content is append-only;
+  stable docs carry the current operating rules.
 - Stable docs: ADR workflow and documentation model are described in
   [docs/adr/README.md](README.md) and [docs/README.md](../README.md).
 - Agent guidance: Root and skill-scoped agent instructions make ADR work
@@ -86,4 +97,7 @@ split, and disappear while the decision remains.
 
 Read back the ADR guide, root AGENTS instructions, skills AGENTS instructions,
 and ADR workflow skills. No executable verification applies because this ADR
-documents repository process only.
+documents repository process only. The 2026-06-05 amendment was applied to
+[docs/adr/README.md](README.md), [AGENTS.md](../../AGENTS.md),
+[.agents/skills/AGENTS.md](../../.agents/skills/AGENTS.md), and the ADR
+workflow skills.

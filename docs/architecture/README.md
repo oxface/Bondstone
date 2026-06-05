@@ -32,8 +32,13 @@ because a module moves from in-process composition to a separate service.
 
 - [messaging.md](messaging.md) records durable command, message identity, and
   messaging-boundary rules.
-- [persistence.md](persistence.md) records persistence-neutral outbox and inbox
-  boundary rules.
+- [persistence.md](persistence.md) is the persistence entrypoint.
+- [persistence-core.md](persistence-core.md) records provider-neutral durable
+  persistence contracts.
+- [persistence-ef-core.md](persistence-ef-core.md) records EF Core mapping,
+  store, and persistence-scope rules.
+- [persistence-postgresql.md](persistence-postgresql.md) records PostgreSQL
+  provider behavior.
 
 ## Related Docs
 

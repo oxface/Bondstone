@@ -62,9 +62,13 @@ Every ADR skill must enforce this flow:
    application as pending, partial, or deferred.
 4. Change the ADR artifact with explicit status, application state, and
    decision trail.
-5. Apply the accepted current state into stable developer docs.
-6. Apply the accepted current state into relevant agent instructions or skills.
-7. Report verification and any docs intentionally left unchanged.
+5. Preserve accepted ADR decision content. Do not rewrite accepted `Context`,
+   `Decision`, or `Consequences` except for mechanical fixes; use dated
+   amendments for compatible clarification and superseding ADRs for replacement
+   decisions.
+6. Apply the accepted current state into stable developer docs.
+7. Apply the accepted current state into relevant agent instructions or skills.
+8. Report verification and any docs intentionally left unchanged.
 
 ADRs should answer why the decision exists. Stable docs should answer how the
 repository currently works.
@@ -73,6 +77,10 @@ ADR application notes should describe the durable current contract, stable docs,
 agent guidance, evidence, and deferred work. They should not try to preserve an
 exhaustive list of changed source files, because source files, workflow files,
 and package metadata move as the repository evolves.
+
+For accepted ADRs, application notes and verification may be updated as
+application state changes, but the original accepted decision text should remain
+traceable.
 
 ## Skill Shape
 

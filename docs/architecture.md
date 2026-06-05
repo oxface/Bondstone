@@ -9,5 +9,11 @@ navigable as extraction proceeds.
   and durable boundary principles.
 - [architecture/messaging.md](architecture/messaging.md) records durable
   command, message identity, and messaging-boundary rules.
-- [architecture/persistence.md](architecture/persistence.md) records
-  persistence-neutral outbox and inbox boundary rules.
+- [architecture/persistence.md](architecture/persistence.md) is the
+  persistence entrypoint.
+- [architecture/persistence-core.md](architecture/persistence-core.md) records
+  provider-neutral durable persistence contracts.
+- [architecture/persistence-ef-core.md](architecture/persistence-ef-core.md)
+  records EF Core mapping, store, and persistence-scope rules.
+- [architecture/persistence-postgresql.md](architecture/persistence-postgresql.md)
+  records PostgreSQL provider behavior.

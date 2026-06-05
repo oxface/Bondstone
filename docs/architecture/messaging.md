@@ -52,6 +52,17 @@ Durable operation tracking is represented by `DurableOperationState`,
 read models that expose a `Status` enum and do not define polling, timeout,
 result deserialization, or `send and wait` behavior.
 
+Receive-side handle-once execution is represented by
+`IDurableInboxHandlerExecutor`. The executor is not a mediator and does not
+discover handlers. It accepts a durable inbox record, a caller-supplied handler
+delegate, and a caller-supplied commit delegate. It runs the handler only when
+the inbox record is newly registered, stages the processed marker after the
+handler completes, invokes the commit delegate, and returns a
+`DurableInboxHandleResult`. Already processed records are skipped. Already
+received but unprocessed records are also skipped because Bondstone does not
+yet have an inbox lease or stale receive recovery model that can prove a second
+handler execution is safe.
+
 `DurableMessageEnvelope` represents the persistence- and transport-neutral
 shape of a durable message before EF Core entities, provider claiming, or
 transport headers are involved. Command envelopes require a target module;
@@ -72,6 +83,8 @@ Deferred durable-command work remains tracked:
 - any `send and wait` helper and timeout/polling policy;
 - trace context and causation propagation rules;
 - retry, max-attempt, and dead-letter policy ownership;
+- inbox handler discovery, receive retry policy, stale receive recovery, and
+  transport acknowledgement coordination;
 - deeper partition-key ordering and scaling semantics;
 - content type or neutral header support if adapters need it;
 - scheduling, TTL, priority, reply-to, tenant, or transport-native metadata if

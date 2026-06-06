@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Transport.Rebus.Inbox;
 
 namespace Bondstone.Transport.Rebus.Outbox;
 
@@ -16,6 +17,12 @@ public static class BondstoneRebusBuilderExtensions
 
         builder.Services.AddBondstoneRebusOutboxTransport(
             rebus.DestinationAddressesByTargetModule);
+        if (rebus.ReceiveEndpointBindings.Count > 0)
+        {
+            builder.Services.AddBondstoneRebusModuleCommandReceiveTopology(
+                rebus.ReceiveEndpointBindings);
+        }
+
         builder.Outbox.MarkTransport("Rebus");
 
         return builder;

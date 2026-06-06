@@ -51,11 +51,12 @@ public sealed class RebusTypedCommandReceivePipelineTests
         Assert.Equal(1, commitCalls);
 
         Activity activity = Assert.Single(
-            stoppedActivities,
-            activity => string.Equals(
-                GetTag(activity, "bondstone.message_id"),
-                CreateEnvelope().MessageId.ToString("D"),
-                StringComparison.Ordinal));
+            Snapshot(stoppedActivities),
+            activity => activity.OperationName == "bondstone.rebus.command.receive"
+                && string.Equals(
+                    GetTag(activity, "bondstone.message_id"),
+                    CreateEnvelope().MessageId.ToString("D"),
+                    StringComparison.Ordinal));
         Assert.Equal("4bf92f3577b34da6a3ce929d0e0e4736", activity.TraceId.ToHexString());
         Assert.Equal("00f067aa0ba902b7", activity.ParentSpanId.ToHexString());
         Assert.Equal("rebus", GetTag(activity, "bondstone.transport"));
@@ -181,11 +182,25 @@ public sealed class RebusTypedCommandReceivePipelineTests
             ShouldListenTo = source => source.Name == BondstoneRebusTelemetry.ActivitySourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
                 ActivitySamplingResult.AllDataAndRecorded,
-            ActivityStopped = stoppedActivities.Add,
+            ActivityStopped = activity =>
+            {
+                lock (stoppedActivities)
+                {
+                    stoppedActivities.Add(activity);
+                }
+            },
         };
 
         ActivitySource.AddActivityListener(listener);
         return listener;
+    }
+
+    private static Activity[] Snapshot(List<Activity> activities)
+    {
+        lock (activities)
+        {
+            return activities.ToArray();
+        }
     }
 
     private static string? GetTag(Activity activity, string key)

@@ -152,6 +152,13 @@ ADRs for durable technical decisions.
   - JSON command payload deserialization
   - durable inbox record passed into `IModuleCommandExecutor`
   - already-received inbox result surfaced through existing Rebus exception
+- Rebus host receive topology metadata:
+  - `UseRebusTransport` receive endpoint binding to accepted local modules
+  - endpoint/module binding registry for future worker/listener integration
+  - idempotent duplicate binding and conflict validation when one module is
+    bound to two endpoints
+  - automatic module command receive pipeline registration when receive
+    topology is configured
 - PostgreSQL inbox registration:
   - provider-neutral `IDurableInboxRegistrar` contract
   - `DurableInboxRegistrationResult`
@@ -309,9 +316,9 @@ Candidate concepts:
   adapters require it;
 - add source-module execution scope so `IDurableCommandSender` can derive the
   durable envelope source module from the active module context;
-- bind host-owned Rebus receive topology to module command routes so Rebus
-  dispatches into `IModuleCommandExecutor` instead of requiring per-command
-  handler and commit delegates;
+- bind actual Rebus workers/listeners to configured host-owned receive
+  topology so Rebus dispatches into `IModuleCommandExecutor` without requiring
+  per-command handler and commit delegates;
 - keep durable commands outbox/inbox-backed; do not add a default local
   durable in-memory queue unless a later transport/testing adapter decision
   proves the need;

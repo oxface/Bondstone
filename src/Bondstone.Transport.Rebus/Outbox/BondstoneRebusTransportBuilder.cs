@@ -1,4 +1,5 @@
 using Bondstone.Utility;
+using Bondstone.Transport.Rebus.Inbox;
 
 namespace Bondstone.Transport.Rebus.Outbox;
 
@@ -6,9 +7,21 @@ public sealed class BondstoneRebusTransportBuilder
 {
     private readonly Dictionary<string, string> _destinationAddressesByTargetModule =
         new(StringComparer.Ordinal);
+    private readonly Dictionary<string, HashSet<string>> _acceptedModuleNamesByEndpointName =
+        new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _endpointNamesByAcceptedModuleName =
+        new(StringComparer.Ordinal);
 
     internal IReadOnlyDictionary<string, string> DestinationAddressesByTargetModule =>
         _destinationAddressesByTargetModule;
+
+    internal IReadOnlyCollection<RebusModuleReceiveEndpointBinding> ReceiveEndpointBindings =>
+        _acceptedModuleNamesByEndpointName
+            .Where(static entry => entry.Value.Count > 0)
+            .Select(static entry => new RebusModuleReceiveEndpointBinding(
+                entry.Key,
+                entry.Value))
+            .ToArray();
 
     public BondstoneRebusModuleRouteBuilder RouteModule(string targetModule)
     {
@@ -17,6 +30,22 @@ public sealed class BondstoneRebusTransportBuilder
             "Target module");
 
         return new BondstoneRebusModuleRouteBuilder(this, normalizedTargetModule);
+    }
+
+    public BondstoneRebusReceiveEndpointBuilder ReceiveEndpoint(string endpointName)
+    {
+        string normalizedEndpointName = endpointName.NormalizeRequired(
+            nameof(endpointName),
+            "Rebus receive endpoint name");
+
+        if (!_acceptedModuleNamesByEndpointName.ContainsKey(normalizedEndpointName))
+        {
+            _acceptedModuleNamesByEndpointName.Add(
+                normalizedEndpointName,
+                new HashSet<string>(StringComparer.Ordinal));
+        }
+
+        return new BondstoneRebusReceiveEndpointBuilder(this, normalizedEndpointName);
     }
 
     internal void SetModuleDestinationAddress(
@@ -43,5 +72,38 @@ public sealed class BondstoneRebusTransportBuilder
         _destinationAddressesByTargetModule.Add(
             targetModule,
             normalizedDestinationAddress);
+    }
+
+    internal void AcceptModuleOnEndpoint(
+        string endpointName,
+        string moduleName)
+    {
+        string normalizedModuleName = moduleName.NormalizeRequired(
+            nameof(moduleName),
+            "Module name");
+
+        if (_endpointNamesByAcceptedModuleName.TryGetValue(
+            normalizedModuleName,
+            out string? existingEndpointName))
+        {
+            if (existingEndpointName == endpointName)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Module '{normalizedModuleName}' is already accepted by Rebus receive endpoint '{existingEndpointName}'.");
+        }
+
+        if (!_acceptedModuleNamesByEndpointName.TryGetValue(
+            endpointName,
+            out HashSet<string>? moduleNames))
+        {
+            moduleNames = new HashSet<string>(StringComparer.Ordinal);
+            _acceptedModuleNamesByEndpointName.Add(endpointName, moduleNames);
+        }
+
+        moduleNames.Add(normalizedModuleName);
+        _endpointNamesByAcceptedModuleName.Add(normalizedModuleName, endpointName);
     }
 }

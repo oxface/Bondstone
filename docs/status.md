@@ -38,6 +38,9 @@ Current implemented surface includes:
   `ModuleCommandExecutionResult`, and already-received failure surfacing;
 - host-owned Rebus outgoing topology builder for mapping target modules to
   Rebus destination addresses;
+- host-owned Rebus receive endpoint topology metadata for binding endpoint
+  names to accepted local modules, plus automatic module command receive
+  pipeline registration when receive topology is configured;
 - module command registration and execution in core, including
   `IBondstoneModule`, `ICommand`, `IDurableCommand`, direct typed command
   handlers, typed validators, startup reflection scanning, cached module
@@ -62,8 +65,9 @@ Current implemented surface includes:
 
 Accepted but not yet implemented direction includes:
 
-- host-owned Rebus endpoint binding to local module sets, replacing manual
-  receive endpoint wiring in app-facing receive setup.
+- actual Rebus worker/listener binding to configured local module endpoint
+  topology, replacing manual receive endpoint wiring in app-facing receive
+  setup.
 
 ## Verification Surface
 
@@ -115,9 +119,9 @@ Deferred extraction work includes:
   domain-event capture, durable-messaging capability validation,
   provider-specific module persistence validation, and broader transaction
   helpers above the EF persistence scope;
-- Rebus host-topology endpoint binding to local module sets, broader
-  transport-level Rebus module receive tests, and event publish/subscribe
-  behavior;
+- actual Rebus worker/listener binding to configured local module endpoint
+  topology, broader transport-level Rebus module receive tests, and event
+  publish/subscribe behavior;
 - provider-specific payload storage such as PostgreSQL `jsonb`, migration
   helpers, broader provider support, samples, and additional integration
   fixtures.

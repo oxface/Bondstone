@@ -23,12 +23,39 @@ The current route builder maps stable target module names to Rebus queue names
 or destination addresses.
 
 The older outbox-specific dictionary registration remains available for now.
-Future receive topology should also stay host-owned and adapter-specific:
-bind a receive endpoint to local modules accepted by the process. Bondstone
-should not require a generic module-to-module route table for ordinary durable
-command delivery. Modules declare durable messaging capability and command
-handlers; the Rebus adapter supplies queue names, endpoint names, storage,
-retry/dead-letter policy, and listener binding.
+Receive topology is also host-owned and adapter-specific. The same
+`UseRebusTransport` builder can bind a Rebus receive endpoint name to local
+modules accepted by the process:
+
+```csharp
+bondstone.UseRebusTransport(rebus =>
+{
+    rebus.RouteModule("fulfillment").ToQueue("fulfillment-commands");
+    rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment");
+});
+```
+
+Receive endpoint bindings are recorded in
+`IRebusModuleReceiveEndpointRegistry`, and configuring one registers the
+module command receive pipeline. A module may be accepted by only one Rebus
+receive endpoint in a host; duplicate matching registrations are idempotent.
+Bondstone should not require a generic module-to-module route table for
+ordinary durable command delivery. Modules declare durable messaging capability
+and command handlers; the Rebus adapter supplies queue names, endpoint names,
+storage, retry/dead-letter policy, and listener binding.
+
+The default operational shape should be one command receive queue per module
+that needs independent ownership, scaling, retry policy, or service-extraction
+headroom. A receive endpoint may accept multiple local modules when those
+modules deploy, scale, fail, and recover together, but a general catch-all
+inbox queue should be treated as a small-host or development convenience, not
+the durable default. The database inbox can still be shared because inbox keys
+include module and handler identity; the transport queue is the operational
+backlog and scale boundary.
+
+Commands should use Rebus queues. Topic or subscription topology is reserved
+for future event publish/subscribe work, where each subscriber needs its own
+copy of an event.
 
 ## Wire Envelope And Headers
 
@@ -126,27 +153,30 @@ API. The user-facing setup example in [../setup.md](../setup.md) therefore
 shows the outgoing durable command path and avoids presenting this temporary
 receive wiring as the main application pattern.
 
-The preferred next receive shape should be host topology binding from Rebus to
-module command routes. Modules register command handlers and validators
-without depending on Rebus; the host decides which local modules are exposed
-through Rebus endpoints and which remote modules are reached through Rebus
-routing. Rebus receive should eventually dispatch accepted wire envelopes into
-`IModuleCommandExecutor` instead of asking application code to pass per-command
-handler and commit delegates.
+The preferred receive shape is host topology binding from Rebus to module
+command routes. Modules register command handlers and validators without
+depending on Rebus; the host decides which local modules are exposed through
+Rebus endpoints and which remote modules are reached through Rebus routing.
+Rebus receive dispatches wire envelopes into `IModuleCommandExecutor` through
+the module command receive pipeline instead of asking application code to pass
+per-command handler and commit delegates.
 
 Current groundwork adds a Rebus module command receive pipeline that resolves a
 wire envelope through Bondstone message identity and module command route
 metadata, passes the durable inbox record into `IModuleCommandExecutor`, and
 reads the inbox result from `ModuleCommandExecutionResult`. This removes
-per-command handler delegates from the receive primitive. Host-owned endpoint
-binding to local modules is still future work.
+per-command handler delegates from the receive primitive.
+
+Host-owned receive endpoint topology can now record which local modules a
+Rebus endpoint accepts. Actual Rebus worker/listener binding to that topology
+is still future work.
 
 ## Deferred Rebus Work
 
-Deferred Rebus work includes event publish/subscribe semantics, host-owned
-endpoint binding to local module sets, and validation that durable receive
-modules have durable messaging enabled. Route or destination circuit breaking,
-stale-claim recovery sweeps, dead-letter routing, receive retry state, stale
-receive recovery, and worker metrics are hosting, persistence, or future
-receive-pipeline decisions unless a later ADR accepts a transport-specific
-policy.
+Deferred Rebus work includes event publish/subscribe semantics, actual Rebus
+worker/listener binding to configured module receive endpoints, and validation
+that durable receive modules have durable messaging enabled. Route or
+destination circuit breaking, stale-claim recovery sweeps, dead-letter
+routing, receive retry state, stale receive recovery, and worker metrics are
+hosting, persistence, or future receive-pipeline decisions unless a later ADR
+accepts a transport-specific policy.

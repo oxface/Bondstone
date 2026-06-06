@@ -121,7 +121,7 @@ continue through the command executor without EF transaction wrapping.
 This is groundwork for the full durable boundary. Receive-side inbox handling
 can now run inside the module command pipeline when a transport passes a
 durable inbox record into `IModuleCommandExecutor`. Operation-state updates,
-receive-side outbox coordination, host endpoint binding, and receive
+receive-side outbox coordination, actual listener binding, and receive
 acknowledgement still need later slices before durable receive is fully
 app-facing.
 
@@ -165,11 +165,19 @@ For Rebus, outgoing target-module-to-address mapping is configured through the
 host-owned transport builder. The current implemented route shape maps target
 modules to queue names or destination addresses.
 
-The Rebus listener shape is still future work. A later slice should bind
-receive topology to local modules and dispatch accepted commands into
-`IModuleCommandExecutor` so applications do not repeat handler delegates or
-commit delegates per command. The intended shape is listener binding to local
-modules, not a generic route table.
+The Rebus transport builder also records receive endpoint topology: an
+endpoint name can accept one or more local modules, and configuring receive
+topology registers the module command receive pipeline. The intended shape is
+listener binding to local modules, not a generic route table. Actual Rebus
+worker/listener binding to the configured endpoint metadata remains future
+work.
+
+Prefer one command receive endpoint per module when the module may need
+independent deployment, scaling, retry/dead-letter policy, or operational
+ownership. Group modules on one endpoint only when they are intentionally part
+of the same host-level processing unit. A shared database inbox is fine; a
+shared transport queue should be chosen deliberately because it couples
+backlog, throughput, and failure recovery.
 
 Topic-based transports may expose different topology while keeping the same
 module concepts: route outgoing durable commands by stable target module, bind

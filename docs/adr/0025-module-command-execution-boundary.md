@@ -210,7 +210,8 @@ additional ADR review or amendments.
   persistence opt-in and an EF transaction system pipeline behavior for
   modules that declare EF persistence. `Bondstone.Transport.Rebus` now has
   module command receive pipeline groundwork that dispatches Rebus wire
-  envelopes into `IModuleCommandExecutor`.
+  envelopes into `IModuleCommandExecutor`, plus host-owned receive endpoint
+  topology metadata that binds Rebus endpoint names to accepted local modules.
 - Stable docs: Current module command direction is described in
   [docs/architecture/modules.md](../architecture/modules.md), with supporting
   messaging, persistence, and Rebus transport notes in
@@ -229,15 +230,16 @@ additional ADR review or amendments.
   behavior, module persistence metadata, EF module persistence opt-in, EF
   command transaction/save behavior, and Rebus module command receive dispatch.
   Rebus outgoing host topology now has an adapter-specific `UseRebusTransport`
-  builder for mapping target modules to Rebus destination addresses. Core
-  module registration now records module metadata, `UseDurableMessaging`
-  capability state, and module persistence capability state through
+  builder for mapping target modules to Rebus destination addresses and
+  binding Rebus receive endpoint names to accepted local modules. Core module
+  registration now records module metadata, `UseDurableMessaging` capability
+  state, and module persistence capability state through
   `IBondstoneModuleRegistry`.
-- Pending or deferred: Rebus receive endpoint binding to local module sets,
-  receive acknowledgement integration, durable-messaging capability validation
-  in transport/persistence adapters, provider-specific module persistence
-  validation, operation-state integration, event handling, and samples remain
-  future work.
+- Pending or deferred: Actual Rebus worker/listener binding to configured
+  module receive endpoint topology, receive acknowledgement integration,
+  durable-messaging capability validation in transport/persistence adapters,
+  provider-specific module persistence validation, operation-state
+  integration, event handling, and samples remain future work.
 
 ## Verification
 
@@ -245,4 +247,5 @@ Read back affected architecture docs and ran:
 
 - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --filter "Category=Unit"`
 - `dotnet test tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application"`
+- `dotnet test tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application"`
 - `pnpm check`

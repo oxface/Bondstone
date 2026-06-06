@@ -114,15 +114,25 @@ accepted W3C trace context, and invokes caller-registered typed command
 handlers with explicit stable handler identity.
 
 The current typed Rebus pipeline is a lower-level transport primitive. The
-preferred app-facing receive shape should eventually bind host Rebus topology
-to `IModuleCommandExecutor` so application code does not repeat handler and
+preferred app-facing receive shape binds host Rebus topology to
+`IModuleCommandExecutor` so application code does not repeat handler and
 commit delegates per command.
 
 Rebus module command receive groundwork now resolves a Bondstone wire envelope
 to a registered module command route, derives the stable handler identity from
 route metadata, passes the durable inbox record into `IModuleCommandExecutor`,
 and receives the inbox result from `ModuleCommandExecutionResult`. Host
-endpoint binding to local module sets remains future work.
+receive topology can now bind Rebus endpoint names to accepted local modules
+and registers the module command receive pipeline; actual Rebus listener
+binding to that topology remains future work.
+
+For durable commands, prefer queue-backed point-to-point delivery. A Rebus
+receive endpoint should usually represent a module-level command backlog so
+that scaling, retry, dead-letter handling, and service extraction can be
+managed per module. Multiple modules may share an endpoint when they share the
+same operational profile, but a general inbox queue is not the default command
+topology. Future event publish/subscribe work can use topic or subscription
+topology because events intentionally fan out to multiple subscribers.
 
 Modules that send or receive durable commands should opt into one durable
 messaging capability, such as `UseDurableMessaging`, rather than making normal

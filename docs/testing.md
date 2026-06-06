@@ -64,6 +64,11 @@ an equivalent real provider fixture.
 Keep tests grouped by package or integration boundary so they reveal package
 ownership and extraction seams.
 
+For transport adapters, prefer a layered shape: use fast in-process transport
+tests for the broad behavior matrix, and keep a small number of
+Testcontainers-backed transport tests for the real persistence, retry,
+acknowledgement, and dead-letter contract.
+
 ## Verification Surface
 
 Repository verification will need a clear split between fast default checks and

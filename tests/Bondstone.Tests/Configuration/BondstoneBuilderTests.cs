@@ -1,4 +1,6 @@
 using Bondstone.Configuration;
+using Bondstone.Messaging;
+using Bondstone.Modules;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -88,6 +90,27 @@ public sealed class BondstoneBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void AddBondstone_WhenDefaultMessageRegistryWasRegisteredByType_NormalizesToInstance()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IMessageTypeRegistry, MessageTypeRegistry>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
+            });
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IMessageTypeRegistry registry = serviceProvider.GetRequiredService<IMessageTypeRegistry>();
+
+        Assert.Equal(typeof(TestCommand), registry.ResolveClrType("sales.test.command.v1"));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void MarkPersistenceProvider_WhenCapabilityNameIsBlank_Throws()
     {
         var services = new ServiceCollection();
@@ -97,5 +120,18 @@ public sealed class BondstoneBuilderTests
                 builder.Outbox.MarkPersistenceProvider(" ")));
 
         Assert.Equal("providerName", exception.ParamName);
+    }
+
+    [DurableCommandIdentity("sales.test.command.v1")]
+    public sealed record TestCommand : IDurableCommand;
+
+    public sealed class TestCommandHandler : ICommandHandler<TestCommand>
+    {
+        public ValueTask HandleAsync(
+            TestCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 }

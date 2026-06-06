@@ -76,6 +76,12 @@ delegate. It does not start database transactions, call EF Core
 `SaveChangesAsync`, acknowledge transports, discover handlers, or wrap
 ordinary in-process calls in a mediator.
 
+Transport adapters that compose the executor should acknowledge transport
+messages only after the executor returns a handled or already-processed result
+and the relevant commit boundary has succeeded. Already-received but
+unprocessed rows remain unresolved until a later inbox lease or stale receive
+recovery decision; adapters should not silently treat them as handled.
+
 `IDurableInboxStore` exposes lower-level inbox store operations: read a record,
 add a receive record, and mark it processed. Provider implementations own the
 unique constraint, transaction, savepoint, and concurrency behavior that make

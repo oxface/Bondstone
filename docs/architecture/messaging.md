@@ -7,15 +7,29 @@ outbox delivery. It is not the general in-process command abstraction for every
 module call.
 
 Direct in-process calls between modules can use consumer-owned `.Contracts`
-references without Bondstone mediation. Bondstone should add in-process command
-or dispatch abstractions only when they protect a durable boundary concern such
-as outbox persistence, inbox handling, tracing, or service-extraction
-continuity.
+references without Bondstone mediation. Bondstone adds command execution
+abstractions only when they protect a durable boundary concern such as outbox
+persistence, inbox handling, validation, tracing, module persistence, or
+service-extraction continuity.
 
 Bondstone should avoid generic mediator or message-bus APIs for ordinary
 in-process calls. They often hide call graphs, weaken discoverability, add
-reflection or dispatch overhead, and provide little durable-boundary value when
-normal typed contracts are sufficient.
+dispatch overhead, and provide little durable-boundary value when normal typed
+contracts are sufficient.
+
+Module command execution is the narrow exception. Commands handled by a
+Bondstone module can be registered through module command routes and executed
+through `IModuleCommandExecutor`. The executor uses startup reflection
+registration and cached runtime route metadata to run typed
+`ICommandHandler<TCommand>` handlers through pipeline behaviors such as
+validation. Later pipeline behaviors will add module transaction ownership,
+inbox handling for durable receives, outbox staging for durable sends,
+operation-state updates, source-module scope, and receive tracing.
+
+`ICommand` is the base marker for module command pipeline execution.
+`IDurableCommand` extends `ICommand` for commands accepted for durable outbox
+delivery and transport receive. Durable message identity, outbox, inbox, and
+operation-state behavior apply to durable commands only.
 
 Durable command sending is represented by `IDurableCommandSender`. The sender
 accepts a durable command, a required target module, and optional explicit
@@ -77,8 +91,23 @@ CLR names or transport details.
 `Bondstone.Transport.Rebus` currently maps outgoing command envelopes to Rebus
 explicit routing sends. The adapter preserves Bondstone message identity in
 Bondstone-specific headers and maps trace context to W3C transport headers.
-Receive-side Rebus inbox integration and event publish/subscribe remain
+Receive-side Rebus inbox integration is command-only. Rebus handlers can
+receive Bondstone wire envelopes, derive inbox keys from message id, target
+module, and explicit handler identity, compose
+`IRebusDurableInboxHandlerExecutor`, and acknowledge only after handle-once
+execution and its commit boundary succeed. Event publish/subscribe remains
 deferred.
+
+The typed Rebus command receive pipeline uses `IMessageTypeRegistry` to
+resolve stable message type names to durable command CLR types, deserializes
+payloads with `System.Text.Json`, starts a .NET/OTel consumer `Activity` from
+accepted W3C trace context, and invokes caller-registered typed command
+handlers with explicit stable handler identity.
+
+The current typed Rebus pipeline is a lower-level transport primitive. The
+preferred app-facing receive shape should eventually bind host Rebus topology
+to `IModuleCommandExecutor` so application code does not repeat handler and
+commit delegates per command.
 
 Future envelope fields remain open. Content type is the most likely next
 addition if Bondstone needs to support non-JSON payloads or make JSON explicit.
@@ -102,6 +131,8 @@ Deferred durable-command work remains tracked:
   a later durable scenario justifies it;
 - receive adapter, receive-side transport integration, and additional
   transport-backed verification.
+- module transaction behaviors, source-module command sender scope, Rebus
+  host-topology binding to module command routes, and service-shaped samples.
 
 ## Message Identity Names
 

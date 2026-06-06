@@ -63,3 +63,9 @@ capture domain events, or introduce a generic mediator.
 
 The EF persistence scope is not a core abstraction and is not a required shape
 for non-EF providers.
+
+Future module command pipeline behavior should wrap
+`IEntityFrameworkCorePersistenceScope` so validation, handler state changes,
+inbox markers, outbox messages, operation-state updates, `SaveChangesAsync`,
+and transaction commit happen in one module boundary. The current EF scope is
+the lower-level transaction companion, not the final module unit-of-work API.

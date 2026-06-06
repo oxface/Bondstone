@@ -21,6 +21,7 @@ ADRs for durable technical decisions.
 
 - Core message identity contracts:
   - `IMessage`
+  - `ICommand`
   - `IDurableCommand`
   - `IIntegrationEvent`
   - message identity attributes
@@ -116,6 +117,17 @@ ADRs for durable technical decisions.
   - PostgreSQL, Rebus, and Hosting builder extension methods
   - validation that hosted or dispatcher-based outbox processing has both
     persistence and transport capability
+- Module command execution boundary:
+  - `IBondstoneModule` for module-provided registration
+  - module registration through `AddBondstone`
+  - `ICommand` base marker for module command pipeline execution
+  - `IDurableCommand` as durable command specialization
+  - `ICommandHandler<TCommand>` direct typed handlers
+  - `ICommandValidator<TCommand>` validators
+  - `IModuleCommandPipelineBehavior<TCommand>` pipeline hook
+  - startup reflection registration for command handlers and validators
+  - cached module command route metadata and scoped `IModuleCommandExecutor`
+  - validation pipeline behavior before direct handler execution
 - PostgreSQL inbox registration:
   - provider-neutral `IDurableInboxRegistrar` contract
   - `DurableInboxRegistrationResult`
@@ -140,6 +152,78 @@ ADRs for durable technical decisions.
     and hosted outbox worker
   - scoped dispatcher graph resolution without requiring live PostgreSQL or
     broker infrastructure
+- Rebus receive-side inbox integration design:
+  - command-only receive direction for Bondstone-owned Rebus wire envelopes
+  - explicit handler identity and target-module inbox keys
+  - handle-once execution through core inbox executor and caller-supplied
+    commit delegate
+  - Rebus acknowledgement after successful handled or already-processed
+    outcomes
+  - unresolved already-received rows surface through Rebus retry/dead-letter
+    policy
+- Rebus receive-side inbox adapter:
+  - `IRebusDurableInboxHandlerExecutor` and default implementation
+  - command wire-envelope mapping back to durable envelopes
+  - low-level DI registration without persistence, EF Core, handler discovery,
+    or Rebus endpoint configuration
+  - fluent `AddBondstone` registration through `UseRebusInbox`
+  - .NET `ActivityContext` validation for W3C `traceparent`
+  - already-received exception for unresolved unprocessed inbox rows
+  - unit coverage for handled, already processed, already received, unsupported
+    events, missing target module, mapping, traceparent validation, and
+    registration
+- Cross-package Rebus receive composition smoke test:
+  - preferred fluent composition with PostgreSQL persistence and
+    `UseRebusInbox`
+  - real Rebus receive adapter and EF persistence scope resolution
+  - explicit `SaveChangesAsync` commit delegate without live PostgreSQL or
+    broker infrastructure
+- Rebus typed command receive pipeline design:
+  - message-registry resolution from stable message type name to command CLR
+    type
+  - `System.Text.Json` payload deserialization
+  - explicit stable handler identity at registration
+  - receive-pipeline .NET/OTel consumer Activity from accepted W3C context
+  - composition over the low-level Rebus inbox adapter and caller-supplied
+    commit delegates
+- Rebus typed command receive pipeline:
+  - `IRebusTypedCommandReceivePipeline` and default implementation
+  - message-registry validation for registered durable command types
+  - `System.Text.Json` payload deserialization
+  - receive ActivitySource and stable initial Activity tags
+  - low-level and fluent DI registration
+  - unit coverage for successful typed handling, missing registration,
+    event-kind mismatch, generic type mismatch, invalid JSON, Activity tags,
+    and registration
+- Cross-package typed Rebus receive composition smoke test:
+  - preferred fluent composition with PostgreSQL persistence and
+    `UseRebusTypedCommandReceivePipeline`
+  - default message registry, typed receive pipeline, Rebus inbox executor,
+    and EF persistence scope resolution
+  - explicit `SaveChangesAsync` commit delegate without live PostgreSQL or
+    broker infrastructure
+- Rebus receive transport-backed verification:
+  - in-memory Rebus transport tests for `SendLocal` delivery of
+    `RebusDurableMessageEnvelope`
+  - typed receive pipeline execution through a real Rebus worker and handler
+    activator
+  - successful command deserialization, handler invocation, inbox delegation,
+    commit delegate execution, and queue drain behavior
+  - unknown message identity failure surfacing through Rebus retry/dead-letter
+    behavior into the in-memory error queue
+- Rebus PostgreSQL receive transport verification:
+  - Testcontainers-backed PostgreSQL transport tests for real Rebus transport
+    persistence
+  - successful `SendLocal` delivery, typed receive handling, acknowledgement,
+    and PostgreSQL transport-table drain behavior
+  - unknown message identity failure moved to the PostgreSQL-backed Rebus
+    error queue with one delivery attempt
+- Rebus receive usage sketch:
+  - current explicit receive wiring documented with normal Rebus handler,
+    message registry setup, typed receive pipeline call, stable handler
+    identity, and EF persistence-scope commit delegate
+  - ergonomic pressure resolved into the module command execution boundary in
+    ADR 0025 rather than more transport-local handler registration helpers
 - Architecture docs split into topic pages under `docs/architecture/`.
 - Neutral unit tests cover message identity registration, trace context capture,
   durable command send result semantics, durable operation state/status
@@ -175,17 +259,32 @@ ADRs for durable technical decisions.
 
 ## Next Candidate Slice
 
-Continue worker and transport extraction with real verification before adding
-broader provider APIs.
+The next work should continue the module command execution direction instead
+of adding more transport-local receive ergonomics.
 
 Candidate concepts:
 
-- outbox stale-claim recovery orchestration or advanced worker policy only
-  after the neutral outbox worker has real sample or transport-backed usage;
-- inbox handler discovery, receive retry policy, stale receive recovery,
-  transport acknowledgement coordination, module identity scopes, and
-  higher-level transaction helper APIs only if required by real transport or
-  sample behavior.
+- add module persistence registration that makes the module-owned DbContext
+  and EF persistence scope explicit without coupling module code to host
+  transport topology;
+- add EF transaction pipeline behavior around `IModuleCommandExecutor` so
+  validators, handlers, outbox staging, inbox markers, operation state,
+  `SaveChangesAsync`, and commit happen in one module boundary;
+- add source-module execution scope so `IDurableCommandSender` can derive the
+  durable envelope source module from the active module context;
+- bind host-owned Rebus receive topology to module command routes so Rebus
+  dispatches into `IModuleCommandExecutor` instead of requiring per-command
+  handler and commit delegates;
+- use Wolverine as a useful comparison point for routing design: handler
+  discovery can imply local handling, explicit routing should override
+  convention, transport listening endpoints should be separate from handler
+  registration, and diagnostics should explain why a command routes where it
+  does;
+- keep Rebus endpoint names, queue names, retry policy, and explicit
+  local-vs-remote route overrides in host topology configuration rather than
+  module registration;
+- keep outbox stale-claim recovery orchestration or advanced worker policy
+  behind real sample or transport-backed usage.
 
 Worker design notes:
 
@@ -248,7 +347,8 @@ Verification:
   conventions.
 - Operation-state transition policy and optimistic concurrency.
 - Provider-specific dispatch behavior beyond PostgreSQL claiming.
-- Rebus receive-side inbox integration and event publish/subscribe behavior.
+- Broader Rebus transport-level receive tests, higher-level typed handler
+  registration helpers, and event publish/subscribe behavior.
 - Additional integration tests with neutral Bondstone fixtures.
 - Samples validating modular-monolith and service-split usage.
 

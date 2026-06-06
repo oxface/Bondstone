@@ -85,9 +85,8 @@ this adapter verifies outgoing transport behavior and header mapping only.
 - Application evidence: Outgoing Rebus command transport, destination
   resolution, wire envelope, header mapping, transport-only registration, and
   unit tests are applied.
-- Pending or deferred: Rebus event publish/subscribe, receive-side inbox
-  integration, Rebus handler discovery, and transport-level integration tests
-  remain future work.
+- Pending or deferred: Rebus event publish/subscribe, typed handler discovery,
+  and transport-level integration tests remain future work.
 
 ## Verification
 

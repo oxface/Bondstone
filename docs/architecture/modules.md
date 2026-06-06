@@ -34,103 +34,21 @@ message contracts. The host decides how commands reach the target module.
 ## Module Registration
 
 `AddBondstone` is the host composition entrypoint. A host can register module
-capabilities inline:
+capabilities inline through `Module`, or a module can provide its own
+`IBondstoneModule` registration object and be stitched into the host with
+`AddModule`.
 
-```csharp
-services.AddBondstone(bondstone =>
-{
-    bondstone.Module("fulfillment", module =>
-    {
-        module.UseDurableMessaging();
-        module.Commands.RegisterFromAssemblyContaining<ReserveOrderCommand>();
-    });
-});
-```
-
-Or a module can provide its own registration object:
-
-```csharp
-public sealed class FulfillmentModule : IBondstoneModule
-{
-    public string Name => "fulfillment";
-
-    public void Configure(BondstoneModuleBuilder module)
-    {
-        module.UseDurableMessaging();
-        module.Commands.RegisterFromAssemblyContaining<ReserveOrderCommand>();
-    }
-}
-```
-
-The host stitches module packages together:
-
-```csharp
-services.AddBondstone(bondstone =>
-{
-    bondstone.AddModule<FulfillmentModule>();
-    bondstone.AddModule<SalesModule>();
-});
-```
-
-Handlers and validators can also be registered explicitly:
-
-```csharp
-module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
-module.Commands.RegisterValidator<ReserveOrderCommand, ReserveOrderValidator>();
-```
+Handlers and validators can be discovered with `RegisterFromAssembly` or
+registered explicitly with `RegisterHandler` and `RegisterValidator`. Keep
+library-user setup examples in [../setup.md](../setup.md).
 
 ## Command Handlers
 
-Module command handlers are direct typed handlers:
-
-```csharp
-public sealed record CreateDraftOrderCommand(Guid OrderId) : ICommand;
-
-public sealed class CreateDraftOrderHandler
-    : ICommandHandler<CreateDraftOrderCommand>
-{
-    public ValueTask HandleAsync(
-        CreateDraftOrderCommand command,
-        CancellationToken ct = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
-Durable commands extend the same command pipeline and add stable durable
-message identity:
-
-```csharp
-[DurableCommandIdentity("fulfillment.order.reserve.v1")]
-public sealed record ReserveOrderCommand(Guid OrderId) : IDurableCommand;
-
-public sealed class ReserveOrderHandler
-    : ICommandHandler<ReserveOrderCommand>
-{
-    public ValueTask HandleAsync(
-        ReserveOrderCommand command,
-        CancellationToken ct = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
-Validators are typed and optional:
-
-```csharp
-public sealed class ReserveOrderValidator
-    : ICommandValidator<ReserveOrderCommand>
-{
-    public ValueTask ValidateAsync(
-        ReserveOrderCommand command,
-        CancellationToken ct = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-}
-```
+Module command handlers are direct typed `ICommandHandler<TCommand>`
+implementations. Plain `ICommand` handlers and durable `IDurableCommand`
+handlers use the same command pipeline; durable commands add stable durable
+message identity. Validators are typed `ICommandValidator<TCommand>`
+implementations and are optional.
 
 `RegisterFromAssembly` scans at startup for command handlers, validators, and
 durable message identity metadata. Runtime dispatch uses cached route metadata
@@ -185,56 +103,19 @@ infer, such as broker connection strings, queue names, endpoint names,
 exchange/topic names, routing keys, and subscriptions.
 
 For Rebus, outgoing target-module-to-address mapping is configured through the
-host-owned transport builder:
-
-```csharp
-bondstone.UseRebusTransport(rebus =>
-{
-    rebus.RouteModule("fulfillment").ToQueue("fulfillment-commands");
-    rebus.RouteModule("billing").ToQueue("billing-commands");
-
-    rebus.ListenOn("sales-commands", listener =>
-    {
-        listener.AcceptCommandsFor("sales");
-    });
-});
-```
+host-owned transport builder. The current implemented route shape maps target
+modules to queue names or destination addresses.
 
 The Rebus listener shape is still future work. A later slice should bind
 receive topology to local modules and dispatch accepted commands into
 `IModuleCommandExecutor` so applications do not repeat handler delegates or
 commit delegates per command. The intended shape is listener binding to local
-modules, not a generic route table:
+modules, not a generic route table.
 
-```csharp
-bondstone.UseRebusTransport(rebus =>
-{
-    rebus.ListenOn("sales-commands", listener =>
-    {
-        listener.AcceptCommandsFor("sales");
-    });
-});
-```
-
-A topic-based transport may expose different topology while keeping the same
-module concepts:
-
-```csharp
-bondstone.UseRabbitMqTransport(rabbit =>
-{
-    rabbit.RouteModule("fulfillment")
-        .ToExchange("commerce.commands")
-        .WithRoutingKey("module.fulfillment.commands");
-
-    rabbit.ListenOnQueue("sales-commands", listener =>
-    {
-        listener.BindExchange("commerce.commands")
-            .WithRoutingKey("module.sales.commands");
-
-        listener.AcceptCommandsFor("sales");
-    });
-});
-```
+Topic-based transports may expose different topology while keeping the same
+module concepts: route outgoing durable commands by stable target module, bind
+listener endpoints to locally accepted modules, and keep transport-native
+exchange, topic, routing-key, and subscription details in the host.
 
 Wolverine provides a useful comparison point: it discovers handlers, applies
 local routing automatically for known local handlers, lets explicit routing

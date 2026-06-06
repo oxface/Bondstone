@@ -18,14 +18,9 @@ destination addresses. This keeps module identity separate from endpoint
 addresses while allowing consumers to choose their own Rebus topology.
 
 Outgoing Rebus topology is host-owned and adapter-specific. Applications can
-configure target-module destinations with:
-
-```csharp
-bondstone.UseRebusTransport(rebus =>
-{
-    rebus.RouteModule("fulfillment").ToQueue("fulfillment-commands");
-});
-```
+configure target-module destinations through the `UseRebusTransport` builder.
+The current route builder maps stable target module names to Rebus queue names
+or destination addresses.
 
 The older outbox-specific dictionary registration remains available for now.
 Future receive topology should also stay host-owned and adapter-specific:
@@ -114,66 +109,22 @@ must not be derived from handler CLR names. The typed pipeline still uses
 caller-supplied commit delegates so EF Core, PostgreSQL, and consumer unit of
 work ownership stay outside the Rebus transport package.
 
-## Current Low-Level Receive Wiring Sketch
+## Current Low-Level Receive Wiring Shape
 
 Applications can wire receive-side commands with a normal Rebus handler while
 Bondstone keeps durable identity, inbox protection, and commit behavior
 explicit.
 
-Register the receive pipeline, persistence, and message identities during host
-setup:
+This lower-level shape registers the receive pipeline, persistence, Rebus host
+configuration, stable message identities, and a normal Rebus handler. The
+handler passes the wire envelope, durable handler identity, typed handler
+delegate, and commit delegate to `IRebusTypedCommandReceivePipeline`.
 
-```csharp
-services.AddSingleton<IMessageTypeRegistry>(serviceProvider =>
-{
-    var registry = new MessageTypeRegistry();
-    registry.Register<ReserveOrderCommand>("fulfillment.order.reserve.v1");
-    return registry;
-});
-
-services.AddBondstone(bondstone =>
-{
-    bondstone.UsePostgreSqlPersistence<ApplicationDbContext>(connectionString);
-    bondstone.UseRebusTypedCommandReceivePipeline();
-});
-
-services.AddRebus(
-    configure => configure
-        .Transport(transport => transport.UsePostgreSql(
-            rebusConnectionString,
-            "rebus_messages",
-            "fulfillment-receive",
-            null,
-            "public"))
-        .Serialization(serializer => serializer.UseSystemTextJson()));
-
-services.AddRebusHandler<ReserveOrderRebusHandler>();
-```
-
-The Rebus handler stays small but still repeats the durable handler identity
-and commit boundary:
-
-```csharp
-public sealed class ReserveOrderRebusHandler(
-    IRebusTypedCommandReceivePipeline receivePipeline,
-    ReserveOrderHandler handler,
-    IEntityFrameworkCorePersistenceScope persistenceScope)
-    : IHandleMessages<RebusDurableMessageEnvelope>
-{
-    public async Task Handle(RebusDurableMessageEnvelope envelope)
-    {
-        await receivePipeline.HandleOnceAsync<ReserveOrderCommand>(
-            envelope,
-            "fulfillment.reserve-order.v1",
-            handler.HandleAsync,
-            persistenceScope.SaveChangesAsync);
-    }
-}
-```
-
-This shape is intentionally explicit and works for one or a few handlers. It
-is now a low-level primitive rather than the preferred future app-facing
-receive API.
+This shape is intentionally explicit and works for one or a few handlers, but
+it is a low-level primitive rather than the preferred future app-facing receive
+API. The user-facing setup example in [../setup.md](../setup.md) therefore
+shows the outgoing durable command path and avoids presenting this temporary
+receive wiring as the main application pattern.
 
 The preferred next receive shape should be host topology binding from Rebus to
 module command routes. Modules register command handlers and validators

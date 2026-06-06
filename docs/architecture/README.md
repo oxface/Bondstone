@@ -47,7 +47,8 @@ because a module moves from in-process composition to a separate service.
 
 ## Related Docs
 
-The initial package split is documented in [../packaging.md](../packaging.md).
+The current package split is documented in [../packaging.md](../packaging.md).
+The user-facing setup example is documented in [../setup.md](../setup.md).
 The migration strategy for bringing source into this repository is documented
 in [../extraction.md](../extraction.md).
 Sample direction is documented in [../samples.md](../samples.md).

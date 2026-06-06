@@ -21,6 +21,7 @@ duplicating durable rules.
 - [repository.md](repository.md) records current repository layout and tooling
   direction.
 - [samples.md](samples.md) records current sample application direction.
+- [setup.md](setup.md) is the single user-facing library setup example.
 - [status.md](status.md) summarizes current extraction, verification, and
   deferred implementation state.
 - [testing.md](testing.md) records current testing direction.
@@ -41,6 +42,20 @@ duplicating durable rules.
 Prefer references over duplication. If a rule matters to both humans and
 agents, record it in stable docs, then reference it from README and AGENTS
 files with the local context each audience needs.
+
+## Document Ownership
+
+- `setup.md` is the only stable doc for library-user code examples.
+- `packaging.md` owns package IDs, dependency direction, target framework,
+  versioning, and publishing policy.
+- `repository.md` owns repository layout, local tooling, CI, and code
+  conventions, but should reference `packaging.md` for package inventory.
+- `testing.md` owns test policy, categories, and command entrypoints.
+- `status.md` owns the current implementation, verification, accepted
+  direction, and deferred-work snapshot.
+- `extraction-plan.md` owns tactical backlog notes and may be pruned when
+  completed detail stops helping active extraction.
+- `architecture/` owns runtime contracts and durable boundary principles.
 
 ## Expanding Docs
 

@@ -27,26 +27,8 @@ skip-locked or equivalent semantics.
 `AddBondstone` is the preferred host registration path. Package-specific
 extensions mark what they contribute, and the builder rejects hosted outbox
 processing when persistence or transport capability is missing.
-
-Typical host registration:
-
-```csharp
-services.AddBondstone(bondstone =>
-{
-    bondstone.UsePostgreSqlPersistence<AppDbContext>(connectionString);
-    bondstone.Outbox.UseRebusTransport(
-        new Dictionary<string, string>
-        {
-            ["fulfillment"] = "fulfillment-queue",
-        });
-    bondstone.Outbox.UseWorker(options =>
-    {
-        options.WorkerId = "orders-api-1";
-        options.LeaseDuration = TimeSpan.FromMinutes(5);
-        options.BatchSize = 100;
-    });
-});
-```
+The current library-user setup example is in
+[../setup.md](../setup.md).
 
 Low-level registration methods remain available for tests and advanced
 composition. For example, a consumer can register persistence and transport,

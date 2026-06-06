@@ -1,35 +1,38 @@
 # Handover Prompt
 
-Use this prompt from a Codex session opened with `/home/oxface/repos/Bondstone`
-as the workspace root.
+Use this document from a Codex session opened at the Bondstone repository root.
 
-```text
+## Continuation Prompt
+
 We are continuing the Bondstone extraction.
 
-Read AGENTS.md first, then docs/README.md, docs/adr/README.md,
-docs/extraction.md, docs/packaging.md, docs/testing.md, and docs/repository.md.
+Read `AGENTS.md` first, then `docs/README.md`, `docs/adr/README.md`,
+`docs/extraction.md`, `docs/packaging.md`, `docs/testing.md`,
+`docs/repository.md`, and `docs/status.md`.
 
-The historical source repository is ../net-react-modular-template. Treat it as
-source material only. Do not preserve compatibility with it as a design
-constraint, and do not bulk-copy Bondstone implementation code.
+The historical source repository is source material only. Do not preserve
+compatibility with it as a design constraint, and do not bulk-copy Bondstone
+implementation code.
 
 Current state:
-- ADR 0001 is applied.
-- ADRs 0002-0008 are accepted/amended and partially applied.
-- The repo shell exists with Bondstone.slnx, net10.0 package projects, matching
-  test projects, pnpm/Husky/commitlint/Prettier, CI, Release Please, and NuGet
-  publish workflow.
-- Publishing to nuget.org works through Release Please, GitHub Releases, and
-  NuGet trusted publishing. GitHub Packages is not a current target. Release
-  Please owns the central VersionPrefix in Directory.Build.props.
-- Default quality gate is pnpm check. It runs formatting, restore, build,
-  Unit/Application tests, and pack. Integration tests are separate.
+
+- ADR-led maintenance is active. Check `docs/adr/README.md` before changing
+  public API, package boundaries, target frameworks, provider or transport
+  support, migration policy, compatibility, release/publishing, sample
+  architecture, repository workflow, or agent harness behavior.
+- Current package projects and dependency direction are recorded in
+  `docs/packaging.md`.
+- The current implemented and deferred runtime surface is summarized in
+  `docs/status.md`.
+- Package, testing, repository, sample, and architecture direction live in the
+  stable docs under `docs/`.
+- Default quality gate is `pnpm check`. Integration tests remain separate.
 
 Next preferred work:
-1. Verify current repo state with pnpm install --frozen-lockfile and pnpm check.
-2. Start the first slow extraction slice: core abstractions and
-   low-dependency primitives from ../net-react-modular-template into
-   src/Bondstone, with neutral Unit/Application tests.
-3. When design tension appears, create or amend ADRs before widening the code
-   move.
-```
+
+1. Read the current docs and source before editing.
+2. Pick a narrow extraction or cleanup slice from `docs/extraction-plan.md` or
+   the user's current request.
+3. Create, amend, or supersede ADRs before widening durable decisions.
+4. Run the narrowest useful verification first, then the repository quality
+   gate when the change warrants it.

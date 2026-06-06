@@ -3,21 +3,15 @@
 Bondstone is a .NET library for durable module boundaries, durable command
 sending, EF Core backed inbox/outbox persistence, and transport adapters.
 
-The repository is currently in early extraction shape: documentation, ADRs,
-repo tooling, package projects, test projects, CI, and NuGet release plumbing
-exist; runtime implementation is still being moved slowly from the historical
-template repository.
+The repository is in active extraction shape: documentation, ADRs, repo
+tooling, package projects, test projects, CI, NuGet release plumbing, and
+several runtime slices exist; remaining runtime implementation is still being
+moved slowly from the historical template repository.
 
 ## Packages
 
-The initial package set is:
-
-- `Bondstone`
-- `Bondstone.EntityFrameworkCore`
-- `Bondstone.EntityFrameworkCore.Postgres`
-- `Bondstone.Transport.Rebus`
-
-All packages initially target `net10.0` and share one coordinated version.
+Current package IDs, dependency direction, target framework, versioning, and
+publishing policy are recorded in [docs/packaging.md](docs/packaging.md).
 
 ## Repository Map
 
@@ -25,6 +19,7 @@ All packages initially target `net10.0` and share one coordinated version.
 - [docs/adr/README.md](docs/adr/README.md) explains the ADR workflow.
 - [docs/architecture/README.md](docs/architecture/README.md) records runtime
   positioning.
+- [docs/setup.md](docs/setup.md) is the single user-facing setup example.
 - [docs/extraction.md](docs/extraction.md) records the slow extraction plan.
 - [docs/packaging.md](docs/packaging.md) records package and release policy.
 - [docs/testing.md](docs/testing.md) records test categories and verification.
@@ -34,10 +29,7 @@ All packages initially target `net10.0` and share one coordinated version.
 
 ## Verification
 
-```sh
-pnpm install
-pnpm check
-```
+Run `pnpm install`, then `pnpm check`.
 
 `pnpm verify` is kept as an alias for `pnpm check`.
 

@@ -5,36 +5,11 @@ Bondstone.
 
 ## Layout
 
-Bondstone uses a library-maintenance repository layout:
-
-```text
-.agents/
-  skills/
-.config/
-.devcontainer/
-.github/
-  workflows/
-docs/
-  adr/
-samples/
-src/
-tests/
-AGENTS.md
-Bondstone.slnx
-Directory.Build.props
-Directory.Packages.props
-global.json
-package.json
-pnpm-workspace.yaml
-README.md
-```
-
-The initial source projects are:
-
-- `src/Bondstone`
-- `src/Bondstone.EntityFrameworkCore`
-- `src/Bondstone.EntityFrameworkCore.Postgres`
-- `src/Bondstone.Transport.Rebus`
+Bondstone uses a library-maintenance repository layout with repository
+automation at the root, stable docs under `docs/`, deferred samples under
+`samples/`, package projects under `src/`, tests under `tests/`, and
+repository agent skills under `.agents/skills/`. Current package projects and
+dependency direction are recorded in [packaging.md](packaging.md).
 
 Tests live under `tests/`, grouped by package or integration boundary. Tests
 extracted from the previous root framework test project should be moved or

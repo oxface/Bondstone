@@ -10,9 +10,9 @@ Bondstone targets `net10.0` for the initial extraction.
 Wider target framework support is deferred until a later compatibility ADR
 evaluates demand and maintenance cost.
 
-## Initial Packages
+## Package Set
 
-Ship one NuGet package per initial project. Package IDs match project names:
+Ship one NuGet package per package project. Package IDs match project names:
 
 - `Bondstone`
 - `Bondstone.Hosting`
@@ -24,13 +24,14 @@ Ship one NuGet package per initial project. Package IDs match project names:
 
 Use this dependency direction:
 
-```text
-Bondstone
-Bondstone.Hosting -> Bondstone
-Bondstone.EntityFrameworkCore -> Bondstone
-Bondstone.EntityFrameworkCore.Postgres -> Bondstone.EntityFrameworkCore, Bondstone
-Bondstone.Transport.Rebus -> Bondstone
-```
+- `Bondstone` stays at the core with no dependency on provider, transport, or
+  hosting packages.
+- `Bondstone.Hosting` depends on `Bondstone`.
+- `Bondstone.EntityFrameworkCore` depends on `Bondstone`.
+- `Bondstone.EntityFrameworkCore.Postgres` depends on
+  `Bondstone.EntityFrameworkCore` and may reference `Bondstone` directly for
+  shared builder extension methods.
+- `Bondstone.Transport.Rebus` depends on `Bondstone`.
 
 Provider-specific packages contain provider-specific behavior only. A provider
 package may also reference `Bondstone` directly for shared builder extension
@@ -50,7 +51,7 @@ registration methods needed by advanced consumers and tests.
 
 Use central package management through `Directory.Packages.props`.
 
-Use coordinated versioning for the initial package set. Release Please manages
+Use coordinated versioning for the current package set. Release Please manages
 the root changelog, release pull request, GitHub release, and version tag.
 
 Release Please uses the `simple` release type and updates the central

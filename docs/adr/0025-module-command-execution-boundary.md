@@ -97,6 +97,9 @@ application code.
 The module command pipeline applies to module commands broadly, not only to
 durable commands.
 
+This amendment supersedes the original durable-only handler and validator
+names in this ADR's decision text.
+
 `Bondstone` adds `ICommand` as the base marker for commands executed through a
 module command pipeline. `IDurableCommand` extends `ICommand` and keeps its
 existing durable meaning: stable message identity, outbox delivery, inbox

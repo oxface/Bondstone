@@ -48,6 +48,55 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void RegisterHandler_WithExplicitDurableMessageTypeName_RegistersMessageIdentityAndHandlerIdentity()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.Commands.RegisterHandler<ShipOrderCommand, ShipOrderHandler>(
+                    "sales.order.ship.v2",
+                    handlerIdentity: "sales.ship-order-handler.v2");
+            });
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IModuleCommandRouteRegistry routeRegistry =
+            serviceProvider.GetRequiredService<IModuleCommandRouteRegistry>();
+
+        ModuleCommandRoute route = routeRegistry.GetByMessageTypeName(
+            "sales",
+            "sales.order.ship.v2");
+
+        Assert.Equal(typeof(ShipOrderCommand), route.CommandType);
+        Assert.Equal("sales.ship-order-handler.v2", route.HandlerIdentity);
+        Assert.True(route.IsDurable);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void RegisterHandler_WhenCommandRouteAlreadyExists_Throws()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    module.Commands.RegisterHandler<CreateDraftOrderCommand, CreateDraftOrderHandler>();
+                    module.Commands.RegisterHandler<CreateDraftOrderCommand, AlternateDraftOrderHandler>();
+                });
+            }));
+
+        Assert.Contains("already has a command route", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task ModuleCommands_WhenCommandIsNotDurable_ExecutesThroughPipelineWithoutMessageIdentity()
     {
         var services = new ServiceCollection();
@@ -227,6 +276,29 @@ public sealed class ModuleCommandRegistrationTests
             CancellationToken ct = default)
         {
             log.Calls.Add($"validate-draft:{command.DraftId}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public abstract class AlternateDraftOrderHandler : ICommandHandler<CreateDraftOrderCommand>
+    {
+        public ValueTask HandleAsync(
+            CreateDraftOrderCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [DurableCommandIdentity("sales.order.ship.v2")]
+    public sealed record ShipOrderCommand(string OrderId) : IDurableCommand;
+
+    public sealed class ShipOrderHandler : ICommandHandler<ShipOrderCommand>
+    {
+        public ValueTask HandleAsync(
+            ShipOrderCommand command,
+            CancellationToken ct = default)
+        {
             return ValueTask.CompletedTask;
         }
     }

@@ -9,7 +9,7 @@ public interface IModuleCommandPipelineBehavior<TCommand>
 {
     ValueTask HandleAsync(
         TCommand command,
-        ModuleCommandPipelineContext context,
+        ModuleCommandExecutionContext context,
         ModuleCommandPipelineNext next,
         CancellationToken ct = default);
 }

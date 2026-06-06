@@ -31,13 +31,30 @@ Current implemented surface includes:
   `System.Text.Json`, explicit handler identity, receive-pipeline Activity
   creation from accepted W3C parent context, the low-level Rebus inbox
   adapter, and caller-supplied commit delegates;
+- Rebus module command receive pipeline groundwork using module command route
+  metadata, stable message identity resolution, JSON deserialization, module
+  command execution with an explicit durable inbox record, inbox handle-once
+  behavior inside the module command pipeline, inbox result return through
+  `ModuleCommandExecutionResult`, and already-received failure surfacing;
 - host-owned Rebus outgoing topology builder for mapping target modules to
   Rebus destination addresses;
 - module command registration and execution in core, including
   `IBondstoneModule`, `ICommand`, `IDurableCommand`, direct typed command
   handlers, typed validators, startup reflection scanning, cached module
   command routes, scoped command execution, module metadata registration,
-  durable-messaging capability metadata, and validation pipeline behavior;
+  durable-messaging capability metadata, module persistence capability
+  metadata, module execution context, explicit receive inbox records,
+  source-module scoped durable command sending, receive-side inbox system
+  behavior, ordered system pipeline behavior, execution results, and validation
+  pipeline behavior;
+- default outbox-backed `IDurableCommandSender` composition that requires a
+  current module execution context, serializes durable command payloads, stages
+  `DurableMessageEnvelope` records through `IDurableOutboxWriter`, and uses
+  the executing module as the source module;
+- module-owned EF Core persistence opt-in through
+  `UseEntityFrameworkCorePersistence<TDbContext>` and an EF-specific module
+  command transaction behavior that wraps opted-in module command execution in
+  `IEntityFrameworkCorePersistenceScope` and calls `SaveChangesAsync`;
 - lightweight `AddBondstone` composition builder with outbox capability
   validation for hosted or dispatcher-based processing.
 
@@ -45,11 +62,8 @@ Current implemented surface includes:
 
 Accepted but not yet implemented direction includes:
 
-- module persistence binding and transaction pipeline behavior above the EF
-  persistence scope;
-- source-module execution scope for durable command sending;
-- host-owned Rebus receive topology binding into module command routes, replacing
-  per-command handler and commit delegates in app-facing receive wiring.
+- host-owned Rebus endpoint binding to local module sets, replacing manual
+  receive endpoint wiring in app-facing receive setup.
 
 ## Verification Surface
 
@@ -57,9 +71,11 @@ Current automated coverage includes:
 
 - neutral unit tests for core messaging and persistence contracts;
 - neutral unit tests for module command registration, startup scanning,
-  validation, route lookup, and direct handler execution;
+  validation, route lookup, module execution context, source-module scoped
+  durable sending, receive inbox behavior, and direct handler execution;
 - EF Core unit and application tests for mapping, service registration, store
-  staging, and persistence-scope validation;
+  staging, persistence-scope validation, module persistence opt-in, and module
+  transaction/save behavior;
 - PostgreSQL Testcontainers integration tests for real schema creation,
   transactions, savepoints, unique constraints, inbox registration, outbox
   claiming, outbox lease renewal, outbox dispatch recording,
@@ -95,11 +111,13 @@ Deferred extraction work includes:
   advanced dispatcher or worker configuration;
 - inbox handler discovery, receive retry policy, stale receive recovery, and
   transport acknowledgement coordination;
-- module identity scopes, source-module command sender scope, domain-event
-  capture, durable-messaging capability validation, and higher-level
-  transaction helpers above the EF persistence scope;
-- Rebus host-topology binding to module command routes, broader
-  transport-level Rebus receive tests, and event publish/subscribe behavior;
+- module identity scopes beyond the current source-module execution context,
+  domain-event capture, durable-messaging capability validation,
+  provider-specific module persistence validation, and broader transaction
+  helpers above the EF persistence scope;
+- Rebus host-topology endpoint binding to local module sets, broader
+  transport-level Rebus module receive tests, and event publish/subscribe
+  behavior;
 - provider-specific payload storage such as PostgreSQL `jsonb`, migration
   helpers, broader provider support, samples, and additional integration
   fixtures.

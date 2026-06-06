@@ -1,4 +1,5 @@
 using Bondstone.Messaging;
+using Bondstone.Persistence;
 using Bondstone.Utility;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,7 +13,7 @@ public sealed class ModuleCommandRoute
         MessageTypeRegistration? messageTypeRegistration,
         string? handlerIdentity,
         Type handlerType,
-        Func<IServiceProvider, object, ModuleCommandRoute, CancellationToken, ValueTask> invoke)
+        Func<IServiceProvider, object, ModuleCommandRoute, DurableInboxRecord?, CancellationToken, ValueTask<ModuleCommandExecutionResult>> invoke)
     {
         ArgumentNullException.ThrowIfNull(commandType);
         ArgumentNullException.ThrowIfNull(handlerType);
@@ -54,7 +55,7 @@ public sealed class ModuleCommandRoute
         _invoke = invoke;
     }
 
-    private readonly Func<IServiceProvider, object, ModuleCommandRoute, CancellationToken, ValueTask> _invoke;
+    private readonly Func<IServiceProvider, object, ModuleCommandRoute, DurableInboxRecord?, CancellationToken, ValueTask<ModuleCommandExecutionResult>> _invoke;
 
     public string ModuleName { get; }
 
@@ -70,15 +71,16 @@ public sealed class ModuleCommandRoute
 
     public Type HandlerType { get; }
 
-    internal ValueTask InvokeAsync(
+    internal ValueTask<ModuleCommandExecutionResult> InvokeAsync(
         IServiceProvider serviceProvider,
         object command,
+        DurableInboxRecord? receiveInboxRecord,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
         ArgumentNullException.ThrowIfNull(command);
 
-        return _invoke(serviceProvider, command, this, ct);
+        return _invoke(serviceProvider, command, this, receiveInboxRecord, ct);
     }
 
     internal static ModuleCommandRoute Create<TCommand, THandler>(
@@ -97,10 +99,11 @@ public sealed class ModuleCommandRoute
             InvokeAsync<TCommand, THandler>);
     }
 
-    private static async ValueTask InvokeAsync<TCommand, THandler>(
+    private static async ValueTask<ModuleCommandExecutionResult> InvokeAsync<TCommand, THandler>(
         IServiceProvider serviceProvider,
         object command,
         ModuleCommandRoute route,
+        DurableInboxRecord? receiveInboxRecord,
         CancellationToken ct)
         where TCommand : ICommand
         where THandler : class, ICommandHandler<TCommand>
@@ -118,27 +121,38 @@ public sealed class ModuleCommandRoute
             await commandHandler.HandleAsync(typedCommand, handlerCt);
         };
 
-        IReadOnlyList<IModuleCommandPipelineBehavior<TCommand>> behaviors = serviceProvider
+        IReadOnlyList<IModuleCommandPipelineBehavior<TCommand>> systemBehaviors = serviceProvider
+            .GetServices<IModuleCommandSystemPipelineBehavior<TCommand>>()
+            .OrderBy(static behavior => behavior.Order)
+            .Cast<IModuleCommandPipelineBehavior<TCommand>>()
+            .ToArray();
+        IReadOnlyList<IModuleCommandPipelineBehavior<TCommand>> applicationBehaviors = serviceProvider
             .GetServices<IModuleCommandPipelineBehavior<TCommand>>()
             .ToArray();
+        IReadOnlyList<IModuleCommandPipelineBehavior<TCommand>> behaviors = systemBehaviors
+            .Concat(applicationBehaviors)
+            .ToArray();
 
-        ModuleCommandPipelineNext pipeline = BuildPipeline(
+        ModuleCommandPipeline pipeline = BuildPipeline(
             typedCommand,
             route,
+            receiveInboxRecord,
             behaviors,
             handler);
 
-        await pipeline(ct);
+        await pipeline.InvokeAsync(ct);
+        return new ModuleCommandExecutionResult(pipeline.Context.ReceiveInboxResult);
     }
 
-    private static ModuleCommandPipelineNext BuildPipeline<TCommand>(
+    private static ModuleCommandPipeline BuildPipeline<TCommand>(
         TCommand command,
         ModuleCommandRoute route,
+        DurableInboxRecord? receiveInboxRecord,
         IReadOnlyList<IModuleCommandPipelineBehavior<TCommand>> behaviors,
         ModuleCommandPipelineNext handler)
         where TCommand : ICommand
     {
-        var context = new ModuleCommandPipelineContext(route);
+        var context = new ModuleCommandExecutionContext(route, receiveInboxRecord);
         ModuleCommandPipelineNext next = handler;
 
         for (int index = behaviors.Count - 1; index >= 0; index--)
@@ -152,6 +166,16 @@ public sealed class ModuleCommandRoute
                 behaviorCt);
         }
 
-        return next;
+        return new ModuleCommandPipeline(context, next);
+    }
+
+    private sealed record ModuleCommandPipeline(
+        ModuleCommandExecutionContext Context,
+        ModuleCommandPipelineNext Next)
+    {
+        public ValueTask InvokeAsync(CancellationToken ct)
+        {
+            return Next(ct);
+        }
     }
 }

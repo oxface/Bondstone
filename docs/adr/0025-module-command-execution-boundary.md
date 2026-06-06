@@ -201,7 +201,16 @@ additional ADR review or amendments.
   marker, command handler and validator abstractions, startup reflection
   registration for handlers and validators, cached module command routes, a
   scoped module command executor, module durable-messaging capability metadata,
-  and a validation pipeline behavior.
+  module durable sending execution context, module persistence capability
+  metadata, source-module scoped durable command sending, ordered system
+  pipeline behavior for Bondstone-owned runtime concerns, explicit receive
+  inbox records on module command execution, execution results carrying inbox
+  outcomes, receive-side inbox system behavior, and a validation pipeline
+  behavior. `Bondstone.EntityFrameworkCore` now adds module-owned EF
+  persistence opt-in and an EF transaction system pipeline behavior for
+  modules that declare EF persistence. `Bondstone.Transport.Rebus` now has
+  module command receive pipeline groundwork that dispatches Rebus wire
+  envelopes into `IModuleCommandExecutor`.
 - Stable docs: Current module command direction is described in
   [docs/architecture/modules.md](../architecture/modules.md), with supporting
   messaging, persistence, and Rebus transport notes in
@@ -213,21 +222,27 @@ additional ADR review or amendments.
 - Application evidence: Core module command registration and executor
   implementation is applied with unit coverage for inline module command
   registration, module-provided registration, assembly scanning, validation,
-  regular command execution, durable command execution, route lookup, and
-  stable handler identity defaulting. Rebus outgoing host topology now has an
-  adapter-specific `UseRebusTransport` builder for mapping target modules to
-  Rebus destination addresses. Core module registration now records module
-  metadata and `UseDurableMessaging` capability state through
+  regular command execution, durable command execution, route lookup, stable
+  handler identity defaulting, module execution context, source-module scoped
+  durable command sending, ordered system pipeline behavior, module
+  execution results, explicit receive inbox records, receive-side inbox system
+  behavior, module persistence metadata, EF module persistence opt-in, EF
+  command transaction/save behavior, and Rebus module command receive dispatch.
+  Rebus outgoing host topology now has an adapter-specific `UseRebusTransport`
+  builder for mapping target modules to Rebus destination addresses. Core
+  module registration now records module metadata, `UseDurableMessaging`
+  capability state, and module persistence capability state through
   `IBondstoneModuleRegistry`.
-- Pending or deferred: EF transaction behavior, module persistence binding,
-  source-module command sender scope, Rebus receive endpoint binding, inbox
-  integration inside the module command pipeline, durable-messaging capability
-  validation in transport/persistence adapters, event handling, and samples
-  remain future work.
+- Pending or deferred: Rebus receive endpoint binding to local module sets,
+  receive acknowledgement integration, durable-messaging capability validation
+  in transport/persistence adapters, provider-specific module persistence
+  validation, operation-state integration, event handling, and samples remain
+  future work.
 
 ## Verification
 
 Read back affected architecture docs and ran:
 
 - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --filter "Category=Unit"`
+- `dotnet test tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application"`
 - `pnpm check`

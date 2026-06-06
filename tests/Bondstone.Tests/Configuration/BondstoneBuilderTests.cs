@@ -127,6 +127,22 @@ public sealed class BondstoneBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void AddBondstone_WhenModuleExecutionContextAccessorWasRegisteredByConsumer_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IModuleExecutionContextAccessor, ConsumerModuleExecutionContextAccessor>();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(_ => { }));
+
+        Assert.Contains(
+            nameof(IModuleExecutionContextAccessor),
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void MarkPersistenceProvider_WhenCapabilityNameIsBlank_Throws()
     {
         var services = new ServiceCollection();
@@ -167,5 +183,10 @@ public sealed class BondstoneBuilderTests
             registration = null;
             return false;
         }
+    }
+
+    private sealed class ConsumerModuleExecutionContextAccessor : IModuleExecutionContextAccessor
+    {
+        public ModuleExecutionContext? Current => null;
     }
 }

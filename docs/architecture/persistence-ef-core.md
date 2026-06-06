@@ -32,6 +32,16 @@ The registration uses the consumer-owned DbContext type and stays
 provider-neutral. It does not configure a database provider, migrations, hosted
 dispatchers, locks, or retries.
 
+Modules opt into EF-backed command transactions with
+`UseEntityFrameworkCorePersistence<TDbContext>` on `BondstoneModuleBuilder`.
+That module-owned registration records EF persistence metadata, reuses the
+provider-neutral EF durable store registrations, and attaches an EF command
+system pipeline behavior for modules that declare that capability. System
+behaviors are ordered by the module command runtime, so the EF transaction
+boundary wraps normal application pipeline behaviors. The host still owns the
+environment-specific DbContext provider configuration, connection strings,
+schema policy, and operational topology.
+
 `EntityFrameworkCoreDurableOutboxWriter<TDbContext>` stages outgoing outbox
 messages in the current EF Core `DbContext`. It does not call
 `SaveChangesAsync`; callers keep control of the transaction that commits
@@ -67,5 +77,9 @@ for non-EF providers.
 Future module command pipeline behavior should wrap
 `IEntityFrameworkCorePersistenceScope` so validation, handler state changes,
 inbox markers, outbox messages, operation-state updates, `SaveChangesAsync`,
-and transaction commit happen in one module boundary. The current EF scope is
-the lower-level transaction companion, not the final module unit-of-work API.
+and transaction commit happen in one module boundary. The current applied EF
+module behavior wraps opted-in module command execution and saves handler
+changes through the EF scope. Inbox markers, outbox messages, operation-state
+updates, and receive acknowledgement are still future durable-boundary pieces.
+The EF scope remains the lower-level transaction companion, not a standalone
+public unit-of-work API.

@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bondstone.Messaging;
 using Bondstone.Modules;
+using Bondstone.Persistence;
 
 namespace Bondstone.Configuration;
 
@@ -15,10 +16,29 @@ public static class BondstoneServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configure);
 
         MessageTypeRegistry messageTypeRegistry = GetOrAddMessageTypeRegistry(services);
-        ModuleCommandRouteRegistry commandRouteRegistry = GetOrAddCommandRouteRegistry(services);
-        BondstoneModuleRegistry moduleRegistry = GetOrAddModuleRegistry(services);
+        ModuleCommandRouteRegistry commandRouteRegistry =
+            GetOrAddOwnedSingleton<IModuleCommandRouteRegistry, ModuleCommandRouteRegistry>(
+                services,
+                "Module command registration");
+        BondstoneModuleRegistry moduleRegistry =
+            GetOrAddOwnedSingleton<IBondstoneModuleRegistry, BondstoneModuleRegistry>(
+                services,
+                "Module registration");
+        GetOrAddModuleExecutionContextAccessor(services);
 
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
+        services.TryAddScoped<IDurableCommandSender>(serviceProvider =>
+            new DurableCommandSender(
+                serviceProvider.GetRequiredService<IDurableOutboxWriter>(),
+                serviceProvider.GetRequiredService<IMessageTypeRegistry>(),
+                serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
+                serviceProvider.GetService<TimeProvider>()));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped(
+            typeof(IModuleCommandSystemPipelineBehavior<>),
+            typeof(ModuleCommandReceiveInboxPipelineBehavior<>)));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped(
+            typeof(IModuleCommandSystemPipelineBehavior<>),
+            typeof(ModuleExecutionContextPipelineBehavior<>)));
         services.TryAddEnumerable(ServiceDescriptor.Scoped(
             typeof(IModuleCommandPipelineBehavior<>),
             typeof(ValidationModuleCommandPipelineBehavior<>)));
@@ -64,45 +84,60 @@ public static class BondstoneServiceCollectionExtensions
         return registry;
     }
 
-    private static ModuleCommandRouteRegistry GetOrAddCommandRouteRegistry(IServiceCollection services)
+    private static TImplementation GetOrAddOwnedSingleton<TService, TImplementation>(
+        IServiceCollection services,
+        string ownerDescription)
+        where TService : class
+        where TImplementation : class, TService, new()
     {
         ServiceDescriptor? descriptor = services.LastOrDefault(
-            service => service.ServiceType == typeof(IModuleCommandRouteRegistry));
+            service => service.ServiceType == typeof(TService));
 
-        if (descriptor?.ImplementationInstance is ModuleCommandRouteRegistry commandRouteRegistry)
+        if (descriptor?.ImplementationInstance is TImplementation implementation)
         {
-            return commandRouteRegistry;
+            return implementation;
         }
 
         if (descriptor is not null)
         {
             throw new InvalidOperationException(
-                $"Module command registration requires {nameof(IModuleCommandRouteRegistry)} to use the default singleton instance managed by {nameof(AddBondstone)}.");
+                $"{ownerDescription} requires {typeof(TService).Name} to use the default singleton instance managed by {nameof(AddBondstone)}.");
         }
 
-        var registry = new ModuleCommandRouteRegistry();
-        services.AddSingleton<IModuleCommandRouteRegistry>(registry);
-        return registry;
+        var defaultImplementation = new TImplementation();
+        services.AddSingleton<TService>(defaultImplementation);
+        return defaultImplementation;
     }
 
-    private static BondstoneModuleRegistry GetOrAddModuleRegistry(IServiceCollection services)
+    private static ModuleExecutionContextAccessor GetOrAddModuleExecutionContextAccessor(
+        IServiceCollection services)
     {
-        ServiceDescriptor? descriptor = services.LastOrDefault(
-            service => service.ServiceType == typeof(IBondstoneModuleRegistry));
+        ServiceDescriptor? concreteDescriptor = services.LastOrDefault(
+            service => service.ServiceType == typeof(ModuleExecutionContextAccessor));
 
-        if (descriptor?.ImplementationInstance is BondstoneModuleRegistry moduleRegistry)
+        if (concreteDescriptor?.ImplementationInstance is ModuleExecutionContextAccessor accessor)
         {
-            return moduleRegistry;
+            return accessor;
         }
 
-        if (descriptor is not null)
+        if (concreteDescriptor is not null)
         {
             throw new InvalidOperationException(
-                $"Module registration requires {nameof(IBondstoneModuleRegistry)} to use the default singleton instance managed by {nameof(AddBondstone)}.");
+                $"Module execution context registration requires {nameof(ModuleExecutionContextAccessor)} to use the default singleton instance managed by {nameof(AddBondstone)}.");
         }
 
-        var registry = new BondstoneModuleRegistry();
-        services.AddSingleton<IBondstoneModuleRegistry>(registry);
-        return registry;
+        ServiceDescriptor? publicDescriptor = services.LastOrDefault(
+            service => service.ServiceType == typeof(IModuleExecutionContextAccessor));
+        if (publicDescriptor is not null)
+        {
+            throw new InvalidOperationException(
+                $"Module execution context registration requires {nameof(IModuleExecutionContextAccessor)} to use the default singleton instance managed by {nameof(AddBondstone)}.");
+        }
+
+        var defaultAccessor = new ModuleExecutionContextAccessor();
+        services.AddSingleton(defaultAccessor);
+        services.AddSingleton<IModuleExecutionContextAccessor>(defaultAccessor);
+        return defaultAccessor;
     }
+
 }

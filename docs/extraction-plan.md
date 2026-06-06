@@ -129,7 +129,29 @@ ADRs for durable technical decisions.
   - `IModuleCommandPipelineBehavior<TCommand>` pipeline hook
   - startup reflection registration for command handlers and validators
   - cached module command route metadata and scoped `IModuleCommandExecutor`
+  - ordered system pipeline behaviors for Bondstone-owned runtime concerns
   - validation pipeline behavior before direct handler execution
+- Source-module scoped durable command sending:
+  - module execution context accessor and command pipeline behavior
+  - scoped default `IDurableCommandSender` registration
+  - current module captured as durable envelope source module
+  - JSON command payload staging through `IDurableOutboxWriter`
+  - explicit failure when durable send is attempted outside module command
+    execution
+- Module command receive inbox groundwork:
+  - optional durable inbox record parameter on `IModuleCommandExecutor`
+  - `ModuleCommandExecutionResult` carrying optional inbox handle result
+  - ordered inbox system pipeline behavior
+  - inbox handle-once execution inside the module command pipeline
+  - no-op lower-level inbox commit delegate so outer module transaction
+    behavior can save handler state and inbox markers together
+- Rebus module command receive pipeline groundwork:
+  - stable message identity resolution to module command CLR type
+  - target-module route lookup and handler identity derivation from module
+    command route metadata
+  - JSON command payload deserialization
+  - durable inbox record passed into `IModuleCommandExecutor`
+  - already-received inbox result surfaced through existing Rebus exception
 - PostgreSQL inbox registration:
   - provider-neutral `IDurableInboxRegistrar` contract
   - `DurableInboxRegistrationResult`
@@ -149,6 +171,17 @@ ADRs for durable technical decisions.
     primitives
   - PostgreSQL verification for commit, rollback, and existing transaction
     ownership
+- Module persistence registration and EF transaction pipeline groundwork:
+  - core module persistence capability metadata on
+    `BondstoneModuleRegistration`
+  - module-owned `UsePersistence` capability registration
+  - EF Core `UseEntityFrameworkCorePersistence<TDbContext>` module extension
+  - EF-specific module command transaction pipeline behavior over
+    `IEntityFrameworkCorePersistenceScope`
+  - transaction behavior registered as ordered system pipeline behavior rather
+    than by DI insertion position
+  - command handler changes saved through the module command boundary for
+    modules that opt into EF persistence
 - Cross-package AddBondstone host wiring smoke test:
   - preferred fluent composition with PostgreSQL persistence, Rebus transport,
     and hosted outbox worker

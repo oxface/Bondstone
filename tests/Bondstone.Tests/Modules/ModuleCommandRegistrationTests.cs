@@ -136,6 +136,41 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task ModuleCommands_WhenExecuting_SetsModuleExecutionContext()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.Commands.RegisterHandler<InspectContextCommand, InspectContextHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IModuleExecutionContextAccessor accessor =
+            serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>();
+
+        Assert.Null(accessor.Current);
+
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "sales",
+                    new InspectContextCommand());
+        }
+
+        CommandCallLog log = serviceProvider.GetRequiredService<CommandCallLog>();
+        Assert.Equal(["context:sales"], log.Calls);
+        Assert.Null(accessor.Current);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task RegisterFromAssemblyContaining_WhenHandlersAndValidatorsExist_RegistersRoutesAndValidators()
     {
         var services = new ServiceCollection();
@@ -276,6 +311,22 @@ public sealed class ModuleCommandRegistrationTests
             CancellationToken ct = default)
         {
             log.Calls.Add($"validate-draft:{command.DraftId}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed record InspectContextCommand : ICommand;
+
+    public sealed class InspectContextHandler(
+        IModuleExecutionContextAccessor executionContextAccessor,
+        CommandCallLog log)
+        : ICommandHandler<InspectContextCommand>
+    {
+        public ValueTask HandleAsync(
+            InspectContextCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"context:{executionContextAccessor.Current?.ModuleName}");
             return ValueTask.CompletedTask;
         }
     }

@@ -134,12 +134,19 @@ routing. Rebus receive should eventually dispatch accepted wire envelopes into
 `IModuleCommandExecutor` instead of asking application code to pass per-command
 handler and commit delegates.
 
+Current groundwork adds a Rebus module command receive pipeline that resolves a
+wire envelope through Bondstone message identity and module command route
+metadata, passes the durable inbox record into `IModuleCommandExecutor`, and
+reads the inbox result from `ModuleCommandExecutionResult`. This removes
+per-command handler delegates from the receive primitive. Host-owned endpoint
+binding to local modules is still future work.
+
 ## Deferred Rebus Work
 
 Deferred Rebus work includes event publish/subscribe semantics, host-owned
-receive topology binding to module command routes, and validation that durable
-receive modules have durable messaging enabled. Route or destination circuit
-breaking, stale-claim recovery sweeps, dead-letter routing, receive retry
-state, stale receive recovery, and worker metrics are hosting, persistence, or
-future receive-pipeline decisions unless a later ADR accepts a
-transport-specific policy.
+endpoint binding to local module sets, and validation that durable receive
+modules have durable messaging enabled. Route or destination circuit breaking,
+stale-claim recovery sweeps, dead-letter routing, receive retry state, stale
+receive recovery, and worker metrics are hosting, persistence, or future
+receive-pipeline decisions unless a later ADR accepts a transport-specific
+policy.

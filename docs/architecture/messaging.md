@@ -22,9 +22,11 @@ Bondstone module can be registered through module command routes and executed
 through `IModuleCommandExecutor`. The executor uses startup reflection
 registration and cached runtime route metadata to run typed
 `ICommandHandler<TCommand>` handlers through pipeline behaviors such as
-validation. Later pipeline behaviors will add module transaction ownership,
-inbox handling for durable receives, outbox staging for durable sends,
-operation-state updates, source-module scope, and receive tracing.
+validation. Bondstone-owned runtime concerns use ordered system pipeline
+behaviors that wrap application behaviors; current system behaviors cover
+source-module execution context, receive-side inbox handling, and EF
+transaction ownership for EF-backed modules. Later pipeline behaviors will add
+operation-state updates and receive tracing.
 
 `ICommand` is the base marker for module command pipeline execution.
 `IDurableCommand` extends `ICommand` for commands accepted for durable outbox
@@ -35,6 +37,13 @@ Durable command sending is represented by `IDurableCommandSender`. The sender
 accepts a durable command, a required target module, and optional explicit
 metadata parameters. It returns a send result and does not promise an
 immediate command result.
+
+The default sender stages a `DurableMessageEnvelope` through
+`IDurableOutboxWriter`. It requires a current module execution context and uses
+the executing module as the envelope source module. That context is established
+by `IModuleCommandExecutor`, so durable sends from HTTP endpoints or local
+application code should normally happen inside a module command handler rather
+than from arbitrary services.
 
 The common send overload accepts only the command, target module, and
 cancellation token. The advanced overload adds parameters in the order callers
@@ -109,6 +118,12 @@ preferred app-facing receive shape should eventually bind host Rebus topology
 to `IModuleCommandExecutor` so application code does not repeat handler and
 commit delegates per command.
 
+Rebus module command receive groundwork now resolves a Bondstone wire envelope
+to a registered module command route, derives the stable handler identity from
+route metadata, passes the durable inbox record into `IModuleCommandExecutor`,
+and receives the inbox result from `ModuleCommandExecutionResult`. Host
+endpoint binding to local module sets remains future work.
+
 Modules that send or receive durable commands should opt into one durable
 messaging capability, such as `UseDurableMessaging`, rather than making normal
 applications choose separate inbox and outbox toggles. The capability should
@@ -139,8 +154,8 @@ Deferred durable-command work remains tracked:
 - receive adapter, receive-side transport integration, and additional
   transport-backed verification;
 - durable-messaging capability validation, transaction behaviors,
-  source-module command sender scope, Rebus host-topology binding to module
-  command routes, and service-shaped samples.
+  Rebus host-topology binding to module command routes, and service-shaped
+  samples.
 
 ## Message Identity Names
 

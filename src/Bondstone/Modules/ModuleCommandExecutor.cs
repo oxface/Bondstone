@@ -1,4 +1,5 @@
 using Bondstone.Messaging;
+using Bondstone.Persistence;
 
 namespace Bondstone.Modules;
 
@@ -12,9 +13,23 @@ internal sealed class ModuleCommandExecutor(
     private readonly IModuleCommandRouteRegistry _routeRegistry =
         routeRegistry ?? throw new ArgumentNullException(nameof(routeRegistry));
 
-    public async ValueTask ExecuteAsync<TCommand>(
+    public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync<TCommand>(
         string moduleName,
         TCommand command,
+        CancellationToken ct = default)
+        where TCommand : ICommand
+    {
+        return await ExecuteAsync(
+            moduleName,
+            command,
+            receiveInboxRecord: null,
+            ct);
+    }
+
+    public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync<TCommand>(
+        string moduleName,
+        TCommand command,
+        DurableInboxRecord? receiveInboxRecord,
         CancellationToken ct = default)
         where TCommand : ICommand
     {
@@ -24,12 +39,29 @@ internal sealed class ModuleCommandExecutor(
             moduleName,
             typeof(TCommand));
 
-        await route.InvokeAsync(_serviceProvider, command, ct);
+        return await route.InvokeAsync(
+            _serviceProvider,
+            command,
+            receiveInboxRecord,
+            ct);
     }
 
-    public async ValueTask ExecuteAsync(
+    public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync(
         string moduleName,
         object command,
+        CancellationToken ct = default)
+    {
+        return await ExecuteAsync(
+            moduleName,
+            command,
+            receiveInboxRecord: null,
+            ct);
+    }
+
+    public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync(
+        string moduleName,
+        object command,
+        DurableInboxRecord? receiveInboxRecord,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -45,6 +77,10 @@ internal sealed class ModuleCommandExecutor(
             moduleName,
             command.GetType());
 
-        await route.InvokeAsync(_serviceProvider, command, ct);
+        return await route.InvokeAsync(
+            _serviceProvider,
+            command,
+            receiveInboxRecord,
+            ct);
     }
 }

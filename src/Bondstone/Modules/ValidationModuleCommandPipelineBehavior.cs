@@ -13,7 +13,7 @@ internal sealed class ValidationModuleCommandPipelineBehavior<TCommand>(
 
     public async ValueTask HandleAsync(
         TCommand command,
-        ModuleCommandPipelineContext context,
+        ModuleCommandExecutionContext context,
         ModuleCommandPipelineNext next,
         CancellationToken ct = default)
     {

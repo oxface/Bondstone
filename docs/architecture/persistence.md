@@ -20,9 +20,9 @@ SQL locking, schema migration, and background dispatch mechanics.
 
 EF Core components stage data and expose transaction/save boundaries, but they
 do not own transport acknowledgement, retry policy, domain events, or a
-generic mediator. Module command execution owns handler registration and is
-the intended place for future transaction pipeline behavior above the current
-EF persistence scope.
+generic mediator. Module command execution owns handler registration and now
+has EF transaction pipeline groundwork for modules that opt into EF
+persistence. Broader inbox/outbox receive orchestration remains future work.
 
 Provider packages own provider-specific SQL, locking, conflict detection,
 schema targeting, and integration tests. Provider-owned SQL should reuse table,
@@ -46,8 +46,9 @@ The current contracts intentionally do not decide:
   advanced worker configuration;
 - inbox handler discovery, stale receive recovery, receive retry policy, and
   transport acknowledgement coordination;
-- module identity scopes, domain-event capture, source-module command sender
-  scope, and higher-level transaction helpers above the EF persistence scope;
+- module identity scopes beyond the current source-module execution context,
+  domain-event capture, and higher-level transaction helpers above the EF
+  persistence scope;
 - operation-state transition policy or optimistic concurrency;
 - provider-specific schemas, migration commands, or payload storage such as
   PostgreSQL `jsonb`.

@@ -89,6 +89,31 @@ internal sealed class BondstoneModuleRegistry : IBondstoneModuleRegistry
         }
     }
 
+    internal BondstoneModuleRegistration EnablePersistence(
+        string moduleName,
+        string providerName,
+        Type? contextType)
+    {
+        string normalizedModuleName = NormalizeModuleName(moduleName);
+        string normalizedProviderName = providerName.NormalizeRequired(
+            nameof(providerName),
+            "Persistence provider name");
+
+        lock (_modules)
+        {
+            if (!_modules.TryGetValue(
+                normalizedModuleName,
+                out ModuleRegistrationState? state))
+            {
+                state = new ModuleRegistrationState(normalizedModuleName);
+                _modules.Add(normalizedModuleName, state);
+            }
+
+            state.EnablePersistence(normalizedProviderName, contextType);
+            return state.ToRegistration();
+        }
+    }
+
     private static string NormalizeModuleName(string moduleName)
     {
         return moduleName.NormalizeRequired(nameof(moduleName), "Module name");
@@ -100,11 +125,40 @@ internal sealed class BondstoneModuleRegistry : IBondstoneModuleRegistry
 
         public bool UsesDurableMessaging { get; set; }
 
+        public string? PersistenceProviderName { get; private set; }
+
+        public Type? PersistenceContextType { get; private set; }
+
+        public void EnablePersistence(
+            string providerName,
+            Type? contextType)
+        {
+            if (PersistenceProviderName is not null
+                && !StringComparer.Ordinal.Equals(PersistenceProviderName, providerName))
+            {
+                throw new InvalidOperationException(
+                    $"Module '{Name}' already uses persistence provider '{PersistenceProviderName}'.");
+            }
+
+            if (PersistenceContextType is not null
+                && contextType is not null
+                && PersistenceContextType != contextType)
+            {
+                throw new InvalidOperationException(
+                    $"Module '{Name}' already uses persistence context '{PersistenceContextType.FullName}'.");
+            }
+
+            PersistenceProviderName ??= providerName;
+            PersistenceContextType ??= contextType;
+        }
+
         public BondstoneModuleRegistration ToRegistration()
         {
             return new BondstoneModuleRegistration(
                 Name,
-                UsesDurableMessaging);
+                UsesDurableMessaging,
+                PersistenceProviderName,
+                PersistenceContextType);
         }
     }
 }

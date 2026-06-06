@@ -42,4 +42,12 @@ public sealed class BondstoneModuleBuilder
         _moduleRegistry.EnableDurableMessaging(Name);
         return this;
     }
+
+    public BondstoneModuleBuilder UsePersistence(
+        string providerName,
+        Type? contextType = null)
+    {
+        _moduleRegistry.EnablePersistence(Name, providerName, contextType);
+        return this;
+    }
 }

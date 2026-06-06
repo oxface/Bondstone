@@ -78,8 +78,11 @@ policy, and transport acknowledgement remain future work.
 
 - Current contract: `IEntityFrameworkCorePersistenceScope` executes operations
   inside an EF Core transaction and exposes explicit `SaveChangesAsync` for
-  lower-level durable primitives. It is EF-specific and not a core provider
-  abstraction for future non-EF integrations.
+  lower-level durable primitives. `Bondstone.EntityFrameworkCore` also uses
+  that scope in an EF-specific module command system pipeline behavior for
+  modules that opt into `UseEntityFrameworkCorePersistence<TDbContext>`. The
+  scope is EF-specific and not a core provider abstraction for future non-EF
+  integrations.
 - Stable docs: Current persistence rules are described in
   [docs/architecture/persistence.md](../architecture/persistence.md), with
   extraction state in [docs/extraction.md](../extraction.md) and
@@ -88,12 +91,14 @@ policy, and transport acknowledgement remain future work.
   broad durable behavior, provider support, migration policy, transport
   strategy, or public API changes.
 - Application evidence: EF Core persistence scope contract, implementation,
-  service registration, fast registration tests, and PostgreSQL transaction
-  tests are applied.
+  service registration, fast registration tests, module-owned EF persistence
+  opt-in, module command transaction/save behavior, receive-side inbox
+  behavior inside the module command pipeline, and PostgreSQL transaction tests
+  are applied.
 - Pending or deferred: Module identity scopes, domain-event capture,
-  source-state-plus-outbox mapping helpers, handler discovery, transport
-  acknowledgement, receive retry policy, and public unit-of-work abstractions
-  remain future work.
+  source-state-plus-outbox mapping helpers, inbox markers, operation-state
+  integration, transport acknowledgement, receive retry policy, and public
+  unit-of-work abstractions remain future work.
 
 ## Verification
 
@@ -112,3 +117,9 @@ with:
 - `git diff --check`
 
 Later checkpoint verification restored the default `pnpm check` gate.
+
+Module transaction checkpoint verification ran:
+
+- `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --filter "Category=Unit"`
+- `dotnet test tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application"`
+- `pnpm check`

@@ -58,10 +58,14 @@ and closed generic delegates.
 
 `IModuleCommandExecutor` executes an `ICommand` for a named module. The
 current applied pipeline runs registered validators before the direct handler.
-Future pipeline behaviors will add module transaction ownership, inbox
-handling for durable receives, outbox staging for durable sends,
-operation-state updates, trace propagation, and source-module scope for
-outgoing durable commands.
+Bondstone-owned runtime concerns use ordered system pipeline behaviors, which
+always wrap normal application pipeline behaviors. For modules that opt into
+EF persistence, an EF-specific system behavior wraps validation and handler
+execution in the EF persistence scope and saves changes before commit. A core
+system behavior also sets the current module execution context so durable
+sends can record the executing module as the source module. Future pipeline
+behavior will add operation-state updates, receive tracing, and deeper module
+identity scopes.
 
 `ICommand` should be used for module endpoint and boundary operations that
 benefit from the module pipeline. Ordinary helper methods and internal domain
@@ -92,8 +96,63 @@ operation-state pieces, but they should not be the common path.
 
 Current core registration records module metadata and durable messaging
 capability through `IBondstoneModuleRegistry`. That metadata is groundwork for
-later validation and pipeline behavior; it does not yet wire module
-persistence, transactions, source-module scope, or receive-side inbox behavior.
+later validation and pipeline behavior.
+
+## Persistence Capability
+
+Persistence is a module capability. Core records neutral module persistence
+metadata through `BondstoneModuleRegistration`, including whether a module uses
+persistence, the provider capability name, and an optional provider context
+type. Provider packages use that metadata to attach provider-specific behavior
+without moving provider dependencies into `Bondstone`.
+
+`Bondstone.EntityFrameworkCore` exposes
+`UseEntityFrameworkCorePersistence<TDbContext>` on `BondstoneModuleBuilder`.
+That module-owned opt-in records the module's DbContext type, registers the
+provider-neutral EF durable stores and persistence scope, and attaches the EF
+module transaction behavior.
+
+For modules that opt into EF persistence, module command execution runs inside
+`IEntityFrameworkCorePersistenceScope`. The EF behavior wraps validation and
+handler execution through the command pipeline, then calls `SaveChangesAsync`
+before the scope commits a transaction it owns. Modules without EF persistence
+continue through the command executor without EF transaction wrapping.
+
+This is groundwork for the full durable boundary. Receive-side inbox handling
+can now run inside the module command pipeline when a transport passes a
+durable inbox record into `IModuleCommandExecutor`. Operation-state updates,
+receive-side outbox coordination, host endpoint binding, and receive
+acknowledgement still need later slices before durable receive is fully
+app-facing.
+
+## Receive Inbox
+
+Transport adapters can pass a durable inbox record when dispatching into
+`IModuleCommandExecutor`. The inbox record is derived from the transport
+envelope and module command route metadata.
+
+When an inbox record is present, a Bondstone-owned inbox system behavior
+wraps the rest of the module command pipeline with `IDurableInboxHandlerExecutor`.
+The lower-level inbox executor still stages receive and processed markers, but
+the module behavior supplies a no-op commit delegate so the outer module
+transaction behavior can save handler state, outbox messages, and inbox
+markers together. The executor returns `ModuleCommandExecutionResult`, which
+allows transport adapters to inspect the inbox result without using ambient
+receive state.
+
+## Source-Module Scope
+
+`IModuleCommandExecutor` sets a current module execution context while a
+command pipeline is running. `IDurableCommandSender` uses that context to stage
+outgoing durable command envelopes with the executing module as
+`SourceModule`.
+
+Durable command sending is therefore tied to module command execution. Sending
+outside a module command context fails instead of guessing the source module.
+HTTP endpoints that need module command behavior should call
+`IModuleCommandExecutor`; direct services that do not need the module boundary
+should avoid durable send APIs unless they are explicitly inside a module
+command handler.
 
 ## Transport Binding
 

@@ -120,6 +120,8 @@ ADRs for durable technical decisions.
 - Module command execution boundary:
   - `IBondstoneModule` for module-provided registration
   - module registration through `AddBondstone`
+  - module metadata registry through `IBondstoneModuleRegistry`
+  - `UseDurableMessaging` capability metadata on `BondstoneModuleBuilder`
   - `ICommand` base marker for module command pipeline execution
   - `IDurableCommand` as durable command specialization
   - `ICommandHandler<TCommand>` direct typed handlers
@@ -270,18 +272,23 @@ Candidate concepts:
 - add EF transaction pipeline behavior around `IModuleCommandExecutor` so
   validators, handlers, outbox staging, inbox markers, operation state,
   `SaveChangesAsync`, and commit happen in one module boundary;
+- validate module durable-messaging capability where transport or persistence
+  adapters require it;
 - add source-module execution scope so `IDurableCommandSender` can derive the
   durable envelope source module from the active module context;
 - bind host-owned Rebus receive topology to module command routes so Rebus
   dispatches into `IModuleCommandExecutor` instead of requiring per-command
   handler and commit delegates;
+- keep durable commands outbox/inbox-backed; do not add a default local
+  durable in-memory queue unless a later transport/testing adapter decision
+  proves the need;
 - use Wolverine as a useful comparison point for routing design: handler
   discovery can imply local handling, explicit routing should override
   convention, transport listening endpoints should be separate from handler
   registration, and diagnostics should explain why a command routes where it
   does;
-- keep Rebus endpoint names, queue names, retry policy, and explicit
-  local-vs-remote route overrides in host topology configuration rather than
+- keep Rebus receive endpoint names, retry policy, and explicit
+  local-vs-remote receive exposure in host topology configuration rather than
   module registration;
 - keep outbox stale-claim recovery orchestration or advanced worker policy
   behind real sample or transport-backed usage.

@@ -17,6 +17,24 @@ and module event topology need their own transport decision.
 destination addresses. This keeps module identity separate from endpoint
 addresses while allowing consumers to choose their own Rebus topology.
 
+Outgoing Rebus topology is host-owned and adapter-specific. Applications can
+configure target-module destinations with:
+
+```csharp
+bondstone.UseRebusTransport(rebus =>
+{
+    rebus.RouteModule("fulfillment").ToQueue("fulfillment-commands");
+});
+```
+
+The older outbox-specific dictionary registration remains available for now.
+Future receive topology should also stay host-owned and adapter-specific:
+bind a receive endpoint to local modules accepted by the process. Bondstone
+should not require a generic module-to-module route table for ordinary durable
+command delivery. Modules declare durable messaging capability and command
+handlers; the Rebus adapter supplies queue names, endpoint names, storage,
+retry/dead-letter policy, and listener binding.
+
 ## Wire Envelope And Headers
 
 The adapter sends a Bondstone-owned `RebusDurableMessageEnvelope` as the Rebus
@@ -168,9 +186,9 @@ handler and commit delegates.
 ## Deferred Rebus Work
 
 Deferred Rebus work includes event publish/subscribe semantics, host-owned
-receive topology binding to module command routes, and route mapping for
-local versus remote modules. Route or destination circuit breaking,
-stale-claim recovery sweeps, dead-letter routing, receive retry state, stale
-receive recovery, and worker metrics are hosting, persistence, or future
-receive-pipeline decisions unless a later ADR accepts a transport-specific
-policy.
+receive topology binding to module command routes, and validation that durable
+receive modules have durable messaging enabled. Route or destination circuit
+breaking, stale-claim recovery sweeps, dead-letter routing, receive retry
+state, stale receive recovery, and worker metrics are hosting, persistence, or
+future receive-pipeline decisions unless a later ADR accepts a
+transport-specific policy.

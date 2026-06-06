@@ -31,10 +31,13 @@ Current implemented surface includes:
   `System.Text.Json`, explicit handler identity, receive-pipeline Activity
   creation from accepted W3C parent context, the low-level Rebus inbox
   adapter, and caller-supplied commit delegates;
+- host-owned Rebus outgoing topology builder for mapping target modules to
+  Rebus destination addresses;
 - module command registration and execution in core, including
   `IBondstoneModule`, `ICommand`, `IDurableCommand`, direct typed command
   handlers, typed validators, startup reflection scanning, cached module
-  command routes, scoped command execution, and validation pipeline behavior;
+  command routes, scoped command execution, module metadata registration,
+  durable-messaging capability metadata, and validation pipeline behavior;
 - lightweight `AddBondstone` composition builder with outbox capability
   validation for hosted or dispatcher-based processing.
 
@@ -45,7 +48,7 @@ Accepted but not yet implemented direction includes:
 - module persistence binding and transaction pipeline behavior above the EF
   persistence scope;
 - source-module execution scope for durable command sending;
-- host-owned Rebus topology binding into module command routes, replacing
+- host-owned Rebus receive topology binding into module command routes, replacing
   per-command handler and commit delegates in app-facing receive wiring.
 
 ## Verification Surface
@@ -93,8 +96,8 @@ Deferred extraction work includes:
 - inbox handler discovery, receive retry policy, stale receive recovery, and
   transport acknowledgement coordination;
 - module identity scopes, source-module command sender scope, domain-event
-  capture, and higher-level transaction helpers above the EF persistence
-  scope;
+  capture, durable-messaging capability validation, and higher-level
+  transaction helpers above the EF persistence scope;
 - Rebus host-topology binding to module command routes, broader
   transport-level Rebus receive tests, and event publish/subscribe behavior;
 - provider-specific payload storage such as PostgreSQL `jsonb`, migration

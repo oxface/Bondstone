@@ -16,6 +16,7 @@ public static class BondstoneServiceCollectionExtensions
 
         MessageTypeRegistry messageTypeRegistry = GetOrAddMessageTypeRegistry(services);
         ModuleCommandRouteRegistry commandRouteRegistry = GetOrAddCommandRouteRegistry(services);
+        BondstoneModuleRegistry moduleRegistry = GetOrAddModuleRegistry(services);
 
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped(
@@ -25,7 +26,8 @@ public static class BondstoneServiceCollectionExtensions
         var builder = new BondstoneBuilder(
             services,
             messageTypeRegistry,
-            commandRouteRegistry);
+            commandRouteRegistry,
+            moduleRegistry);
         configure(builder);
         builder.Validate();
 
@@ -80,6 +82,27 @@ public static class BondstoneServiceCollectionExtensions
 
         var registry = new ModuleCommandRouteRegistry();
         services.AddSingleton<IModuleCommandRouteRegistry>(registry);
+        return registry;
+    }
+
+    private static BondstoneModuleRegistry GetOrAddModuleRegistry(IServiceCollection services)
+    {
+        ServiceDescriptor? descriptor = services.LastOrDefault(
+            service => service.ServiceType == typeof(IBondstoneModuleRegistry));
+
+        if (descriptor?.ImplementationInstance is BondstoneModuleRegistry moduleRegistry)
+        {
+            return moduleRegistry;
+        }
+
+        if (descriptor is not null)
+        {
+            throw new InvalidOperationException(
+                $"Module registration requires {nameof(IBondstoneModuleRegistry)} to use the default singleton instance managed by {nameof(AddBondstone)}.");
+        }
+
+        var registry = new BondstoneModuleRegistry();
+        services.AddSingleton<IBondstoneModuleRegistry>(registry);
         return registry;
     }
 }

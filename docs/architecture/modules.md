@@ -12,15 +12,19 @@ Modules own their durable capabilities:
 - module command validators;
 - message identities for commands they handle;
 - module persistence capability;
+- durable messaging capability when the module sends or receives durable
+  commands;
 - future module transaction, inbox, outbox, and operation-state behavior.
 
-Hosts own deployment topology:
+Hosts own deployment topology and transport infrastructure:
 
 - which modules are loaded in a process;
 - which modules are local or remote;
 - connection strings and environment-specific settings;
-- transport adapters and route maps;
+- transport adapters and target-module address maps;
 - Rebus endpoint names, queue names, retry policy, and workers;
+- exchange, topic, routing-key, subscription, and listener names for other
+  transports;
 - process-level hosted services and operational policy.
 
 Module code should not need to know whether another module is local,
@@ -37,6 +41,7 @@ services.AddBondstone(bondstone =>
 {
     bondstone.Module("fulfillment", module =>
     {
+        module.UseDurableMessaging();
         module.Commands.RegisterFromAssemblyContaining<ReserveOrderCommand>();
     });
 });
@@ -51,6 +56,7 @@ public sealed class FulfillmentModule : IBondstoneModule
 
     public void Configure(BondstoneModuleBuilder module)
     {
+        module.UseDurableMessaging();
         module.Commands.RegisterFromAssemblyContaining<ReserveOrderCommand>();
     }
 }
@@ -146,15 +152,89 @@ collaboration inside a module should remain direct method calls.
 Transport adapters should enter the same command executor rather than owning
 module command behavior themselves.
 
+## Durable Messaging Capability
+
+Plain `ICommand` execution is direct module command pipeline execution. It is
+appropriate for module-owned endpoints and local application use cases that
+need validation, logging, transaction behavior, or other module pipeline
+features.
+
+`IDurableCommand` represents asynchronous durable messaging. Durable command
+send and receive should use inbox/outbox-backed infrastructure even when the
+source and target modules happen to be deployed in the same process. Direct
+in-process collaboration can use `.Contracts` references or plain `ICommand`.
+
+The normal application-facing shape should be one module capability such as
+`UseDurableMessaging`, not separate inbox/outbox toggles. Durable messaging
+implies the module needs the persistence and pipeline pieces required for
+durable send and receive: outbox writing, inbox registration/storage, module
+transaction behavior, source-module scope for send, and durable receive
+orchestration. Advanced APIs may later expose separate inbox, outbox, or
+operation-state pieces, but they should not be the common path.
+
+Current core registration records module metadata and durable messaging
+capability through `IBondstoneModuleRegistry`. That metadata is groundwork for
+later validation and pipeline behavior; it does not yet wire module
+persistence, transactions, source-module scope, or receive-side inbox behavior.
+
 ## Transport Binding
 
-Transport is host topology. A module can be local-only, local and exposed
-through Rebus, or remote and reached through Rebus. That should be decided by
-host route configuration rather than module handler registration.
+Transport is host topology. Modules declare durable messaging capability and
+command handlers; transport adapters configure infrastructure Bondstone cannot
+infer, such as broker connection strings, queue names, endpoint names,
+exchange/topic names, routing keys, and subscriptions.
 
-The current Rebus receive pipeline remains a lower-level adapter. A later
-slice should bind Rebus host receive topology to `IModuleCommandExecutor` so
-applications do not repeat handler delegates or commit delegates per command.
+For Rebus, outgoing target-module-to-address mapping is configured through the
+host-owned transport builder:
+
+```csharp
+bondstone.UseRebusTransport(rebus =>
+{
+    rebus.RouteModule("fulfillment").ToQueue("fulfillment-commands");
+    rebus.RouteModule("billing").ToQueue("billing-commands");
+
+    rebus.ListenOn("sales-commands", listener =>
+    {
+        listener.AcceptCommandsFor("sales");
+    });
+});
+```
+
+The Rebus listener shape is still future work. A later slice should bind
+receive topology to local modules and dispatch accepted commands into
+`IModuleCommandExecutor` so applications do not repeat handler delegates or
+commit delegates per command. The intended shape is listener binding to local
+modules, not a generic route table:
+
+```csharp
+bondstone.UseRebusTransport(rebus =>
+{
+    rebus.ListenOn("sales-commands", listener =>
+    {
+        listener.AcceptCommandsFor("sales");
+    });
+});
+```
+
+A topic-based transport may expose different topology while keeping the same
+module concepts:
+
+```csharp
+bondstone.UseRabbitMqTransport(rabbit =>
+{
+    rabbit.RouteModule("fulfillment")
+        .ToExchange("commerce.commands")
+        .WithRoutingKey("module.fulfillment.commands");
+
+    rabbit.ListenOnQueue("sales-commands", listener =>
+    {
+        listener.BindExchange("commerce.commands")
+            .WithRoutingKey("module.sales.commands");
+
+        listener.AcceptCommandsFor("sales");
+    });
+});
+```
 
 Wolverine provides a useful comparison point: it discovers handlers, applies
 local routing automatically for known local handlers, lets explicit routing

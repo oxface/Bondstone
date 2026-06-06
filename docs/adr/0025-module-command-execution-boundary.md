@@ -117,6 +117,43 @@ This keeps endpoint and module-boundary commands on the same validation,
 logging, tracing, and future transaction pipeline without turning every
 in-module method call into a mediator call.
 
+## Amendment 2026-06-06: Durable Messaging And Transport Topology
+
+Durable commands always use durable messaging semantics. If a module wants a
+direct in-process call, it should use normal `.Contracts` references or a
+plain `ICommand` through the local module command executor. `IDurableCommand`
+send and receive should not silently degrade to direct in-process execution
+because that would make service extraction change command semantics.
+
+Bondstone should not introduce a first-class in-memory local durable queue as
+part of the module command boundary. Local durable test or development
+adapters can be considered later, but they are transport adapters, not the
+default meaning of local module execution.
+
+Modules that participate in durable messaging should opt into one clear
+capability, such as `UseDurableMessaging`, instead of requiring normal
+applications to toggle inbox and outbox separately. That capability implies
+that the module needs durable send and receive infrastructure: outbox writer,
+inbox registration/store, module transaction behavior, source-module scope,
+and durable receive behavior. Advanced APIs may later expose separate inbox,
+outbox, or operation-state pieces, but the default module shape should be one
+durable-messaging capability.
+
+Host route configuration should stay transport-topology oriented. Bondstone
+can infer command handler routes from module registration and message
+identity. Hosts and transport adapters provide the pieces Bondstone cannot
+infer: broker connection strings, queue names, exchange/topic names, routing
+keys, subscription names, listener endpoints, retry/dead-letter topology, and
+which remote modules are reached through which transport.
+
+Transport adapters should expose topology in their own vocabulary. For Rebus
+this means mapping a target module to a Rebus destination address and binding
+a Rebus receive endpoint to accepted local modules. For a topic-based
+transport this may mean mapping a target module to an exchange/topic plus
+routing key or subject. A generic module-to-module route table should remain
+deferred until multiple transports or explicit policy requirements prove it
+useful.
+
 ## Consequences
 
 The durable command pipeline becomes reusable across local module execution,
@@ -163,7 +200,8 @@ additional ADR review or amendments.
   as the base module command marker, `IDurableCommand` as the durable command
   marker, command handler and validator abstractions, startup reflection
   registration for handlers and validators, cached module command routes, a
-  scoped module command executor, and a validation pipeline behavior.
+  scoped module command executor, module durable-messaging capability metadata,
+  and a validation pipeline behavior.
 - Stable docs: Current module command direction is described in
   [docs/architecture/modules.md](../architecture/modules.md), with supporting
   messaging, persistence, and Rebus transport notes in
@@ -176,10 +214,15 @@ additional ADR review or amendments.
   implementation is applied with unit coverage for inline module command
   registration, module-provided registration, assembly scanning, validation,
   regular command execution, durable command execution, route lookup, and
-  stable handler identity defaulting.
+  stable handler identity defaulting. Rebus outgoing host topology now has an
+  adapter-specific `UseRebusTransport` builder for mapping target modules to
+  Rebus destination addresses. Core module registration now records module
+  metadata and `UseDurableMessaging` capability state through
+  `IBondstoneModuleRegistry`.
 - Pending or deferred: EF transaction behavior, module persistence binding,
-  source-module command sender scope, Rebus host topology binding, inbox
-  integration inside the module command pipeline, event handling, and samples
+  source-module command sender scope, Rebus receive endpoint binding, inbox
+  integration inside the module command pipeline, durable-messaging capability
+  validation in transport/persistence adapters, event handling, and samples
   remain future work.
 
 ## Verification

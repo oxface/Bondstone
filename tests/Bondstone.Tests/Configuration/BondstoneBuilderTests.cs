@@ -111,6 +111,22 @@ public sealed class BondstoneBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void AddBondstone_WhenModuleRegistryWasRegisteredByConsumer_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IBondstoneModuleRegistry, ConsumerModuleRegistry>();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(_ => { }));
+
+        Assert.Contains(
+            nameof(IBondstoneModuleRegistry),
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void MarkPersistenceProvider_WhenCapabilityNameIsBlank_Throws()
     {
         var services = new ServiceCollection();
@@ -132,6 +148,24 @@ public sealed class BondstoneBuilderTests
             CancellationToken ct = default)
         {
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class ConsumerModuleRegistry : IBondstoneModuleRegistry
+    {
+        public IReadOnlyCollection<BondstoneModuleRegistration> Modules => [];
+
+        public BondstoneModuleRegistration GetModule(string moduleName)
+        {
+            throw new NotSupportedException();
+        }
+
+        public bool TryGetModule(
+            string moduleName,
+            out BondstoneModuleRegistration? registration)
+        {
+            registration = null;
+            return false;
         }
     }
 }

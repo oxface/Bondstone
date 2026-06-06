@@ -33,11 +33,8 @@ public sealed class AddBondstoneCompositionTests
         {
             bondstone.UsePostgreSqlPersistence<CompositionDbContext>(
                 "Host=localhost;Database=bondstone");
-            bondstone.Outbox.UseRebusTransport(
-                new Dictionary<string, string>
-                {
-                    ["fulfillment"] = "fulfillment-queue",
-                });
+            bondstone.UseRebusTransport(
+                rebus => rebus.RouteModule("fulfillment").ToQueue("fulfillment-queue"));
             bondstone.Outbox.UseWorker(options =>
             {
                 options.WorkerId = "composition-smoke-test";

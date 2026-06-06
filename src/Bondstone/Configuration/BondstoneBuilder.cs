@@ -9,16 +9,19 @@ public sealed class BondstoneBuilder
     internal BondstoneBuilder(
         IServiceCollection services,
         IMessageTypeRegistry messageTypeRegistry,
-        ModuleCommandRouteRegistry commandRouteRegistry)
+        ModuleCommandRouteRegistry commandRouteRegistry,
+        BondstoneModuleRegistry moduleRegistry)
     {
         Services = services;
         Outbox = new BondstoneOutboxBuilder(services);
         _messageTypeRegistry = messageTypeRegistry;
         _commandRouteRegistry = commandRouteRegistry;
+        _moduleRegistry = moduleRegistry;
     }
 
     private readonly IMessageTypeRegistry _messageTypeRegistry;
     private readonly ModuleCommandRouteRegistry _commandRouteRegistry;
+    private readonly BondstoneModuleRegistry _moduleRegistry;
 
     public IServiceCollection Services { get; }
 
@@ -30,7 +33,8 @@ public sealed class BondstoneBuilder
             Services,
             moduleName,
             _messageTypeRegistry,
-            _commandRouteRegistry);
+            _commandRouteRegistry,
+            _moduleRegistry);
     }
 
     internal void Validate()

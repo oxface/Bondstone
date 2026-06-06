@@ -109,6 +109,13 @@ preferred app-facing receive shape should eventually bind host Rebus topology
 to `IModuleCommandExecutor` so application code does not repeat handler and
 commit delegates per command.
 
+Modules that send or receive durable commands should opt into one durable
+messaging capability, such as `UseDurableMessaging`, rather than making normal
+applications choose separate inbox and outbox toggles. The capability should
+represent the inbox/outbox-backed path for durable commands. Plain direct
+module collaboration should use `.Contracts` references or regular
+`ICommand` execution, not a local durable queue substitute.
+
 Future envelope fields remain open. Content type is the most likely next
 addition if Bondstone needs to support non-JSON payloads or make JSON explicit.
 Neutral headers may be added if multiple adapters need cross-cutting metadata
@@ -130,9 +137,10 @@ Deferred durable-command work remains tracked:
 - scheduling, TTL, priority, reply-to, tenant, or transport-native metadata if
   a later durable scenario justifies it;
 - receive adapter, receive-side transport integration, and additional
-  transport-backed verification.
-- module transaction behaviors, source-module command sender scope, Rebus
-  host-topology binding to module command routes, and service-shaped samples.
+  transport-backed verification;
+- durable-messaging capability validation, transaction behaviors,
+  source-module command sender scope, Rebus host-topology binding to module
+  command routes, and service-shaped samples.
 
 ## Message Identity Names
 

@@ -1,3 +1,4 @@
+using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Bondstone.Transport.Rebus.Outbox;
@@ -174,6 +175,26 @@ public sealed class RebusDurableOutboxTransportTests
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         IDurableOutboxTransport transport = serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+
+        await transport.SendAsync(CreateRecord());
+
+        Assert.Equal("fulfillment-queue", routingApi.DestinationAddress);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task UseRebusTransport_WhenConfiguredWithTopologyBuilder_RoutesConfiguredModule()
+    {
+        var routingApi = new RecordingRoutingApi();
+        var services = new ServiceCollection();
+        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus.RouteModule("fulfillment").ToQueue("fulfillment-queue")));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
 
         await transport.SendAsync(CreateRecord());
 

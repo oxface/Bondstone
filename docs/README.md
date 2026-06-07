@@ -11,19 +11,14 @@ duplicating durable rules.
   ADR decisions are applied into stable docs and agent instructions.
 - [architecture/README.md](architecture/README.md) records current runtime
   positioning and durable module-boundary architecture.
-- [extraction.md](extraction.md) records the slow layered extraction strategy.
-- [extraction-plan.md](extraction-plan.md) tracks the current tactical
-  extraction backlog.
-- [handover.md](handover.md) contains a continuation prompt for future
-  Bondstone workspace sessions.
+- [mvp-plan.md](mvp-plan.md) tracks implemented surface, MVP priority groups,
+  current slice, verification surface, and deferred work.
 - [packaging.md](packaging.md) records current package IDs, target framework,
   and package dependency direction.
 - [repository.md](repository.md) records current repository layout and tooling
   direction.
 - [samples.md](samples.md) records current sample application direction.
 - [setup.md](setup.md) is the single user-facing library setup example.
-- [status.md](status.md) summarizes current extraction, verification, and
-  deferred implementation state.
 - [testing.md](testing.md) records current testing direction.
 
 ## Documentation Model
@@ -51,11 +46,11 @@ files with the local context each audience needs.
 - `repository.md` owns repository layout, local tooling, CI, and code
   conventions, but should reference `packaging.md` for package inventory.
 - `testing.md` owns test policy, categories, and command entrypoints.
-- `status.md` owns the current implementation, verification, accepted
-  direction, and deferred-work snapshot.
-- `extraction-plan.md` owns tactical backlog notes and may be pruned when
-  completed detail stops helping active extraction.
+- `mvp-plan.md` owns the current implementation, verification surface,
+  priority groups, current slice, and deferred-work snapshot.
 - `architecture/` owns runtime contracts and durable boundary principles.
+- `archive/` preserves historical planning documents that should not steer new
+  implementation work.
 
 ## Expanding Docs
 

@@ -12,8 +12,8 @@ Start with:
   architecture documentation.
 - [docs/adr/README.md](docs/adr/README.md) when it exists before creating,
   updating, superseding, or archiving ADRs.
-- [docs/extraction.md](docs/extraction.md) before moving or rewriting
-  Bondstone source from an existing repository.
+- [docs/mvp-plan.md](docs/mvp-plan.md) before choosing or continuing an
+  implementation slice.
 - [docs/testing.md](docs/testing.md) before moving or writing tests.
 - [docs/samples.md](docs/samples.md) before adding or changing sample
   applications.
@@ -41,9 +41,9 @@ Start with:
   different packaging decision.
 - Use coordinated package versioning and NuGet release automation according to
   [docs/packaging.md](docs/packaging.md).
-- Extract source slowly according to [docs/extraction.md](docs/extraction.md).
-  Do not bulk-copy Bondstone code or preserve the current consumer repository
-  as a compatibility constraint.
+- Build toward the current MVP according to [docs/mvp-plan.md](docs/mvp-plan.md).
+  Do not bulk-copy Bondstone code or preserve the historical template
+  repository as a compatibility constraint.
 - Source, tests, docs, repository automation, and samples should be arranged
   for library maintenance, while avoiding validation and frontend/browser
   tooling that Bondstone does not need.
@@ -60,7 +60,7 @@ Start with:
 - Bondstone should also be usable in microservice setups that need internal
   durability, inbox/outbox processing, stable message identities, and
   provider-owned transport adapters.
-- Do not extract a generic mediator or message-bus layer as a default
+- Do not introduce a generic mediator or message-bus layer as a default
   Bondstone feature. Durable command sending is for asynchronous outbox
   delivery; ordinary in-process module calls can use typed `.Contracts`
   references.

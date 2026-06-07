@@ -171,7 +171,7 @@ Use this mapping as a starting point:
   - [docs/architecture/persistence-core.md](../architecture/persistence-core.md)
   - [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md)
   - [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md)
-  - [docs/extraction.md](../extraction.md)
+  - [docs/mvp-plan.md](../mvp-plan.md)
   - [AGENTS.md](../../AGENTS.md)
 - Verification entrypoints, test categories, sample expectations, and
   integration-test requirements:

@@ -1,5 +1,8 @@
 # Extraction
 
+Archived: this document is preserved for historical context only. Use
+[../mvp-plan.md](../mvp-plan.md) for current implementation planning.
+
 Bondstone is extracted slowly, project by project and often layer by layer.
 
 ## Purpose
@@ -54,9 +57,10 @@ of an explicit migration step.
 
 ## Current Status
 
-This extraction strategy is accepted and documented. Core, EF Core,
-PostgreSQL, and Rebus transport slices have started and are tracked in
-[status.md](status.md) and [extraction-plan.md](extraction-plan.md).
+This extraction strategy was accepted for the early repository phase. Current
+implementation scope is tracked in [../mvp-plan.md](../mvp-plan.md). The
+historical tactical backlog is preserved in
+[extraction-plan.md](extraction-plan.md).
 
 General in-process module calls are not an extraction target unless a later ADR
 or sample exposes a durable boundary need. Do not extract the historical

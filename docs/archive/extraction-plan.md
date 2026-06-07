@@ -1,5 +1,8 @@
 # Extraction Plan
 
+Archived: this document is preserved for historical context only. Use
+[../mvp-plan.md](../mvp-plan.md) for current implementation planning.
+
 This is the tactical extraction backlog. It should stay current and disposable:
 use [extraction.md](extraction.md) for the durable extraction strategy, and use
 ADRs for durable technical decisions.

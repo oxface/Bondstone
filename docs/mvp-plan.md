@@ -1,0 +1,267 @@
+# MVP Plan
+
+This document is the active implementation plan for making Bondstone useful as
+a standalone library. It replaces the old tactical backlog. Historical source
+notes are archived under [archive/](archive/) and should be treated as source
+archaeology, not current direction.
+
+## Purpose
+
+Bondstone is no longer trying to preserve compatibility with the historical
+template repository. The product goal is a focused .NET library for durable
+module boundaries:
+
+- outbox-backed durable commands;
+- EF Core backed inbox/outbox persistence;
+- module-owned command execution and transactions;
+- transport adapters that keep provider infrastructure configuration native;
+- a low-friction path from modular monolith to split services.
+
+Use this plan for current scope, priority, and slice sequencing. Use ADRs for
+durable technical decisions and architecture docs for the current operating
+contract.
+
+## Current Position
+
+Bondstone has the core durable-command spine in place but does not yet have a
+complete app-facing receive loop or first-class event handling.
+
+Implemented surface includes:
+
+- core message identity, message type registration, trace context, durable
+  command send result, durable operation read, and durable envelope contracts;
+- provider-neutral persistence records and boundaries for outbox, inbox,
+  operation state, outbox claiming, outbox lease renewal, outbox dispatch
+  recording, inbox registration, and delegate-based inbox handle-once
+  execution;
+- EF Core entity mappings, outbox writer, inbox store, operation state store,
+  and EF persistence scope;
+- PostgreSQL registration, duplicate classification, inbox registration,
+  outbox claiming, outbox lease renewal, and dispatch recording;
+- hosted outbox worker composition over `IDurableOutboxDispatcher`;
+- Rebus outgoing command transport for claimed outbox records, including
+  destination resolution, wire-envelope mapping, durable headers, and W3C
+  trace headers;
+- Rebus low-level receive inbox adapter and typed command receive pipeline;
+- Rebus module command receive pipeline groundwork that dispatches wire
+  envelopes into `IModuleCommandExecutor` with explicit durable inbox records;
+- host-owned Rebus command topology with conventional module queue naming,
+  convention fallback routing, receive endpoint bindings, and explicit
+  destination overrides;
+- module registration and command execution in core, including
+  `IBondstoneModule`, `ICommand`, `IDurableCommand`, direct typed handlers,
+  validators, startup scanning, cached routes, scoped execution, module
+  metadata, durable-messaging capability metadata, module persistence
+  metadata, source-module execution context, ordered system behaviors, receive
+  inbox behavior, validation, and execution results;
+- default outbox-backed `IDurableCommandSender` that requires current module
+  execution context and uses the executing module as source module;
+- module-owned EF Core persistence opt-in and EF-specific module command
+  transaction behavior over `IEntityFrameworkCorePersistenceScope`;
+- fluent `AddBondstone` composition and outbox capability validation for
+  hosted or dispatcher-based processing.
+
+## MVP Priority Groups
+
+### Group 0: Event Shape Guardrail
+
+Current group: **Group 0**.
+
+Current/next slice: **first-class event ADR/design**.
+
+This group exists to prevent command-only naming and topology assumptions from
+hardening before receive listener binding and diagnostics are built.
+
+Slices:
+
+1. Create an event ADR/design note:
+   - event publisher shape;
+   - event handler/subscriber shape;
+   - outbox-backed event publish;
+   - per-subscriber inbox identity;
+   - fan-out versus point-to-point semantics;
+   - Rebus topic/subscription vocabulary;
+   - shared command/event diagnostics implications.
+2. Update stable docs for the current command/event split.
+
+Remaining in closest group: **1 design slice**.
+
+### Group 1: Usable Durable Command Loop
+
+Goal: a consumer can register a module, send a durable command through outbox
+and Rebus, receive it through module command execution, persist handler state
+and inbox markers in one EF transaction, and understand why routing worked or
+failed.
+
+Already done:
+
+- command contracts, identities, handlers, validators, and module executor;
+- source-module scoped durable sender;
+- EF transaction behavior for modules that opt into EF persistence;
+- outbox writer, dispatcher, hosted worker, and Rebus outgoing transport;
+- Rebus module command receive pipeline groundwork;
+- Rebus command topology conventions and explicit overrides.
+
+Remaining slices:
+
+1. Rebus endpoint dispatcher:
+   - `HandleOnceAsync(endpointName, envelope, ct)`;
+   - validate endpoint exists;
+   - validate envelope target module is accepted by the endpoint;
+   - call `IRebusModuleCommandReceivePipeline`.
+2. Rebus listener binding helper:
+   - Rebus-native handler or adapter;
+   - application still owns Rebus infrastructure configuration;
+   - in-memory Rebus transport test proving `SendLocal` dispatches into
+     `IModuleCommandExecutor`.
+3. Durable-messaging capability validation:
+   - durable modules have persistence when durable messaging is enabled;
+   - Rebus receive topology targets registered local modules;
+   - missing persistence, transport, or route pieces produce useful errors.
+4. Command topology diagnostics:
+   - explicit route versus receive binding versus convention fallback versus
+     missing route;
+   - diagnostic result object before or alongside logging.
+5. Operation-state integration:
+   - make `IDurableOperationReader` meaningful beyond current contracts;
+   - record durable send and receive state transitions consistently.
+
+Remaining in Group 1: **about 4-5 slices**.
+
+### Group 2: First-Class Events Implementation
+
+Goal: publish/subscribe is first-class and durable without turning Bondstone
+into a generic bus.
+
+Slices:
+
+1. Core event publisher contract and outbox staging.
+2. Module event handler/subscriber registration.
+3. Event subscriber identity and inbox behavior.
+4. Rebus event publish topology with topic/exchange naming.
+5. Rebus event subscription topology with subscriber endpoint/subscription
+   binding.
+6. Event diagnostics and transport-backed tests.
+
+Remaining in Group 2: **large, 5-6 slices**.
+
+### Group 3: Reliability And Recovery
+
+Goal: the happy path is operationally resilient.
+
+Slices:
+
+1. Receive retry policy ownership.
+2. Stale receive recovery.
+3. Stale outbox claim recovery.
+4. Cleanup and maintenance workers.
+5. Dead-letter routing ownership.
+6. Advanced dispatcher and worker options.
+
+Remaining in Group 3: **medium-large, 5-6 slices**.
+
+### Group 4: Provider And Migration Usefulness
+
+Goal: persistence providers are usable in real applications without relying on
+hidden project conventions.
+
+Slices:
+
+1. Provider-specific module persistence validation.
+2. PostgreSQL `jsonb` payload decision and implementation if accepted.
+3. Migration helper strategy.
+4. Broader provider fixtures.
+5. Operation-state optimistic concurrency policy.
+
+Remaining in Group 4: **medium, 4-5 slices**.
+
+### Group 5: Samples And Adoption Proof
+
+Goal: prove the library works for modular-monolith and service-split usage.
+
+Slices:
+
+1. Modular monolith sample.
+2. Split-service Rebus sample.
+3. Event choreography sample after events exist.
+4. Setup and production topology documentation cleanup.
+
+Remaining in Group 5: **medium, 3-4 slices**.
+
+## Verification Surface
+
+Current automated coverage includes:
+
+- neutral unit tests for core messaging and persistence contracts;
+- neutral unit tests for module command registration, startup scanning,
+  validation, route lookup, module execution context, source-module scoped
+  durable sending, receive inbox behavior, and direct handler execution;
+- EF Core unit and application tests for mapping, service registration, store
+  staging, persistence-scope validation, module persistence opt-in, and module
+  transaction/save behavior;
+- PostgreSQL Testcontainers integration tests for real schema creation,
+  transactions, savepoints, unique constraints, inbox registration, outbox
+  claiming, lease renewal, dispatch recording, dispatcher composition, EF
+  persistence-scope behavior, and schema-aware provider registration;
+- hosting unit tests for outbox worker options, hosted worker loop behavior,
+  DI registration, and builder guardrails;
+- Rebus unit tests for outgoing command transport routing, wire-envelope
+  mapping, durable headers, trace headers, unsupported event envelopes,
+  destination resolution, command receive-side inbox mapping,
+  already-received behavior, traceparent validation, typed command
+  deserialization, Activity creation, registry mismatch failures, topology
+  conventions, and DI registration;
+- Rebus in-memory transport tests for receive-side `SendLocal` delivery
+  through a real Rebus worker, typed receive pipeline execution, queue drain,
+  and unknown message identity dead-letter behavior;
+- Rebus PostgreSQL transport tests for receive-side `SendLocal` delivery,
+  typed receive handling, PostgreSQL-backed acknowledgement/queue drain, and
+  PostgreSQL-backed dead-letter behavior;
+- cross-package application smoke tests for preferred `AddBondstone`
+  composition with PostgreSQL persistence, Rebus transport, hosted outbox
+  worker, Rebus inbox execution, typed Rebus command receive execution, and
+  explicit EF persistence commit boundaries.
+
+Default gate: `pnpm check`.
+
+Integration gate: `pnpm backend:test:integration` or targeted provider and
+transport integration tests when a slice changes provider behavior.
+
+## Deferred Work
+
+- `send and wait` helper behavior and timeout/polling policy.
+- Trace context and causation propagation through inbox, outbox, and transport
+  adapters beyond the currently implemented Rebus send/receive pieces.
+- Envelope content type if non-JSON payloads or explicit JSON contracts become
+  necessary.
+- Neutral envelope headers if multiple adapters need cross-cutting metadata.
+- Scheduling, TTL, priority, reply-to, tenant, or transport-native metadata if
+  a later durable scenario justifies it.
+- Partition-key ordering and scaling semantics.
+- Provider-specific dispatch behavior beyond PostgreSQL claiming.
+- Additional integration tests with neutral Bondstone fixtures.
+
+## Historical Source Notes
+
+The historical template repository is source material only. It is useful for
+source archaeology around persistence, inbox/outbox lifecycle, Rebus adapter
+reference points, and terminology pressure, but it no longer defines the
+Bondstone route.
+
+Do not preserve compatibility with the historical template as a design
+constraint. Do not bulk-copy implementation code. If historical source is
+consulted, extract only the idea that still fits current ADRs and stable docs.
+
+Archived extraction docs:
+
+- [archive/extraction.md](archive/extraction.md)
+- [archive/extraction-plan.md](archive/extraction-plan.md)
+
+## Terminology Notes
+
+Historical source material used `DurableOperationSnapshot` for the read-model
+DTO and `DurableOperationState` for the enum. The extracted public contract
+uses `DurableOperationState` for the read-model DTO and
+`DurableOperationStatus` for the enum because callers read the current
+operation state and inspect its status, while `snapshot` sounds like a
+persisted projection or event-sourcing term.

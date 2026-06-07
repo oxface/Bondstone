@@ -10,17 +10,20 @@ public sealed class BondstoneBuilder
         IServiceCollection services,
         IMessageTypeRegistry messageTypeRegistry,
         ModuleCommandRouteRegistry commandRouteRegistry,
+        ModuleEventSubscriberRegistry eventSubscriberRegistry,
         BondstoneModuleRegistry moduleRegistry)
     {
         Services = services;
         Outbox = new BondstoneOutboxBuilder(services);
         _messageTypeRegistry = messageTypeRegistry;
         _commandRouteRegistry = commandRouteRegistry;
+        _eventSubscriberRegistry = eventSubscriberRegistry;
         _moduleRegistry = moduleRegistry;
     }
 
     private readonly IMessageTypeRegistry _messageTypeRegistry;
     private readonly ModuleCommandRouteRegistry _commandRouteRegistry;
+    private readonly ModuleEventSubscriberRegistry _eventSubscriberRegistry;
     private readonly BondstoneModuleRegistry _moduleRegistry;
 
     public IServiceCollection Services { get; }
@@ -34,6 +37,7 @@ public sealed class BondstoneBuilder
             moduleName,
             _messageTypeRegistry,
             _commandRouteRegistry,
+            _eventSubscriberRegistry,
             _moduleRegistry);
     }
 

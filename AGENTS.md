@@ -64,6 +64,18 @@ Start with:
   Bondstone feature. Durable command sending is for asynchronous outbox
   delivery; ordinary in-process module calls can use typed `.Contracts`
   references.
+- Durable commands and integration events are the durable boundary for
+  cross-persistence state changes. Direct `.Contracts` calls are mainly for
+  reads, local composition, or operations that tolerate failure. Domain events
+  are module-local/private unless module code explicitly publishes an
+  integration event.
+- Core can stage durable integration events through the outbox, but event
+  fan-out, Rebus publish/subscribe dispatch, subscriber execution, and
+  choreography samples remain later MVP work.
+- Transport adapter topology should describe durable message topology, such as
+  command queues or future event topics/subscriptions, while broker
+  connection, worker, retry, dead-letter, serializer, and subscription-storage
+  setup stays provider-native.
 - Durable behavior, public API shape, package boundaries, provider support,
   transport support, migration strategy, and compatibility policy require ADRs
   before broad implementation.

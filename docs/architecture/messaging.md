@@ -37,16 +37,44 @@ operation-state updates and receive tracing.
 
 `ICommand` is the base marker for module command pipeline execution.
 `IDurableCommand` extends `ICommand` for commands accepted for durable outbox
-delivery and transport receive. Durable message identity, outbox, inbox, and
-operation-state behavior apply to durable commands only.
+delivery and transport receive. The currently applied durable identity,
+outbox, inbox, and operation-state behavior is command-first; integration
+event publish/subscribe will apply those durable concepts through separate
+event-specific runtime slices.
 
 `IIntegrationEvent` is reserved for durable cross-module facts. Integration
 events are not commands: they do not target one module and should eventually
 fan out to independently identified subscribers. First-class event
-publish/subscribe is not implemented yet. The proposed guardrail for this
+publish/subscribe is not implemented yet. The accepted guardrail for this
 shape is tracked in
 [ADR 0026](../adr/0026-event-shape-guardrail.md), and implementation
 sequencing is tracked in [../mvp-plan.md](../mvp-plan.md).
+
+Durable commands and integration events are the durable boundary for
+cross-persistence state changes. Direct `.Contracts` calls remain appropriate
+for reads, local composition, and operations that tolerate failure without a
+retry or deduplication boundary. Bondstone should not introduce a generic
+mediator or message-bus layer for ordinary module collaboration.
+
+The durable event publisher is a narrow core contract. `IDurableEventPublisher`
+accepts an `IIntegrationEvent`, requires current source-module context, stages
+a `MessageKind.Event` envelope through the outbox, and returns
+`DurableEventPublishResult` instead of subscriber results. Event envelopes do
+not specify `TargetModule`. Transport dispatch for event fan-out remains
+deferred, so publishing is an outbox-backed core shape rather than a complete
+broker publish/subscribe path.
+
+Event handlers are typed integration event handlers registered as module
+subscriber metadata through `IIntegrationEventHandler<TEvent>` and
+`module.Events.RegisterSubscriber`. A subscriber belongs to a module and
+carries stable consumer-owned subscriber identity. Subscriber identity must
+not be derived from handler CLR names. Subscriber execution remains deferred.
+
+Event inbox identity is per subscriber: durable message id, subscriber module,
+and stable subscriber identity. It is not based on command target module
+because events intentionally have no target module. Each subscriber receives
+its own handle-once boundary and retry/dead-letter outcome through the
+transport endpoint or subscription that delivers that subscriber's copy.
 
 Domain events are module-local facts raised inside a module's domain model.
 They are not automatically integration events, and Bondstone does not
@@ -129,6 +157,16 @@ module, and explicit handler identity, compose
 execution and its commit boundary succeed. Event publish/subscribe remains
 deferred.
 
+Durable payload serialization is shared command/event infrastructure. The
+current implementation uses `System.Text.Json` in command send, event publish,
+and Rebus command receive paths, but the stable architecture should not grow
+separate command-only and event-only serializer configuration. Future
+serialization work should define one durable payload boundary for command
+send, command receive, event publish, and event receive. Transport adapters
+must not rely on transport CLR type headers for Bondstone durable identity.
+Content type, non-JSON payloads, and compatibility policy remain deferred to
+the durable payload serialization slice.
+
 The typed Rebus command receive pipeline uses `IMessageTypeRegistry` to
 resolve stable message type names to durable command CLR types, deserializes
 payloads with `System.Text.Json`, starts a .NET/OTel consumer `Activity` from
@@ -158,6 +196,17 @@ managed per module. Multiple modules may share an endpoint when they share the
 same operational profile, but a general inbox queue is not the default command
 topology. Future event publish/subscribe work can use topic or subscription
 topology because events intentionally fan out to multiple subscribers.
+
+Durable-message diagnostics should specialize by message kind. Command
+diagnostics can report target module, destination, route source, and receive
+endpoint binding. Event diagnostics can report event identity, topic,
+subscriber module, subscriber identity, subscription binding, and zero
+subscriber outcomes. Shared diagnostics should include stable message
+identity, message kind, source module, payload serialization policy, trace
+context, and causation information without assuming every durable message is a
+command. Core now has `DurableMessageTopologyDiagnosticKind` values for
+command routes, command destinations, command receive endpoints, event topics,
+and event subscriptions.
 
 Modules that send or receive durable commands should opt into one durable
 messaging capability, such as `UseDurableMessaging`, rather than making normal

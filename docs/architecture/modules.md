@@ -11,10 +11,14 @@ Modules own their durable capabilities:
 - module command handlers;
 - module command validators;
 - message identities for commands they handle;
+- integration event identities they publish;
+- integration event subscriber handlers and stable subscriber identity
+  metadata;
 - module persistence capability;
 - durable messaging capability when the module sends or receives durable
-  commands;
-- future module transaction, inbox, outbox, and operation-state behavior.
+  commands or integration events;
+- future module transaction, inbox, outbox, subscriber, and operation-state
+  behavior.
 
 Hosts own deployment topology and transport infrastructure:
 
@@ -23,8 +27,7 @@ Hosts own deployment topology and transport infrastructure:
 - connection strings and environment-specific settings;
 - transport adapters and target-module address maps;
 - Rebus endpoint names, queue names, retry policy, and workers;
-- exchange, topic, routing-key, subscription, and listener names for other
-  transports;
+- exchange, topic, routing-key, subscription, and listener names;
 - process-level hosted services and operational policy.
 
 Module code should not need to know whether another module is local,
@@ -90,17 +93,33 @@ boundaries, prefer a durable command or event choreography over a direct call.
 The modules do not share a transaction, so the durable boundary is what
 preserves retry, deduplication, and service-extraction behavior.
 
+Integration events are the durable event half of that boundary. A module may
+publish a durable cross-module fact after its own state changes, and zero or
+more subscriber modules may react independently. Publication should remain an
+explicit module action. Module-local domain events are private facts and are
+not automatically integration events.
+
 The normal application-facing shape should be one module capability such as
 `UseDurableMessaging`, not separate inbox/outbox toggles. Durable messaging
 implies the module needs the persistence and pipeline pieces required for
-durable send and receive: outbox writing, inbox registration/storage, module
-transaction behavior, source-module scope for send, and durable receive
-orchestration. Advanced APIs may later expose separate inbox, outbox, or
-operation-state pieces, but they should not be the common path.
+durable send, publish, receive, and subscribe: outbox writing, inbox
+registration/storage, module transaction behavior, source-module scope,
+subscriber identity metadata, and durable receive orchestration. The current
+implementation can stage durable event publish envelopes and record event
+subscriber metadata, but event fan-out dispatch and subscriber execution are
+deferred. Advanced APIs may later expose separate inbox, outbox, subscriber,
+or operation-state pieces, but they should not be the common path.
 
 Current core registration records module metadata and durable messaging
 capability through `IBondstoneModuleRegistry`. That metadata is groundwork for
 later validation and pipeline behavior.
+
+Module event registration lives under `module.Events`. Published integration
+events can be registered with `RegisterPublishedEvent`; event subscribers can
+be registered with `RegisterSubscriber<TEvent, THandler>` where handlers
+implement `IIntegrationEventHandler<TEvent>`. Registration records stable
+message identity and stable subscriber identity only. It does not execute
+subscribers or bind transport subscriptions yet.
 
 ## Persistence Capability
 
@@ -186,6 +205,13 @@ ownership. Group modules on one endpoint only when they are intentionally part
 of the same host-level processing unit. A shared database inbox is fine; a
 shared transport queue should be chosen deliberately because it couples
 backlog, throughput, and failure recovery.
+
+Future event topology should use topic and subscription language instead of
+command route language. A durable event topic represents the publish side of
+an integration event identity, while a subscriber endpoint or subscription
+binding represents one module subscriber's copy and inbox identity. Hosts own
+the concrete topic, exchange, queue, subscription storage, listener, retry,
+and dead-letter configuration through the transport provider.
 
 Topic-based transports may expose different topology while keeping the same
 module concepts: route outgoing durable commands by stable target module, bind

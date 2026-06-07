@@ -24,4 +24,26 @@ public sealed record DurableInboxMessageKey
     public string ModuleName { get; }
 
     public string HandlerIdentity { get; }
+
+    public static DurableInboxMessageKey ForCommandHandler(
+        Guid messageId,
+        string moduleName,
+        string handlerIdentity)
+    {
+        return new DurableInboxMessageKey(
+            messageId,
+            moduleName,
+            handlerIdentity);
+    }
+
+    public static DurableInboxMessageKey ForEventSubscriber(
+        Guid messageId,
+        string subscriberModule,
+        string subscriberIdentity)
+    {
+        return new DurableInboxMessageKey(
+            messageId,
+            subscriberModule,
+            subscriberIdentity);
+    }
 }

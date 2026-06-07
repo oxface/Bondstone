@@ -11,11 +11,13 @@ public sealed class BondstoneModuleBuilder
         string name,
         IMessageTypeRegistry messageTypeRegistry,
         ModuleCommandRouteRegistry commandRouteRegistry,
+        ModuleEventSubscriberRegistry eventSubscriberRegistry,
         BondstoneModuleRegistry moduleRegistry)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(messageTypeRegistry);
         ArgumentNullException.ThrowIfNull(commandRouteRegistry);
+        ArgumentNullException.ThrowIfNull(eventSubscriberRegistry);
         ArgumentNullException.ThrowIfNull(moduleRegistry);
 
         Services = services;
@@ -27,6 +29,11 @@ public sealed class BondstoneModuleBuilder
             Name,
             messageTypeRegistry,
             commandRouteRegistry);
+        Events = new BondstoneModuleEventBuilder(
+            services,
+            Name,
+            messageTypeRegistry,
+            eventSubscriberRegistry);
     }
 
     private readonly BondstoneModuleRegistry _moduleRegistry;
@@ -36,6 +43,8 @@ public sealed class BondstoneModuleBuilder
     public string Name { get; }
 
     public BondstoneModuleCommandBuilder Commands { get; }
+
+    public BondstoneModuleEventBuilder Events { get; }
 
     public BondstoneModuleBuilder UseDurableMessaging()
     {

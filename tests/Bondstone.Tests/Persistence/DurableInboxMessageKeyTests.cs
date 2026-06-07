@@ -51,6 +51,22 @@ public sealed class DurableInboxMessageKeyTests
         Assert.Equal("handlerIdentity", exception.ParamName);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ForEventSubscriber_WhenCalled_UsesSubscriberModuleAndIdentity()
+    {
+        Guid messageId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        DurableInboxMessageKey key = DurableInboxMessageKey.ForEventSubscriber(
+            messageId,
+            " fulfillment ",
+            " fulfillment.customer-cache.v1 ");
+
+        Assert.Equal(messageId, key.MessageId);
+        Assert.Equal("fulfillment", key.ModuleName);
+        Assert.Equal("fulfillment.customer-cache.v1", key.HandlerIdentity);
+    }
+
     private static DurableInboxMessageKey CreateKey(
         Guid? messageId = null,
         string moduleName = "sales",

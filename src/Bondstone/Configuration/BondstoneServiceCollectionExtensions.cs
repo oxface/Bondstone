@@ -20,6 +20,10 @@ public static class BondstoneServiceCollectionExtensions
             GetOrAddOwnedSingleton<IModuleCommandRouteRegistry, ModuleCommandRouteRegistry>(
                 services,
                 "Module command registration");
+        ModuleEventSubscriberRegistry eventSubscriberRegistry =
+            GetOrAddOwnedSingleton<IModuleEventSubscriberRegistry, ModuleEventSubscriberRegistry>(
+                services,
+                "Module event subscriber registration");
         BondstoneModuleRegistry moduleRegistry =
             GetOrAddOwnedSingleton<IBondstoneModuleRegistry, BondstoneModuleRegistry>(
                 services,
@@ -29,6 +33,12 @@ public static class BondstoneServiceCollectionExtensions
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
         services.TryAddScoped<IDurableCommandSender>(serviceProvider =>
             new DurableCommandSender(
+                serviceProvider.GetRequiredService<IDurableOutboxWriter>(),
+                serviceProvider.GetRequiredService<IMessageTypeRegistry>(),
+                serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
+                serviceProvider.GetService<TimeProvider>()));
+        services.TryAddScoped<IDurableEventPublisher>(serviceProvider =>
+            new DurableEventPublisher(
                 serviceProvider.GetRequiredService<IDurableOutboxWriter>(),
                 serviceProvider.GetRequiredService<IMessageTypeRegistry>(),
                 serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
@@ -47,6 +57,7 @@ public static class BondstoneServiceCollectionExtensions
             services,
             messageTypeRegistry,
             commandRouteRegistry,
+            eventSubscriberRegistry,
             moduleRegistry);
         configure(builder);
         builder.Validate();

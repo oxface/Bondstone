@@ -30,7 +30,8 @@ complete app-facing receive loop or first-class event handling.
 Implemented surface includes:
 
 - core message identity, message type registration, trace context, durable
-  command send result, durable operation read, and durable envelope contracts;
+  command send result, durable event publish result, durable operation read,
+  and durable envelope contracts;
 - provider-neutral persistence records and boundaries for outbox, inbox,
   operation state, outbox claiming, outbox lease renewal, outbox dispatch
   recording, inbox registration, and delegate-based inbox handle-once
@@ -57,6 +58,12 @@ Implemented surface includes:
   inbox behavior, validation, and execution results;
 - default outbox-backed `IDurableCommandSender` that requires current module
   execution context and uses the executing module as source module;
+- default outbox-backed `IDurableEventPublisher` that requires current module
+  execution context, uses the executing module as source module, and stages
+  `MessageKind.Event` envelopes without target modules;
+- module event registration metadata for published integration events,
+  subscriber handler identity, per-subscriber inbox-key naming, and
+  command/event topology diagnostic vocabulary;
 - module-owned EF Core persistence opt-in and EF-specific module command
   transaction behavior over `IEntityFrameworkCorePersistenceScope`;
 - fluent `AddBondstone` composition and outbox capability validation for
@@ -64,42 +71,71 @@ Implemented surface includes:
 
 ## MVP Priority Groups
 
-### Group 0: Event Shape Guardrail
+### Group 0: Durable Message Shape Guardrail
 
-Current group: **Group 0**.
+Status: **Complete**.
 
-Current/next slice: **first-class event guardrail ADR/design**.
-Proposed decision: [ADR 0026](adr/0026-event-shape-guardrail.md).
+Accepted decision: [ADR 0026](adr/0026-event-shape-guardrail.md).
 
 This group exists to prevent command-only naming and topology assumptions from
-hardening before receive listener binding and diagnostics are built.
+hardening before serializer configuration, receive listener binding, and
+diagnostics are built.
 
 The near-term goal is guardrail, not full event transport implementation.
 Bondstone should acknowledge events early because they are essential to
 modular-monolith workflows, while keeping actual event fan-out, Rebus
-publish/subscribe, and event choreography samples for later groups.
+publish/subscribe, and event choreography samples for later groups. The same
+guardrail should also protect shared durable-message concepts such as payload
+serialization, diagnostics, inbox identity, topology naming, and envelope
+semantics across commands and events.
 
 Slices:
 
-1. Create an event ADR/design note:
+1. Create a durable message/event ADR/design note. **Done by ADR 0026.**
    - event publisher shape;
    - event handler/subscriber shape;
    - outbox-backed event publish;
    - per-subscriber inbox identity;
    - fan-out versus point-to-point semantics;
    - Rebus topic/subscription vocabulary;
+   - durable payload serialization boundaries;
    - shared command/event diagnostics implications.
-2. Add minimal core event abstractions if accepted:
+2. Update stable docs for the current command/event/domain-event split.
+   **Done.**
+3. Add only low-risk core shape if accepted. **Done.**
    - explicit durable event publisher contract;
-   - module event subscriber registration metadata;
-   - stable subscriber identity metadata;
-   - diagnostics result shapes that can describe command routes and event
+   - event subscriber registration metadata;
+   - stable subscriber identity metadata for inbox identity;
+   - diagnostics vocabulary that can describe command routes and event
      subscriptions without assuming a command-only topology.
-3. Update stable docs for the current command/event/domain-event split.
 
-Remaining in closest group: **1-2 small design/API slices**.
+Remaining in Group 0: **complete**.
 
-### Group 1: Optional Persistence Mapping
+### Group 1: Durable Payload Serialization
+
+Current group: **Group 1**.
+
+Current/next slice: **durable payload serialization ADR/design**.
+
+Goal: commands and events use one durable payload serialization configuration
+surface so consumers can configure JSON options and converters without
+transport-specific duplication.
+
+Slices:
+
+1. ADR/design for durable payload serialization:
+   - shared JSON options or serializer abstraction for send and receive;
+   - command and event payload parity;
+   - provider-neutral core contract versus transport-specific registration;
+   - compatibility expectations for stored payloads.
+2. Implement the accepted serializer configuration shape:
+   - use it in `IDurableCommandSender`;
+   - use it in Rebus command receive pipelines;
+   - add focused tests for custom converters/options.
+
+Remaining in Group 1: **small-medium, 1-2 slices**.
+
+### Group 2: Optional Persistence Mapping
 
 Goal: modules that only need module-owned persistence should not be forced to
 map durable messaging tables. Durable messaging modules should still get clear
@@ -117,9 +153,9 @@ Slices:
 3. Update setup and architecture docs so persistence-only modules and durable
    messaging modules have distinct examples.
 
-Remaining in Group 1: **small-medium, 2-3 slices**.
+Remaining in Group 2: **small-medium, 2-3 slices**.
 
-### Group 2: Usable Durable Command Loop
+### Group 3: Usable Durable Command Loop
 
 Goal: a consumer can register a module, send a durable command through outbox
 and Rebus, receive it through module command execution, persist handler state
@@ -137,15 +173,16 @@ Already done:
 
 Remaining slices:
 
-1. Durable payload serializer configuration:
-   - shared JSON options or serializer abstraction for send and receive;
-   - support custom converters without transport-specific duplication.
-2. Durable-messaging capability validation:
+1. Durable-messaging capability validation:
    - durable modules have persistence when durable messaging is enabled;
    - Rebus receive topology targets registered local modules;
    - durable command handlers are registered on modules that opt into durable
      messaging;
    - missing persistence, transport, or route pieces produce useful errors.
+2. Command topology diagnostics:
+   - explicit route versus receive binding versus convention fallback versus
+     missing route;
+   - diagnostic result object before or alongside logging.
 3. Rebus endpoint dispatcher:
    - `HandleOnceAsync(endpointName, envelope, ct)`;
    - validate endpoint exists;
@@ -156,17 +193,13 @@ Remaining slices:
    - application still owns Rebus infrastructure configuration;
    - in-memory Rebus transport test proving `SendLocal` dispatches into
      `IModuleCommandExecutor`.
-5. Command topology diagnostics:
-   - explicit route versus receive binding versus convention fallback versus
-     missing route;
-   - diagnostic result object before or alongside logging.
-6. Operation-state integration:
+5. Operation-state integration:
    - make `IDurableOperationReader` meaningful beyond current contracts;
    - record durable send and receive state transitions consistently.
 
-Remaining in Group 2: **about 5-6 slices**.
+Remaining in Group 3: **about 4-5 slices**.
 
-### Group 3: Domain Event Persistence Capability
+### Group 4: Domain Event Persistence Capability
 
 Goal: support transactional collection and persistence of module-local domain
 events without forcing consumers to adopt a Bondstone aggregate model or
@@ -198,9 +231,9 @@ Slices:
 4. Optional mapping helper from domain events to integration events only after
    first-class integration events exist, keeping publication explicit.
 
-Remaining in Group 3: **medium, 3-4 slices**.
+Remaining in Group 4: **medium, 3-4 slices**.
 
-### Group 4: First-Class Events Implementation
+### Group 5: First-Class Events Implementation
 
 Goal: publish/subscribe is first-class and durable without turning Bondstone
 into a generic bus.
@@ -215,9 +248,9 @@ Slices:
    binding.
 6. Event diagnostics and transport-backed tests.
 
-Remaining in Group 4: **large, 5-6 slices**.
+Remaining in Group 5: **large, 5-6 slices**.
 
-### Group 5: Reliability And Recovery
+### Group 6: Reliability And Recovery
 
 Goal: the happy path is operationally resilient.
 
@@ -230,9 +263,9 @@ Slices:
 5. Dead-letter routing ownership.
 6. Advanced dispatcher and worker options.
 
-Remaining in Group 5: **medium-large, 5-6 slices**.
+Remaining in Group 6: **medium-large, 5-6 slices**.
 
-### Group 6: Provider And Migration Usefulness
+### Group 7: Provider And Migration Usefulness
 
 Goal: persistence providers are usable in real applications without relying on
 hidden project conventions.
@@ -245,9 +278,9 @@ Slices:
 4. Broader provider fixtures.
 5. Operation-state optimistic concurrency policy.
 
-Remaining in Group 6: **medium, 4-5 slices**.
+Remaining in Group 7: **medium, 4-5 slices**.
 
-### Group 7: Samples And Adoption Proof
+### Group 8: Samples And Adoption Proof
 
 Goal: prove the library works for modular-monolith and service-split usage.
 
@@ -259,7 +292,7 @@ Slices:
 3. Event choreography sample after events exist.
 4. Setup and production topology documentation cleanup.
 
-Remaining in Group 7: **medium, 3-4 slices**.
+Remaining in Group 8: **medium, 3-4 slices**.
 
 ## Verification Surface
 
@@ -268,7 +301,9 @@ Current automated coverage includes:
 - neutral unit tests for core messaging and persistence contracts;
 - neutral unit tests for module command registration, startup scanning,
   validation, route lookup, module execution context, source-module scoped
-  durable sending, receive inbox behavior, and direct handler execution;
+  durable sending, source-module scoped durable event publishing, module event
+  registration metadata, event subscriber inbox-key naming, receive inbox
+  behavior, and direct handler execution;
 - EF Core unit and application tests for mapping, service registration, store
   staging, persistence-scope validation, module persistence opt-in, and module
   transaction/save behavior;

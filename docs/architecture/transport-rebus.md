@@ -9,9 +9,11 @@ command outbox records. It sends one command through Rebus' explicit routing
 API after resolving a destination address from the claimed
 `DurableOutboxRecord`.
 
-The first adapter supports `MessageKind.Command` only. Event publish/subscribe
-semantics remain deferred because Rebus topic ownership, subscription storage,
-and module event topology need their own transport decision.
+The first adapter supports `MessageKind.Command` dispatch only. Core can stage
+`MessageKind.Event` envelopes through `IDurableEventPublisher`, but Rebus
+event publish/subscribe semantics remain deferred because Rebus topic
+ownership, subscription storage, and module event topology need their own
+transport decision.
 
 `RebusModuleDestinationResolver` maps Bondstone target modules to Rebus
 destination addresses. This keeps module identity separate from endpoint
@@ -72,6 +74,22 @@ backlog and scale boundary.
 Commands should use Rebus queues. Topic or subscription topology is reserved
 for future event publish/subscribe work, where each subscriber needs its own
 copy of an event.
+
+Future event support should use Rebus publish/subscribe vocabulary instead of
+command routing vocabulary. Durable event publish topology may map an
+integration event identity to a Rebus topic or equivalent publish subject.
+Durable event subscription topology may bind a subscriber module and stable
+subscriber identity to a Rebus endpoint/subscription. Bondstone topology
+metadata should describe those durable message relationships; applications
+still configure Rebus-native subscription storage, broker transport,
+connection string, serializer, worker count, retry/dead-letter policy, and
+input queue through Rebus.
+
+Subscriber inbox identity is per subscriber. A future Rebus event receive
+pipeline should derive event inbox keys from Bondstone message id, subscriber
+module, and stable subscriber identity, not from command target module.
+Each subscription's copy can then be retried, dead-lettered, and marked
+processed independently.
 
 ## Wire Envelope And Headers
 

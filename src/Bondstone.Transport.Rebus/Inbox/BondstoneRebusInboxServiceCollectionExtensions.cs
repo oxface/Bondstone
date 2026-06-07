@@ -1,4 +1,5 @@
 using Bondstone.Messaging;
+using Bondstone.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -12,6 +13,7 @@ public static class BondstoneRebusInboxServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddSingleton<IMessageTypeRegistry, MessageTypeRegistry>();
+        services.AddBondstoneDurablePayloadSerialization();
         services.TryAddTransient<
             IRebusDurableInboxHandlerExecutor,
             RebusDurableInboxHandlerExecutor>();

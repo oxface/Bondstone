@@ -52,6 +52,41 @@ public sealed class RebusModuleCommandReceivePipelineTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task HandleOnceAsync_UsesConfiguredDurablePayloadJsonOptions()
+    {
+        var inboxExecutor = new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.Handled);
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+        services.AddSingleton<IDurableInboxHandlerExecutor>(inboxExecutor);
+        services.ConfigureBondstoneDurablePayloadJson(
+            options => options.Converters.Add(new DurableOrderIdJsonConverter()));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.UseRebusModuleCommandReceivePipeline();
+            bondstone.Module("fulfillment", module =>
+            {
+                module.Commands.RegisterHandler<
+                    ReserveConvertedOrderCommand,
+                    ReserveConvertedOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IRebusModuleCommandReceivePipeline pipeline =
+            scope.ServiceProvider.GetRequiredService<IRebusModuleCommandReceivePipeline>();
+
+        DurableInboxHandleResult result = await pipeline.HandleOnceAsync(
+            CreateConvertedEnvelope());
+
+        Assert.Equal(DurableInboxHandleStatus.Handled, result.Status);
+        CommandCallLog log = serviceProvider.GetRequiredService<CommandCallLog>();
+        Assert.Equal(["handle-converted:A-100"], log.Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task HandleOnceAsync_WhenInboxRecordAlreadyReceived_ThrowsAndSkipsHandler()
     {
         var inboxExecutor = new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.AlreadyReceived);
@@ -117,6 +152,25 @@ public sealed class RebusModuleCommandReceivePipelineTests
             PartitionKey: "orders/A-100");
     }
 
+    private static RebusDurableMessageEnvelope CreateConvertedEnvelope()
+    {
+        return new RebusDurableMessageEnvelope(
+            Guid.Parse("e37baceb-4d6f-4c91-9870-6d209cd258a8"),
+            MessageKind.Command.ToString(),
+            "fulfillment.order.reserve-converted.v1",
+            "sales",
+            "fulfillment",
+            """{"orderId":"payload-A-100"}""",
+            null,
+            DateTimeOffset.Parse("2026-06-05T12:00:00+00:00"),
+            DurableOperationId: null,
+            TraceParent: null,
+            TraceState: null,
+            TraceBaggage: null,
+            CausationId: null,
+            PartitionKey: "orders/A-100");
+    }
+
     [DurableCommandIdentity("fulfillment.order.reserve.v1")]
     public sealed record ReserveOrderCommand(string OrderId) : IDurableCommand;
 
@@ -128,6 +182,22 @@ public sealed class RebusModuleCommandReceivePipelineTests
             CancellationToken ct = default)
         {
             log.Calls.Add($"handle:{command.OrderId}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [DurableCommandIdentity("fulfillment.order.reserve-converted.v1")]
+    public sealed record ReserveConvertedOrderCommand(DurableOrderId OrderId)
+        : IDurableCommand;
+
+    public sealed class ReserveConvertedOrderHandler(CommandCallLog log)
+        : ICommandHandler<ReserveConvertedOrderCommand>
+    {
+        public ValueTask HandleAsync(
+            ReserveConvertedOrderCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"handle-converted:{command.OrderId.Value}");
             return ValueTask.CompletedTask;
         }
     }
@@ -171,4 +241,3 @@ public sealed class RebusModuleCommandReceivePipelineTests
         }
     }
 }
-

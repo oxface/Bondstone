@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
@@ -13,7 +12,7 @@ public sealed class RebusModuleCommandReceivePipeline(
     IModuleCommandRouteRegistry routeRegistry,
     IModuleCommandExecutor moduleCommandExecutor,
     TimeProvider? timeProvider = null,
-    JsonSerializerOptions? jsonSerializerOptions = null)
+    IDurablePayloadSerializer? payloadSerializer = null)
     : IRebusModuleCommandReceivePipeline
 {
     private const string ActivityName = "bondstone.rebus.module_command.receive";
@@ -24,8 +23,8 @@ public sealed class RebusModuleCommandReceivePipeline(
     private readonly IModuleCommandExecutor _moduleCommandExecutor =
         moduleCommandExecutor ?? throw new ArgumentNullException(nameof(moduleCommandExecutor));
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
-    private readonly JsonSerializerOptions _jsonSerializerOptions =
-        jsonSerializerOptions ?? new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    private readonly IDurablePayloadSerializer _payloadSerializer =
+        payloadSerializer ?? new SystemTextJsonDurablePayloadSerializer();
 
     public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
         RebusDurableMessageEnvelope envelope,
@@ -113,18 +112,9 @@ public sealed class RebusModuleCommandReceivePipeline(
         RebusDurableMessageEnvelope envelope,
         Type commandType)
     {
-        object? command = JsonSerializer.Deserialize(
+        return _payloadSerializer.Deserialize(
             envelope.Payload,
-            commandType,
-            _jsonSerializerOptions);
-
-        if (command is null)
-        {
-            throw new JsonException(
-                $"Message payload for '{envelope.MessageTypeName}' deserialized to null.");
-        }
-
-        return command;
+            commandType);
     }
 
     private static Activity? StartReceiveActivity(

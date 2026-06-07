@@ -112,9 +112,10 @@ and samples remain future work.
 ## Application Notes
 
 - Current contract: A typed Rebus command receive pipeline is implemented.
-  It uses message-registry type resolution, System.Text.Json payload
-  deserialization, explicit stable handler identity, Activity creation from
-  accepted W3C context, and the existing low-level Rebus inbox adapter.
+  It uses message-registry type resolution, shared durable payload
+  deserialization through the ADR 0029 serializer boundary, explicit stable
+  handler identity, Activity creation from accepted W3C context, and the
+  existing low-level Rebus inbox adapter.
 - Stable docs: Current receive-side transport direction is described in
   [docs/architecture/messaging.md](../architecture/messaging.md) and
   [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md),

@@ -132,7 +132,7 @@ becomes a durable public contract.
 
 ## Amendment 2026-06-07: Minimal Core Guardrail APIs
 
-The follow-up Group 0 API slice validated the minimal names and applied them
+The follow-up Phase 0 API slice validated the minimal names and applied them
 in core without implementing event fan-out or subscriber execution.
 
 `Bondstone` now includes `IDurableEventPublisher`,
@@ -211,7 +211,7 @@ leaving implementation details for smaller reviewed slices.
   topology changes. It now points agents at the accepted command/event/domain
   event split.
 - Application evidence: Existing core messaging tests cover event message
-  identity registration and envelope validation. Group 0 tests cover
+  identity registration and envelope validation. Phase 0 tests cover
   outbox-backed durable event publish staging, event subscriber registration
   metadata, per-subscriber inbox-key naming, and command/event topology
   diagnostic vocabulary. Stable docs now carry the accepted guardrail.
@@ -223,5 +223,5 @@ leaving implementation details for smaller reviewed slices.
 ## Verification
 
 Read back the amended ADR and related stable docs. Ran `pnpm check` and
-stale-reference scans for ADR 0026, event guardrail status, Group 0 closeout,
+stale-reference scans for ADR 0026, event guardrail status, Phase 0 closeout,
 and old command-only/event proposal language.

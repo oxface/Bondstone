@@ -157,21 +157,24 @@ module, and explicit handler identity, compose
 execution and its commit boundary succeed. Event publish/subscribe remains
 deferred.
 
-Durable payload serialization is shared command/event infrastructure. The
-current implementation uses `System.Text.Json` in command send, event publish,
-and Rebus command receive paths, but the stable architecture should not grow
-separate command-only and event-only serializer configuration. Future
-serialization work should define one durable payload boundary for command
-send, command receive, event publish, and event receive. Transport adapters
-must not rely on transport CLR type headers for Bondstone durable identity.
-Content type, non-JSON payloads, and compatibility policy remain deferred to
-the durable payload serialization slice.
+Durable payload serialization is shared command/event infrastructure. Current
+command send, event publish, Rebus typed command receive, and Rebus module
+command receive use `IDurablePayloadSerializer`. The default implementation
+uses `System.Text.Json` with durable-payload-specific
+`DurablePayloadJsonOptions`, so consumers configure payload JSON options and
+converters once instead of repeating transport-specific serializer options.
+Applications can call `ConfigureBondstoneDurablePayloadJson` for the default
+JSON implementation or replace `IDurablePayloadSerializer` when a custom
+serializer is needed. Future event receive must use the same boundary.
+Transport adapters must not rely on transport CLR type headers for Bondstone
+durable identity. Content type, non-JSON payloads, schema registries, payload
+encryption, compression, and stored-payload migration remain deferred.
 
 The typed Rebus command receive pipeline uses `IMessageTypeRegistry` to
 resolve stable message type names to durable command CLR types, deserializes
-payloads with `System.Text.Json`, starts a .NET/OTel consumer `Activity` from
-accepted W3C trace context, and invokes caller-registered typed command
-handlers with explicit stable handler identity.
+payloads through `IDurablePayloadSerializer`, starts a .NET/OTel consumer
+`Activity` from accepted W3C trace context, and invokes caller-registered
+typed command handlers with explicit stable handler identity.
 
 The current typed Rebus pipeline is a lower-level transport primitive. The
 preferred app-facing receive shape binds host Rebus topology to

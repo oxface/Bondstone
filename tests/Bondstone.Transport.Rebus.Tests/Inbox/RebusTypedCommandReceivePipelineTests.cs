@@ -69,6 +69,39 @@ public sealed class RebusTypedCommandReceivePipelineTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task HandleOnceAsync_UsesConfiguredDurablePayloadJsonOptions()
+    {
+        var registry = new MessageTypeRegistry();
+        registry.Register<ReserveConvertedOrderCommand>(
+            "fulfillment.order.reserve-converted.v1");
+        var inboxExecutor = new CapturingRebusInboxExecutor(DurableInboxHandleStatus.Handled);
+        var services = new ServiceCollection();
+        services.AddSingleton<IMessageTypeRegistry>(registry);
+        services.AddSingleton<IRebusDurableInboxHandlerExecutor>(inboxExecutor);
+        services.ConfigureBondstoneDurablePayloadJson(
+            options => options.Converters.Add(new DurableOrderIdJsonConverter()));
+        services.AddBondstoneRebusTypedCommandReceivePipeline();
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusTypedCommandReceivePipeline pipeline =
+            serviceProvider.GetRequiredService<IRebusTypedCommandReceivePipeline>();
+        ReserveConvertedOrderCommand? handledCommand = null;
+
+        await pipeline.HandleOnceAsync<ReserveConvertedOrderCommand>(
+            CreateConvertedEnvelope(),
+            "reserve-order-handler",
+            (command, _) =>
+            {
+                handledCommand = command;
+                return ValueTask.CompletedTask;
+            },
+            _ => ValueTask.CompletedTask);
+
+        Assert.Equal("A-100", handledCommand?.OrderId.Value);
+        Assert.Equal(1, inboxExecutor.HandlerCalls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task HandleOnceAsync_WhenMessageTypeIsUnknown_ThrowsWithoutDelegating()
     {
         var registry = new MessageTypeRegistry();
@@ -228,7 +261,29 @@ public sealed class RebusTypedCommandReceivePipelineTests
             PartitionKey: "orders/A-100");
     }
 
+    private static RebusDurableMessageEnvelope CreateConvertedEnvelope()
+    {
+        return new RebusDurableMessageEnvelope(
+            Guid.Parse("e37baceb-4d6f-4c91-9870-6d209cd258a8"),
+            MessageKind.Command.ToString(),
+            "fulfillment.order.reserve-converted.v1",
+            "sales",
+            "fulfillment",
+            """{"orderId":"payload-A-100"}""",
+            null,
+            DateTimeOffset.Parse("2026-06-05T12:00:00+00:00"),
+            DurableOperationId: null,
+            TraceParent: null,
+            TraceState: null,
+            TraceBaggage: null,
+            CausationId: null,
+            PartitionKey: "orders/A-100");
+    }
+
     public sealed record ReserveOrderCommand(string OrderId) : IDurableCommand;
+
+    public sealed record ReserveConvertedOrderCommand(DurableOrderId OrderId)
+        : IDurableCommand;
 
     public sealed record CancelOrderCommand(string OrderId) : IDurableCommand;
 

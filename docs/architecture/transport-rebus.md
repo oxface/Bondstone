@@ -157,9 +157,9 @@ throw so Rebus retry and dead-letter policy remains in control.
 
 The pipeline resolves the wire envelope's stable message type name through
 `IMessageTypeRegistry`, deserializes the payload into the registered durable
-command CLR type with `System.Text.Json`, starts a .NET/OTel consumer
-`Activity` from the accepted W3C parent context when present, and invokes a
-caller-registered typed command handler delegate.
+command CLR type through Bondstone's shared `IDurablePayloadSerializer`,
+starts a .NET/OTel consumer `Activity` from the accepted W3C parent context
+when present, and invokes a caller-registered typed command handler delegate.
 
 The typed pipeline is available through low-level
 `AddBondstoneRebusTypedCommandReceivePipeline` registration and the preferred
@@ -197,9 +197,11 @@ per-command handler and commit delegates.
 
 Current groundwork adds a Rebus module command receive pipeline that resolves a
 wire envelope through Bondstone message identity and module command route
-metadata, passes the durable inbox record into `IModuleCommandExecutor`, and
-reads the inbox result from `ModuleCommandExecutionResult`. This removes
-per-command handler delegates from the receive primitive.
+metadata, deserializes payloads through Bondstone's shared
+`IDurablePayloadSerializer`, passes the durable inbox record into
+`IModuleCommandExecutor`, and reads the inbox result from
+`ModuleCommandExecutionResult`. This removes per-command handler delegates
+from the receive primitive.
 
 Host-owned receive endpoint topology can now record which local modules a
 Rebus endpoint accepts. Actual Rebus worker/listener binding to that topology

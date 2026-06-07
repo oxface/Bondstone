@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Bondstone.Modules;
 using Bondstone.Persistence;
 
@@ -8,18 +7,18 @@ internal sealed class DurableCommandSender(
     IDurableOutboxWriter outboxWriter,
     IMessageTypeRegistry messageTypeRegistry,
     IModuleExecutionContextAccessor executionContextAccessor,
+    IDurablePayloadSerializer? payloadSerializer = null,
     TimeProvider? timeProvider = null)
     : IDurableCommandSender
 {
-    private static readonly JsonSerializerOptions JsonSerializerOptions =
-        new(JsonSerializerDefaults.Web);
-
     private readonly IDurableOutboxWriter _outboxWriter =
         outboxWriter ?? throw new ArgumentNullException(nameof(outboxWriter));
     private readonly IMessageTypeRegistry _messageTypeRegistry =
         messageTypeRegistry ?? throw new ArgumentNullException(nameof(messageTypeRegistry));
     private readonly IModuleExecutionContextAccessor _executionContextAccessor =
         executionContextAccessor ?? throw new ArgumentNullException(nameof(executionContextAccessor));
+    private readonly IDurablePayloadSerializer _payloadSerializer =
+        payloadSerializer ?? new SystemTextJsonDurablePayloadSerializer();
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     public async ValueTask<DurableCommandSendResult> SendAsync<TCommand>(
@@ -57,7 +56,7 @@ internal sealed class DurableCommandSender(
 
         Guid messageId = Guid.NewGuid();
         string messageTypeName = _messageTypeRegistry.GetMessageTypeName<TCommand>();
-        string payload = JsonSerializer.Serialize(command, JsonSerializerOptions);
+        string payload = _payloadSerializer.Serialize(command);
         MessageTraceContext? capturedTraceContext =
             traceContext ?? MessageTraceContext.CaptureCurrent();
 
@@ -82,4 +81,3 @@ internal sealed class DurableCommandSender(
             DurableCommandSendStatus.Accepted);
     }
 }
-

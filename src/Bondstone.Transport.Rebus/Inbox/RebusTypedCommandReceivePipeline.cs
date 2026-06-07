@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Bondstone.Transport.Rebus.Outbox;
@@ -10,7 +9,7 @@ namespace Bondstone.Transport.Rebus.Inbox;
 public sealed class RebusTypedCommandReceivePipeline(
     IMessageTypeRegistry messageTypeRegistry,
     IRebusDurableInboxHandlerExecutor inboxHandlerExecutor,
-    JsonSerializerOptions? jsonSerializerOptions = null)
+    IDurablePayloadSerializer? payloadSerializer = null)
     : IRebusTypedCommandReceivePipeline
 {
     private const string ActivityName = "bondstone.rebus.command.receive";
@@ -18,8 +17,8 @@ public sealed class RebusTypedCommandReceivePipeline(
         messageTypeRegistry ?? throw new ArgumentNullException(nameof(messageTypeRegistry));
     private readonly IRebusDurableInboxHandlerExecutor _inboxHandlerExecutor =
         inboxHandlerExecutor ?? throw new ArgumentNullException(nameof(inboxHandlerExecutor));
-    private readonly JsonSerializerOptions _jsonSerializerOptions =
-        jsonSerializerOptions ?? new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    private readonly IDurablePayloadSerializer _payloadSerializer =
+        payloadSerializer ?? new SystemTextJsonDurablePayloadSerializer();
 
     public async ValueTask<DurableInboxHandleResult> HandleOnceAsync<TCommand>(
         RebusDurableMessageEnvelope envelope,
@@ -84,18 +83,9 @@ public sealed class RebusTypedCommandReceivePipeline(
         Type registeredType)
         where TCommand : IDurableCommand
     {
-        object? command = JsonSerializer.Deserialize(
+        return (TCommand)_payloadSerializer.Deserialize(
             envelope.Payload,
-            registeredType,
-            _jsonSerializerOptions);
-
-        if (command is null)
-        {
-            throw new JsonException(
-                $"Message payload for '{envelope.MessageTypeName}' deserialized to null.");
-        }
-
-        return (TCommand)command;
+            registeredType);
     }
 
     private static Activity? StartReceiveActivity(

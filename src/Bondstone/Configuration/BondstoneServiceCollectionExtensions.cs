@@ -29,6 +29,7 @@ public static class BondstoneServiceCollectionExtensions
                 services,
                 "Module registration");
         GetOrAddModuleExecutionContextAccessor(services);
+        services.AddBondstoneDurablePayloadSerialization();
 
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
         services.TryAddScoped<IDurableCommandSender>(serviceProvider =>
@@ -36,12 +37,14 @@ public static class BondstoneServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IDurableOutboxWriter>(),
                 serviceProvider.GetRequiredService<IMessageTypeRegistry>(),
                 serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
+                serviceProvider.GetRequiredService<IDurablePayloadSerializer>(),
                 serviceProvider.GetService<TimeProvider>()));
         services.TryAddScoped<IDurableEventPublisher>(serviceProvider =>
             new DurableEventPublisher(
                 serviceProvider.GetRequiredService<IDurableOutboxWriter>(),
                 serviceProvider.GetRequiredService<IMessageTypeRegistry>(),
                 serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
+                serviceProvider.GetRequiredService<IDurablePayloadSerializer>(),
                 serviceProvider.GetService<TimeProvider>()));
         services.TryAddEnumerable(ServiceDescriptor.Scoped(
             typeof(IModuleCommandSystemPipelineBehavior<>),

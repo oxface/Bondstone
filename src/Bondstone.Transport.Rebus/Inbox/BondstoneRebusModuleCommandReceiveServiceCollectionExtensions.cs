@@ -1,3 +1,4 @@
+using Bondstone.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -27,6 +28,7 @@ public static class BondstoneRebusModuleCommandReceiveServiceCollectionExtension
         services.TryAddTransient<
             IRebusModuleCommandReceivePipeline,
             RebusModuleCommandReceivePipeline>();
+        services.AddBondstoneDurablePayloadSerialization();
 
         return services;
     }

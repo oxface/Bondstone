@@ -17,6 +17,13 @@ in-process calls. They often hide call graphs, weaken discoverability, add
 dispatch overhead, and provide little durable-boundary value when normal typed
 contracts are sufficient.
 
+Durable commands are different from ordinary in-process collaboration. When a
+workflow changes state across distinct module persistence boundaries, direct
+calls should be reserved for operations that tolerate failure without a durable
+retry/deduplication boundary. The usual shape should be a durable command to a
+target module or event choreography when multiple subscribers react to a
+completed fact.
+
 Module command execution is the narrow exception. Commands handled by a
 Bondstone module can be registered through module command routes and executed
 through `IModuleCommandExecutor`. The executor uses startup reflection
@@ -123,8 +130,11 @@ to a registered module command route, derives the stable handler identity from
 route metadata, passes the durable inbox record into `IModuleCommandExecutor`,
 and receives the inbox result from `ModuleCommandExecutionResult`. Host
 receive topology can now bind Rebus endpoint names to accepted local modules
-and registers the module command receive pipeline; actual Rebus listener
-binding to that topology remains future work.
+and registers the module command receive pipeline. Receive bindings also
+derive outgoing command destinations for accepted modules, with explicit
+`RouteModule` mappings reserved as overrides and module queue conventions as
+fallback routing for extracted or otherwise remote target modules. Actual Rebus
+listener binding to that topology remains future work.
 
 For durable commands, prefer queue-backed point-to-point delivery. A Rebus
 receive endpoint should usually represent a module-level command backlog so

@@ -157,6 +157,29 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void UseRebusTransport_WhenReceiveModuleUsesConvention_RegistersDerivedReceiveTopology()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstone(builder =>
+        {
+            builder.UseRebusTransport(rebus =>
+            {
+                rebus
+                    .UseModuleQueueConvention(static moduleName => $"module-{moduleName}")
+                    .ReceiveModule("fulfillment");
+            });
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusModuleReceiveEndpointRegistry registry =
+            serviceProvider.GetRequiredService<IRebusModuleReceiveEndpointRegistry>();
+
+        Assert.True(registry.EndpointAcceptsModule("module-fulfillment", "fulfillment"));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void UseRebusTransport_WhenConfigureIsNull_Throws()
     {
         var services = new ServiceCollection();
@@ -215,6 +238,47 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
         var builder = new BondstoneRebusTransportBuilder();
 
         Assert.Throws<ArgumentException>(() => builder.ReceiveEndpoint(" "));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UseModuleQueueConvention_WhenFactoryIsNull_Throws()
+    {
+        var builder = new BondstoneRebusTransportBuilder();
+
+        Assert.Throws<ArgumentNullException>(
+            () => builder.UseModuleQueueConvention(null!));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ReceiveModule_WhenModuleNameIsBlank_Throws()
+    {
+        var builder = new BondstoneRebusTransportBuilder();
+
+        Assert.Throws<ArgumentException>(() => builder.ReceiveModule(" "));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ReceiveModule_WhenConventionIsMissing_Throws()
+    {
+        var builder = new BondstoneRebusTransportBuilder();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => builder.ReceiveModule("fulfillment"));
+
+        Assert.Contains(nameof(BondstoneRebusTransportBuilder.UseModuleQueueConvention), exception.Message);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ReceiveModule_WhenConventionReturnsBlank_Throws()
+    {
+        var builder = new BondstoneRebusTransportBuilder();
+        builder.UseModuleQueueConvention(static _ => " ");
+
+        Assert.Throws<ArgumentException>(() => builder.ReceiveModule("fulfillment"));
     }
 
     [Fact]

@@ -153,7 +153,13 @@ ADRs for durable technical decisions.
   - durable inbox record passed into `IModuleCommandExecutor`
   - already-received inbox result surfaced through existing Rebus exception
 - Rebus host receive topology metadata:
+  - conventional module queue naming through `UseModuleQueueConvention`
+  - convention fallback routing for target modules without explicit routes or
+    local receive bindings
+  - `ReceiveModule` shorthand for convention-derived local module endpoints
   - `UseRebusTransport` receive endpoint binding to accepted local modules
+  - receive bindings derive outgoing command destinations for accepted modules
+  - explicit `RouteModule` mappings override derived destinations
   - endpoint/module binding registry for future worker/listener integration
   - idempotent duplicate binding and conflict validation when one module is
     bound to two endpoints

@@ -16,7 +16,8 @@ public static class BondstoneRebusBuilderExtensions
         configure(rebus);
 
         builder.Services.AddBondstoneRebusOutboxTransport(
-            rebus.DestinationAddressesByTargetModule);
+            rebus.DestinationAddressesByTargetModule,
+            rebus.ModuleDestinationAddressConvention);
         if (rebus.ReceiveEndpointBindings.Count > 0)
         {
             builder.Services.AddBondstoneRebusModuleCommandReceiveTopology(
@@ -39,7 +40,8 @@ public static class BondstoneRebusBuilderExtensions
         configure(rebus);
 
         outbox.Services.AddBondstoneRebusOutboxTransport(
-            rebus.DestinationAddressesByTargetModule);
+            rebus.DestinationAddressesByTargetModule,
+            rebus.ModuleDestinationAddressConvention);
         outbox.MarkTransport("Rebus");
 
         return outbox;

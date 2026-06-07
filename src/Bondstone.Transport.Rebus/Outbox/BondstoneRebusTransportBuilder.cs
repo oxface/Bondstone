@@ -1,5 +1,5 @@
-using Bondstone.Utility;
 using Bondstone.Transport.Rebus.Inbox;
+using Bondstone.Utility;
 
 namespace Bondstone.Transport.Rebus.Outbox;
 
@@ -11,9 +11,25 @@ public sealed class BondstoneRebusTransportBuilder
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _endpointNamesByAcceptedModuleName =
         new(StringComparer.Ordinal);
+    private Func<string, string>? _moduleQueueNameConvention;
 
-    internal IReadOnlyDictionary<string, string> DestinationAddressesByTargetModule =>
-        _destinationAddressesByTargetModule;
+    internal IReadOnlyDictionary<string, string> DestinationAddressesByTargetModule
+    {
+        get
+        {
+            var destinationAddressesByTargetModule =
+                new Dictionary<string, string>(
+                    _endpointNamesByAcceptedModuleName,
+                    StringComparer.Ordinal);
+
+            foreach (KeyValuePair<string, string> explicitRoute in _destinationAddressesByTargetModule)
+            {
+                destinationAddressesByTargetModule[explicitRoute.Key] = explicitRoute.Value;
+            }
+
+            return destinationAddressesByTargetModule;
+        }
+    }
 
     internal IReadOnlyCollection<RebusModuleReceiveEndpointBinding> ReceiveEndpointBindings =>
         _acceptedModuleNamesByEndpointName
@@ -23,6 +39,9 @@ public sealed class BondstoneRebusTransportBuilder
                 entry.Value))
             .ToArray();
 
+    internal Func<string, string>? ModuleDestinationAddressConvention =>
+        _moduleQueueNameConvention;
+
     public BondstoneRebusModuleRouteBuilder RouteModule(string targetModule)
     {
         string normalizedTargetModule = targetModule.NormalizeRequired(
@@ -30,6 +49,41 @@ public sealed class BondstoneRebusTransportBuilder
             "Target module");
 
         return new BondstoneRebusModuleRouteBuilder(this, normalizedTargetModule);
+    }
+
+    public BondstoneRebusTransportBuilder UseModuleQueueConvention()
+    {
+        return UseModuleQueueConvention(static moduleName => $"{moduleName}-commands");
+    }
+
+    public BondstoneRebusTransportBuilder UseModuleQueueConvention(
+        Func<string, string> queueNameFactory)
+    {
+        ArgumentNullException.ThrowIfNull(queueNameFactory);
+
+        _moduleQueueNameConvention = moduleName =>
+            queueNameFactory(moduleName).NormalizeRequired(
+                nameof(queueNameFactory),
+                "Rebus module queue name");
+
+        return this;
+    }
+
+    public BondstoneRebusTransportBuilder ReceiveModule(string moduleName)
+    {
+        string normalizedModuleName = moduleName.NormalizeRequired(
+            nameof(moduleName),
+            "Module name");
+
+        if (_moduleQueueNameConvention is null)
+        {
+            throw new InvalidOperationException(
+                $"Receiving module '{normalizedModuleName}' by convention requires {nameof(UseModuleQueueConvention)} to be configured first.");
+        }
+
+        string endpointName = _moduleQueueNameConvention(normalizedModuleName);
+        AcceptModuleOnEndpoint(endpointName, normalizedModuleName);
+        return this;
     }
 
     public BondstoneRebusReceiveEndpointBuilder ReceiveEndpoint(string endpointName)

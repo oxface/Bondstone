@@ -211,7 +211,9 @@ additional ADR review or amendments.
   modules that declare EF persistence. `Bondstone.Transport.Rebus` now has
   module command receive pipeline groundwork that dispatches Rebus wire
   envelopes into `IModuleCommandExecutor`, plus host-owned receive endpoint
-  topology metadata that binds Rebus endpoint names to accepted local modules.
+  topology metadata that binds Rebus endpoint names to accepted local modules
+  and can derive outgoing command destinations from those bindings or module
+  queue conventions.
 - Stable docs: Current module command direction is described in
   [docs/architecture/modules.md](../architecture/modules.md), with supporting
   messaging, persistence, and Rebus transport notes in
@@ -230,11 +232,12 @@ additional ADR review or amendments.
   behavior, module persistence metadata, EF module persistence opt-in, EF
   command transaction/save behavior, and Rebus module command receive dispatch.
   Rebus outgoing host topology now has an adapter-specific `UseRebusTransport`
-  builder for mapping target modules to Rebus destination addresses and
-  binding Rebus receive endpoint names to accepted local modules. Core module
-  registration now records module metadata, `UseDurableMessaging` capability
-  state, and module persistence capability state through
-  `IBondstoneModuleRegistry`.
+  builder for conventional module queue naming, explicit target-module
+  destination overrides, convention fallback routing, and Rebus receive
+  endpoint bindings to accepted local modules. Core module registration now
+  records module metadata,
+  `UseDurableMessaging` capability state, and module persistence capability
+  state through `IBondstoneModuleRegistry`.
 - Pending or deferred: Actual Rebus worker/listener binding to configured
   module receive endpoint topology, receive acknowledgement integration,
   durable-messaging capability validation in transport/persistence adapters,

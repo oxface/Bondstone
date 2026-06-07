@@ -18,9 +18,9 @@ destination addresses. This keeps module identity separate from endpoint
 addresses while allowing consumers to choose their own Rebus topology.
 
 Outgoing Rebus topology is host-owned and adapter-specific. Applications can
-configure target-module destinations through the `UseRebusTransport` builder.
-The current route builder maps stable target module names to Rebus queue names
-or destination addresses.
+configure conventional module queue names through the `UseRebusTransport`
+builder. Explicit target-module routes remain available as overrides for
+legacy names, extracted modules, or other non-conventional topology.
 
 The older outbox-specific dictionary registration remains available for now.
 Receive topology is also host-owned and adapter-specific. The same
@@ -30,8 +30,9 @@ modules accepted by the process:
 ```csharp
 bondstone.UseRebusTransport(rebus =>
 {
-    rebus.RouteModule("fulfillment").ToQueue("fulfillment-commands");
-    rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment");
+    rebus
+        .UseModuleQueueConvention()
+        .ReceiveModule("fulfillment");
 });
 ```
 
@@ -39,10 +40,25 @@ Receive endpoint bindings are recorded in
 `IRebusModuleReceiveEndpointRegistry`, and configuring one registers the
 module command receive pipeline. A module may be accepted by only one Rebus
 receive endpoint in a host; duplicate matching registrations are idempotent.
-Bondstone should not require a generic module-to-module route table for
-ordinary durable command delivery. Modules declare durable messaging capability
-and command handlers; the Rebus adapter supplies queue names, endpoint names,
-storage, retry/dead-letter policy, and listener binding.
+With the default convention, module `fulfillment` maps to Rebus endpoint
+`fulfillment-commands`. A custom naming convention can be provided with
+`UseModuleQueueConvention(moduleName => ...)`. The convention can route
+outgoing commands to any target module by name, including modules extracted to
+another service. Accepted receive modules also provide outgoing command
+destinations for the same target modules.
+
+Explicit `RouteModule(...).ToQueue(...)` or `.ToAddress(...)` calls override
+any destination derived from receive bindings or conventions. Destination
+resolution order is explicit route, receive binding, then module queue
+convention. Bondstone should not require a generic module-to-module route table
+for ordinary durable command delivery. Modules declare durable messaging
+capability and command handlers; the Rebus adapter supplies queue names,
+endpoint names, storage, retry/dead-letter policy, and listener binding.
+
+Rebus infrastructure setup remains Rebus-native and outside Bondstone's
+topology builder. Applications still configure the broker transport,
+connection string, serializer, worker count, retry/dead-letter policy, and
+input queue through Rebus' own configuration APIs.
 
 The default operational shape should be one command receive queue per module
 that needs independent ownership, scaling, retry policy, or service-extraction
@@ -148,10 +164,10 @@ handler passes the wire envelope, durable handler identity, typed handler
 delegate, and commit delegate to `IRebusTypedCommandReceivePipeline`.
 
 This shape is intentionally explicit and works for one or a few handlers, but
-it is a low-level primitive rather than the preferred future app-facing receive
-API. The user-facing setup example in [../setup.md](../setup.md) therefore
-shows the outgoing durable command path and avoids presenting this temporary
-receive wiring as the main application pattern.
+it is a low-level primitive rather than the preferred app-facing receive path.
+The user-facing setup example in [../setup.md](../setup.md) therefore shows
+the outgoing durable command path and avoids presenting this temporary receive
+wiring as the main application pattern.
 
 The preferred receive shape is host topology binding from Rebus to module
 command routes. Modules register command handlers and validators without

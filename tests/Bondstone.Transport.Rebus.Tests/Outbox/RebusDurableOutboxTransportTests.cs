@@ -85,6 +85,43 @@ public sealed class RebusDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenDestinationConventionExists_RoutesTargetModuleByConvention()
+    {
+        DurableOutboxRecord record = CreateRecord();
+        var routingApi = new RecordingRoutingApi();
+        var transport = new RebusDurableOutboxTransport(
+            routingApi,
+            new RebusModuleDestinationResolver(
+                new Dictionary<string, string>(),
+                static targetModule => $"module-{targetModule}"));
+
+        await transport.SendAsync(record);
+
+        Assert.Equal("module-fulfillment", routingApi.DestinationAddress);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenExplicitDestinationAndConventionExist_UsesExplicitDestination()
+    {
+        DurableOutboxRecord record = CreateRecord();
+        var routingApi = new RecordingRoutingApi();
+        var transport = new RebusDurableOutboxTransport(
+            routingApi,
+            new RebusModuleDestinationResolver(
+                new Dictionary<string, string>
+                {
+                    ["fulfillment"] = "fulfillment-priority",
+                },
+                static targetModule => $"module-{targetModule}"));
+
+        await transport.SendAsync(record);
+
+        Assert.Equal("fulfillment-priority", routingApi.DestinationAddress);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task SendAsync_WhenTraceContextIsMissing_UsesDurableOperationIdAsCorrelationId()
     {
         DurableOutboxRecord record = CreateRecord(includeTraceContext: false);
@@ -199,6 +236,92 @@ public sealed class RebusDurableOutboxTransportTests
         await transport.SendAsync(CreateRecord());
 
         Assert.Equal("fulfillment-queue", routingApi.DestinationAddress);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task UseRebusTransport_WhenReceiveEndpointAcceptsModule_DerivesOutgoingRoute()
+    {
+        var routingApi = new RecordingRoutingApi();
+        var services = new ServiceCollection();
+        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment")));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+
+        await transport.SendAsync(CreateRecord());
+
+        Assert.Equal("fulfillment-commands", routingApi.DestinationAddress);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task UseRebusTransport_WhenExplicitRouteAndReceiveEndpointExist_UsesExplicitRoute()
+    {
+        var routingApi = new RecordingRoutingApi();
+        var services = new ServiceCollection();
+        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus =>
+                {
+                    rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment");
+                    rebus.RouteModule("fulfillment").ToQueue("fulfillment-priority");
+                }));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+
+        await transport.SendAsync(CreateRecord());
+
+        Assert.Equal("fulfillment-priority", routingApi.DestinationAddress);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task UseRebusTransport_WhenReceiveModuleUsesConvention_RoutesTargetModuleByConvention()
+    {
+        var routingApi = new RecordingRoutingApi();
+        var services = new ServiceCollection();
+        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus
+                    .UseModuleQueueConvention()
+                    .ReceiveModule("fulfillment")));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+
+        await transport.SendAsync(CreateRecord());
+
+        Assert.Equal("fulfillment-commands", routingApi.DestinationAddress);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task UseRebusTransport_WhenOnlyConventionIsConfigured_RoutesTargetModuleByConvention()
+    {
+        var routingApi = new RecordingRoutingApi();
+        var services = new ServiceCollection();
+        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus.UseModuleQueueConvention()));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+
+        await transport.SendAsync(CreateRecord());
+
+        Assert.Equal("fulfillment-commands", routingApi.DestinationAddress);
     }
 
     private static DurableOutboxRecord CreateRecord(

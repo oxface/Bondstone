@@ -36,11 +36,13 @@ Current implemented surface includes:
   command execution with an explicit durable inbox record, inbox handle-once
   behavior inside the module command pipeline, inbox result return through
   `ModuleCommandExecutionResult`, and already-received failure surfacing;
-- host-owned Rebus outgoing topology builder for mapping target modules to
-  Rebus destination addresses;
+- host-owned Rebus outgoing topology builder for conventional module queue
+  names, convention fallback routing, and explicit target-module destination
+  overrides;
 - host-owned Rebus receive endpoint topology metadata for binding endpoint
   names to accepted local modules, plus automatic module command receive
-  pipeline registration when receive topology is configured;
+  pipeline registration and derived outgoing destinations when receive
+  topology is configured;
 - module command registration and execution in core, including
   `IBondstoneModule`, `ICommand`, `IDurableCommand`, direct typed command
   handlers, typed validators, startup reflection scanning, cached module

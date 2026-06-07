@@ -10,14 +10,17 @@ public static class BondstoneRebusServiceCollectionExtensions
 {
     public static IServiceCollection AddBondstoneRebusOutboxTransport(
         this IServiceCollection services,
-        IReadOnlyDictionary<string, string> destinationAddressesByTargetModule)
+        IReadOnlyDictionary<string, string> destinationAddressesByTargetModule,
+        Func<string, string>? destinationAddressConvention = null)
     {
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddTransient<IRoutingApi>(
             static serviceProvider => serviceProvider.GetRequiredService<IBus>().Advanced.Routing);
         services.AddSingleton<IRebusOutboxDestinationResolver>(
-            new RebusModuleDestinationResolver(destinationAddressesByTargetModule));
+            new RebusModuleDestinationResolver(
+                destinationAddressesByTargetModule,
+                destinationAddressConvention));
         services.TryAddTransient<IDurableOutboxTransport, RebusDurableOutboxTransport>();
 
         return services;

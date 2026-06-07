@@ -85,6 +85,10 @@ features.
 send and receive should use inbox/outbox-backed infrastructure even when the
 source and target modules happen to be deployed in the same process. Direct
 in-process collaboration can use `.Contracts` references or plain `ICommand`.
+When an operation changes state across two or more module-owned persistence
+boundaries, prefer a durable command or event choreography over a direct call.
+The modules do not share a transaction, so the durable boundary is what
+preserves retry, deduplication, and service-extraction behavior.
 
 The normal application-facing shape should be one module capability such as
 `UseDurableMessaging`, not separate inbox/outbox toggles. Durable messaging
@@ -161,16 +165,20 @@ command handlers; transport adapters configure infrastructure Bondstone cannot
 infer, such as broker connection strings, queue names, endpoint names,
 exchange/topic names, routing keys, and subscriptions.
 
-For Rebus, outgoing target-module-to-address mapping is configured through the
-host-owned transport builder. The current implemented route shape maps target
-modules to queue names or destination addresses.
+For Rebus, module queue conventions and explicit target-module-to-address
+overrides are configured through the host-owned transport builder. Explicit
+routes are overrides for legacy, extracted, or otherwise non-conventional
+topology; applications should not need a pairwise module route matrix.
 
 The Rebus transport builder also records receive endpoint topology: an
 endpoint name can accept one or more local modules, and configuring receive
-topology registers the module command receive pipeline. The intended shape is
-listener binding to local modules, not a generic route table. Actual Rebus
-worker/listener binding to the configured endpoint metadata remains future
-work.
+topology registers the module command receive pipeline. Receive bindings also
+derive outgoing command destinations for the accepted modules unless an
+explicit route overrides them. When a module queue convention is configured,
+outgoing commands can route to target modules by convention even if this host
+does not receive that module locally. The intended shape is listener binding to
+local modules, not a generic route table. Actual Rebus worker/listener binding
+to the configured endpoint metadata remains future work.
 
 Prefer one command receive endpoint per module when the module may need
 independent deployment, scaling, retry/dead-letter policy, or operational

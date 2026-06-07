@@ -45,7 +45,7 @@ builder.Services.AddBondstone(bondstone =>
 
     bondstone.UsePostgreSqlPersistence<AppDbContext>(connectionString);
     bondstone.UseRebusTransport(rebus =>
-        rebus.RouteModule("fulfillment").ToQueue("fulfillment-commands"));
+        rebus.UseModuleQueueConvention());
     bondstone.Outbox.UseWorker(options =>
     {
         options.WorkerId = "orders-api-1";
@@ -79,10 +79,11 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand>
 Configure Rebus itself through the normal Rebus host APIs for the application's
 chosen transport, serializer, endpoint, retry, and worker settings before
 building the service provider. Bondstone's Rebus package supplies the durable
-outbox transport adapter and module route mapping; it does not own the whole
-Rebus host.
+outbox transport adapter and module topology mapping; it does not own the
+whole Rebus host.
 
 The current receive-side Rebus typed pipeline is still a low-level primitive
 that requires explicit handler identity and commit delegates. The preferred
-app-facing receive topology binding into module command routes remains deferred,
+app-facing receive topology is now configured through the Rebus transport
+builder, but actual Rebus listener binding to that topology remains deferred,
 so this setup page intentionally shows the outgoing durable command path only.

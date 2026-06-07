@@ -192,6 +192,14 @@ derive outgoing command destinations for accepted modules, with explicit
 fallback routing for extracted or otherwise remote target modules. Actual Rebus
 listener binding to that topology remains future work.
 
+Durable command loop validation now runs during `AddBondstone` composition.
+Modules that opt into durable messaging must declare persistence, durable
+command handlers must belong to durable-messaging modules, and Rebus receive
+endpoints must target registered local modules that use durable messaging and
+have durable command handlers. These checks cover incomplete local durable
+receive topology before the future listener binding and endpoint dispatcher are
+added.
+
 For durable commands, prefer queue-backed point-to-point delivery. A Rebus
 receive endpoint should usually represent a module-level command backlog so
 that scaling, retry, dead-letter handling, and service extraction can be
@@ -240,9 +248,10 @@ Deferred durable-command work remains tracked:
   a later durable scenario justifies it;
 - receive adapter, receive-side transport integration, and additional
   transport-backed verification;
-- durable-messaging validation beyond the current EF outbox/inbox mapping
-  checks, deeper transaction behaviors, Rebus host-topology binding to module
-  command routes, and service-shaped samples.
+- durable-messaging validation beyond the current module capability, Rebus
+  receive binding, and EF outbox/inbox mapping checks, including outbound
+  topology diagnostics, deeper transaction behaviors, and service-shaped
+  samples.
 
 ## Message Identity Names
 

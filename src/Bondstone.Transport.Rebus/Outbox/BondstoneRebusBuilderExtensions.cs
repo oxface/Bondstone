@@ -20,6 +20,9 @@ public static class BondstoneRebusBuilderExtensions
             rebus.ModuleDestinationAddressConvention);
         if (rebus.ReceiveEndpointBindings.Count > 0)
         {
+            builder.AddConfigurationValidator(
+                new RebusReceiveTopologyConfigurationValidator(
+                    rebus.ReceiveEndpointBindings));
             builder.Services.AddBondstoneRebusModuleCommandReceiveTopology(
                 rebus.ReceiveEndpointBindings);
         }

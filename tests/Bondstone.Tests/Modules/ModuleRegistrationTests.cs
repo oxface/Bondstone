@@ -43,6 +43,7 @@ public sealed class ModuleRegistrationTests
             bondstone.Module("fulfillment", module =>
             {
                 module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
             });
         });
 
@@ -67,6 +68,7 @@ public sealed class ModuleRegistrationTests
             bondstone.Module("billing", module =>
             {
                 module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
             });
         });
 
@@ -225,6 +227,7 @@ public sealed class ModuleRegistrationTests
         public void Configure(BondstoneModuleBuilder module)
         {
             module.UseDurableMessaging();
+            module.UsePersistence("test persistence");
         }
     }
 

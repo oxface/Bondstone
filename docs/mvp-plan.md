@@ -55,7 +55,8 @@ Implemented surface includes:
   validators, startup scanning, cached routes, scoped execution, module
   metadata, durable-messaging capability metadata, module persistence
   metadata, source-module execution context, ordered system behaviors, receive
-  inbox behavior, validation, and execution results;
+  inbox behavior, durable-messaging capability validation, and execution
+  results;
 - default outbox-backed `IDurableCommandSender` that requires current module
   execution context and uses the executing module as source module;
 - default outbox-backed `IDurableEventPublisher` that requires current module
@@ -196,15 +197,18 @@ Already done:
 - outbox writer, dispatcher, hosted worker, and Rebus outgoing transport;
 - Rebus module command receive pipeline groundwork;
 - Rebus command topology conventions and explicit overrides.
+- build-time validation that modules using durable messaging also declare
+  persistence, durable command handlers belong to durable-messaging modules,
+  and Rebus receive endpoints bind only registered local durable-messaging
+  modules with durable command handlers.
 
 Remaining slices:
 
 1. Durable-messaging capability validation:
-   - durable modules have persistence when durable messaging is enabled;
-   - Rebus receive topology targets registered local modules;
-   - durable command handlers are registered on modules that opt into durable
-     messaging;
-   - missing persistence, transport, or route pieces produce useful errors.
+   - **Done for build-time module and Rebus receive topology checks.**
+   - Remaining: validate missing outbound command destination pieces through
+     topology diagnostics, and add deeper operation-state/provider-specific
+     validation when those capabilities are implemented.
 2. Command topology diagnostics:
    - explicit route versus receive binding versus convention fallback versus
      missing route;
@@ -223,7 +227,7 @@ Remaining slices:
    - make `IDurableOperationReader` meaningful beyond current contracts;
    - record durable send and receive state transitions consistently.
 
-Remaining in Phase 3: **about 4-5 slices**.
+Remaining in Phase 3: **about 3-4 slices**.
 
 ### Phase 4: Domain Event Persistence Capability
 

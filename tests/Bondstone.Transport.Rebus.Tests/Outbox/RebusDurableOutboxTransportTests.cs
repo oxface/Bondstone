@@ -1,5 +1,6 @@
 using Bondstone.Configuration;
 using Bondstone.Messaging;
+using Bondstone.Modules;
 using Bondstone.Persistence;
 using Bondstone.Transport.Rebus.Outbox;
 using Microsoft.Extensions.DependencyInjection;
@@ -246,8 +247,12 @@ public sealed class RebusDurableOutboxTransportTests
         var services = new ServiceCollection();
         services.AddSingleton<IRoutingApi>(routingApi);
         services.AddBondstone(
-            bondstone => bondstone.UseRebusTransport(
-                rebus => rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment")));
+            bondstone =>
+            {
+                bondstone.Module("fulfillment", ConfigureFulfillmentModule);
+                bondstone.UseRebusTransport(
+                    rebus => rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment"));
+            });
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         IDurableOutboxTransport transport =
@@ -266,12 +271,16 @@ public sealed class RebusDurableOutboxTransportTests
         var services = new ServiceCollection();
         services.AddSingleton<IRoutingApi>(routingApi);
         services.AddBondstone(
-            bondstone => bondstone.UseRebusTransport(
-                rebus =>
-                {
-                    rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment");
-                    rebus.RouteModule("fulfillment").ToQueue("fulfillment-priority");
-                }));
+            bondstone =>
+            {
+                bondstone.Module("fulfillment", ConfigureFulfillmentModule);
+                bondstone.UseRebusTransport(
+                    rebus =>
+                    {
+                        rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment");
+                        rebus.RouteModule("fulfillment").ToQueue("fulfillment-priority");
+                    });
+            });
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         IDurableOutboxTransport transport =
@@ -290,10 +299,14 @@ public sealed class RebusDurableOutboxTransportTests
         var services = new ServiceCollection();
         services.AddSingleton<IRoutingApi>(routingApi);
         services.AddBondstone(
-            bondstone => bondstone.UseRebusTransport(
-                rebus => rebus
-                    .UseModuleQueueConvention()
-                    .ReceiveModule("fulfillment")));
+            bondstone =>
+            {
+                bondstone.Module("fulfillment", ConfigureFulfillmentModule);
+                bondstone.UseRebusTransport(
+                    rebus => rebus
+                        .UseModuleQueueConvention()
+                        .ReceiveModule("fulfillment"));
+            });
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         IDurableOutboxTransport transport =
@@ -359,6 +372,26 @@ public sealed class RebusDurableOutboxTransportTests
                 attemptCount: 1,
                 claimedBy: "dispatcher-1",
                 claimedUntilUtc: DateTimeOffset.Parse("2026-06-04T00:05:00+00:00")));
+    }
+
+    private static void ConfigureFulfillmentModule(BondstoneModuleBuilder module)
+    {
+        module.UseDurableMessaging();
+        module.UsePersistence("test persistence");
+        module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+    }
+
+    [DurableCommandIdentity("fulfillment.order.reserve.v1")]
+    public sealed record ReserveOrderCommand(string OrderId) : IDurableCommand;
+
+    public sealed class ReserveOrderHandler : ICommandHandler<ReserveOrderCommand>
+    {
+        public ValueTask HandleAsync(
+            ReserveOrderCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class RecordingRoutingApi : IRoutingApi

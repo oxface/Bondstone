@@ -19,6 +19,7 @@ public sealed class ModuleCommandRegistrationTests
         {
             bondstone.Module("fulfillment", module =>
             {
+                ConfigureDurableMessaging(module);
                 module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
                 module.Commands.RegisterValidator<ReserveOrderCommand, ReserveOrderValidator>();
             });
@@ -57,6 +58,7 @@ public sealed class ModuleCommandRegistrationTests
         {
             bondstone.Module("sales", module =>
             {
+                ConfigureDurableMessaging(module);
                 module.Commands.RegisterHandler<ShipOrderCommand, ShipOrderHandler>(
                     "sales.order.ship.v2",
                     handlerIdentity: "sales.ship-order-handler.v2");
@@ -180,6 +182,7 @@ public sealed class ModuleCommandRegistrationTests
         {
             bondstone.Module("billing", module =>
             {
+                ConfigureDurableMessaging(module);
                 module.Commands.RegisterFromAssemblyContaining<CapturePaymentCommand>();
             });
         });
@@ -226,8 +229,15 @@ public sealed class ModuleCommandRegistrationTests
 
         public void Configure(BondstoneModuleBuilder module)
         {
+            ConfigureDurableMessaging(module);
             module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
         }
+    }
+
+    private static void ConfigureDurableMessaging(BondstoneModuleBuilder module)
+    {
+        module.UseDurableMessaging();
+        module.UsePersistence("test persistence");
     }
 
     public sealed class CommandCallLog

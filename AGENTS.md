@@ -33,6 +33,9 @@ Start with:
 - Keep generated artifacts, packed packages, temporary sample outputs, coverage,
   and build artifacts out of committed source unless the user explicitly asks to
   preserve them.
+- Do not use `InternalsVisibleTo` for production package collaboration. Reserve
+  friend assemblies for tests; runtime packages should collaborate through
+  explicit contracts or package-local implementation.
 
 ## Repository Direction
 

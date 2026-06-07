@@ -23,6 +23,8 @@ public sealed class DurableCommandSenderTests
         {
             bondstone.Module("sales", module =>
             {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
                 module.Commands.RegisterHandler<SubmitOrderCommand, SubmitOrderHandler>();
                 module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
             });
@@ -61,6 +63,8 @@ public sealed class DurableCommandSenderTests
         {
             bondstone.Module("sales", module =>
             {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
                 module.Commands.RegisterHandler<
                     SubmitConvertedOrderCommand,
                     SubmitConvertedOrderHandler>();
@@ -96,6 +100,8 @@ public sealed class DurableCommandSenderTests
         {
             bondstone.Module("sales", module =>
             {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
                 module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
             });
         });

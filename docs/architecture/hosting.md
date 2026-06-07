@@ -26,7 +26,19 @@ skip-locked or equivalent semantics.
 
 `AddBondstone` is the preferred host registration path. Package-specific
 extensions mark what they contribute, and the builder rejects hosted outbox
-processing when persistence or transport capability is missing.
+processing when persistence or transport capability is missing. Runtime
+packages can also register configuration validators with the shared builder so
+cross-package host topology checks run once after host configuration completes.
+These validators are for composed Bondstone graph checks, such as modules,
+routes, capabilities, and transport topology. Normal .NET options objects
+should continue to use `IValidateOptions<TOptions>` or equivalent options
+validation.
+
+Validation should stay close to its lifecycle: argument guards on public
+methods, options validation for option objects, `AddBondstone` configuration
+validators for composed host topology, and runtime checks for state that can
+only be known while executing, such as EF Core model mappings or receive
+envelope contents.
 The current library-user setup example is in
 [../setup.md](../setup.md).
 

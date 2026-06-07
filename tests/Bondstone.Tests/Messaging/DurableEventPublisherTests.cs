@@ -23,6 +23,8 @@ public sealed class DurableEventPublisherTests
         {
             bondstone.Module("sales", module =>
             {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
                 module.Events.RegisterPublishedEvent<OrderSubmittedEvent>();
                 module.Commands.RegisterHandler<SubmitOrderCommand, SubmitOrderHandler>();
             });
@@ -61,6 +63,8 @@ public sealed class DurableEventPublisherTests
         {
             bondstone.Module("sales", module =>
             {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
                 module.Events.RegisterPublishedEvent<ConvertedOrderSubmittedEvent>();
                 module.Commands.RegisterHandler<
                     SubmitConvertedOrderCommand,

@@ -99,6 +99,8 @@ public sealed class BondstoneBuilderTests
         {
             bondstone.Module("sales", module =>
             {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
                 module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
             });
         });
@@ -154,6 +156,72 @@ public sealed class BondstoneBuilderTests
         Assert.Equal("providerName", exception.ParamName);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddConfigurationValidator_WhenRegistered_RunsAfterHostConfiguration()
+    {
+        var services = new ServiceCollection();
+        var validator = new CapturingConfigurationValidator();
+
+        services.AddBondstone(builder =>
+        {
+            builder.AddConfigurationValidator(validator);
+            builder.Module("sales", _ => { });
+        });
+
+        Assert.Equal(["sales"], validator.ModuleNames);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddConfigurationValidator_WhenValidatorIsNull_Throws()
+    {
+        var services = new ServiceCollection();
+
+        Assert.Throws<ArgumentNullException>(
+            () => services.AddBondstone(builder =>
+                builder.AddConfigurationValidator(null!)));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenDurableMessagingModuleHasNoPersistence_Throws()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    module.UseDurableMessaging();
+                });
+            }));
+
+        Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("persistence", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenDurableHandlerModuleDoesNotUseDurableMessaging_Throws()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
+                });
+            }));
+
+        Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("durable messaging", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("sales.test.command.v1", exception.Message, StringComparison.Ordinal);
+    }
+
     [DurableCommandIdentity("sales.test.command.v1")]
     public sealed record TestCommand : IDurableCommand;
 
@@ -188,5 +256,19 @@ public sealed class BondstoneBuilderTests
     private sealed class ConsumerModuleExecutionContextAccessor : IModuleExecutionContextAccessor
     {
         public ModuleExecutionContext? Current => null;
+    }
+
+    private sealed class CapturingConfigurationValidator
+        : IBondstoneConfigurationValidator
+    {
+        public IReadOnlyCollection<string> ModuleNames { get; private set; } = [];
+
+        public void Validate(BondstoneConfigurationValidationContext context)
+        {
+            ModuleNames = context.Modules
+                .Select(static module => module.Name)
+                .OrderBy(static name => name, StringComparer.Ordinal)
+                .ToArray();
+        }
     }
 }

@@ -49,6 +49,14 @@ outgoing commands to any target module by name, including modules extracted to
 another service. Accepted receive modules also provide outgoing command
 destinations for the same target modules.
 
+Receive bindings configured through `UseRebusTransport` are validated during
+`AddBondstone` composition. Each accepted module must be registered in the
+host, must use durable messaging, and must have at least one durable command
+handler. Missing modules, non-durable modules, and receive bindings with no
+durable handlers fail with endpoint and module names in the error. Outgoing-only
+explicit routes and module queue conventions remain valid for remote modules
+that are not registered locally.
+
 Explicit `RouteModule(...).ToQueue(...)` or `.ToAddress(...)` calls override
 any destination derived from receive bindings or conventions. Destination
 resolution order is explicit route, receive binding, then module queue
@@ -210,9 +218,9 @@ is still future work.
 ## Deferred Rebus Work
 
 Deferred Rebus work includes event publish/subscribe semantics, actual Rebus
-worker/listener binding to configured module receive endpoints, and validation
-that durable receive modules have durable messaging enabled. Route or
-destination circuit breaking, stale-claim recovery sweeps, dead-letter
-routing, receive retry state, stale receive recovery, and worker metrics are
-hosting, persistence, or future receive-pipeline decisions unless a later ADR
-accepts a transport-specific policy.
+worker/listener binding to configured module receive endpoints, endpoint
+dispatcher APIs, command topology diagnostics for outbound destination
+resolution, route or destination circuit breaking, stale-claim recovery
+sweeps, dead-letter routing, receive retry state, stale receive recovery, and
+worker metrics. These remain hosting, persistence, or future receive-pipeline
+decisions unless a later ADR accepts a transport-specific policy.

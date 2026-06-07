@@ -118,6 +118,14 @@ running the command pipeline. This keeps persistence-only EF modules free to
 omit durable messaging tables while durable messaging modules fail with a
 specific mapping error.
 
+`AddBondstone` also validates durable-messaging capability declarations after
+host configuration runs. A module that calls `UseDurableMessaging` must
+declare persistence through `UsePersistence` or a provider-specific opt-in
+such as `UseEntityFrameworkCorePersistence<TDbContext>`. A durable command
+handler can be registered only on a module that uses durable messaging. These
+checks fail during composition with module, handler, and message identity
+details so incomplete durable command loops do not reach runtime dispatch.
+
 Module event registration lives under `module.Events`. Published integration
 events can be registered with `RegisterPublishedEvent`; event subscribers can
 be registered with `RegisterSubscriber<TEvent, THandler>` where handlers
@@ -202,6 +210,12 @@ outgoing commands can route to target modules by convention even if this host
 does not receive that module locally. The intended shape is listener binding to
 local modules, not a generic route table. Actual Rebus worker/listener binding
 to the configured endpoint metadata remains future work.
+
+Rebus receive topology is validated at `AddBondstone` composition time. Every
+accepted module on a Rebus receive endpoint must be registered in the host,
+must use durable messaging, and must have at least one durable command handler.
+This validates local listener bindings only; remote outbound destinations can
+still be supplied through explicit routes or module queue conventions.
 
 Prefer one command receive endpoint per module when the module may need
 independent deployment, scaling, retry/dead-letter policy, or operational

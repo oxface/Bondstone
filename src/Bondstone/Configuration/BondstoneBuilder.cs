@@ -19,12 +19,18 @@ public sealed class BondstoneBuilder
         _commandRouteRegistry = commandRouteRegistry;
         _eventSubscriberRegistry = eventSubscriberRegistry;
         _moduleRegistry = moduleRegistry;
+        _configurationValidators =
+        [
+            new BondstoneOutboxConfigurationValidator(Outbox),
+            new DurableMessagingConfigurationValidator(),
+        ];
     }
 
     private readonly IMessageTypeRegistry _messageTypeRegistry;
     private readonly ModuleCommandRouteRegistry _commandRouteRegistry;
     private readonly ModuleEventSubscriberRegistry _eventSubscriberRegistry;
     private readonly BondstoneModuleRegistry _moduleRegistry;
+    private readonly List<IBondstoneConfigurationValidator> _configurationValidators;
 
     public IServiceCollection Services { get; }
 
@@ -43,6 +49,21 @@ public sealed class BondstoneBuilder
 
     internal void Validate()
     {
-        Outbox.Validate();
+        var context = new BondstoneConfigurationValidationContext(
+            _moduleRegistry.Modules,
+            _commandRouteRegistry.Routes);
+        foreach (IBondstoneConfigurationValidator validator in _configurationValidators)
+        {
+            validator.Validate(context);
+        }
+    }
+
+    public BondstoneBuilder AddConfigurationValidator(
+        IBondstoneConfigurationValidator validator)
+    {
+        ArgumentNullException.ThrowIfNull(validator);
+
+        _configurationValidators.Add(validator);
+        return this;
     }
 }

@@ -27,6 +27,8 @@ public sealed class RebusModuleCommandReceivePipelineTests
             bondstone.UseRebusModuleCommandReceivePipeline();
             bondstone.Module("fulfillment", module =>
             {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
                 module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
             });
         });
@@ -66,6 +68,8 @@ public sealed class RebusModuleCommandReceivePipelineTests
             bondstone.UseRebusModuleCommandReceivePipeline();
             bondstone.Module("fulfillment", module =>
             {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
                 module.Commands.RegisterHandler<
                     ReserveConvertedOrderCommand,
                     ReserveConvertedOrderHandler>();
@@ -101,6 +105,8 @@ public sealed class RebusModuleCommandReceivePipelineTests
             bondstone.UseRebusModuleCommandReceivePipeline();
             bondstone.Module("fulfillment", module =>
             {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
                 module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
             });
         });

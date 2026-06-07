@@ -49,25 +49,4 @@ public sealed class BondstoneOutboxBuilder
         return this;
     }
 
-    internal void Validate()
-    {
-        if (!HasDispatcher && !HasWorker)
-        {
-            return;
-        }
-
-        if (!HasPersistenceProvider)
-        {
-            throw new InvalidOperationException(
-                "Bondstone outbox dispatching requires an outbox persistence provider. "
-                + "Register a provider such as PostgreSQL before enabling the dispatcher or worker.");
-        }
-
-        if (!HasTransport)
-        {
-            throw new InvalidOperationException(
-                "Bondstone outbox dispatching requires an outbox transport. "
-                + "Register a transport such as Rebus before enabling the dispatcher or worker.");
-        }
-    }
 }

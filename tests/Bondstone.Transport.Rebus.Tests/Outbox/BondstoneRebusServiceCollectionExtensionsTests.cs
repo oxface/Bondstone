@@ -1,4 +1,6 @@
 using Bondstone.Configuration;
+using Bondstone.Messaging;
+using Bondstone.Modules;
 using Bondstone.Persistence;
 using Bondstone.Transport.Rebus.Inbox;
 using Bondstone.Transport.Rebus.Outbox;
@@ -120,6 +122,14 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
 
         services.AddBondstone(builder =>
         {
+            builder.Module("fulfillment", module =>
+            {
+                ConfigureDurableModule<ReserveOrderCommand, ReserveOrderHandler>(module);
+            });
+            builder.Module("billing", module =>
+            {
+                ConfigureDurableModule<CapturePaymentCommand, CapturePaymentHandler>(module);
+            });
             builder.UseRebusTransport(rebus =>
             {
                 rebus
@@ -163,6 +173,10 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
 
         services.AddBondstone(builder =>
         {
+            builder.Module("fulfillment", module =>
+            {
+                ConfigureDurableModule<ReserveOrderCommand, ReserveOrderHandler>(module);
+            });
             builder.UseRebusTransport(rebus =>
             {
                 rebus
@@ -176,6 +190,72 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
             serviceProvider.GetRequiredService<IRebusModuleReceiveEndpointRegistry>();
 
         Assert.True(registry.EndpointAcceptsModule("module-fulfillment", "fulfillment"));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UseRebusTransport_WhenReceiveEndpointTargetsMissingModule_Throws()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(builder =>
+            {
+                builder.UseRebusTransport(rebus =>
+                {
+                    rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment");
+                });
+            }));
+
+        Assert.Contains("fulfillment-commands", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("not registered", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UseRebusTransport_WhenReceiveEndpointTargetsNonDurableModule_Throws()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(builder =>
+            {
+                builder.Module("fulfillment", _ => { });
+                builder.UseRebusTransport(rebus =>
+                {
+                    rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment");
+                });
+            }));
+
+        Assert.Contains("fulfillment-commands", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("durable messaging", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UseRebusTransport_WhenReceiveEndpointTargetsModuleWithNoDurableHandlers_Throws()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(builder =>
+            {
+                builder.Module("fulfillment", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                });
+                builder.UseRebusTransport(rebus =>
+                {
+                    rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment");
+                });
+            }));
+
+        Assert.Contains("fulfillment-commands", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("durable command handlers", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -313,5 +393,41 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
 
         Assert.Contains("fulfillment", exception.Message);
         Assert.Contains("fulfillment-commands", exception.Message);
+    }
+
+    private static void ConfigureDurableModule<TCommand, THandler>(
+        BondstoneModuleBuilder module)
+        where TCommand : IDurableCommand
+        where THandler : class, ICommandHandler<TCommand>
+    {
+        module.UseDurableMessaging();
+        module.UsePersistence("test persistence");
+        module.Commands.RegisterHandler<TCommand, THandler>();
+    }
+
+    [DurableCommandIdentity("fulfillment.order.reserve.v1")]
+    public sealed record ReserveOrderCommand(string OrderId) : IDurableCommand;
+
+    public sealed class ReserveOrderHandler : ICommandHandler<ReserveOrderCommand>
+    {
+        public ValueTask HandleAsync(
+            ReserveOrderCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [DurableCommandIdentity("billing.payment.capture.v1")]
+    public sealed record CapturePaymentCommand(string PaymentId) : IDurableCommand;
+
+    public sealed class CapturePaymentHandler : ICommandHandler<CapturePaymentCommand>
+    {
+        public ValueTask HandleAsync(
+            CapturePaymentCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 }

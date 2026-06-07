@@ -137,29 +137,29 @@ Already done:
 
 Remaining slices:
 
-1. Rebus endpoint dispatcher:
-   - `HandleOnceAsync(endpointName, envelope, ct)`;
-   - validate endpoint exists;
-   - validate envelope target module is accepted by the endpoint;
-   - call `IRebusModuleCommandReceivePipeline`.
-2. Rebus listener binding helper:
-   - Rebus-native handler or adapter;
-   - application still owns Rebus infrastructure configuration;
-   - in-memory Rebus transport test proving `SendLocal` dispatches into
-     `IModuleCommandExecutor`.
-3. Durable-messaging capability validation:
+1. Durable payload serializer configuration:
+   - shared JSON options or serializer abstraction for send and receive;
+   - support custom converters without transport-specific duplication.
+2. Durable-messaging capability validation:
    - durable modules have persistence when durable messaging is enabled;
    - Rebus receive topology targets registered local modules;
    - durable command handlers are registered on modules that opt into durable
      messaging;
    - missing persistence, transport, or route pieces produce useful errors.
-4. Command topology diagnostics:
+3. Rebus endpoint dispatcher:
+   - `HandleOnceAsync(endpointName, envelope, ct)`;
+   - validate endpoint exists;
+   - validate envelope target module is accepted by the endpoint;
+   - call `IRebusModuleCommandReceivePipeline`.
+4. Rebus listener binding helper:
+   - Rebus-native handler or adapter;
+   - application still owns Rebus infrastructure configuration;
+   - in-memory Rebus transport test proving `SendLocal` dispatches into
+     `IModuleCommandExecutor`.
+5. Command topology diagnostics:
    - explicit route versus receive binding versus convention fallback versus
      missing route;
    - diagnostic result object before or alongside logging.
-5. Durable payload serializer configuration:
-   - shared JSON options or serializer abstraction for send and receive;
-   - support custom converters without transport-specific duplication.
 6. Operation-state integration:
    - make `IDurableOperationReader` meaningful beyond current contracts;
    - record durable send and receive state transitions consistently.

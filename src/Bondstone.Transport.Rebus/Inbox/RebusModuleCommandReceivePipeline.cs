@@ -97,9 +97,8 @@ public sealed class RebusModuleCommandReceivePipeline(
                 "Rebus module command receive supports command envelopes only.");
         }
 
-        Type registeredType = _messageTypeRegistry.ResolveClrType(envelope.MessageTypeName);
-        MessageTypeRegistration registration = _messageTypeRegistry.Registrations.Single(
-            item => item.ClrType == registeredType);
+        MessageTypeRegistration registration = _messageTypeRegistry.ResolveRegistration(
+            envelope.MessageTypeName);
 
         if (registration.Kind != MessageKind.Command)
         {
@@ -132,42 +131,9 @@ public sealed class RebusModuleCommandReceivePipeline(
         RebusDurableMessageEnvelope envelope,
         string handlerIdentity)
     {
-        ActivityContext parentContext = default;
-        bool hasParentContext = false;
-
-        if (!string.IsNullOrWhiteSpace(envelope.TraceParent))
-        {
-            if (!ActivityContext.TryParse(envelope.TraceParent, envelope.TraceState, out parentContext))
-            {
-                throw new ArgumentException(
-                    "Trace parent must be a valid W3C traceparent value.",
-                    nameof(envelope));
-            }
-
-            hasParentContext = true;
-        }
-
-        Activity? activity = hasParentContext
-            ? BondstoneRebusTelemetry.ActivitySource.StartActivity(
-                ActivityName,
-                ActivityKind.Consumer,
-                parentContext)
-            : BondstoneRebusTelemetry.ActivitySource.StartActivity(
-                ActivityName,
-                ActivityKind.Consumer);
-
-        if (activity is null)
-        {
-            return null;
-        }
-
-        activity.SetTag("bondstone.transport", "rebus");
-        activity.SetTag("bondstone.message_id", envelope.MessageId.ToString("D"));
-        activity.SetTag("bondstone.message_type", envelope.MessageTypeName);
-        activity.SetTag("bondstone.source_module", envelope.SourceModule);
-        activity.SetTag("bondstone.target_module", envelope.TargetModule);
-        activity.SetTag("bondstone.handler_identity", handlerIdentity);
-
-        return activity;
+        return RebusReceiveTelemetry.StartReceiveActivity(
+            ActivityName,
+            envelope,
+            handlerIdentity);
     }
 }

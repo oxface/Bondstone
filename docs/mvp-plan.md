@@ -65,6 +65,9 @@ Implemented surface includes:
   `IDurablePayloadSerializer` with a default System.Text.Json implementation
   and one durable JSON configuration surface for current command send, event
   publish, and Rebus command receive paths;
+- granular provider-neutral EF Core mapping helpers for outbox, inbox, and
+  operation state, with `ApplyBondstonePersistence` retained as the full
+  convenience mapping helper;
 - module event registration metadata for published integration events,
   subscriber handler identity, per-subscriber inbox-key naming, and
   command/event topology diagnostic vocabulary;
@@ -149,23 +152,34 @@ and command receive surface; future event receive remains in Phase 5**.
 
 ### Phase 2: Optional Persistence Mapping
 
+Status: **Complete for the current MVP surface**.
+
+Accepted decision:
+[ADR 0027](adr/0027-optional-ef-core-persistence-mapping.md).
+
+Current/next slice: **complete; move to Phase 3 durable command loop work**.
+
 Goal: modules that only need module-owned persistence should not be forced to
 map durable messaging tables. Durable messaging modules should still get clear
 validation that required inbox/outbox/operation-state pieces exist.
-Proposed decision: [ADR 0027](adr/0027-optional-ef-core-persistence-mapping.md).
 
 Slices:
 
-1. ADR/design for optional persistence mapping:
+1. ADR/design for optional persistence mapping. **Done by ADR 0027.**
    - keep `ApplyBondstonePersistence` as the convenience mapping;
    - add granular mapping such as outbox, inbox, and operation-state mappings;
    - define how module durable-messaging capability validates required
      mappings and provider registrations.
-2. Implement granular EF Core mapping helpers and focused tests if accepted.
-3. Update setup and architecture docs so persistence-only modules and durable
-   messaging modules have distinct examples.
+2. Implement granular EF Core mapping helpers and focused tests. **Done.**
+3. Update setup and architecture docs for the current full and granular
+   mapping surface. **Done.**
+4. Implement durable-messaging capability validation that ties configured
+   module capabilities to required mapped persistence pieces. **Done for the
+   current EF `UseDurableMessaging` surface by requiring outbox and inbox
+   mappings.**
 
-Remaining in Phase 2: **small-medium, 2-3 slices**.
+Remaining in Phase 2: **complete for the current MVP surface. Provider-specific
+schema validation remains later provider work.**
 
 ### Phase 3: Usable Durable Command Loop
 

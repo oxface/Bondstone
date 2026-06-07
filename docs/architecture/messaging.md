@@ -240,9 +240,9 @@ Deferred durable-command work remains tracked:
   a later durable scenario justifies it;
 - receive adapter, receive-side transport integration, and additional
   transport-backed verification;
-- durable-messaging capability validation, transaction behaviors,
-  Rebus host-topology binding to module command routes, and service-shaped
-  samples.
+- durable-messaging validation beyond the current EF outbox/inbox mapping
+  checks, deeper transaction behaviors, Rebus host-topology binding to module
+  command routes, and service-shaped samples.
 
 ## Message Identity Names
 

@@ -96,6 +96,113 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
     }
 
     [Fact]
+    [Trait("Category", "Application")]
+    public async Task ModuleCommands_WhenDurableMessagingDbContextIsMissingOutboxMapping_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+        services.AddDbContext<InboxOnlyMappingDbContext>(options =>
+            options
+                .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UseEntityFrameworkCorePersistence<InboxOnlyMappingDbContext>();
+                module.Commands.RegisterHandler<StoreHandledCommand, LoggingCommandHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    new StoreHandledCommand("A-100")));
+
+        Assert.Contains("missing required Bondstone EF Core mappings: outbox", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("ApplyBondstoneOutbox()", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ModuleCommands_WhenDurableMessagingDbContextIsMissingInboxMapping_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+        services.AddDbContext<OutboxOnlyMappingDbContext>(options =>
+            options
+                .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UseEntityFrameworkCorePersistence<OutboxOnlyMappingDbContext>();
+                module.Commands.RegisterHandler<StoreHandledCommand, LoggingCommandHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    new StoreHandledCommand("A-100")));
+
+        Assert.Contains("missing required Bondstone EF Core mappings: inbox", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("ApplyBondstoneInbox()", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ModuleCommands_WhenDurableMessagingDbContextMapsOutboxAndInbox_AllowsExecution()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+        services.AddDbContext<OutboxInboxMappingDbContext>(options =>
+            options
+                .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UseEntityFrameworkCorePersistence<OutboxInboxMappingDbContext>();
+                module.Commands.RegisterHandler<StoreHandledCommand, LoggingCommandHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "fulfillment",
+                new StoreHandledCommand("A-100"));
+
+        CommandCallLog log = serviceProvider.GetRequiredService<CommandCallLog>();
+        Assert.Equal(["handle:A-100"], log.Calls);
+    }
+
+    [Fact]
     [Trait("Category", "Unit")]
     public void UseEntityFrameworkCorePersistence_WhenCalled_RecordsModulePersistenceMetadata()
     {
@@ -320,6 +427,37 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
                 {
                     entity.HasKey(record => record.Id);
                 });
+        }
+    }
+
+    public sealed class InboxOnlyMappingDbContext(
+        DbContextOptions<InboxOnlyMappingDbContext> options)
+        : DbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.ApplyBondstoneInbox();
+        }
+    }
+
+    public sealed class OutboxOnlyMappingDbContext(
+        DbContextOptions<OutboxOnlyMappingDbContext> options)
+        : DbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.ApplyBondstoneOutbox();
+        }
+    }
+
+    public sealed class OutboxInboxMappingDbContext(
+        DbContextOptions<OutboxInboxMappingDbContext> options)
+        : DbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.ApplyBondstoneOutbox();
+            modelBuilder.ApplyBondstoneInbox();
         }
     }
 

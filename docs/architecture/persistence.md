@@ -24,10 +24,15 @@ generic mediator. Module command execution owns handler registration and now
 has EF transaction pipeline groundwork for modules that opt into EF
 persistence. Broader inbox/outbox receive orchestration remains future work.
 
-Optional EF Core mapping helpers are proposed in
-[ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md). Until that
-decision is accepted and applied, `ApplyBondstonePersistence` remains the
-current generic EF Core mapping entrypoint.
+Optional EF Core mapping helpers are accepted in
+[ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md).
+`ApplyBondstonePersistence` remains the convenience entrypoint for the full
+generic EF Core mapping shape, while `ApplyBondstoneOutbox`,
+`ApplyBondstoneInbox`, and `ApplyBondstoneOperationState` let hosts map only
+the durable persistence pieces a DbContext needs. The current EF module
+runtime validates that modules using `UseDurableMessaging` with EF persistence
+have outbox and inbox mappings in their DbContext model. Operation-state and
+provider-specific schema validation remain deferred.
 
 Domain event persistence is proposed as an optional module boundary capability
 in [ADR 0028](../adr/0028-domain-event-persistence-capability.md). It is not

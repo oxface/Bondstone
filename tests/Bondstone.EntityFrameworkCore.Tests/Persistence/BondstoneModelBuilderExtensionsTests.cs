@@ -89,10 +89,67 @@ public sealed class BondstoneModelBuilderExtensionsTests
             entityType.FindProperty(nameof(OperationStateEntity.Status))!.GetMaxLength());
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ApplyBondstoneOutbox_ConfiguresOnlyOutboxEntity()
+    {
+        IMutableModel model = BuildModel(static modelBuilder =>
+            modelBuilder.ApplyBondstoneOutbox("bondstone"));
+
+        IMutableEntityType entityType = model
+            .FindEntityType(typeof(OutboxMessageEntity))
+            ?? throw new InvalidOperationException("Outbox entity type was not configured.");
+
+        Assert.Equal("bondstone", entityType.GetSchema());
+        Assert.Equal(OutboxMessageEntityConfiguration.TableName, entityType.GetTableName());
+        Assert.Null(model.FindEntityType(typeof(InboxMessageEntity)));
+        Assert.Null(model.FindEntityType(typeof(OperationStateEntity)));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ApplyBondstoneInbox_ConfiguresOnlyInboxEntity()
+    {
+        IMutableModel model = BuildModel(static modelBuilder =>
+            modelBuilder.ApplyBondstoneInbox("bondstone"));
+
+        IMutableEntityType entityType = model
+            .FindEntityType(typeof(InboxMessageEntity))
+            ?? throw new InvalidOperationException("Inbox entity type was not configured.");
+
+        Assert.Equal("bondstone", entityType.GetSchema());
+        Assert.Equal(InboxMessageEntityConfiguration.TableName, entityType.GetTableName());
+        Assert.Null(model.FindEntityType(typeof(OutboxMessageEntity)));
+        Assert.Null(model.FindEntityType(typeof(OperationStateEntity)));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ApplyBondstoneOperationState_ConfiguresOnlyOperationStateEntity()
+    {
+        IMutableModel model = BuildModel(static modelBuilder =>
+            modelBuilder.ApplyBondstoneOperationState("bondstone"));
+
+        IMutableEntityType entityType = model
+            .FindEntityType(typeof(OperationStateEntity))
+            ?? throw new InvalidOperationException("Operation state entity type was not configured.");
+
+        Assert.Equal("bondstone", entityType.GetSchema());
+        Assert.Equal("operation_states", entityType.GetTableName());
+        Assert.Null(model.FindEntityType(typeof(OutboxMessageEntity)));
+        Assert.Null(model.FindEntityType(typeof(InboxMessageEntity)));
+    }
+
     private static IMutableModel BuildModel()
     {
+        return BuildModel(static modelBuilder =>
+            modelBuilder.ApplyBondstonePersistence("bondstone"));
+    }
+
+    private static IMutableModel BuildModel(Action<ModelBuilder> configure)
+    {
         var modelBuilder = new ModelBuilder(new ConventionSet());
-        modelBuilder.ApplyBondstonePersistence("bondstone");
+        configure(modelBuilder);
         return modelBuilder.Model;
     }
 }

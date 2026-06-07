@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using Bondstone.EntityFrameworkCore.Inbox;
+using Bondstone.EntityFrameworkCore.Outbox;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +45,9 @@ internal sealed class EntityFrameworkCoreModuleTransactionBehavior<TCommand>(
         }
 
         Type dbContextType = GetDbContextType(module);
+        DbContext dbContext = (DbContext)_serviceProvider.GetRequiredService(dbContextType);
+        ValidateDurableMessagingMappings(module, dbContext);
+
         IEntityFrameworkCorePersistenceScope persistenceScope = CreatePersistenceScope(dbContextType);
 
         await persistenceScope.ExecuteAsync(
@@ -70,6 +75,39 @@ internal sealed class EntityFrameworkCoreModuleTransactionBehavior<TCommand>(
         }
 
         return contextType;
+    }
+
+    private static void ValidateDurableMessagingMappings(
+        BondstoneModuleRegistration module,
+        DbContext dbContext)
+    {
+        if (!module.UsesDurableMessaging)
+        {
+            return;
+        }
+
+        List<string> missingMappings = [];
+        if (dbContext.Model.FindEntityType(typeof(OutboxMessageEntity)) is null)
+        {
+            missingMappings.Add("outbox");
+        }
+
+        if (dbContext.Model.FindEntityType(typeof(InboxMessageEntity)) is null)
+        {
+            missingMappings.Add("inbox");
+        }
+
+        if (missingMappings.Count == 0)
+        {
+            return;
+        }
+
+        string joinedMappings = string.Join(", ", missingMappings);
+        throw new InvalidOperationException(
+            $"Module '{module.Name}' uses durable messaging with Entity Framework Core persistence context "
+            + $"'{dbContext.GetType().FullName}', but the DbContext model is missing required Bondstone EF Core mappings: "
+            + $"{joinedMappings}. Map the required durable messaging tables with ApplyBondstoneOutbox() "
+            + "and ApplyBondstoneInbox(), or use ApplyBondstonePersistence().");
     }
 
     private IEntityFrameworkCorePersistenceScope CreatePersistenceScope(Type dbContextType)

@@ -111,8 +111,12 @@ deferred. Advanced APIs may later expose separate inbox, outbox, subscriber,
 or operation-state pieces, but they should not be the common path.
 
 Current core registration records module metadata and durable messaging
-capability through `IBondstoneModuleRegistry`. That metadata is groundwork for
-later validation and pipeline behavior.
+capability through `IBondstoneModuleRegistry`. When a module combines
+`UseDurableMessaging` with EF persistence, the EF module behavior validates
+that the module DbContext model includes outbox and inbox mappings before
+running the command pipeline. This keeps persistence-only EF modules free to
+omit durable messaging tables while durable messaging modules fail with a
+specific mapping error.
 
 Module event registration lives under `module.Events`. Published integration
 events can be registered with `RegisterPublishedEvent`; event subscribers can

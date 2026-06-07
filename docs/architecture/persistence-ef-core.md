@@ -12,16 +12,33 @@ The provider-neutral EF mappings own canonical Bondstone table names, column
 names, constraint names, and shared model limits. Provider packages adapt those
 names to their SQL dialect instead of redefining them.
 
-`ApplyBondstonePersistence` applies the generic EF Core mappings to a
-consumer-owned `ModelBuilder`. Consumers own migrations for now; Bondstone does
-not ship migrations or provider-specific migration conventions in the generic
-EF Core package.
+`ApplyBondstonePersistence` applies the full generic EF Core persistence shape
+to a consumer-owned `ModelBuilder`. It remains the convenience helper for hosts
+that want all current Bondstone durable persistence tables.
 
-The current helper applies the full generic Bondstone persistence shape. More
-granular mapping helpers for outbox, inbox, and operation state are proposed in
-[ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md) so modules that
-only need module-owned EF transactions are not forced to map durable messaging
-tables.
+Hosts that only need selected durable persistence pieces can use the granular
+mapping helpers accepted in
+[ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md):
+
+```csharp
+modelBuilder.ApplyBondstoneOutbox();
+modelBuilder.ApplyBondstoneInbox();
+modelBuilder.ApplyBondstoneOperationState();
+```
+
+`ApplyBondstoneOutbox` maps outbox messages, `ApplyBondstoneInbox` maps inbox
+messages, and `ApplyBondstoneOperationState` maps durable operation state.
+Modules that only need module-owned EF transactions do not need to map durable
+messaging tables unless their chosen durable capabilities use those stores.
+Consumers own migrations for now; Bondstone does not ship migrations or
+provider-specific migration conventions in the generic EF Core package.
+
+For modules that use the current `UseDurableMessaging` capability with EF
+persistence, Bondstone validates the module DbContext model during module
+command execution. The model must include outbox and inbox mappings, either by
+calling `ApplyBondstoneOutbox` and `ApplyBondstoneInbox`, or by using the full
+`ApplyBondstonePersistence` helper. Operation-state mapping validation remains
+tied to later operation-state integration.
 
 ## Registration And Stores
 
@@ -37,6 +54,11 @@ provider-neutral EF Core implementations for:
 The registration uses the consumer-owned DbContext type and stays
 provider-neutral. It does not configure a database provider, migrations, hosted
 dispatchers, locks, or retries.
+
+Service registration and model mapping remain separate. Registering the EF
+Core durable stores does not force every DbContext model to map every
+Bondstone table; callers choose the full or granular mappings in
+`OnModelCreating` according to the capabilities the DbContext supports.
 
 Modules opt into EF-backed command transactions with
 `UseEntityFrameworkCorePersistence<TDbContext>` on `BondstoneModuleBuilder`.

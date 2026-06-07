@@ -1,7 +1,7 @@
 # 0027 Optional EF Core Persistence Mapping
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Partially Applied
 Date: 2026-06-07
 
 ## Context
@@ -85,19 +85,31 @@ mapping diagnostics.
 
 ## Application Notes
 
-- Current contract: Proposed only. The current implemented mapping helper is
-  `ApplyBondstonePersistence`, which applies all generic EF Core mappings.
+- Current contract: `ApplyBondstonePersistence` remains the convenience helper
+  for the full generic EF Core persistence shape. `ApplyBondstoneOutbox`,
+  `ApplyBondstoneInbox`, and `ApplyBondstoneOperationState` map only their
+  respective provider-neutral EF Core durable persistence tables.
 - Stable docs: Current mapping behavior is described in
-  [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md).
+  [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md)
+  and [docs/setup.md](../setup.md). Cross-cutting persistence positioning is
+  described in [docs/architecture/persistence.md](../architecture/persistence.md).
   Sequencing for optional mapping work is tracked in
   [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, persistence, provider, migration, or compatibility changes.
-- Application evidence: None yet.
-- Pending or deferred: Accept or revise this ADR, then implement granular EF
-  mapping helpers, validation, stable docs, and focused tests.
+- Application evidence: The provider-neutral EF Core model builder extensions
+  expose granular mapping helpers, `ApplyBondstonePersistence` composes those
+  helpers, and focused EF Core model tests cover each granular helper. EF
+  module transaction behavior validates that modules using the current
+  `UseDurableMessaging` capability with EF persistence have outbox and inbox
+  mappings in the module DbContext model.
+- Pending or deferred: Operation-state mapping validation remains tied to
+  future operation-state integration. Provider-specific missing-mapping
+  diagnostics and broader schema validation remain future provider-validation
+  work.
 
 ## Verification
 
-Read back the proposed ADR and related stable docs. No executable verification
-is relevant for this proposal-only decision.
+Read back the ADR and related stable docs. Focused EF Core model tests cover
+the accepted granular mapping surface and the current durable-messaging EF
+mapping validation.

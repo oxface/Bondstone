@@ -76,6 +76,65 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand>
 }
 ```
 
+`ApplyBondstonePersistence` maps the full current Bondstone durable persistence
+shape. Modules that use `UseDurableMessaging` with EF persistence currently
+need outbox and inbox mappings. Hosts that only need selected durable pieces
+can map them explicitly:
+
+```csharp
+modelBuilder.ApplyBondstoneOutbox();
+modelBuilder.ApplyBondstoneInbox();
+modelBuilder.ApplyBondstoneOperationState();
+```
+
+For a module that only wants EF-backed module command transactions, omit
+`UseDurableMessaging` and map only the module's own tables:
+
+```csharp
+builder.Services.AddBondstone(bondstone =>
+{
+    bondstone.Module("catalog", module =>
+    {
+        module.UseEntityFrameworkCorePersistence<CatalogDbContext>();
+        module.Commands.RegisterFromAssemblyContaining<UpdateCatalogItemCommand>();
+    });
+});
+
+public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
+    : DbContext(options)
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<CatalogItem>();
+    }
+}
+```
+
+For durable messaging with a granular model, map at least outbox and inbox:
+
+```csharp
+builder.Services.AddBondstone(bondstone =>
+{
+    bondstone.Module("orders", module =>
+    {
+        module.UseDurableMessaging();
+        module.UseEntityFrameworkCorePersistence<OrdersDbContext>();
+        module.Commands.RegisterFromAssemblyContaining<CreateOrderCommand>();
+    });
+});
+
+public sealed class OrdersDbContext(DbContextOptions<OrdersDbContext> options)
+    : DbContext(options)
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Order>();
+        modelBuilder.ApplyBondstoneOutbox();
+        modelBuilder.ApplyBondstoneInbox();
+    }
+}
+```
+
 Configure Rebus itself through the normal Rebus host APIs for the application's
 chosen transport, serializer, endpoint, retry, and worker settings before
 building the service provider. Bondstone's Rebus package supplies the durable

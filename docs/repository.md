@@ -67,5 +67,5 @@ are visible to named-argument callers.
 ## Current Status
 
 This structure is accepted. Current package implementation and verification
-state is summarized in [status.md](status.md). Keep this document focused on
-repository layout, local tooling, CI, and release automation.
+state is summarized in [mvp-plan.md](mvp-plan.md). Keep this document focused
+on repository layout, local tooling, CI, and release automation.

@@ -54,5 +54,5 @@ decision for Bondstone packages.
 ## Current Status
 
 This sample direction is accepted and documented. Sample projects and runnable
-smoke paths remain deferred; current extraction status is summarized in
-[status.md](status.md).
+smoke paths remain deferred; current implementation status is summarized in
+[mvp-plan.md](mvp-plan.md).

@@ -10,8 +10,8 @@ Persistence docs are split by ownership boundary:
   PostgreSQL-specific registration, SQL behavior, and integration coverage.
 
 Current implementation and verification state is summarized in
-[../status.md](../status.md). Tactical extraction details remain in
-[../extraction-plan.md](../extraction-plan.md).
+[../mvp-plan.md](../mvp-plan.md). Historical extraction details remain in
+[../archive/extraction-plan.md](../archive/extraction-plan.md).
 
 ## Cross-Cutting Rules
 
@@ -23,6 +23,15 @@ do not own transport acknowledgement, retry policy, domain events, or a
 generic mediator. Module command execution owns handler registration and now
 has EF transaction pipeline groundwork for modules that opt into EF
 persistence. Broader inbox/outbox receive orchestration remains future work.
+
+Optional EF Core mapping helpers are proposed in
+[ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md). Until that
+decision is accepted and applied, `ApplyBondstonePersistence` remains the
+current generic EF Core mapping entrypoint.
+
+Domain event persistence is proposed as an optional module boundary capability
+in [ADR 0028](../adr/0028-domain-event-persistence-capability.md). It is not
+part of the current implemented persistence contract.
 
 Provider packages own provider-specific SQL, locking, conflict detection,
 schema targeting, and integration tests. Provider-owned SQL should reuse table,
@@ -46,9 +55,9 @@ The current contracts intentionally do not decide:
   advanced worker configuration;
 - inbox handler discovery, stale receive recovery, receive retry policy, and
   transport acknowledgement coordination;
-- module identity scopes beyond the current source-module execution context,
-  domain-event capture, and higher-level transaction helpers above the EF
-  persistence scope;
+- module identity scopes beyond the current source-module execution context
+  and higher-level transaction helpers above the EF persistence scope;
+- domain event collection and persistence;
 - operation-state transition policy or optimistic concurrency;
 - provider-specific schemas, migration commands, or payload storage such as
   PostgreSQL `jsonb`.

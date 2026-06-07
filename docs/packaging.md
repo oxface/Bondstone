@@ -101,5 +101,5 @@ and release-management cost.
 The package boundary, target framework, coordinated versioning, and release
 automation direction are accepted and scaffolded. Initial packages have been
 published to nuget.org. Current package implementation state is summarized in
-[status.md](status.md). Keep this document focused on package boundaries,
+[mvp-plan.md](mvp-plan.md). Keep this document focused on package boundaries,
 dependency direction, versioning, and publishing rules.

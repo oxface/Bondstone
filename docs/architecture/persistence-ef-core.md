@@ -17,6 +17,12 @@ consumer-owned `ModelBuilder`. Consumers own migrations for now; Bondstone does
 not ship migrations or provider-specific migration conventions in the generic
 EF Core package.
 
+The current helper applies the full generic Bondstone persistence shape. More
+granular mapping helpers for outbox, inbox, and operation state are proposed in
+[ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md) so modules that
+only need module-owned EF transactions are not forced to map durable messaging
+tables.
+
 ## Registration And Stores
 
 `AddBondstoneEntityFrameworkCorePersistence<TDbContext>` registers the
@@ -56,6 +62,12 @@ must be verified with integration tests.
 `EntityFrameworkCoreDurableOperationStateStore<TDbContext>` reads and stages
 durable operation state in the current EF Core `DbContext`. It does not own
 transition policy, optimistic concurrency, or automatic transaction boundaries.
+
+EF Core does not currently collect or persist domain events. Proposed future
+domain event persistence should use provider abstractions and module command
+pipeline behavior instead of requiring a custom DbContext base class or
+overriding `SaveChangesAsync`. That proposal is tracked in
+[ADR 0028](../adr/0028-domain-event-persistence-capability.md).
 
 ## Persistence Scope
 

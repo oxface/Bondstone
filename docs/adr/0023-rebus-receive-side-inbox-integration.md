@@ -118,8 +118,9 @@ receive recovery, metrics, or event publish/subscribe behavior.
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
   and [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md),
-  with extraction state in [docs/extraction-plan.md](../extraction-plan.md)
-  and [docs/status.md](../status.md).
+  with current implementation state in [docs/mvp-plan.md](../mvp-plan.md) and
+  historical extraction notes in
+  [docs/archive/extraction-plan.md](../archive/extraction-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, durable behavior, provider, or transport strategy changes.
 - Application evidence: Rebus receive adapter implementation, low-level and

@@ -12,6 +12,7 @@ template repository. The product goal is a focused .NET library for durable
 module boundaries:
 
 - outbox-backed durable commands;
+- explicit durable integration events;
 - EF Core backed inbox/outbox persistence;
 - module-owned command execution and transactions;
 - transport adapters that keep provider infrastructure configuration native;
@@ -67,10 +68,16 @@ Implemented surface includes:
 
 Current group: **Group 0**.
 
-Current/next slice: **first-class event ADR/design**.
+Current/next slice: **first-class event guardrail ADR/design**.
+Proposed decision: [ADR 0026](adr/0026-event-shape-guardrail.md).
 
 This group exists to prevent command-only naming and topology assumptions from
 hardening before receive listener binding and diagnostics are built.
+
+The near-term goal is guardrail, not full event transport implementation.
+Bondstone should acknowledge events early because they are essential to
+modular-monolith workflows, while keeping actual event fan-out, Rebus
+publish/subscribe, and event choreography samples for later groups.
 
 Slices:
 
@@ -82,11 +89,37 @@ Slices:
    - fan-out versus point-to-point semantics;
    - Rebus topic/subscription vocabulary;
    - shared command/event diagnostics implications.
-2. Update stable docs for the current command/event split.
+2. Add minimal core event abstractions if accepted:
+   - explicit durable event publisher contract;
+   - module event subscriber registration metadata;
+   - stable subscriber identity metadata;
+   - diagnostics result shapes that can describe command routes and event
+     subscriptions without assuming a command-only topology.
+3. Update stable docs for the current command/event/domain-event split.
 
-Remaining in closest group: **1 design slice**.
+Remaining in closest group: **1-2 small design/API slices**.
 
-### Group 1: Usable Durable Command Loop
+### Group 1: Optional Persistence Mapping
+
+Goal: modules that only need module-owned persistence should not be forced to
+map durable messaging tables. Durable messaging modules should still get clear
+validation that required inbox/outbox/operation-state pieces exist.
+Proposed decision: [ADR 0027](adr/0027-optional-ef-core-persistence-mapping.md).
+
+Slices:
+
+1. ADR/design for optional persistence mapping:
+   - keep `ApplyBondstonePersistence` as the convenience mapping;
+   - add granular mapping such as outbox, inbox, and operation-state mappings;
+   - define how module durable-messaging capability validates required
+     mappings and provider registrations.
+2. Implement granular EF Core mapping helpers and focused tests if accepted.
+3. Update setup and architecture docs so persistence-only modules and durable
+   messaging modules have distinct examples.
+
+Remaining in Group 1: **small-medium, 2-3 slices**.
+
+### Group 2: Usable Durable Command Loop
 
 Goal: a consumer can register a module, send a durable command through outbox
 and Rebus, receive it through module command execution, persist handler state
@@ -117,35 +150,74 @@ Remaining slices:
 3. Durable-messaging capability validation:
    - durable modules have persistence when durable messaging is enabled;
    - Rebus receive topology targets registered local modules;
+   - durable command handlers are registered on modules that opt into durable
+     messaging;
    - missing persistence, transport, or route pieces produce useful errors.
 4. Command topology diagnostics:
    - explicit route versus receive binding versus convention fallback versus
      missing route;
    - diagnostic result object before or alongside logging.
-5. Operation-state integration:
+5. Durable payload serializer configuration:
+   - shared JSON options or serializer abstraction for send and receive;
+   - support custom converters without transport-specific duplication.
+6. Operation-state integration:
    - make `IDurableOperationReader` meaningful beyond current contracts;
    - record durable send and receive state transitions consistently.
 
-Remaining in Group 1: **about 4-5 slices**.
+Remaining in Group 2: **about 5-6 slices**.
 
-### Group 2: First-Class Events Implementation
+### Group 3: Domain Event Persistence Capability
+
+Goal: support transactional collection and persistence of module-local domain
+events without forcing consumers to adopt a Bondstone aggregate model or
+automatically publishing integration events.
+Proposed decision:
+[ADR 0028](adr/0028-domain-event-persistence-capability.md).
+
+This group is a boundary capability, not a DDD framework. It should use narrow
+provider-neutral abstractions and provider-specific collectors/stores, then
+compose through the module command pipeline. Domain events remain private to a
+module unless module code explicitly publishes integration events.
+
+Slices:
+
+1. ADR/design for provider-neutral domain event collection and persistence:
+   - collector/store abstractions;
+   - naming for the small event-source/buffer/accessor interface or adapter;
+   - pipeline ordering relative to validation, transaction, inbox, outbox, and
+     `SaveChangesAsync`;
+   - clear or mark-collected behavior after successful persistence.
+2. EF Core collector/store implementation:
+   - discover domain event sources from the EF `ChangeTracker` or configured
+     adapters;
+   - stage domain event records in the same module transaction;
+   - avoid custom DbContext inheritance or `SaveChangesAsync` hijacking.
+3. Module opt-in and validation:
+   - `UseDomainEventPersistence` or equivalent capability;
+   - provider-specific registration validation.
+4. Optional mapping helper from domain events to integration events only after
+   first-class integration events exist, keeping publication explicit.
+
+Remaining in Group 3: **medium, 3-4 slices**.
+
+### Group 4: First-Class Events Implementation
 
 Goal: publish/subscribe is first-class and durable without turning Bondstone
 into a generic bus.
 
 Slices:
 
-1. Core event publisher contract and outbox staging.
-2. Module event handler/subscriber registration.
+1. Event outbox staging and dispatch after the guardrail abstractions settle.
+2. Module event handler/subscriber registration execution path.
 3. Event subscriber identity and inbox behavior.
 4. Rebus event publish topology with topic/exchange naming.
 5. Rebus event subscription topology with subscriber endpoint/subscription
    binding.
 6. Event diagnostics and transport-backed tests.
 
-Remaining in Group 2: **large, 5-6 slices**.
+Remaining in Group 4: **large, 5-6 slices**.
 
-### Group 3: Reliability And Recovery
+### Group 5: Reliability And Recovery
 
 Goal: the happy path is operationally resilient.
 
@@ -158,9 +230,9 @@ Slices:
 5. Dead-letter routing ownership.
 6. Advanced dispatcher and worker options.
 
-Remaining in Group 3: **medium-large, 5-6 slices**.
+Remaining in Group 5: **medium-large, 5-6 slices**.
 
-### Group 4: Provider And Migration Usefulness
+### Group 6: Provider And Migration Usefulness
 
 Goal: persistence providers are usable in real applications without relying on
 hidden project conventions.
@@ -173,20 +245,21 @@ Slices:
 4. Broader provider fixtures.
 5. Operation-state optimistic concurrency policy.
 
-Remaining in Group 4: **medium, 4-5 slices**.
+Remaining in Group 6: **medium, 4-5 slices**.
 
-### Group 5: Samples And Adoption Proof
+### Group 7: Samples And Adoption Proof
 
 Goal: prove the library works for modular-monolith and service-split usage.
 
 Slices:
 
-1. Modular monolith sample.
+1. Modular monolith sample after the command loop and optional persistence
+   mapping are usable.
 2. Split-service Rebus sample.
 3. Event choreography sample after events exist.
 4. Setup and production topology documentation cleanup.
 
-Remaining in Group 5: **medium, 3-4 slices**.
+Remaining in Group 7: **medium, 3-4 slices**.
 
 ## Verification Surface
 

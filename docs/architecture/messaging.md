@@ -40,6 +40,21 @@ operation-state updates and receive tracing.
 delivery and transport receive. Durable message identity, outbox, inbox, and
 operation-state behavior apply to durable commands only.
 
+`IIntegrationEvent` is reserved for durable cross-module facts. Integration
+events are not commands: they do not target one module and should eventually
+fan out to independently identified subscribers. First-class event
+publish/subscribe is not implemented yet. The proposed guardrail for this
+shape is tracked in
+[ADR 0026](../adr/0026-event-shape-guardrail.md), and implementation
+sequencing is tracked in [../mvp-plan.md](../mvp-plan.md).
+
+Domain events are module-local facts raised inside a module's domain model.
+They are not automatically integration events, and Bondstone does not
+currently collect, persist, dispatch, or publish them. Proposed future domain
+event persistence should remain an explicit module capability and should not
+force consumers into a Bondstone aggregate model. That proposal is tracked in
+[ADR 0028](../adr/0028-domain-event-persistence-capability.md).
+
 Durable command sending is represented by `IDurableCommandSender`. The sender
 accepts a durable command, a required target module, and optional explicit
 metadata parameters. It returns a send result and does not promise an

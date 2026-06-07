@@ -97,6 +97,6 @@ application exists.
 
 This testing strategy is accepted and documented. Initial test projects,
 category-filtered commands, and CI wiring exist. Current test coverage is
-summarized in [status.md](status.md). Keep this document focused on testing
-policy and command entrypoints; keep the tactical list of currently covered
-slices in the status and extraction-plan docs.
+summarized in [mvp-plan.md](mvp-plan.md). Keep this document focused on
+testing policy and command entrypoints; keep the tactical list of currently
+covered slices in the MVP plan.

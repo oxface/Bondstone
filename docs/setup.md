@@ -144,5 +144,7 @@ whole Rebus host.
 The current receive-side Rebus typed pipeline is still a low-level primitive
 that requires explicit handler identity and commit delegates. The preferred
 app-facing receive topology is now configured through the Rebus transport
-builder, but actual Rebus listener binding to that topology remains deferred,
-so this setup page intentionally shows the outgoing durable command path only.
+builder and bound to a Rebus input queue with
+`AddBondstoneRebusModuleCommandEndpointHandler(endpointName)`. This setup page
+intentionally keeps the first example focused on the outgoing durable command
+path until the sample application owns the full receive wiring example.

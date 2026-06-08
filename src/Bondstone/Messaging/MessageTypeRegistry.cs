@@ -6,6 +6,8 @@ namespace Bondstone.Messaging;
 public sealed class MessageTypeRegistry : IMessageTypeRegistry
 {
     private readonly Dictionary<Type, MessageTypeRegistration> _registrationsByClrType = [];
+    private readonly Dictionary<string, MessageTypeRegistration> _registrationsByMessageTypeName =
+        new(StringComparer.Ordinal);
     private readonly object _sync = new();
 
     public MessageTypeRegistration Register<TMessage>()
@@ -91,9 +93,9 @@ public sealed class MessageTypeRegistry : IMessageTypeRegistry
 
         lock (_sync)
         {
-            MessageTypeRegistration? registration = _registrationsByClrType.Values.FirstOrDefault(
-                item => string.Equals(item.MessageTypeName, normalizedTypeName, StringComparison.Ordinal));
-            if (registration is not null)
+            if (_registrationsByMessageTypeName.TryGetValue(
+                normalizedTypeName,
+                out MessageTypeRegistration? registration))
             {
                 clrType = registration.ClrType;
                 return true;
@@ -140,15 +142,16 @@ public sealed class MessageTypeRegistry : IMessageTypeRegistry
                 return existingRegistration;
             }
 
-            MessageTypeRegistration? existingTypeNameRegistration = _registrationsByClrType.Values.FirstOrDefault(
-                item => string.Equals(item.MessageTypeName, normalizedTypeName, StringComparison.Ordinal));
-            if (existingTypeNameRegistration is not null)
+            if (_registrationsByMessageTypeName.TryGetValue(
+                normalizedTypeName,
+                out MessageTypeRegistration? existingTypeNameRegistration))
             {
                 throw new InvalidOperationException(
                     $"Message type '{normalizedTypeName}' is already registered for '{existingTypeNameRegistration.ClrType.FullName}'.");
             }
 
             _registrationsByClrType.Add(clrType, registration);
+            _registrationsByMessageTypeName.Add(normalizedTypeName, registration);
             return registration;
         }
     }

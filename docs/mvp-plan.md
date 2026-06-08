@@ -238,37 +238,36 @@ Remaining slices:
 
 Remaining in Phase 3: **complete for the current MVP surface**.
 
-### Phase 4: Domain Event Persistence Capability
+### Phase 4: Samples And Adoption Proof
 
-Goal: support transactional collection and persistence of module-local domain
-events without forcing consumers to adopt a Bondstone aggregate model or
-automatically publishing integration events.
-Proposed decision:
-[ADR 0028](adr/0028-domain-event-persistence-capability.md).
+Goal: prove the implemented command-loop and optional persistence mapping are
+pleasant enough to adopt before adding more durable capabilities.
 
-This phase is a boundary capability, not a DDD framework. It should use narrow
-provider-neutral abstractions and provider-specific collectors/stores, then
-compose through the module command pipeline. Domain events remain private to a
-module unless module code explicitly publishes integration events.
+This phase should exercise the current Phase 1-3 implementation without
+changing the completed phase scope. The first sample should be a modular
+monolith that sends a durable command through outbox and Rebus, receives it
+through module command execution, persists handler state and inbox markers in
+one EF transaction, and shows the normal setup path a consumer should copy.
+Use the sample to discover API friction, naming confusion, missing setup docs,
+and small immediate fixes.
 
 Slices:
 
-1. ADR/design for provider-neutral domain event collection and persistence:
-   - collector/store abstractions;
-   - naming for the small event-source/buffer/accessor interface or adapter;
-   - pipeline ordering relative to validation, transaction, inbox, outbox, and
-     `SaveChangesAsync`;
-   - clear or mark-collected behavior after successful persistence.
-2. EF Core collector/store implementation:
-   - discover domain event sources from the EF `ChangeTracker` or configured
-     adapters;
-   - stage domain event records in the same module transaction;
-   - avoid custom DbContext inheritance or `SaveChangesAsync` hijacking.
-3. Module opt-in and validation:
-   - `UseDomainEventPersistence` or equivalent capability;
-   - provider-specific registration validation.
-4. Optional mapping helper from domain events to integration events only after
-   first-class integration events exist, keeping publication explicit.
+1. Create the modular monolith sample according to [samples.md](samples.md):
+   - two or three modules with distinct persistence ownership;
+   - at least one durable command crossing module persistence boundaries;
+   - Rebus in-memory or test-friendly transport first, with PostgreSQL-backed
+     persistence when the sample is ready for infrastructure-backed proof;
+   - one module receive endpoint per independently owned command backlog unless
+     the sample deliberately demonstrates a shared endpoint.
+2. Add a focused sample verification entrypoint or test shape:
+   - keep default verification fast;
+   - make infrastructure-backed sample verification explicit if PostgreSQL or a
+     real broker is required.
+3. Update [setup.md](setup.md) with the full preferred receive wiring once the
+   sample settles the exact shape.
+4. Record API friction found by the sample as narrow follow-up slices before
+   moving deeper into events or domain-event persistence.
 
 Remaining in Phase 4: **medium, 3-4 slices**.
 
@@ -319,17 +318,37 @@ Slices:
 
 Remaining in Phase 7: **medium, 4-5 slices**.
 
-### Phase 8: Samples And Adoption Proof
+### Phase 8: Domain Event Persistence Capability
 
-Goal: prove the library works for modular-monolith and service-split usage.
+Goal: support transactional collection and persistence of module-local domain
+events without forcing consumers to adopt a Bondstone aggregate model or
+automatically publishing integration events.
+Proposed decision:
+[ADR 0028](adr/0028-domain-event-persistence-capability.md).
+
+This phase is a boundary capability, not a DDD framework. It should use narrow
+provider-neutral abstractions and provider-specific collectors/stores, then
+compose through the module command pipeline. Domain events remain private to a
+module unless module code explicitly publishes integration events.
 
 Slices:
 
-1. Modular monolith sample after the command loop and optional persistence
-   mapping are usable.
-2. Split-service Rebus sample.
-3. Event choreography sample after events exist.
-4. Setup and production topology documentation cleanup.
+1. ADR/design for provider-neutral domain event collection and persistence:
+   - collector/store abstractions;
+   - naming for the small event-source/buffer/accessor interface or adapter;
+   - pipeline ordering relative to validation, transaction, inbox, outbox, and
+     `SaveChangesAsync`;
+   - clear or mark-collected behavior after successful persistence.
+2. EF Core collector/store implementation:
+   - discover domain event sources from the EF `ChangeTracker` or configured
+     adapters;
+   - stage domain event records in the same module transaction;
+   - avoid custom DbContext inheritance or `SaveChangesAsync` hijacking.
+3. Module opt-in and validation:
+   - `UseDomainEventPersistence` or equivalent capability;
+   - provider-specific registration validation.
+4. Optional mapping helper from domain events to integration events only after
+   first-class integration events exist, keeping publication explicit.
 
 Remaining in Phase 8: **medium, 3-4 slices**.
 

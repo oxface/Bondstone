@@ -42,8 +42,8 @@ Implemented surface includes:
   outbox claiming, outbox lease renewal, and dispatch recording;
 - hosted outbox worker composition over `IDurableOutboxDispatcher`;
 - Rebus outgoing command transport for claimed outbox records, including
-  destination resolution, wire-envelope mapping, durable headers, and W3C
-  trace headers;
+  destination resolution, command destination diagnostics, wire-envelope
+  mapping, durable headers, and W3C trace headers;
 - Rebus low-level receive inbox adapter and typed command receive pipeline;
 - Rebus module command receive pipeline groundwork that dispatches wire
   envelopes into `IModuleCommandExecutor` with explicit durable inbox records;
@@ -201,6 +201,8 @@ Already done:
   persistence, durable command handlers belong to durable-messaging modules,
   and Rebus receive endpoints bind only registered local durable-messaging
   modules with durable command handlers.
+- Rebus command destination diagnostics that report explicit route, receive
+  endpoint binding, module queue convention, or missing destination outcomes.
 
 Remaining slices:
 
@@ -210,9 +212,10 @@ Remaining slices:
      topology diagnostics, and add deeper operation-state/provider-specific
      validation when those capabilities are implemented.
 2. Command topology diagnostics:
-   - explicit route versus receive binding versus convention fallback versus
-     missing route;
-   - diagnostic result object before or alongside logging.
+   - **Done for Rebus command destination diagnostics.**
+   - Remaining: add endpoint-dispatch diagnostics when endpoint dispatch is
+     implemented, and event topic/subscription diagnostics when first-class
+     events are implemented.
 3. Rebus endpoint dispatcher:
    - `HandleOnceAsync(endpointName, envelope, ct)`;
    - validate endpoint exists;
@@ -227,7 +230,7 @@ Remaining slices:
    - make `IDurableOperationReader` meaningful beyond current contracts;
    - record durable send and receive state transitions consistently.
 
-Remaining in Phase 3: **about 3-4 slices**.
+Remaining in Phase 3: **about 3 slices**.
 
 ### Phase 4: Domain Event Persistence Capability
 

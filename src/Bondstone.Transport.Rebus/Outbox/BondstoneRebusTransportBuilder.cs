@@ -13,24 +13,6 @@ public sealed class BondstoneRebusTransportBuilder
         new(StringComparer.Ordinal);
     private Func<string, string>? _moduleQueueNameConvention;
 
-    internal IReadOnlyDictionary<string, string> DestinationAddressesByTargetModule
-    {
-        get
-        {
-            var destinationAddressesByTargetModule =
-                new Dictionary<string, string>(
-                    _endpointNamesByAcceptedModuleName,
-                    StringComparer.Ordinal);
-
-            foreach (KeyValuePair<string, string> explicitRoute in _destinationAddressesByTargetModule)
-            {
-                destinationAddressesByTargetModule[explicitRoute.Key] = explicitRoute.Value;
-            }
-
-            return destinationAddressesByTargetModule;
-        }
-    }
-
     internal IReadOnlyCollection<RebusModuleReceiveEndpointBinding> ReceiveEndpointBindings =>
         _acceptedModuleNamesByEndpointName
             .Where(static entry => entry.Value.Count > 0)
@@ -39,8 +21,11 @@ public sealed class BondstoneRebusTransportBuilder
                 entry.Value))
             .ToArray();
 
-    internal Func<string, string>? ModuleDestinationAddressConvention =>
-        _moduleQueueNameConvention;
+    internal RebusCommandDestinationTopology CommandDestinationTopology =>
+        new(
+            _destinationAddressesByTargetModule,
+            _endpointNamesByAcceptedModuleName,
+            _moduleQueueNameConvention);
 
     public BondstoneRebusModuleRouteBuilder RouteModule(string targetModule)
     {

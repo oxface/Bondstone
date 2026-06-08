@@ -65,6 +65,14 @@ for ordinary durable command delivery. Modules declare durable messaging
 capability and command handlers; the Rebus adapter supplies queue names,
 endpoint names, storage, retry/dead-letter policy, and listener binding.
 
+`IRebusCommandTopologyDiagnostics` describes command destination resolution
+without dispatching an outbox record. The result reports target module,
+`CommandDestination` diagnostic kind, destination source, resolved Rebus
+address, receive endpoint name when a receive binding supplied the address,
+and a failure reason when no destination exists. The diagnostic path and
+dispatch path use the same resolution precedence: explicit route, receive
+binding, module queue convention, then missing destination.
+
 Rebus infrastructure setup remains Rebus-native and outside Bondstone's
 topology builder. Applications still configure the broker transport,
 connection string, serializer, worker count, retry/dead-letter policy, and
@@ -219,8 +227,8 @@ is still future work.
 
 Deferred Rebus work includes event publish/subscribe semantics, actual Rebus
 worker/listener binding to configured module receive endpoints, endpoint
-dispatcher APIs, command topology diagnostics for outbound destination
-resolution, route or destination circuit breaking, stale-claim recovery
-sweeps, dead-letter routing, receive retry state, stale receive recovery, and
-worker metrics. These remain hosting, persistence, or future receive-pipeline
-decisions unless a later ADR accepts a transport-specific policy.
+dispatcher APIs, route or destination circuit breaking, stale-claim recovery
+sweeps, dead-letter routing, receive retry state, stale receive recovery,
+event topic/subscription diagnostics, and worker metrics. These remain
+hosting, persistence, or future receive-pipeline decisions unless a later ADR
+accepts a transport-specific policy.

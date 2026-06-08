@@ -200,6 +200,131 @@ public sealed class RebusDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void DescribeCommandDestination_WhenExplicitRouteExists_ReturnsExplicitRoute()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus.RouteModule("fulfillment").ToQueue("fulfillment-queue")));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusCommandTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusCommandTopologyDiagnostics>();
+
+        RebusCommandDestinationDiagnostic diagnostic =
+            diagnostics.DescribeCommandDestination("fulfillment");
+
+        Assert.Equal(DurableMessageTopologyDiagnosticKind.CommandDestination, diagnostic.Kind);
+        Assert.Equal("fulfillment", diagnostic.TargetModule);
+        Assert.Equal(RebusCommandDestinationSource.ExplicitRoute, diagnostic.Source);
+        Assert.Equal("fulfillment-queue", diagnostic.DestinationAddress);
+        Assert.Null(diagnostic.ReceiveEndpointName);
+        Assert.Null(diagnostic.FailureReason);
+        Assert.True(diagnostic.HasDestination);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DescribeCommandDestination_WhenExplicitRouteAndReceiveEndpointExist_ReturnsExplicitRoute()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone =>
+            {
+                bondstone.Module("fulfillment", ConfigureFulfillmentModule);
+                bondstone.UseRebusTransport(
+                    rebus =>
+                    {
+                        rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment");
+                        rebus.RouteModule("fulfillment").ToQueue("fulfillment-priority");
+                    });
+            });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusCommandTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusCommandTopologyDiagnostics>();
+
+        RebusCommandDestinationDiagnostic diagnostic =
+            diagnostics.DescribeCommandDestination("fulfillment");
+
+        Assert.Equal(RebusCommandDestinationSource.ExplicitRoute, diagnostic.Source);
+        Assert.Equal("fulfillment-priority", diagnostic.DestinationAddress);
+        Assert.Null(diagnostic.ReceiveEndpointName);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DescribeCommandDestination_WhenReceiveEndpointAcceptsModule_ReturnsReceiveEndpoint()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone =>
+            {
+                bondstone.Module("fulfillment", ConfigureFulfillmentModule);
+                bondstone.UseRebusTransport(
+                    rebus => rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment"));
+            });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusCommandTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusCommandTopologyDiagnostics>();
+
+        RebusCommandDestinationDiagnostic diagnostic =
+            diagnostics.DescribeCommandDestination("fulfillment");
+
+        Assert.Equal(RebusCommandDestinationSource.ReceiveEndpoint, diagnostic.Source);
+        Assert.Equal("fulfillment-commands", diagnostic.DestinationAddress);
+        Assert.Equal("fulfillment-commands", diagnostic.ReceiveEndpointName);
+        Assert.Null(diagnostic.FailureReason);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DescribeCommandDestination_WhenConventionExists_ReturnsModuleQueueConvention()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus.UseModuleQueueConvention(
+                    static moduleName => $"module-{moduleName}")));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusCommandTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusCommandTopologyDiagnostics>();
+
+        RebusCommandDestinationDiagnostic diagnostic =
+            diagnostics.DescribeCommandDestination("fulfillment");
+
+        Assert.Equal(RebusCommandDestinationSource.ModuleQueueConvention, diagnostic.Source);
+        Assert.Equal("module-fulfillment", diagnostic.DestinationAddress);
+        Assert.Null(diagnostic.ReceiveEndpointName);
+        Assert.Null(diagnostic.FailureReason);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DescribeCommandDestination_WhenDestinationIsMissing_ReturnsMissingDiagnostic()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(_ => { }));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusCommandTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusCommandTopologyDiagnostics>();
+
+        RebusCommandDestinationDiagnostic diagnostic =
+            diagnostics.DescribeCommandDestination("fulfillment");
+
+        Assert.Equal(RebusCommandDestinationSource.Missing, diagnostic.Source);
+        Assert.Null(diagnostic.DestinationAddress);
+        Assert.Null(diagnostic.ReceiveEndpointName);
+        Assert.Contains("fulfillment", diagnostic.FailureReason, StringComparison.Ordinal);
+        Assert.False(diagnostic.HasDestination);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task AddBondstoneRebusOutboxTransport_RegistersTransportWithModuleDestinations()
     {
         var routingApi = new RecordingRoutingApi();

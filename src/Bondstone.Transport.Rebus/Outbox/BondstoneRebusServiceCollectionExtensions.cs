@@ -15,12 +15,25 @@ public static class BondstoneRebusServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        return services.AddBondstoneRebusOutboxTransport(
+            RebusCommandDestinationTopology.FromConfiguredDestinations(
+                destinationAddressesByTargetModule,
+                destinationAddressConvention));
+    }
+
+    internal static IServiceCollection AddBondstoneRebusOutboxTransport(
+        this IServiceCollection services,
+        RebusCommandDestinationTopology topology)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(topology);
+
         services.TryAddTransient<IRoutingApi>(
             static serviceProvider => serviceProvider.GetRequiredService<IBus>().Advanced.Routing);
         services.AddSingleton<IRebusOutboxDestinationResolver>(
-            new RebusModuleDestinationResolver(
-                destinationAddressesByTargetModule,
-                destinationAddressConvention));
+            new RebusModuleDestinationResolver(topology));
+        services.AddSingleton<IRebusCommandTopologyDiagnostics>(
+            new RebusCommandTopologyDiagnostics(topology));
         services.TryAddTransient<IDurableOutboxTransport, RebusDurableOutboxTransport>();
 
         return services;

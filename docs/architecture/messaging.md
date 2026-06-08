@@ -192,6 +192,13 @@ derive outgoing command destinations for accepted modules, with explicit
 fallback routing for extracted or otherwise remote target modules. Actual Rebus
 listener binding to that topology remains future work.
 
+Rebus command destination diagnostics can describe how a target module would
+be addressed before dispatch. Diagnostics report command destination kind,
+target module, resolved destination address, and whether resolution came from
+an explicit route, receive endpoint binding, module queue convention, or no
+configured destination. Receive endpoint binding diagnostics include the
+endpoint name that supplied the destination.
+
 Durable command loop validation now runs during `AddBondstone` composition.
 Modules that opt into durable messaging must declare persistence, durable
 command handlers must belong to durable-messaging modules, and Rebus receive
@@ -208,16 +215,17 @@ same operational profile, but a general inbox queue is not the default command
 topology. Future event publish/subscribe work can use topic or subscription
 topology because events intentionally fan out to multiple subscribers.
 
-Durable-message diagnostics should specialize by message kind. Command
-diagnostics can report target module, destination, route source, and receive
-endpoint binding. Event diagnostics can report event identity, topic,
-subscriber module, subscriber identity, subscription binding, and zero
-subscriber outcomes. Shared diagnostics should include stable message
-identity, message kind, source module, payload serialization policy, trace
-context, and causation information without assuming every durable message is a
-command. Core now has `DurableMessageTopologyDiagnosticKind` values for
-command routes, command destinations, command receive endpoints, event topics,
-and event subscriptions.
+Durable-message diagnostics should specialize by message kind. Current Rebus
+command destination diagnostics report target module, destination, route
+source, and receive endpoint binding. Future event diagnostics can report
+event identity, topic, subscriber module, subscriber identity, subscription
+binding, and zero subscriber outcomes. Shared diagnostics should include
+stable message identity, message kind, source module, payload serialization
+policy, trace context, and causation information without assuming every
+durable message is a command. Core now has
+`DurableMessageTopologyDiagnosticKind` values for command routes, command
+destinations, command receive endpoints, event topics, and event
+subscriptions.
 
 Modules that send or receive durable commands should opt into one durable
 messaging capability, such as `UseDurableMessaging`, rather than making normal
@@ -249,9 +257,9 @@ Deferred durable-command work remains tracked:
 - receive adapter, receive-side transport integration, and additional
   transport-backed verification;
 - durable-messaging validation beyond the current module capability, Rebus
-  receive binding, and EF outbox/inbox mapping checks, including outbound
-  topology diagnostics, deeper transaction behaviors, and service-shaped
-  samples.
+  receive binding, EF outbox/inbox mapping checks, and Rebus command
+  destination diagnostics, including deeper transaction behaviors and
+  service-shaped samples.
 
 ## Message Identity Names
 

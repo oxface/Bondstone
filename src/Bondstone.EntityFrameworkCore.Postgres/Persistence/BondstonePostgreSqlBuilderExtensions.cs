@@ -23,4 +23,26 @@ public static class BondstonePostgreSqlBuilderExtensions
 
         return builder;
     }
+
+    public static BondstoneBuilder UsePostgreSqlPersistence<TDbContext>(
+        this BondstoneBuilder builder,
+        string moduleName,
+        string connectionString,
+        Action<NpgsqlDbContextOptionsBuilder>? configureNpgsql = null,
+        string? schema = null)
+        where TDbContext : DbContext
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Services.AddBondstonePostgreSqlPersistence<TDbContext>(
+            connectionString,
+            configureNpgsql,
+            schema);
+        builder.Services.AddBondstonePostgreSqlModulePersistence<TDbContext>(
+            moduleName,
+            schema);
+        builder.Outbox.MarkPersistenceProvider("PostgreSQL");
+
+        return builder;
+    }
 }

@@ -32,17 +32,33 @@ public static class BondstoneServiceCollectionExtensions
         services.AddBondstoneDurablePayloadSerialization();
 
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
+        services.TryAddScoped(serviceProvider =>
+            new DurableModuleOutboxWriterResolver(
+                serviceProvider.GetServices<IDurableModuleOutboxWriter>(),
+                serviceProvider.GetService<IDurableOutboxWriter>()));
+        services.TryAddScoped(serviceProvider =>
+            new DurableModuleInboxHandlerExecutorResolver(
+                serviceProvider.GetServices<IDurableModuleInboxHandlerExecutor>(),
+                serviceProvider.GetService<IDurableInboxHandlerExecutor>()));
+        services.TryAddScoped(serviceProvider =>
+            new DurableModuleOperationStateStoreResolver(
+                serviceProvider.GetServices<IDurableModuleOperationStateStore>(),
+                serviceProvider.GetService<IDurableOperationStateStore>()));
+        services.TryAddScoped<IDurableOperationReader>(serviceProvider =>
+            new DurableModuleOperationReader(
+                serviceProvider.GetServices<IDurableModuleOperationStateStore>(),
+                serviceProvider.GetService<IDurableOperationStateStore>()));
         services.TryAddScoped<IDurableCommandSender>(serviceProvider =>
             new DurableCommandSender(
-                serviceProvider.GetRequiredService<IDurableOutboxWriter>(),
+                serviceProvider.GetRequiredService<DurableModuleOutboxWriterResolver>(),
                 serviceProvider.GetRequiredService<IMessageTypeRegistry>(),
                 serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
+                serviceProvider.GetRequiredService<DurableModuleOperationStateStoreResolver>(),
                 serviceProvider.GetRequiredService<IDurablePayloadSerializer>(),
-                serviceProvider.GetService<IDurableOperationStateStore>(),
                 serviceProvider.GetService<TimeProvider>()));
         services.TryAddScoped<IDurableEventPublisher>(serviceProvider =>
             new DurableEventPublisher(
-                serviceProvider.GetRequiredService<IDurableOutboxWriter>(),
+                serviceProvider.GetRequiredService<DurableModuleOutboxWriterResolver>(),
                 serviceProvider.GetRequiredService<IMessageTypeRegistry>(),
                 serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
                 serviceProvider.GetRequiredService<IDurablePayloadSerializer>(),

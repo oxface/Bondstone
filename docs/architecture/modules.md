@@ -157,12 +157,16 @@ handler execution through the command pipeline, then calls `SaveChangesAsync`
 before the scope commits a transaction it owns. Modules without EF persistence
 continue through the command executor without EF transaction wrapping.
 
-This is groundwork for the full durable boundary. Receive-side inbox handling
-can now run inside the module command pipeline when a transport passes a
-durable inbox record into `IModuleCommandExecutor`. Operation-state updates,
-receive-side outbox coordination, actual listener binding, and receive
-acknowledgement still need later slices before durable receive is fully
-app-facing.
+For durable messaging, module-owned EF persistence is resolved by module name
+when provider-specific module bindings are configured. A source module sends
+through its own outbox. A target module receives through its own inbox and EF
+transaction, saving handler state, inbox markers, operation completion, and
+any outgoing outbox messages together.
+
+Receive-side inbox handling can run inside the module command pipeline when a
+transport passes a durable inbox record into `IModuleCommandExecutor`.
+Receive failure state, retry state, stale receive recovery, and receive
+acknowledgement policy remain later durable-boundary pieces.
 
 ## Receive Inbox
 

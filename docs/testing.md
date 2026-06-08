@@ -90,8 +90,10 @@ Additional test entrypoints are:
 
 `pnpm verify` is kept as an alias for `pnpm check`.
 
-Samples may become end-to-end and smoke-test targets when the sample
-application exists.
+The modular monolith adoption-proof harness has an explicit `Integration`
+smoke test under `tests/Bondstone.Samples.Tests`. It is covered by
+`pnpm backend:test:integration` and intentionally stays out of the default
+fast test filter because it starts Testcontainers PostgreSQL.
 
 ## Current Status
 

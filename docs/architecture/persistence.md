@@ -34,6 +34,15 @@ runtime validates that modules using `UseDurableMessaging` with EF persistence
 have outbox and inbox mappings in their DbContext model. Operation-state and
 provider-specific schema validation remain deferred.
 
+Module-owned durable EF persistence is accepted in
+[ADR 0032](../adr/0032-module-owned-durable-ef-persistence.md). In the current
+command loop, durable sends resolve outbox and pending operation-state writes
+from the source module persistence context. Durable receives resolve inbox
+handling, successful operation completion, handler state, and any outgoing
+outbox writes from the target module persistence context. Existing
+single-`DbContext` setups remain supported, but modular-monolith samples should
+prefer one module-owned `DbContext` per module.
+
 Domain event persistence is proposed as an optional module boundary capability
 in [ADR 0028](../adr/0028-domain-event-persistence-capability.md). It is not
 part of the current implemented persistence contract.

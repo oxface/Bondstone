@@ -5,12 +5,12 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bondstone.Modules;
 
 internal sealed class ModuleCommandReceiveInboxPipelineBehavior<TCommand>(
-    IServiceProvider serviceProvider)
+    DurableModuleInboxHandlerExecutorResolver inboxHandlerExecutorResolver)
     : IModuleCommandSystemPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
-    private readonly IServiceProvider _serviceProvider =
-        serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+    private readonly DurableModuleInboxHandlerExecutorResolver _inboxHandlerExecutorResolver =
+        inboxHandlerExecutorResolver ?? throw new ArgumentNullException(nameof(inboxHandlerExecutorResolver));
 
     public int Order => ModuleCommandSystemPipelineOrder.ReceiveInbox;
 
@@ -38,7 +38,7 @@ internal sealed class ModuleCommandReceiveInboxPipelineBehavior<TCommand>(
         }
 
         IDurableInboxHandlerExecutor inboxHandlerExecutor =
-            _serviceProvider.GetRequiredService<IDurableInboxHandlerExecutor>();
+            _inboxHandlerExecutorResolver.Resolve(context.ModuleName);
 
         DurableInboxHandleResult result = await inboxHandlerExecutor.HandleOnceAsync(
             receiveInboxRecord,

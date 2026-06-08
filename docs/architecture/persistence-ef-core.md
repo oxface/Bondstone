@@ -70,6 +70,16 @@ boundary wraps normal application pipeline behaviors. The host still owns the
 environment-specific DbContext provider configuration, connection strings,
 schema policy, and operational topology.
 
+For modular-monolith durable messaging, the command loop resolves durable EF
+stores by module name when module-specific provider registrations are present.
+Source-module sends stage outgoing outbox rows and caller-supplied `Pending`
+operation state through the source module `DbContext`. Target-module receives
+stage inbox markers, handler state, successful `Completed` operation state,
+and any outgoing outbox rows through the target module `DbContext`.
+`IDurableOperationReader` can aggregate operation states across configured
+module stores and returns completed state ahead of pending state for the same
+operation id.
+
 `EntityFrameworkCoreDurableOutboxWriter<TDbContext>` stages outgoing outbox
 messages in the current EF Core `DbContext`. It does not call
 `SaveChangesAsync`; callers keep control of the transaction that commits
@@ -121,3 +131,7 @@ operation-state completion updates through the EF scope. Receive failure
 state, retry state, stale receive recovery, and receive acknowledgement policy
 remain future durable-boundary pieces. The EF scope remains the lower-level
 transaction companion, not a standalone public unit-of-work API.
+
+Sample and integration verification should assert persisted state after the EF
+transaction commits. In-handler signals are not durable completion evidence
+because the module transaction may still be open.

@@ -55,6 +55,15 @@ hosted service and does not own polling, leader election, singleton sweeper
 coordination, route circuit breaking, archiving, or dead-letter routing.
 Hosted worker composition lives outside core in `Bondstone.Hosting`.
 
+For module-owned durable persistence, module-specific outbox writers and
+outbox dispatchers can be registered by provider packages. Durable sends
+resolve the source module writer, while the app-facing dispatcher can aggregate
+dispatch across configured local module outboxes. The underlying claim, lease,
+transport, and outcome-recording contracts remain per persistence boundary.
+The `IDurableModule*` persistence contracts are provider-extension contracts;
+application code should normally configure them through provider setup helpers
+such as PostgreSQL module persistence registration.
+
 ## Inbox
 
 `DurableInboxMessageKey` identifies receive-side deduplication by stable
@@ -100,6 +109,10 @@ request carries a caller-supplied durable operation id. Command send stages
 stages `Completed` inside module command execution. Failure states, running
 states, retry state, stale receive recovery, cancellation, and result payloads
 remain later policy.
+
+When module-owned operation stores are configured, operation reads can
+aggregate across local module stores. Completed state takes precedence over
+pending state for the same operation id in the current command loop.
 
 ## Provider Boundaries
 

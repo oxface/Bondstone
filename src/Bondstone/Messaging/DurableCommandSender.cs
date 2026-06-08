@@ -4,23 +4,24 @@ using Bondstone.Persistence;
 namespace Bondstone.Messaging;
 
 internal sealed class DurableCommandSender(
-    IDurableOutboxWriter outboxWriter,
+    DurableModuleOutboxWriterResolver outboxWriterResolver,
     IMessageTypeRegistry messageTypeRegistry,
     IModuleExecutionContextAccessor executionContextAccessor,
+    DurableModuleOperationStateStoreResolver operationStateStoreResolver,
     IDurablePayloadSerializer? payloadSerializer = null,
-    IDurableOperationStateStore? operationStateStore = null,
     TimeProvider? timeProvider = null)
     : IDurableCommandSender
 {
-    private readonly IDurableOutboxWriter _outboxWriter =
-        outboxWriter ?? throw new ArgumentNullException(nameof(outboxWriter));
+    private readonly DurableModuleOutboxWriterResolver _outboxWriterResolver =
+        outboxWriterResolver ?? throw new ArgumentNullException(nameof(outboxWriterResolver));
     private readonly IMessageTypeRegistry _messageTypeRegistry =
         messageTypeRegistry ?? throw new ArgumentNullException(nameof(messageTypeRegistry));
     private readonly IModuleExecutionContextAccessor _executionContextAccessor =
         executionContextAccessor ?? throw new ArgumentNullException(nameof(executionContextAccessor));
+    private readonly DurableModuleOperationStateStoreResolver _operationStateStoreResolver =
+        operationStateStoreResolver ?? throw new ArgumentNullException(nameof(operationStateStoreResolver));
     private readonly IDurablePayloadSerializer _payloadSerializer =
         payloadSerializer ?? new SystemTextJsonDurablePayloadSerializer();
-    private readonly IDurableOperationStateStore? _operationStateStore = operationStateStore;
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     public async ValueTask<DurableCommandSendResult> SendAsync<TCommand>(
@@ -76,13 +77,17 @@ internal sealed class DurableCommandSender(
             causationId,
             partitionKey);
 
+        string sourceModule = executionContext.ModuleName;
+        IDurableOutboxWriter outboxWriter = _outboxWriterResolver.Resolve(sourceModule);
         IDurableOperationStateStore? operationStateStore = null;
         if (durableOperationId is Guid operationId)
         {
-            operationStateStore = ResolveOperationStateStore(operationId);
+            operationStateStore = _operationStateStoreResolver.Resolve(
+                sourceModule,
+                operationId);
         }
 
-        await _outboxWriter.WriteAsync(envelope, ct);
+        await outboxWriter.WriteAsync(envelope, ct);
 
         if (durableOperationId is Guid operationIdToTrack)
         {
@@ -97,17 +102,6 @@ internal sealed class DurableCommandSender(
             messageId,
             durableOperationId,
             DurableCommandSendStatus.Accepted);
-    }
-
-    private IDurableOperationStateStore ResolveOperationStateStore(Guid durableOperationId)
-    {
-        if (_operationStateStore is not null)
-        {
-            return _operationStateStore;
-        }
-
-        throw new InvalidOperationException(
-            $"Durable command send with operation id '{durableOperationId}' requires {nameof(IDurableOperationStateStore)} to be registered.");
     }
 
     private static async ValueTask SavePendingOperationStateIfUnknownAsync(

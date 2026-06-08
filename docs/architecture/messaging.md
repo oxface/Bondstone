@@ -148,6 +148,13 @@ module persistence, that completion update is saved in the same module
 transaction as handler state, receive inbox markers, and any outgoing outbox
 messages.
 
+When module-owned durable EF persistence is configured, `Pending` operation
+state is staged in the source module persistence context during send and
+`Completed` operation state is staged in the target module persistence context
+during receive. `IDurableOperationReader` can aggregate configured module
+operation stores and returns completed state ahead of pending state for the
+same operation id.
+
 Operation states do not define polling, timeout, result deserialization,
 `send and wait` behavior, running-state reporting, failure-state reporting,
 retry state, or stale receive recovery. Handler exceptions still roll back the

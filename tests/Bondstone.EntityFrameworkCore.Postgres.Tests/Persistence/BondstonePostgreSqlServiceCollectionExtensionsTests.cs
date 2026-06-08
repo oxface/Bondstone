@@ -1,6 +1,8 @@
 using Bondstone.Configuration;
+using Bondstone.EntityFrameworkCore.Persistence;
 using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Messaging;
+using Bondstone.Modules;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,6 +84,81 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         AssertContainsScopedFactory<IDurableOutboxDispatchRecorder>(services);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UsePostgreSqlPersistence_WhenBoundToModule_RegistersModuleDurablePersistence()
+    {
+        var services = new ServiceCollection();
+        var persistenceWasMarked = false;
+
+        services.AddBondstone(builder =>
+        {
+            builder.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UseEntityFrameworkCorePersistence<PostgreSqlTestDbContext>();
+                module.Commands.RegisterHandler<TestDurableCommand, TestDurableCommandHandler>();
+            });
+
+            builder.UsePostgreSqlPersistence<PostgreSqlTestDbContext>(
+                "fulfillment",
+                "Host=localhost;Database=bondstone",
+                schema: "fulfillment");
+
+            persistenceWasMarked = builder.Outbox.HasPersistenceProvider;
+        });
+
+        Assert.True(persistenceWasMarked);
+        AssertContainsScopedFactory<IDurableModuleOutboxWriter>(services);
+        AssertContainsScopedFactory<IDurableModuleInboxHandlerExecutor>(services);
+        AssertContainsScopedFactory<IDurableModuleOperationStateStore>(services);
+        AssertContainsScopedFactory<IDurableModuleOutboxDispatcher>(services);
+        AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstonePostgreSqlModulePersistence_WhenDefaultDispatcherAlreadyRegistered_ReplacesWithAggregator()
+    {
+        var services = new ServiceCollection();
+        services.AddTransient<IDurableOutboxDispatcher, DurableOutboxDispatcher>();
+
+        services.AddBondstonePostgreSqlModulePersistence<PostgreSqlTestDbContext>(
+            "fulfillment",
+            schema: "fulfillment");
+
+        Assert.DoesNotContain(
+            services,
+            static descriptor =>
+                descriptor.ServiceType == typeof(IDurableOutboxDispatcher)
+                && descriptor.ImplementationType == typeof(DurableOutboxDispatcher));
+        AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstonePostgreSqlModulePersistence_WhenCustomDispatcherAlreadyRegistered_PreservesCustomDispatcher()
+    {
+        var services = new ServiceCollection();
+        services.AddTransient<IDurableOutboxDispatcher, CustomDispatcher>();
+
+        services.AddBondstonePostgreSqlModulePersistence<PostgreSqlTestDbContext>(
+            "fulfillment",
+            schema: "fulfillment");
+
+        Assert.Contains(
+            services,
+            static descriptor =>
+                descriptor.ServiceType == typeof(IDurableOutboxDispatcher)
+                && descriptor.ImplementationType == typeof(CustomDispatcher)
+                && descriptor.Lifetime == ServiceLifetime.Transient);
+        Assert.DoesNotContain(
+            services,
+            static descriptor =>
+                descriptor.ServiceType == typeof(IDurableOutboxDispatcher)
+                && descriptor.ImplementationType == typeof(DurableModuleOutboxDispatchAggregator));
+    }
+
     private static void AssertContainsScoped<TService>(
         IServiceCollection services)
     {
@@ -101,5 +178,41 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
                 descriptor.ServiceType == typeof(TService)
                 && descriptor.ImplementationFactory is not null
                 && descriptor.Lifetime == ServiceLifetime.Scoped);
+    }
+
+    private static void AssertContainsTransient<TImplementation>(
+        IServiceCollection services)
+    {
+        Assert.Contains(
+            services,
+            descriptor =>
+                descriptor.ServiceType == typeof(IDurableOutboxDispatcher)
+                && descriptor.ImplementationType == typeof(TImplementation)
+                && descriptor.Lifetime == ServiceLifetime.Transient);
+    }
+
+    [DurableCommandIdentity("fulfillment.test.command.v1")]
+    public sealed record TestDurableCommand : IDurableCommand;
+
+    public sealed class TestDurableCommandHandler : ICommandHandler<TestDurableCommand>
+    {
+        public ValueTask HandleAsync(
+            TestDurableCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CustomDispatcher : IDurableOutboxDispatcher
+    {
+        public ValueTask<DurableOutboxDispatchResult> DispatchAsync(
+            string claimedBy,
+            TimeSpan leaseDuration,
+            int maxCount = 100,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult(new DurableOutboxDispatchResult(0, 0, 0, 0, 0));
+        }
     }
 }

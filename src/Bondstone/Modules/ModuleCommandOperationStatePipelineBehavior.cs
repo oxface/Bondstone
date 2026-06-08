@@ -5,12 +5,15 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bondstone.Modules;
 
 internal sealed class ModuleCommandOperationStatePipelineBehavior<TCommand>(
-    IServiceProvider serviceProvider)
+    IServiceProvider serviceProvider,
+    DurableModuleOperationStateStoreResolver operationStateStoreResolver)
     : IModuleCommandSystemPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly IServiceProvider _serviceProvider =
         serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+    private readonly DurableModuleOperationStateStoreResolver _operationStateStoreResolver =
+        operationStateStoreResolver ?? throw new ArgumentNullException(nameof(operationStateStoreResolver));
 
     public int Order => ModuleCommandSystemPipelineOrder.OperationState;
 
@@ -43,7 +46,9 @@ internal sealed class ModuleCommandOperationStatePipelineBehavior<TCommand>(
         }
 
         IDurableOperationStateStore operationStateStore =
-            ResolveOperationStateStore(durableOperationId);
+            _operationStateStoreResolver.Resolve(
+                context.ModuleName,
+                durableOperationId);
 
         await next(ct);
 
@@ -69,17 +74,4 @@ internal sealed class ModuleCommandOperationStatePipelineBehavior<TCommand>(
             ct);
     }
 
-    private IDurableOperationStateStore ResolveOperationStateStore(Guid durableOperationId)
-    {
-        IDurableOperationStateStore? operationStateStore =
-            _serviceProvider.GetService<IDurableOperationStateStore>();
-
-        if (operationStateStore is not null)
-        {
-            return operationStateStore;
-        }
-
-        throw new InvalidOperationException(
-            $"Durable command execution with operation id '{durableOperationId}' requires {nameof(IDurableOperationStateStore)} to be registered.");
-    }
 }

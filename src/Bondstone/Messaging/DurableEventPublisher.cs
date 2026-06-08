@@ -4,15 +4,15 @@ using Bondstone.Persistence;
 namespace Bondstone.Messaging;
 
 internal sealed class DurableEventPublisher(
-    IDurableOutboxWriter outboxWriter,
+    DurableModuleOutboxWriterResolver outboxWriterResolver,
     IMessageTypeRegistry messageTypeRegistry,
     IModuleExecutionContextAccessor executionContextAccessor,
     IDurablePayloadSerializer? payloadSerializer = null,
     TimeProvider? timeProvider = null)
     : IDurableEventPublisher
 {
-    private readonly IDurableOutboxWriter _outboxWriter =
-        outboxWriter ?? throw new ArgumentNullException(nameof(outboxWriter));
+    private readonly DurableModuleOutboxWriterResolver _outboxWriterResolver =
+        outboxWriterResolver ?? throw new ArgumentNullException(nameof(outboxWriterResolver));
     private readonly IMessageTypeRegistry _messageTypeRegistry =
         messageTypeRegistry ?? throw new ArgumentNullException(nameof(messageTypeRegistry));
     private readonly IModuleExecutionContextAccessor _executionContextAccessor =
@@ -70,7 +70,10 @@ internal sealed class DurableEventPublisher(
             causationId,
             partitionKey);
 
-        await _outboxWriter.WriteAsync(envelope, ct);
+        IDurableOutboxWriter outboxWriter = _outboxWriterResolver.Resolve(
+            executionContext.ModuleName);
+
+        await outboxWriter.WriteAsync(envelope, ct);
 
         return new DurableEventPublishResult(
             messageId,

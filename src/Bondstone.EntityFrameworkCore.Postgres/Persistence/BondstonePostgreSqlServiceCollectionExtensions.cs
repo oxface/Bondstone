@@ -1,6 +1,8 @@
 using Bondstone.EntityFrameworkCore.Persistence;
 using Bondstone.EntityFrameworkCore.Postgres.Inbox;
 using Bondstone.EntityFrameworkCore.Postgres.Outbox;
+using Bondstone.EntityFrameworkCore.Operations;
+using Bondstone.EntityFrameworkCore.Outbox;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,5 +55,62 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
                 schema));
 
         return services;
+    }
+
+    public static IServiceCollection AddBondstonePostgreSqlModulePersistence<TDbContext>(
+        this IServiceCollection services,
+        string moduleName,
+        string? schema = null)
+        where TDbContext : DbContext
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        if (string.IsNullOrWhiteSpace(moduleName))
+        {
+            throw new ArgumentException("Module name is required.", nameof(moduleName));
+        }
+
+        ReplaceDefaultDispatcherWithModuleAggregator(services);
+        services.AddScoped<IDurableModuleOutboxWriter>(serviceProvider =>
+            new EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext>(
+                moduleName,
+                serviceProvider.GetRequiredService<TDbContext>(),
+                serviceProvider.GetService<TimeProvider>()));
+        services.AddScoped<IDurableModuleInboxHandlerExecutor>(serviceProvider =>
+            new PostgreSqlModuleDurableInboxHandlerExecutor<TDbContext>(
+                moduleName,
+                serviceProvider.GetRequiredService<TDbContext>(),
+                serviceProvider.GetService<TimeProvider>(),
+                schema));
+        services.AddScoped<IDurableModuleOperationStateStore>(serviceProvider =>
+            new EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>(
+                moduleName,
+                serviceProvider.GetRequiredService<TDbContext>()));
+        services.AddScoped<IDurableModuleOutboxDispatcher>(serviceProvider =>
+            new PostgreSqlModuleDurableOutboxDispatcher<TDbContext>(
+                moduleName,
+                serviceProvider.GetRequiredService<TDbContext>(),
+                serviceProvider.GetRequiredService<IDurableOutboxTransport>(),
+                serviceProvider.GetRequiredService<IDurableOutboxFailurePolicy>(),
+                serviceProvider.GetService<TimeProvider>(),
+                schema));
+
+        return services;
+    }
+
+    private static void ReplaceDefaultDispatcherWithModuleAggregator(IServiceCollection services)
+    {
+        ServiceDescriptor[] defaultDispatcherDescriptors = services
+            .Where(descriptor =>
+                descriptor.ServiceType == typeof(IDurableOutboxDispatcher)
+                && descriptor.ImplementationType == typeof(DurableOutboxDispatcher))
+            .ToArray();
+
+        foreach (ServiceDescriptor descriptor in defaultDispatcherDescriptors)
+        {
+            services.Remove(descriptor);
+        }
+
+        services.TryAddTransient<IDurableOutboxDispatcher, DurableModuleOutboxDispatchAggregator>();
     }
 }

@@ -74,6 +74,10 @@ Implemented surface includes:
   command/event topology diagnostic vocabulary;
 - module-owned EF Core persistence opt-in and EF-specific module command
   transaction behavior over `IEntityFrameworkCorePersistenceScope`;
+- module-aware durable EF persistence resolution for source-module outbox
+  sends, target-module receive inbox handling, target-module operation
+  completion, aggregate operation reading, and aggregate local module outbox
+  dispatching;
 - fluent `AddBondstone` composition and outbox capability validation for
   hosted or dispatcher-based processing.
 
@@ -244,32 +248,45 @@ Goal: prove the implemented command-loop and optional persistence mapping are
 pleasant enough to adopt before adding more durable capabilities.
 
 This phase should exercise the current Phase 1-3 implementation without
-changing the completed phase scope. The first sample should be a modular
-monolith that sends a durable command through outbox and Rebus, receives it
-through module command execution, persists handler state and inbox markers in
-one EF transaction, and shows the normal setup path a consumer should copy.
-Use the sample to discover API friction, naming confusion, missing setup docs,
-and small immediate fixes.
+changing the completed phase scope. The first `samples/ModularMonolith`
+project is an adoption-proof harness rather than the final consumer-style
+sample: it should send a durable command through outbox and Rebus, receive it
+through module command execution, persist handler state and inbox markers in
+one EF transaction, and expose API friction while the MVP surface is still
+settling. Once the MVP API is stable, replace or reshape it into a real sample
+that shows the public setup path an application should copy.
 
 Slices:
 
 1. Create the modular monolith sample according to [samples.md](samples.md):
-   - two or three modules with distinct persistence ownership;
-   - at least one durable command crossing module persistence boundaries;
-   - Rebus in-memory or test-friendly transport first, with PostgreSQL-backed
-     persistence when the sample is ready for infrastructure-backed proof;
-   - one module receive endpoint per independently owned command backlog unless
-     the sample deliberately demonstrates a shared endpoint.
+   - **Initial adoption-proof harness added in `samples/ModularMonolith`.**
+   - The harness uses `ordering` and `fulfillment` modules with module-owned
+     `DbContext` types and PostgreSQL schemas, sends a durable command across
+     module persistence ownership, uses Rebus in-memory transport, and uses
+     PostgreSQL-backed EF Core persistence for outbox claiming, inbox handling,
+     operation state, and module state.
+   - It binds one Rebus receive endpoint, `fulfillment-commands`, to the
+     fulfillment module command backlog.
 2. Add a focused sample verification entrypoint or test shape:
-   - keep default verification fast;
-   - make infrastructure-backed sample verification explicit if PostgreSQL or a
-     real broker is required.
+   - **Initial smoke test added in `tests/Bondstone.Samples.Tests`.**
+   - It is categorized as `Integration`, so default verification remains fast
+     and PostgreSQL/Testcontainers sample verification is explicit.
 3. Update [setup.md](setup.md) with the full preferred receive wiring once the
    sample settles the exact shape.
 4. Record API friction found by the sample as narrow follow-up slices before
    moving deeper into events or domain-event persistence.
+   - Module-owned durable EF persistence was accepted in
+     [ADR 0032](adr/0032-module-owned-durable-ef-persistence.md) and applied
+     to the sample after the first sample slice exposed the one-`DbContext`
+     limitation.
+   - Follow-up: Rebus-host bootstrap in simple console/sample code still needs
+     application-owned wiring between the running Rebus bus and Bondstone's
+     `IRoutingApi`; production hosts can use normal Rebus host integration, but
+     the verification harness has a small bridge.
+   - Follow-up: replace the Phase 4 verification harness with a consumer-style
+     sample after the MVP public API settles.
 
-Remaining in Phase 4: **medium, 3-4 slices**.
+Remaining in Phase 4: **medium, 1-2 slices**.
 
 ### Phase 5: First-Class Events Implementation
 

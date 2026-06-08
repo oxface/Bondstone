@@ -242,6 +242,140 @@ public sealed class DurableCommandSenderTests
         Assert.Empty(outboxWriter.Envelopes);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenModuleWritersAreRegistered_UsesCurrentModuleOutboxWriter()
+    {
+        var salesWriter = new CapturingModuleOutboxWriter("sales");
+        var billingWriter = new CapturingModuleOutboxWriter("billing");
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableModuleOutboxWriter>(salesWriter);
+        services.AddSingleton<IDurableModuleOutboxWriter>(billingWriter);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<SubmitOrderCommand, SubmitOrderHandler>();
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+            });
+
+            bondstone.Module("billing", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<BillOrderCommand, BillOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new SubmitOrderCommand("order-123"));
+
+        DurableMessageEnvelope envelope = Assert.Single(salesWriter.Envelopes);
+        Assert.Equal("sales", envelope.SourceModule);
+        Assert.Empty(billingWriter.Envelopes);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenModuleOperationStoresAreRegistered_UsesCurrentModuleStore()
+    {
+        var salesWriter = new CapturingModuleOutboxWriter("sales");
+        var salesStore = new CapturingModuleOperationStateStore("sales");
+        var billingStore = new CapturingModuleOperationStateStore("billing");
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableModuleOutboxWriter>(salesWriter);
+        services.AddSingleton<IDurableModuleOperationStateStore>(salesStore);
+        services.AddSingleton<IDurableModuleOperationStateStore>(billingStore);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<
+                    SubmitTrackedOrderCommand,
+                    SubmitTrackedOrderHandler>();
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+            });
+
+            bondstone.Module("billing", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<BillOrderCommand, BillOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new SubmitTrackedOrderCommand("order-123", durableOperationId));
+
+        Assert.Single(salesWriter.Envelopes);
+        DurableOperationState state = Assert.Single(salesStore.SavedStates);
+        Assert.Equal(durableOperationId, state.DurableOperationId);
+        Assert.Equal(DurableOperationStatus.Pending, state.Status);
+        Assert.Empty(billingStore.SavedStates);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task OperationReader_WhenModuleStoresHavePendingAndCompleted_ReturnsCompletedState()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var salesStore = new CapturingModuleOperationStateStore("sales")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+        };
+        var fulfillmentStore = new CapturingModuleOperationStateStore("fulfillment")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")),
+        };
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableModuleOperationStateStore>(salesStore);
+        services.AddSingleton<IDurableModuleOperationStateStore>(fulfillmentStore);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        DurableOperationState? state = await scope.ServiceProvider
+            .GetRequiredService<IDurableOperationReader>()
+            .GetStateAsync(durableOperationId);
+
+        Assert.NotNull(state);
+        Assert.Equal(DurableOperationStatus.Completed, state.Status);
+    }
+
     [DurableCommandIdentity("sales.order.submit.v1")]
     public sealed record SubmitOrderCommand(string OrderId) : IDurableCommand;
 
@@ -294,6 +428,19 @@ public sealed class DurableCommandSenderTests
         }
     }
 
+    [DurableCommandIdentity("billing.order.bill.v1")]
+    public sealed record BillOrderCommand(string OrderId) : IDurableCommand;
+
+    public sealed class BillOrderHandler : ICommandHandler<BillOrderCommand>
+    {
+        public ValueTask HandleAsync(
+            BillOrderCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
     [DurableCommandIdentity("sales.order.submit-converted.v1")]
     public sealed record SubmitConvertedOrderCommand(string OrderId) : IDurableCommand;
 
@@ -339,8 +486,53 @@ public sealed class DurableCommandSenderTests
         }
     }
 
+    private sealed class CapturingModuleOutboxWriter(string moduleName)
+        : IDurableModuleOutboxWriter
+    {
+        public string ModuleName { get; } = moduleName;
+
+        public List<DurableMessageEnvelope> Envelopes { get; } = [];
+
+        public ValueTask WriteAsync(
+            DurableMessageEnvelope envelope,
+            CancellationToken ct = default)
+        {
+            Envelopes.Add(envelope);
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private sealed class CapturingOperationStateStore : IDurableOperationStateStore
     {
+        public DurableOperationState? State { get; set; }
+
+        public List<DurableOperationState> SavedStates { get; } = [];
+
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult(
+                State?.DurableOperationId == durableOperationId
+                    ? State
+                    : null);
+        }
+
+        public ValueTask SaveAsync(
+            DurableOperationState state,
+            CancellationToken ct = default)
+        {
+            State = state;
+            SavedStates.Add(state);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CapturingModuleOperationStateStore(string moduleName)
+        : IDurableModuleOperationStateStore
+    {
+        public string ModuleName { get; } = moduleName;
+
         public DurableOperationState? State { get; set; }
 
         public List<DurableOperationState> SavedStates { get; } = [];

@@ -6,11 +6,15 @@
     <Project Path="src/Bondstone.Transport.Rebus/Bondstone.Transport.Rebus.csproj" />
     <Project Path="src/Bondstone/Bondstone.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/ModularMonolith/Bondstone.Samples.ModularMonolith.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Bondstone.Composition.Tests/Bondstone.Composition.Tests.csproj" />
     <Project Path="tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj" />
     <Project Path="tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj" />
     <Project Path="tests/Bondstone.Hosting.Tests/Bondstone.Hosting.Tests.csproj" />
+    <Project Path="tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj" />
     <Project Path="tests/Bondstone.Tests/Bondstone.Tests.csproj" />
     <Project Path="tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj" />
   </Folder>

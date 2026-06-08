@@ -53,6 +53,24 @@ decision for Bondstone packages.
 
 ## Current Status
 
-This sample direction is accepted and documented. Sample projects and runnable
-smoke paths remain deferred; current implementation status is summarized in
-[mvp-plan.md](mvp-plan.md).
+The current `samples/ModularMonolith` project is a Phase 4 adoption-proof
+harness, not the final user-facing sample. It deliberately stays close to the
+implemented command-loop seams so it can validate real library behavior while
+the MVP API is still settling.
+
+The harness has `ordering` and `fulfillment` modules with separate
+module-owned `DbContext` types and PostgreSQL schemas, sends a durable command
+from ordering to fulfillment, dispatches the ordering outbox through Rebus
+in-memory transport, receives through the Rebus module command endpoint
+handler, and persists fulfillment state, inbox markers, and operation
+completion through fulfillment EF persistence.
+
+The focused smoke test lives in
+[`tests/Bondstone.Samples.Tests`](../tests/Bondstone.Samples.Tests) and is an
+`Integration` test because it uses Testcontainers PostgreSQL. Default fast
+verification remains `Unit` and `Application` only; run sample smoke coverage
+with the repository integration test entrypoint.
+
+Once the MVP surface settles, replace this harness with a consumer-style sample
+that demonstrates the preferred public API and application structure rather
+than carrying verification-specific bootstrap code.

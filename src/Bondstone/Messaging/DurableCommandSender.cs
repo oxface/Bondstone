@@ -8,6 +8,7 @@ internal sealed class DurableCommandSender(
     IMessageTypeRegistry messageTypeRegistry,
     IModuleExecutionContextAccessor executionContextAccessor,
     IDurablePayloadSerializer? payloadSerializer = null,
+    IDurableOperationStateStore? operationStateStore = null,
     TimeProvider? timeProvider = null)
     : IDurableCommandSender
 {
@@ -19,6 +20,7 @@ internal sealed class DurableCommandSender(
         executionContextAccessor ?? throw new ArgumentNullException(nameof(executionContextAccessor));
     private readonly IDurablePayloadSerializer _payloadSerializer =
         payloadSerializer ?? new SystemTextJsonDurablePayloadSerializer();
+    private readonly IDurableOperationStateStore? _operationStateStore = operationStateStore;
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     public async ValueTask<DurableCommandSendResult> SendAsync<TCommand>(
@@ -60,6 +62,7 @@ internal sealed class DurableCommandSender(
         MessageTraceContext? capturedTraceContext =
             traceContext ?? MessageTraceContext.CaptureCurrent();
 
+        DateTimeOffset createdAtUtc = _timeProvider.GetUtcNow();
         var envelope = new DurableMessageEnvelope(
             messageId,
             MessageKind.Command,
@@ -67,17 +70,66 @@ internal sealed class DurableCommandSender(
             executionContext.ModuleName,
             targetModule,
             payload,
-            _timeProvider.GetUtcNow(),
+            createdAtUtc,
             durableOperationId,
             capturedTraceContext,
             causationId,
             partitionKey);
 
+        IDurableOperationStateStore? operationStateStore = null;
+        if (durableOperationId is Guid operationId)
+        {
+            operationStateStore = ResolveOperationStateStore(operationId);
+        }
+
         await _outboxWriter.WriteAsync(envelope, ct);
+
+        if (durableOperationId is Guid operationIdToTrack)
+        {
+            await SavePendingOperationStateIfUnknownAsync(
+                operationStateStore!,
+                operationIdToTrack,
+                createdAtUtc,
+                ct);
+        }
 
         return new DurableCommandSendResult(
             messageId,
             durableOperationId,
             DurableCommandSendStatus.Accepted);
+    }
+
+    private IDurableOperationStateStore ResolveOperationStateStore(Guid durableOperationId)
+    {
+        if (_operationStateStore is not null)
+        {
+            return _operationStateStore;
+        }
+
+        throw new InvalidOperationException(
+            $"Durable command send with operation id '{durableOperationId}' requires {nameof(IDurableOperationStateStore)} to be registered.");
+    }
+
+    private static async ValueTask SavePendingOperationStateIfUnknownAsync(
+        IDurableOperationStateStore operationStateStore,
+        Guid durableOperationId,
+        DateTimeOffset updatedAtUtc,
+        CancellationToken ct)
+    {
+        DurableOperationState? existingState = await operationStateStore.GetStateAsync(
+            durableOperationId,
+            ct);
+
+        if (existingState is not null)
+        {
+            return;
+        }
+
+        await operationStateStore.SaveAsync(
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                updatedAtUtc),
+            ct);
     }
 }

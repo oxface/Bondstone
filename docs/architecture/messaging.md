@@ -125,8 +125,33 @@ while causation points to the direct message parent when one exists.
 Durable operation tracking is represented by `DurableOperationState`,
 `DurableOperationStatus`, and `IDurableOperationReader`. The reader returns
 `null` when an operation id is unknown. Operation states are persistence-neutral
-read models that expose a `Status` enum and do not define polling, timeout,
-result deserialization, or `send and wait` behavior.
+read models that expose a `Status` enum.
+
+Operation state is not the delivery ledger. Outbox records track staged and
+dispatched durable messages; inbox records track receive idempotency and
+processed markers. A durable operation id is a caller-visible logical handle
+that can correlate with durable messages and provide a coarse status for the
+workflow the caller started.
+
+The current command loop records operation state only for caller-supplied
+operation ids. The default command sender does not generate an operation id.
+When a durable command send includes one, Bondstone stages `Pending` operation
+state if the operation is unknown and requires `IDurableOperationStateStore` to
+be registered. Repeated sends with an existing operation id do not downgrade
+the existing state.
+
+When a Rebus module command receive envelope carries a durable operation id,
+the module command execution metadata carries that id into the command
+pipeline. After the durable handler path completes successfully, Bondstone
+stages `Completed` operation state inside module command execution. With EF
+module persistence, that completion update is saved in the same module
+transaction as handler state, receive inbox markers, and any outgoing outbox
+messages.
+
+Operation states do not define polling, timeout, result deserialization,
+`send and wait` behavior, running-state reporting, failure-state reporting,
+retry state, or stale receive recovery. Handler exceptions still roll back the
+module transaction and flow to Rebus retry/dead-letter policy.
 
 Receive-side handle-once execution is represented by
 `IDurableInboxHandlerExecutor`. The executor is not a mediator and does not
@@ -186,11 +211,17 @@ to a registered module command route, derives the stable handler identity from
 route metadata, passes the durable inbox record into `IModuleCommandExecutor`,
 and receives the inbox result from `ModuleCommandExecutionResult`. Host
 receive topology can now bind Rebus endpoint names to accepted local modules
-and registers the module command receive pipeline. Receive bindings also
-derive outgoing command destinations for accepted modules, with explicit
-`RouteModule` mappings reserved as overrides and module queue conventions as
-fallback routing for extracted or otherwise remote target modules. Actual Rebus
-listener binding to that topology remains future work.
+and registers the module command receive pipeline plus
+`IRebusModuleCommandEndpointDispatcher`. The endpoint dispatcher validates
+that the named endpoint exists and accepts the envelope target module before
+delegating to the module command receive pipeline. The Rebus module command
+endpoint handler binds one configured endpoint name to the dispatcher, allowing
+Rebus to invoke durable module command receive through a normal
+`RebusDurableMessageEnvelope` handler while the application keeps Rebus
+infrastructure configuration. Receive bindings also derive outgoing command
+destinations for accepted modules, with explicit `RouteModule` mappings
+reserved as overrides and module queue conventions as fallback routing for
+extracted or otherwise remote target modules.
 
 Rebus command destination diagnostics can describe how a target module would
 be addressed before dispatch. Diagnostics report command destination kind,
@@ -204,8 +235,7 @@ Modules that opt into durable messaging must declare persistence, durable
 command handlers must belong to durable-messaging modules, and Rebus receive
 endpoints must target registered local modules that use durable messaging and
 have durable command handlers. These checks cover incomplete local durable
-receive topology before the future listener binding and endpoint dispatcher are
-added.
+receive topology before the Rebus listener starts handling messages.
 
 For durable commands, prefer queue-backed point-to-point delivery. A Rebus
 receive endpoint should usually represent a module-level command backlog so

@@ -16,6 +16,9 @@ public static class BondstoneRebusModuleCommandReceiveServiceCollectionExtension
         services.AddSingleton<IRebusModuleReceiveEndpointRegistry>(
             new RebusModuleReceiveEndpointRegistry(endpoints));
         services.AddBondstoneRebusModuleCommandReceivePipeline();
+        services.TryAddTransient<
+            IRebusModuleCommandEndpointDispatcher,
+            RebusModuleCommandEndpointDispatcher>();
 
         return services;
     }

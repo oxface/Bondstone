@@ -62,4 +62,37 @@ public sealed class EntityFrameworkCoreDurableOperationStateStoreTests
         Assert.Equal(completed, mapped);
     }
 
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task SaveAsync_WhenOperationStateMappingIsMissing_ThrowsClearError()
+    {
+        await using var context = MissingOperationStateMappingDbContext.Create();
+        var store =
+            new EntityFrameworkCoreDurableOperationStateStore<MissingOperationStateMappingDbContext>(
+                context);
+        var state = new DurableOperationState(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            DurableOperationStatus.Pending,
+            DateTimeOffset.Parse("2026-06-04T00:00:00+00:00"));
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await store.SaveAsync(state));
+
+        Assert.Contains("operation-state mapping", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ApplyBondstoneOperationState()", exception.Message, StringComparison.Ordinal);
+    }
+
+    private sealed class MissingOperationStateMappingDbContext(
+        DbContextOptions<MissingOperationStateMappingDbContext> options)
+        : DbContext(options)
+    {
+        public static MissingOperationStateMappingDbContext Create()
+        {
+            var options = new DbContextOptionsBuilder<MissingOperationStateMappingDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+                .Options;
+
+            return new MissingOperationStateMappingDbContext(options);
+        }
+    }
 }

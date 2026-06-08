@@ -1,5 +1,4 @@
 using Bondstone.Messaging;
-using Bondstone.Persistence;
 
 namespace Bondstone.Modules;
 
@@ -14,7 +13,7 @@ public interface IModuleCommandExecutor
     ValueTask<ModuleCommandExecutionResult> ExecuteAsync<TCommand>(
         string moduleName,
         TCommand command,
-        DurableInboxRecord? receiveInboxRecord,
+        ModuleCommandReceiveContext receiveContext,
         CancellationToken ct = default)
         where TCommand : ICommand;
 
@@ -26,6 +25,6 @@ public interface IModuleCommandExecutor
     ValueTask<ModuleCommandExecutionResult> ExecuteAsync(
         string moduleName,
         object command,
-        DurableInboxRecord? receiveInboxRecord,
+        ModuleCommandReceiveContext receiveContext,
         CancellationToken ct = default);
 }

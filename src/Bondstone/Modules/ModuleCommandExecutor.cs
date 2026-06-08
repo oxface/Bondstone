@@ -1,5 +1,4 @@
 using Bondstone.Messaging;
-using Bondstone.Persistence;
 
 namespace Bondstone.Modules;
 
@@ -19,18 +18,63 @@ internal sealed class ModuleCommandExecutor(
         CancellationToken ct = default)
         where TCommand : ICommand
     {
-        return await ExecuteAsync(
+        return await ExecuteCoreAsync(
             moduleName,
             command,
-            receiveInboxRecord: null,
+            receiveContext: null,
             ct);
     }
 
     public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync<TCommand>(
         string moduleName,
         TCommand command,
-        DurableInboxRecord? receiveInboxRecord,
+        ModuleCommandReceiveContext receiveContext,
         CancellationToken ct = default)
+        where TCommand : ICommand
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(receiveContext);
+
+        return await ExecuteCoreAsync(
+            moduleName,
+            command,
+            receiveContext,
+            ct);
+    }
+
+    public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync(
+        string moduleName,
+        object command,
+        CancellationToken ct = default)
+    {
+        return await ExecuteCoreAsync(
+            moduleName,
+            command,
+            receiveContext: null,
+            ct);
+    }
+
+    public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync(
+        string moduleName,
+        object command,
+        ModuleCommandReceiveContext receiveContext,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(receiveContext);
+
+        return await ExecuteCoreAsync(
+            moduleName,
+            command,
+            receiveContext,
+            ct);
+    }
+
+    private async ValueTask<ModuleCommandExecutionResult> ExecuteCoreAsync<TCommand>(
+        string moduleName,
+        TCommand command,
+        ModuleCommandReceiveContext? receiveContext,
+        CancellationToken ct)
         where TCommand : ICommand
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -42,27 +86,15 @@ internal sealed class ModuleCommandExecutor(
         return await route.InvokeAsync(
             _serviceProvider,
             command,
-            receiveInboxRecord,
+            receiveContext,
             ct);
     }
 
-    public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync(
+    private async ValueTask<ModuleCommandExecutionResult> ExecuteCoreAsync(
         string moduleName,
         object command,
-        CancellationToken ct = default)
-    {
-        return await ExecuteAsync(
-            moduleName,
-            command,
-            receiveInboxRecord: null,
-            ct);
-    }
-
-    public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync(
-        string moduleName,
-        object command,
-        DurableInboxRecord? receiveInboxRecord,
-        CancellationToken ct = default)
+        ModuleCommandReceiveContext? receiveContext,
+        CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -80,7 +112,7 @@ internal sealed class ModuleCommandExecutor(
         return await route.InvokeAsync(
             _serviceProvider,
             command,
-            receiveInboxRecord,
+            receiveContext,
             ct);
     }
 }

@@ -13,7 +13,7 @@ public sealed class ModuleCommandRoute
         MessageTypeRegistration? messageTypeRegistration,
         string? handlerIdentity,
         Type handlerType,
-        Func<IServiceProvider, object, ModuleCommandRoute, DurableInboxRecord?, CancellationToken, ValueTask<ModuleCommandExecutionResult>> invoke)
+        Func<IServiceProvider, object, ModuleCommandRoute, ModuleCommandReceiveContext?, CancellationToken, ValueTask<ModuleCommandExecutionResult>> invoke)
     {
         ArgumentNullException.ThrowIfNull(commandType);
         ArgumentNullException.ThrowIfNull(handlerType);
@@ -55,7 +55,7 @@ public sealed class ModuleCommandRoute
         _invoke = invoke;
     }
 
-    private readonly Func<IServiceProvider, object, ModuleCommandRoute, DurableInboxRecord?, CancellationToken, ValueTask<ModuleCommandExecutionResult>> _invoke;
+    private readonly Func<IServiceProvider, object, ModuleCommandRoute, ModuleCommandReceiveContext?, CancellationToken, ValueTask<ModuleCommandExecutionResult>> _invoke;
 
     public string ModuleName { get; }
 
@@ -74,13 +74,18 @@ public sealed class ModuleCommandRoute
     internal ValueTask<ModuleCommandExecutionResult> InvokeAsync(
         IServiceProvider serviceProvider,
         object command,
-        DurableInboxRecord? receiveInboxRecord,
+        ModuleCommandReceiveContext? receiveContext,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
         ArgumentNullException.ThrowIfNull(command);
 
-        return _invoke(serviceProvider, command, this, receiveInboxRecord, ct);
+        return _invoke(
+            serviceProvider,
+            command,
+            this,
+            receiveContext,
+            ct);
     }
 
     internal static ModuleCommandRoute Create<TCommand, THandler>(
@@ -103,7 +108,7 @@ public sealed class ModuleCommandRoute
         IServiceProvider serviceProvider,
         object command,
         ModuleCommandRoute route,
-        DurableInboxRecord? receiveInboxRecord,
+        ModuleCommandReceiveContext? receiveContext,
         CancellationToken ct)
         where TCommand : ICommand
         where THandler : class, ICommandHandler<TCommand>
@@ -136,7 +141,7 @@ public sealed class ModuleCommandRoute
         ModuleCommandPipeline pipeline = BuildPipeline(
             typedCommand,
             route,
-            receiveInboxRecord,
+            receiveContext,
             behaviors,
             handler);
 
@@ -147,12 +152,14 @@ public sealed class ModuleCommandRoute
     private static ModuleCommandPipeline BuildPipeline<TCommand>(
         TCommand command,
         ModuleCommandRoute route,
-        DurableInboxRecord? receiveInboxRecord,
+        ModuleCommandReceiveContext? receiveContext,
         IReadOnlyList<IModuleCommandPipelineBehavior<TCommand>> behaviors,
         ModuleCommandPipelineNext handler)
         where TCommand : ICommand
     {
-        var context = new ModuleCommandExecutionContext(route, receiveInboxRecord);
+        var context = new ModuleCommandExecutionContext(
+            route,
+            receiveContext);
         ModuleCommandPipelineNext next = handler;
 
         for (int index = behaviors.Count - 1; index >= 0; index--)

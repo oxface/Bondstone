@@ -91,8 +91,15 @@ those operations reliable.
 
 `IDurableOperationStateStore` saves durable operation state by durable
 operation id and inherits `IDurableOperationReader` for read access. The core
-contract does not enforce transition rules, concurrency tokens, polling,
-timeouts, or result deserialization.
+contract does not enforce concurrency tokens, polling, timeouts, or result
+deserialization.
+
+Current command-loop integration uses the store only when an envelope or send
+request carries a caller-supplied durable operation id. Command send stages
+`Pending` when the operation is unknown. Successful durable command receive
+stages `Completed` inside module command execution. Failure states, running
+states, retry state, stale receive recovery, cancellation, and result payloads
+remain later policy.
 
 ## Provider Boundaries
 

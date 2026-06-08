@@ -66,9 +66,10 @@ always wrap normal application pipeline behaviors. For modules that opt into
 EF persistence, an EF-specific system behavior wraps validation and handler
 execution in the EF persistence scope and saves changes before commit. A core
 system behavior also sets the current module execution context so durable
-sends can record the executing module as the source module. Future pipeline
-behavior will add operation-state updates, receive tracing, and deeper module
-identity scopes.
+sends can record the executing module as the source module. Another core
+system behavior records durable operation completion for caller-supplied
+operation ids after successful command execution. Future pipeline behavior
+will add receive tracing and deeper module identity scopes.
 
 `ICommand` should be used for module endpoint and boundary operations that
 benefit from the module pipeline. Ordinary helper methods and internal domain
@@ -116,7 +117,10 @@ capability through `IBondstoneModuleRegistry`. When a module combines
 that the module DbContext model includes outbox and inbox mappings before
 running the command pipeline. This keeps persistence-only EF modules free to
 omit durable messaging tables while durable messaging modules fail with a
-specific mapping error.
+specific mapping error. Operation-state mapping is required when operation
+tracking is used; EF operation-state persistence fails with a clear
+`ApplyBondstoneOperationState()` mapping error if the store is used without
+that mapping.
 
 `AddBondstone` also validates durable-messaging capability declarations after
 host configuration runs. A module that calls `UseDurableMessaging` must
@@ -203,13 +207,19 @@ topology; applications should not need a pairwise module route matrix.
 
 The Rebus transport builder also records receive endpoint topology: an
 endpoint name can accept one or more local modules, and configuring receive
-topology registers the module command receive pipeline. Receive bindings also
-derive outgoing command destinations for the accepted modules unless an
-explicit route overrides them. When a module queue convention is configured,
-outgoing commands can route to target modules by convention even if this host
-does not receive that module locally. The intended shape is listener binding to
-local modules, not a generic route table. Actual Rebus worker/listener binding
-to the configured endpoint metadata remains future work.
+topology registers the module command receive pipeline and endpoint
+dispatcher. The dispatcher accepts a Rebus endpoint name plus a Bondstone wire
+envelope, validates that the endpoint exists and accepts the envelope target
+module, then delegates to the module command receive pipeline. The Rebus
+module command endpoint handler binds a configured endpoint name to that
+dispatcher so a normal Rebus receive loop can dispatch command envelopes into
+`IModuleCommandExecutor`. Receive bindings also derive outgoing command
+destinations for the accepted modules unless an explicit route overrides them.
+When a module queue convention is configured, outgoing commands can route to
+target modules by convention even if this host does not receive that module
+locally. The intended shape is listener binding to local modules, not a
+generic route table. Rebus broker, worker, retry, dead-letter, serializer, and
+input queue setup remains application-owned Rebus configuration.
 
 Rebus receive topology is validated at `AddBondstone` composition time. Every
 accepted module on a Rebus receive endpoint must be registered in the host,

@@ -1,7 +1,9 @@
 using Bondstone.Configuration;
+using Bondstone.EntityFrameworkCore.Operations;
 using Bondstone.EntityFrameworkCore.Persistence;
 using Bondstone.Messaging;
 using Bondstone.Modules;
+using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
@@ -200,6 +202,68 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
 
         CommandCallLog log = serviceProvider.GetRequiredService<CommandCallLog>();
         Assert.Equal(["handle:A-100"], log.Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ModuleCommands_WhenReceiveHasOperationId_SavesCompletedOperationStateInModuleTransaction()
+    {
+        string databaseName = Guid.NewGuid().ToString("N");
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+        services.AddSingleton<IDurableInboxHandlerExecutor>(
+            new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.Handled));
+        services.AddDbContext<FullDurableMappingDbContext>(options =>
+            options
+                .UseInMemoryDatabase(databaseName)
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+        services.AddBondstoneEntityFrameworkCorePersistence<FullDurableMappingDbContext>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UseEntityFrameworkCorePersistence<FullDurableMappingDbContext>();
+                module.Commands.RegisterHandler<
+                    StoreDurableHandledCommand,
+                    StoreDurableHandledCommandHandler>();
+            });
+        });
+
+        var inboxRecord = new DurableInboxRecord(
+            new DurableInboxMessageKey(
+                Guid.Parse("3f1a9e26-75d4-4a7d-bb48-ae453f5e5e02"),
+                "fulfillment",
+                "fulfillment.store-handled.v1"),
+            DateTimeOffset.Parse("2026-06-08T12:00:00+00:00"));
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    new StoreDurableHandledCommand("A-100"),
+                    new ModuleCommandReceiveContext(
+                        inboxRecord,
+                        durableOperationId));
+        }
+
+        using IServiceScope verificationScope = serviceProvider.CreateScope();
+        FullDurableMappingDbContext context =
+            verificationScope.ServiceProvider.GetRequiredService<FullDurableMappingDbContext>();
+        HandledCommandEntity handledCommand = await context.HandledCommands.SingleAsync();
+        OperationStateEntity operationState = await context
+            .Set<OperationStateEntity>()
+            .SingleAsync();
+
+        Assert.Equal("A-100", handledCommand.Id);
+        Assert.Equal(durableOperationId, operationState.DurableOperationId);
+        Assert.Equal(DurableOperationStatus.Completed, operationState.Status);
     }
 
     [Fact]
@@ -406,6 +470,24 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
         }
     }
 
+    [DurableCommandIdentity("fulfillment.store-handled.v1")]
+    public sealed record StoreDurableHandledCommand(string Id) : IDurableCommand;
+
+    public sealed class StoreDurableHandledCommandHandler(
+        FullDurableMappingDbContext context,
+        CommandCallLog log)
+        : ICommandHandler<StoreDurableHandledCommand>
+    {
+        public ValueTask HandleAsync(
+            StoreDurableHandledCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"handle:{command.Id}");
+            context.HandledCommands.Add(new HandledCommandEntity(command.Id));
+            return ValueTask.CompletedTask;
+        }
+    }
+
     public sealed class ModuleTransactionTestDbContext(
         DbContextOptions<ModuleTransactionTestDbContext> options,
         CommandCallLog log)
@@ -458,6 +540,44 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
         {
             modelBuilder.ApplyBondstoneOutbox();
             modelBuilder.ApplyBondstoneInbox();
+        }
+    }
+
+    public sealed class FullDurableMappingDbContext(
+        DbContextOptions<FullDurableMappingDbContext> options)
+        : DbContext(options)
+    {
+        public DbSet<HandledCommandEntity> HandledCommands => Set<HandledCommandEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.ApplyBondstoneOutbox();
+            modelBuilder.ApplyBondstoneInbox();
+            modelBuilder.ApplyBondstoneOperationState();
+            modelBuilder.Entity<HandledCommandEntity>(
+                entity =>
+                {
+                    entity.HasKey(record => record.Id);
+                });
+        }
+    }
+
+    private sealed class CapturingInboxHandlerExecutor(DurableInboxHandleStatus status)
+        : IDurableInboxHandlerExecutor
+    {
+        public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
+            DurableInboxRecord record,
+            Func<CancellationToken, ValueTask> handler,
+            Func<CancellationToken, ValueTask> commit,
+            CancellationToken ct = default)
+        {
+            if (status == DurableInboxHandleStatus.Handled)
+            {
+                await handler(ct);
+                await commit(ct);
+            }
+
+            return new DurableInboxHandleResult(status, record);
         }
     }
 

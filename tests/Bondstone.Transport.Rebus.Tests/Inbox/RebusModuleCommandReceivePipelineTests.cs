@@ -54,6 +54,46 @@ public sealed class RebusModuleCommandReceivePipelineTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task HandleOnceAsync_WhenOperationIdIsPresent_RecordsCompletedOperationState()
+    {
+        var inboxExecutor = new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.Handled);
+        var operationStore = new CapturingOperationStateStore();
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+        services.AddSingleton<IDurableInboxHandlerExecutor>(inboxExecutor);
+        services.AddSingleton<IDurableOperationStateStore>(operationStore);
+        services.AddSingleton<TimeProvider>(
+            new FixedTimeProvider(DateTimeOffset.Parse("2026-06-06T12:01:00+00:00")));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.UseRebusModuleCommandReceivePipeline();
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IRebusModuleCommandReceivePipeline pipeline =
+            scope.ServiceProvider.GetRequiredService<IRebusModuleCommandReceivePipeline>();
+
+        DurableInboxHandleResult result = await pipeline.HandleOnceAsync(
+            CreateEnvelope(durableOperationId: durableOperationId));
+
+        Assert.Equal(DurableInboxHandleStatus.Handled, result.Status);
+        DurableOperationState state = Assert.Single(operationStore.SavedStates);
+        Assert.Equal(durableOperationId, state.DurableOperationId);
+        Assert.Equal(DurableOperationStatus.Completed, state.Status);
+        Assert.Equal(DateTimeOffset.Parse("2026-06-06T12:01:00+00:00"), state.UpdatedAtUtc);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task HandleOnceAsync_UsesConfiguredDurablePayloadJsonOptions()
     {
         var inboxExecutor = new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.Handled);
@@ -139,7 +179,8 @@ public sealed class RebusModuleCommandReceivePipelineTests
     }
 
     private static RebusDurableMessageEnvelope CreateEnvelope(
-        string payload = """{"orderId":"A-100"}""")
+        string payload = """{"orderId":"A-100"}""",
+        Guid? durableOperationId = null)
     {
         return new RebusDurableMessageEnvelope(
             Guid.Parse("e37baceb-4d6f-4c91-9870-6d209cd258a8"),
@@ -150,7 +191,7 @@ public sealed class RebusModuleCommandReceivePipelineTests
             payload,
             null,
             DateTimeOffset.Parse("2026-06-05T12:00:00+00:00"),
-            DurableOperationId: null,
+            durableOperationId,
             TraceParent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
             TraceState: null,
             TraceBaggage: null,
@@ -236,6 +277,26 @@ public sealed class RebusModuleCommandReceivePipelineTests
             }
 
             return new DurableInboxHandleResult(status, record);
+        }
+    }
+
+    private sealed class CapturingOperationStateStore : IDurableOperationStateStore
+    {
+        public List<DurableOperationState> SavedStates { get; } = [];
+
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult<DurableOperationState?>(null);
+        }
+
+        public ValueTask SaveAsync(
+            DurableOperationState state,
+            CancellationToken ct = default)
+        {
+            SavedStates.Add(state);
+            return ValueTask.CompletedTask;
         }
     }
 

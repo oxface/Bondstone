@@ -13,6 +13,8 @@ public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext>(
         Guid durableOperationId,
         CancellationToken ct = default)
     {
+        ValidateOperationStateMapping();
+
         OperationStateEntity? entity = await context
             .Set<OperationStateEntity>()
             .FindAsync([durableOperationId], ct);
@@ -25,6 +27,7 @@ public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext>(
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(state);
+        ValidateOperationStateMapping();
 
         OperationStateEntity? existing = await context
             .Set<OperationStateEntity>()
@@ -37,5 +40,16 @@ public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext>(
         }
 
         existing.ApplyState(state);
+    }
+
+    private void ValidateOperationStateMapping()
+    {
+        if (context.Model.FindEntityType(typeof(OperationStateEntity)) is not null)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"DbContext '{context.GetType().FullName}' is missing the Bondstone EF Core operation-state mapping. Map operation state with ApplyBondstoneOperationState(), or use ApplyBondstonePersistence().");
     }
 }

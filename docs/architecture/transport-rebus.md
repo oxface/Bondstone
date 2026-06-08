@@ -40,9 +40,15 @@ bondstone.UseRebusTransport(rebus =>
 
 Receive endpoint bindings are recorded in
 `IRebusModuleReceiveEndpointRegistry`, and configuring one registers the
-module command receive pipeline. A module may be accepted by only one Rebus
-receive endpoint in a host; duplicate matching registrations are idempotent.
-With the default convention, module `fulfillment` maps to Rebus endpoint
+module command receive pipeline and endpoint dispatcher. The dispatcher
+accepts an endpoint name and `RebusDurableMessageEnvelope`, verifies the
+endpoint is configured and accepts the envelope target module, then calls the
+module command receive pipeline. `RebusModuleCommandEndpointHandler` binds a
+configured endpoint name to the dispatcher so Rebus can invoke module command
+receive through a normal `IHandleMessages<RebusDurableMessageEnvelope>`
+handler. A module may be accepted by only one Rebus receive endpoint in a
+host; duplicate matching registrations are idempotent. With the default
+convention, module `fulfillment` maps to Rebus endpoint
 `fulfillment-commands`. A custom naming convention can be provided with
 `UseModuleQueueConvention(moduleName => ...)`. The convention can route
 outgoing commands to any target module by name, including modules extracted to
@@ -220,15 +226,18 @@ metadata, deserializes payloads through Bondstone's shared
 from the receive primitive.
 
 Host-owned receive endpoint topology can now record which local modules a
-Rebus endpoint accepts. Actual Rebus worker/listener binding to that topology
-is still future work.
+Rebus endpoint accepts. `IRebusModuleCommandEndpointDispatcher` validates the
+endpoint name and target module before calling the module command receive
+pipeline. `AddBondstoneRebusModuleCommandEndpointHandler(endpointName)`
+registers the Rebus handler and binds it to one configured endpoint name.
+Applications still configure Rebus' broker transport, input queue, serializer,
+workers, retry policy, and dead-letter policy through Rebus-native APIs.
 
 ## Deferred Rebus Work
 
-Deferred Rebus work includes event publish/subscribe semantics, actual Rebus
-worker/listener binding to configured module receive endpoints, endpoint
-dispatcher APIs, route or destination circuit breaking, stale-claim recovery
-sweeps, dead-letter routing, receive retry state, stale receive recovery,
-event topic/subscription diagnostics, and worker metrics. These remain
-hosting, persistence, or future receive-pipeline decisions unless a later ADR
-accepts a transport-specific policy.
+Deferred Rebus work includes event publish/subscribe semantics, endpoint
+dispatch diagnostics, route or destination circuit breaking, stale-claim
+recovery sweeps, dead-letter routing, receive retry state, stale receive
+recovery, event topic/subscription diagnostics, and worker metrics. These
+remain hosting, persistence, or future receive-pipeline decisions unless a
+later ADR accepts a transport-specific policy.

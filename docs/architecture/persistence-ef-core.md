@@ -84,6 +84,9 @@ must be verified with integration tests.
 `EntityFrameworkCoreDurableOperationStateStore<TDbContext>` reads and stages
 durable operation state in the current EF Core `DbContext`. It does not own
 transition policy, optimistic concurrency, or automatic transaction boundaries.
+The store requires the operation-state entity mapping and fails with a clear
+`ApplyBondstoneOperationState()` mapping error if it is used with a DbContext
+that does not map operation state.
 
 EF Core does not currently collect or persist domain events. Proposed future
 domain event persistence should use provider abstractions and module command
@@ -108,12 +111,13 @@ capture domain events, or introduce a generic mediator.
 The EF persistence scope is not a core abstraction and is not a required shape
 for non-EF providers.
 
-Future module command pipeline behavior should wrap
-`IEntityFrameworkCorePersistenceScope` so validation, handler state changes,
-inbox markers, outbox messages, operation-state updates, `SaveChangesAsync`,
-and transaction commit happen in one module boundary. The current applied EF
+Module command pipeline behavior wraps `IEntityFrameworkCorePersistenceScope`
+so validation, handler state changes, inbox markers, outbox messages,
+operation-state updates, `SaveChangesAsync`, and transaction commit happen in
+one module boundary when those capabilities are used. The current applied EF
 module behavior wraps opted-in module command execution and saves handler
-changes through the EF scope. Inbox markers, outbox messages, operation-state
-updates, and receive acknowledgement are still future durable-boundary pieces.
-The EF scope remains the lower-level transaction companion, not a standalone
-public unit-of-work API.
+changes, receive inbox markers, outgoing outbox messages, and successful
+operation-state completion updates through the EF scope. Receive failure
+state, retry state, stale receive recovery, and receive acknowledgement policy
+remain future durable-boundary pieces. The EF scope remains the lower-level
+transaction companion, not a standalone public unit-of-work API.

@@ -38,6 +38,7 @@ public static class BondstoneServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IMessageTypeRegistry>(),
                 serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
                 serviceProvider.GetRequiredService<IDurablePayloadSerializer>(),
+                serviceProvider.GetService<IDurableOperationStateStore>(),
                 serviceProvider.GetService<TimeProvider>()));
         services.TryAddScoped<IDurableEventPublisher>(serviceProvider =>
             new DurableEventPublisher(
@@ -49,6 +50,9 @@ public static class BondstoneServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped(
             typeof(IModuleCommandSystemPipelineBehavior<>),
             typeof(ModuleCommandReceiveInboxPipelineBehavior<>)));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped(
+            typeof(IModuleCommandSystemPipelineBehavior<>),
+            typeof(ModuleCommandOperationStatePipelineBehavior<>)));
         services.TryAddEnumerable(ServiceDescriptor.Scoped(
             typeof(IModuleCommandSystemPipelineBehavior<>),
             typeof(ModuleExecutionContextPipelineBehavior<>)));

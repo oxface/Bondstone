@@ -203,6 +203,14 @@ Already done:
   modules with durable command handlers.
 - Rebus command destination diagnostics that report explicit route, receive
   endpoint binding, module queue convention, or missing destination outcomes.
+- Rebus endpoint dispatcher that validates a receive endpoint name and target
+  module before delegating to the module command receive pipeline.
+- Rebus module command endpoint handler that binds a configured Rebus receive
+  endpoint name to the endpoint dispatcher while leaving broker, worker, retry,
+  dead-letter, serializer, and input queue setup Rebus-native.
+- durable operation-state integration for caller-supplied operation ids:
+  command send stages `Pending`, successful module command receive stages
+  `Completed`, and `IDurableOperationReader` can observe those states.
 
 Remaining slices:
 
@@ -213,24 +221,22 @@ Remaining slices:
      validation when those capabilities are implemented.
 2. Command topology diagnostics:
    - **Done for Rebus command destination diagnostics.**
-   - Remaining: add endpoint-dispatch diagnostics when endpoint dispatch is
-     implemented, and event topic/subscription diagnostics when first-class
-     events are implemented.
+   - Remaining: endpoint-dispatch diagnostics remain deferred until listener
+     binding needs a preflight surface, and event topic/subscription
+     diagnostics remain deferred until first-class events are implemented.
 3. Rebus endpoint dispatcher:
-   - `HandleOnceAsync(endpointName, envelope, ct)`;
-   - validate endpoint exists;
-   - validate envelope target module is accepted by the endpoint;
-   - call `IRebusModuleCommandReceivePipeline`.
+   - **Done for explicit `DispatchAsync(endpointName, envelope, ct)` over
+     configured receive topology.**
 4. Rebus listener binding helper:
-   - Rebus-native handler or adapter;
-   - application still owns Rebus infrastructure configuration;
-   - in-memory Rebus transport test proving `SendLocal` dispatches into
-     `IModuleCommandExecutor`.
+   - **Done for a Rebus-native command endpoint handler and DI registration
+     helper.**
 5. Operation-state integration:
-   - make `IDurableOperationReader` meaningful beyond current contracts;
-   - record durable send and receive state transitions consistently.
+   - **Done for caller-supplied operation ids in the current command loop.**
+   - Remaining: failure states, running states, cancellation states, result
+     payloads, retry state, stale receive recovery, and provider-specific
+     concurrency policy remain deferred.
 
-Remaining in Phase 3: **about 3 slices**.
+Remaining in Phase 3: **complete for the current MVP surface**.
 
 ### Phase 4: Domain Event Persistence Capability
 

@@ -63,7 +63,8 @@ The current contracts intentionally do not decide:
 - module identity scopes beyond the current source-module execution context
   and higher-level transaction helpers above the EF persistence scope;
 - domain event collection and persistence;
-- operation-state transition policy or optimistic concurrency;
+- advanced operation-state transition policy or optimistic concurrency beyond
+  current `Pending` and successful `Completed` command-loop updates;
 - provider-specific schemas, migration commands, or payload storage such as
   PostgreSQL `jsonb`.
 

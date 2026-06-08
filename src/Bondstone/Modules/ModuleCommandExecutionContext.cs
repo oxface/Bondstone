@@ -4,12 +4,16 @@ namespace Bondstone.Modules;
 
 public sealed class ModuleCommandExecutionContext(
     ModuleCommandRoute route,
-    DurableInboxRecord? receiveInboxRecord = null)
+    ModuleCommandReceiveContext? receiveContext = null)
 {
     public ModuleCommandRoute Route { get; } =
         route ?? throw new ArgumentNullException(nameof(route));
 
-    public DurableInboxRecord? ReceiveInboxRecord { get; } = receiveInboxRecord;
+    public ModuleCommandReceiveContext? ReceiveContext { get; } = receiveContext;
+
+    public DurableInboxRecord? ReceiveInboxRecord => ReceiveContext?.InboxRecord;
+
+    public Guid? DurableOperationId => ReceiveContext?.DurableOperationId;
 
     public DurableInboxHandleResult? ReceiveInboxResult { get; private set; }
 

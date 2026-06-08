@@ -5,6 +5,7 @@ using Bondstone.Persistence;
 using Bondstone.Transport.Rebus.Inbox;
 using Bondstone.Transport.Rebus.Outbox;
 using Microsoft.Extensions.DependencyInjection;
+using Rebus.Handlers;
 using Xunit;
 
 namespace Bondstone.Transport.Rebus.Tests.Outbox;
@@ -152,6 +153,10 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
             services,
             descriptor => descriptor.ServiceType == typeof(IRebusModuleCommandReceivePipeline)
                 && descriptor.ImplementationType == typeof(RebusModuleCommandReceivePipeline));
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IRebusModuleCommandEndpointDispatcher)
+                && descriptor.ImplementationType?.Name == "RebusModuleCommandEndpointDispatcher");
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         IRebusModuleReceiveEndpointRegistry registry =
@@ -167,6 +172,45 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
         Assert.Equal(
             ["billing", "fulfillment"],
             endpoint.ModuleNames.OrderBy(static moduleName => moduleName, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstoneRebusModuleCommandEndpointHandler_RegistersEndpointHandler()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstoneRebusModuleCommandEndpointHandler("fulfillment-commands");
+
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(RebusModuleCommandEndpointHandlerOptions)
+                && descriptor.ImplementationInstance
+                    is RebusModuleCommandEndpointHandlerOptions
+                    {
+                        EndpointName: "fulfillment-commands",
+                    });
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(RebusModuleCommandEndpointHandler)
+                && descriptor.ImplementationType == typeof(RebusModuleCommandEndpointHandler));
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IHandleMessages<RebusDurableMessageEnvelope>)
+                && descriptor.ImplementationType == typeof(RebusModuleCommandEndpointHandler));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstoneRebusModuleCommandEndpointHandler_WhenReboundToDifferentEndpoint_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstoneRebusModuleCommandEndpointHandler("fulfillment-commands");
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstoneRebusModuleCommandEndpointHandler("billing-commands"));
+
+        Assert.Contains("fulfillment-commands", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

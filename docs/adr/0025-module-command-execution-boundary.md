@@ -213,7 +213,9 @@ additional ADR review or amendments.
   envelopes into `IModuleCommandExecutor`, plus host-owned receive endpoint
   topology metadata that binds Rebus endpoint names to accepted local modules
   and can derive outgoing command destinations from those bindings or module
-  queue conventions.
+  queue conventions, an endpoint dispatcher that validates receive endpoint
+  membership, and a Rebus handler that binds one configured endpoint name to
+  module command receive.
 - Stable docs: Current module command direction is described in
   [docs/architecture/modules.md](../architecture/modules.md), with supporting
   messaging, persistence, and Rebus transport notes in
@@ -234,15 +236,19 @@ additional ADR review or amendments.
   Rebus outgoing host topology now has an adapter-specific `UseRebusTransport`
   builder for conventional module queue naming, explicit target-module
   destination overrides, convention fallback routing, and Rebus receive
-  endpoint bindings to accepted local modules. Core module registration now
-  records module metadata,
+  endpoint bindings to accepted local modules. Rebus receive topology now has
+  an endpoint dispatcher and module command endpoint handler that bind a
+  configured endpoint name to `IModuleCommandExecutor` while leaving Rebus
+  infrastructure configuration application-owned. Durable operation state is
+  now integrated for caller-supplied operation ids in command send and
+  successful module command receive. Core module registration now records
+  module metadata,
   `UseDurableMessaging` capability state, and module persistence capability
   state through `IBondstoneModuleRegistry`.
-- Pending or deferred: Actual Rebus worker/listener binding to configured
-  module receive endpoint topology, receive acknowledgement integration,
-  durable-messaging capability validation in transport/persistence adapters,
-  provider-specific module persistence validation, operation-state
-  integration, event handling, and samples remain future work.
+- Pending or deferred: Durable-messaging capability validation in
+  transport/persistence adapters, provider-specific module persistence
+  validation, richer operation-state transition policy, receive retry state,
+  stale receive recovery, event handling, and samples remain future work.
 
 ## Verification
 
@@ -251,4 +257,5 @@ Read back affected architecture docs and ran:
 - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --filter "Category=Unit"`
 - `dotnet test tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application"`
 - `dotnet test tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application"`
+- `dotnet test tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj --configuration Release --filter "Category=Unit|Category=Integration"`
 - `pnpm check`

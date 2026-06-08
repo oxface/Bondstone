@@ -58,7 +58,9 @@ public sealed class RebusModuleCommandReceivePipeline(
             executionResult = await _moduleCommandExecutor.ExecuteAsync(
                 targetModule,
                 command,
-                record,
+                new ModuleCommandReceiveContext(
+                    record,
+                    envelope.DurableOperationId),
                 ct);
         }
         catch (Exception exception)

@@ -102,11 +102,11 @@ mapping diagnostics.
   helpers, and focused EF Core model tests cover each granular helper. EF
   module transaction behavior validates that modules using the current
   `UseDurableMessaging` capability with EF persistence have outbox and inbox
-  mappings in the module DbContext model.
-- Pending or deferred: Operation-state mapping validation remains tied to
-  future operation-state integration. Provider-specific missing-mapping
-  diagnostics and broader schema validation remain future provider-validation
-  work.
+  mappings in the module DbContext model. EF operation-state persistence now
+  fails with a clear `ApplyBondstoneOperationState()` mapping error when
+  operation tracking uses a DbContext that does not map operation state.
+- Pending or deferred: Provider-specific missing-mapping diagnostics and
+  broader schema validation remain future provider-validation work.
 
 ## Verification
 

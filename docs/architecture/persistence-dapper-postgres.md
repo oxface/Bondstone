@@ -20,6 +20,11 @@ Dapper is an implementation helper, not a generic product abstraction. The
 public API is provider-specific and keeps PostgreSQL session/transaction
 ownership inside this package.
 
+The current proof supports one `NpgsqlDataSource` per service provider. Multiple
+PostgreSQL/Dapper modules can use separate schemas in the same database. Modules
+that require different connection strings should run in separate service
+providers until a later ADR accepts multi-data-source selection.
+
 ## Schema
 
 The provider reuses the current durable table names and column shape:
@@ -48,5 +53,6 @@ execute commands through the current connection and transaction.
 ## Deferred Work
 
 Production migration helpers, stale outbox claim recovery, stale inbox receive
-recovery, cleanup workers, advanced operation-state transitions, and a generic
-Dapper/provider abstraction remain later decisions.
+recovery, cleanup workers, advanced operation-state transitions,
+multi-data-source selection, and a generic Dapper/provider abstraction remain
+later decisions.

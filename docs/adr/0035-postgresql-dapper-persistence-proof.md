@@ -94,9 +94,11 @@ tuning remain later reliability or operational slices.
 
 ## Application Notes
 
-- Current contract: Phase 6 will add `Bondstone.Persistence.Dapper.Postgres`
-  as a PostgreSQL-specific, Dapper-assisted proof provider for durable module
-  messaging persistence without EF Core.
+- Current contract: Phase 6 adds `Bondstone.Persistence.Dapper.Postgres` as a
+  PostgreSQL-specific, Dapper-assisted proof provider for durable module
+  messaging persistence without EF Core. The current proof supports one
+  `NpgsqlDataSource` per service provider; multiple modules can use separate
+  schemas in the same database.
 - Stable docs: Package and persistence direction are reflected in
   [docs/packaging.md](../packaging.md),
   [docs/architecture/persistence.md](../architecture/persistence.md),
@@ -113,7 +115,8 @@ tuning remain later reliability or operational slices.
   billing module alongside EF-backed ordering and fulfillment modules.
 - Pending or deferred: Production migration helpers, stale receive recovery,
   stale claim recovery, cleanup workers, advanced operation-state policy, and
-  generic Dapper/provider abstraction are deferred.
+  multi-data-source selection, and generic Dapper/provider abstraction are
+  deferred.
 
 ## Verification
 

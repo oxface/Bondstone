@@ -20,7 +20,34 @@ public static class BondstonePostgresDapperServiceCollectionExtensions
             throw new ArgumentException("Connection string is required.", nameof(connectionString));
         }
 
-        services.TryAddSingleton(_ => NpgsqlDataSource.Create(connectionString));
+        string normalizedConnectionString = connectionString.Trim();
+        PostgresDapperPersistenceOptions? existingOptions = services
+            .Where(static descriptor =>
+                descriptor.ServiceType == typeof(PostgresDapperPersistenceOptions))
+            .Select(static descriptor =>
+                descriptor.ImplementationInstance as PostgresDapperPersistenceOptions)
+            .SingleOrDefault(static options => options is not null);
+
+        if (existingOptions is not null)
+        {
+            if (!StringComparer.Ordinal.Equals(
+                existingOptions.ConnectionString,
+                normalizedConnectionString))
+            {
+                throw new InvalidOperationException(
+                    "Bondstone PostgreSQL Dapper persistence currently supports one Npgsql data source per service provider. Use separate service providers for different connection strings, or keep modules on separate schemas in the same database.");
+            }
+        }
+        else
+        {
+            services.AddSingleton(new PostgresDapperPersistenceOptions(
+                normalizedConnectionString));
+        }
+
+        services.TryAddSingleton(serviceProvider =>
+            NpgsqlDataSource.Create(serviceProvider
+                .GetRequiredService<PostgresDapperPersistenceOptions>()
+                .ConnectionString));
         services.TryAddScoped<IPostgresDapperModuleSession, PostgresDapperModuleSession>();
 
         return services;

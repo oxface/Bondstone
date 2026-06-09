@@ -477,7 +477,7 @@ Slices:
    to a queue, address, exchange route, or broker-specific sink because fan-out
    is owned outside Bondstone.
 
-Remaining in Phase 7: **medium-large, 6-7 slices**.
+Remaining in Phase 7: **medium-large, 8 slices**.
 
 ### Phase 8: Provider And Migration Usefulness
 

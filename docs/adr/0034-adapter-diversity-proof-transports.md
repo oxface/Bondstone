@@ -125,7 +125,8 @@ slices.
 - Pending or deferred: Receive-side Service Bus and RabbitMQ adapters,
   provider-backed broker integration tests, broker topology declaration,
   acknowledgement/retry/dead-letter semantics, external event wire formats,
-  and non-EF persistence proof remain future slices.
+  and provider-hardening reliability work remain future slices. The non-EF
+  persistence proof is handled by [ADR 0035](0035-postgresql-dapper-persistence-proof.md).
 
 ## Verification
 

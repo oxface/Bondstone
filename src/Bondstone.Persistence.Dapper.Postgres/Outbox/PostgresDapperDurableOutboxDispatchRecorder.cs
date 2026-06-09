@@ -22,6 +22,11 @@ public sealed class PostgresDapperDurableOutboxDispatchRecorder(
         DateTimeOffset dispatchedAtUtc,
         CancellationToken ct = default)
     {
+        ValidateUtcTimestamp(
+            dispatchedAtUtc,
+            nameof(dispatchedAtUtc),
+            "Dispatched timestamp");
+
         return UpdateClaimedAsync(
             """
             "Status" = @Dispatched,
@@ -51,6 +56,22 @@ public sealed class PostgresDapperDurableOutboxDispatchRecorder(
         DateTimeOffset nextAttemptAtUtc,
         CancellationToken ct = default)
     {
+        ValidateUtcTimestamp(
+            failedAtUtc,
+            nameof(failedAtUtc),
+            "Failed timestamp");
+        ValidateUtcTimestamp(
+            nextAttemptAtUtc,
+            nameof(nextAttemptAtUtc),
+            "Next-attempt timestamp");
+
+        if (nextAttemptAtUtc < failedAtUtc)
+        {
+            throw new ArgumentException(
+                "Next-attempt timestamp must not be earlier than failed timestamp.",
+                nameof(nextAttemptAtUtc));
+        }
+
         return UpdateClaimedAsync(
             """
             "Status" = @Pending,
@@ -81,6 +102,11 @@ public sealed class PostgresDapperDurableOutboxDispatchRecorder(
         DateTimeOffset failedAtUtc,
         CancellationToken ct = default)
     {
+        ValidateUtcTimestamp(
+            failedAtUtc,
+            nameof(failedAtUtc),
+            "Failed timestamp");
+
         return UpdateClaimedAsync(
             """
             "Status" = @DeadLettered,
@@ -152,5 +178,21 @@ public sealed class PostgresDapperDurableOutboxDispatchRecorder(
         }
 
         return failureReason.Trim();
+    }
+
+    private static void ValidateUtcTimestamp(
+        DateTimeOffset value,
+        string parameterName,
+        string valueName)
+    {
+        if (value == default)
+        {
+            throw new ArgumentException($"{valueName} must not be the default value.", parameterName);
+        }
+
+        if (value.Offset != TimeSpan.Zero)
+        {
+            throw new ArgumentException($"{valueName} must use UTC offset.", parameterName);
+        }
     }
 }

@@ -25,7 +25,7 @@ public sealed class PlaceOrderHandler(
                 command.OrderId,
                 command.Sku,
                 command.Quantity),
-            FulfillmentModule.Name,
+            FulfillmentModule.ModuleName,
             partitionKey: command.OrderId.ToString("D"),
             durableOperationId: command.DurableOperationId,
             ct: ct);

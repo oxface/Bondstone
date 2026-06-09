@@ -36,14 +36,24 @@ message contracts. The host decides how commands reach the target module.
 
 ## Module Registration
 
-`AddBondstone` is the host composition entrypoint. A host can register module
-capabilities inline through `Module`, or a module can provide its own
-`IBondstoneModule` registration object and be stitched into the host with
-`AddModule`.
+`AddBondstone` is the host composition entrypoint. Inline `Module(...)`
+registration is useful for small examples, tests, or host-owned composition.
+For a real module assembly, prefer a module-owned `IBondstoneModule`
+registration object and stitch it into the host with `AddModule(...)` or a
+small module-specific host extension that delegates to `AddModule(...)`.
+
+Module-owned registration keeps command handlers, validators, durable
+messaging capability, provider-specific persistence opt-ins, and handler
+assembly scanning close to the module implementation. The host should still
+own environment-specific values such as connection strings and transport
+topology, so module registration objects can accept those values through their
+constructor or a thin host extension.
 
 Handlers and validators can be discovered with `RegisterFromAssembly` or
-registered explicitly with `RegisterHandler` and `RegisterValidator`. Keep
-library-user setup examples in [../setup.md](../setup.md).
+registered explicitly with `RegisterHandler` and `RegisterValidator`. In a
+module-owned assembly, prefer `RegisterFromAssemblyContaining<TMarker>()` so
+the host does not need to list every handler. Keep library-user setup examples
+in [../setup.md](../setup.md).
 
 ## Command Handlers
 

@@ -1,7 +1,5 @@
 using Bondstone.Configuration;
-using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Modules;
-using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 
 namespace Bondstone.Samples.ModularMonolith.Fulfillment;
 
@@ -14,13 +12,6 @@ public static class FulfillmentModuleRegistration
         ArgumentNullException.ThrowIfNull(bondstone);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
-        return bondstone.Module(FulfillmentModule.Name, module =>
-        {
-            module.UseDurableMessaging();
-            module.UsePostgreSqlPersistence<FulfillmentDbContext>(
-                connectionString,
-                schema: FulfillmentModule.Name);
-            module.Commands.RegisterFromAssemblyContaining<ReserveInventoryHandler>();
-        });
+        return bondstone.AddModule(new FulfillmentBondstoneModule(connectionString));
     }
 }

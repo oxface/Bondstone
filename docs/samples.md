@@ -62,13 +62,16 @@ entrypoint.
 
 The sample has `ordering` and `fulfillment` modules split into module-owned
 assemblies with separate module-owned `DbContext` types and PostgreSQL
-schemas. It registers module command handlers through
-`RegisterFromAssemblyContaining<TMarker>()`, sends a durable command from
-ordering to fulfillment, dispatches the ordering outbox through the durable
-outbox worker and Rebus in-memory transport, receives through the Rebus
-topology-bound module command endpoint handler, and persists
-fulfillment state, inbox markers, and operation completion through fulfillment
-EF persistence.
+schemas. Each implementation assembly exposes a module-owned
+`IBondstoneModule` registration object plus a thin host extension for the
+connection string. The API host composes those module extensions, while the
+module assemblies own durable messaging capability, PostgreSQL persistence
+binding, and `RegisterFromAssemblyContaining<TMarker>()` handler scanning. The
+sample sends a durable command from ordering to fulfillment, dispatches the
+ordering outbox through the durable outbox worker and Rebus in-memory
+transport, receives through the Rebus topology-bound module command endpoint
+handler, and persists fulfillment state, inbox markers, and operation
+completion through fulfillment EF persistence.
 
 The focused smoke test lives in
 [`tests/Bondstone.Samples.Tests`](../tests/Bondstone.Samples.Tests) and is an

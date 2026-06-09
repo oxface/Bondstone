@@ -13,11 +13,11 @@ public sealed class OrderingDbContext(
     {
         modelBuilder.Entity<Order>(entity =>
         {
-            entity.ToTable("orders", OrderingModule.Name);
+            entity.ToTable("orders", OrderingModule.ModuleName);
             entity.HasKey(order => order.Id);
             entity.Property(order => order.Sku).IsRequired();
         });
 
-        modelBuilder.ApplyBondstonePersistence(OrderingModule.Name);
+        modelBuilder.ApplyBondstonePersistence(OrderingModule.ModuleName);
     }
 }

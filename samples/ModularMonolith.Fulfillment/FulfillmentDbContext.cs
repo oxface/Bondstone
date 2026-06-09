@@ -14,12 +14,12 @@ public sealed class FulfillmentDbContext(
     {
         modelBuilder.Entity<FulfillmentReservation>(entity =>
         {
-            entity.ToTable("reservations", FulfillmentModule.Name);
+            entity.ToTable("reservations", FulfillmentModule.ModuleName);
             entity.HasKey(reservation => reservation.Id);
             entity.Property(reservation => reservation.OrderId).IsRequired();
             entity.Property(reservation => reservation.Sku).IsRequired();
         });
 
-        modelBuilder.ApplyBondstonePersistence(FulfillmentModule.Name);
+        modelBuilder.ApplyBondstonePersistence(FulfillmentModule.ModuleName);
     }
 }

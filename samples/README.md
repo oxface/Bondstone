@@ -6,7 +6,8 @@
 minimal API sample. It proves the current durable command loop with:
 
 - module registration for `ordering` and `fulfillment`;
-- module-owned assemblies with assembly-scanned command handler registration;
+- module-owned assemblies with `IBondstoneModule` registration objects and
+  assembly-scanned command handler registration;
 - separate module-owned EF Core `DbContext` types and PostgreSQL schemas;
 - outbox-backed durable command sending from ordering to fulfillment;
 - durable outbox worker dispatch through Rebus in-memory transport;

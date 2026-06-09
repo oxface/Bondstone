@@ -50,7 +50,7 @@ public static class ModularMonolithApplication
             {
                 rebus
                     .UseModuleQueueConvention()
-                    .ReceiveModule(FulfillmentModule.Name);
+                    .ReceiveModule(FulfillmentModule.ModuleName);
             });
             bondstone.Outbox.UseWorker(options =>
             {
@@ -82,7 +82,7 @@ public static class ModularMonolithApplication
                 Guid durableOperationId = Guid.NewGuid();
 
                 await executor.ExecuteAsync(
-                    OrderingModule.Name,
+                    OrderingModule.ModuleName,
                     new PlaceOrderCommand(
                         orderId,
                         order.Sku,

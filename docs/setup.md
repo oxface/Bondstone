@@ -76,6 +76,42 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand>
 }
 ```
 
+Inline `Module(...)` registration is fine for small apps and tests. For a
+module-owned assembly, prefer a module-provided registration object and keep a
+thin host extension for environment-specific values:
+
+```csharp
+public sealed class OrdersBondstoneModule(string connectionString)
+    : IBondstoneModule
+{
+    public string Name => "orders";
+
+    public void Configure(BondstoneModuleBuilder module)
+    {
+        module.UseDurableMessaging();
+        module.UsePostgreSqlPersistence<OrdersDbContext>(
+            connectionString,
+            schema: "orders");
+        module.Commands.RegisterFromAssemblyContaining<CreateOrderHandler>();
+    }
+}
+
+public static class OrdersModuleRegistration
+{
+    public static BondstoneBuilder AddOrdersModule(
+        this BondstoneBuilder bondstone,
+        string connectionString)
+    {
+        return bondstone.AddModule(new OrdersBondstoneModule(connectionString));
+    }
+}
+
+builder.Services.AddBondstone(bondstone =>
+{
+    bondstone.AddOrdersModule(connectionString);
+});
+```
+
 `ApplyBondstonePersistence` maps the full current Bondstone durable persistence
 shape. Modules that use `UseDurableMessaging` with EF persistence currently
 need outbox and inbox mappings. Hosts that only need selected durable pieces
@@ -154,23 +190,9 @@ builder.Services.AddRebus(configure => configure
 
 builder.Services.AddBondstone(bondstone =>
 {
-    bondstone.Module("ordering", module =>
-    {
-        module.UseDurableMessaging();
-        module.UsePostgreSqlPersistence<OrderingDbContext>(
-            connectionString,
-            schema: "ordering");
-        module.Commands.RegisterFromAssemblyContaining<PlaceOrderCommand>();
-    });
-
-    bondstone.Module("fulfillment", module =>
-    {
-        module.UseDurableMessaging();
-        module.UsePostgreSqlPersistence<FulfillmentDbContext>(
-            connectionString,
-            schema: "fulfillment");
-        module.Commands.RegisterFromAssemblyContaining<ReserveInventoryHandler>();
-    });
+    bondstone
+        .AddOrderingModule(connectionString)
+        .AddFulfillmentModule(connectionString);
 
     bondstone.UseRebusTransport(rebus =>
     {
@@ -188,7 +210,8 @@ message identity, inbox handling, module command execution, and the Rebus
 handler binding needed for the configured module receive endpoint.
 
 In the modular-monolith shape, each module should normally declare its own EF
-`DbContext` and bind that context to PostgreSQL durable persistence. Durable
-sends write to the source module outbox; durable receives write handler state,
-inbox markers, operation completion, and any outgoing outbox messages through
-the target module transaction.
+`DbContext`, expose module-owned Bondstone registration, and bind that context
+to PostgreSQL durable persistence. Durable sends write to the source module
+outbox; durable receives write handler state, inbox markers, operation
+completion, and any outgoing outbox messages through the target module
+transaction.

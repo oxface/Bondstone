@@ -300,9 +300,10 @@ Slices:
    - Follow-up: replace or polish the Phase 4 adoption-proof sample after the
      MVP public API settles.
 8. Move sample module setup into module-owned registration extensions:
-   - **Done.** Ordering and fulfillment assemblies now expose their own
-     `Add...Module` registration methods so the API host composes modules
-     without owning module persistence and command-handler details.
+   - **Done.** Ordering and fulfillment assemblies now expose module-owned
+     `IBondstoneModule` registration objects plus thin `Add...Module`
+     registration methods so the API host composes modules without owning
+     module persistence and command-handler details.
 9. Fold default Rebus module endpoint handler binding into receive topology:
    - **Done.** Configuring the current single receive endpoint through
      `ReceiveModule(...)` registers the durable module receive pipeline,

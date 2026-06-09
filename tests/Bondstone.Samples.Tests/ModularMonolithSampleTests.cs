@@ -42,7 +42,7 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
                 scope.ServiceProvider.GetRequiredService<IModuleCommandExecutor>();
 
             await executor.ExecuteAsync(
-                OrderingModule.Name,
+                OrderingModule.ModuleName,
                 new PlaceOrderCommand(
                     orderId,
                     Sku: "coffee-mug",

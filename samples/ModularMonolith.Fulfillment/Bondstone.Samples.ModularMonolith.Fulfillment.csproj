@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Bondstone.EntityFrameworkCore.Postgres\Bondstone.EntityFrameworkCore.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.EntityFrameworkCore\Bondstone.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone\Bondstone.csproj" />
+    <ProjectReference Include="..\ModularMonolith.Fulfillment.Contracts\Bondstone.Samples.ModularMonolith.Fulfillment.Contracts.csproj" />
+  </ItemGroup>
+</Project>

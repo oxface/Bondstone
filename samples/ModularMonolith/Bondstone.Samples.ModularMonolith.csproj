@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
@@ -9,5 +9,8 @@
     <ProjectReference Include="..\..\src\Bondstone.Hosting\Bondstone.Hosting.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Transport.Rebus\Bondstone.Transport.Rebus.csproj" />
     <ProjectReference Include="..\..\src\Bondstone\Bondstone.csproj" />
+    <ProjectReference Include="..\ModularMonolith.Fulfillment.Contracts\Bondstone.Samples.ModularMonolith.Fulfillment.Contracts.csproj" />
+    <ProjectReference Include="..\ModularMonolith.Fulfillment\Bondstone.Samples.ModularMonolith.Fulfillment.csproj" />
+    <ProjectReference Include="..\ModularMonolith.Ordering\Bondstone.Samples.ModularMonolith.Ordering.csproj" />
   </ItemGroup>
 </Project>

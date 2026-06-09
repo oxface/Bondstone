@@ -219,10 +219,11 @@ route metadata, passes the durable inbox record into `IModuleCommandExecutor`,
 and receives the inbox result from `ModuleCommandExecutionResult`. Host
 receive topology can now bind Rebus endpoint names to accepted local modules
 and registers the module command receive pipeline plus
-`IRebusModuleCommandEndpointDispatcher`. The endpoint dispatcher validates
-that the named endpoint exists and accepts the envelope target module before
-delegating to the module command receive pipeline. The Rebus module command
-endpoint handler binds one configured endpoint name to the dispatcher, allowing
+`IRebusModuleCommandEndpointDispatcher`. For the current single-endpoint
+app-facing shape, receive topology also registers the Rebus module command
+endpoint handler bound to the configured endpoint. The endpoint dispatcher
+validates that the named endpoint exists and accepts the envelope target
+module before delegating to the module command receive pipeline, allowing
 Rebus to invoke durable module command receive through a normal
 `RebusDurableMessageEnvelope` handler while the application keeps Rebus
 infrastructure configuration. Receive bindings also derive outgoing command

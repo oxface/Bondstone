@@ -118,6 +118,43 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void UsePostgreSqlPersistence_WhenUsedOnModule_RegistersModulePersistence()
+    {
+        var services = new ServiceCollection();
+        var persistenceWasMarked = false;
+
+        services.AddBondstone(builder =>
+        {
+            builder.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePostgreSqlPersistence<PostgreSqlTestDbContext>(
+                    "Host=localhost;Database=bondstone",
+                    schema: "fulfillment");
+                module.Commands.RegisterHandler<TestDurableCommand, TestDurableCommandHandler>();
+            });
+
+            persistenceWasMarked = builder.Outbox.HasPersistenceProvider;
+        });
+
+        Assert.True(persistenceWasMarked);
+        AssertContainsScopedFactory<IDurableModuleOutboxWriter>(services);
+        AssertContainsScopedFactory<IDurableModuleInboxHandlerExecutor>(services);
+        AssertContainsScopedFactory<IDurableModuleOperationStateStore>(services);
+        AssertContainsScopedFactory<IDurableModuleOutboxDispatcher>(services);
+        AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        BondstoneModuleRegistration module = serviceProvider
+            .GetRequiredService<IBondstoneModuleRegistry>()
+            .GetModule("fulfillment");
+        Assert.True(module.UsesDurableMessaging);
+        Assert.Equal("EntityFrameworkCore", module.PersistenceProviderName);
+        Assert.Equal(typeof(PostgreSqlTestDbContext), module.PersistenceContextType);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void AddBondstonePostgreSqlModulePersistence_WhenDefaultDispatcherAlreadyRegistered_ReplacesWithAggregator()
     {
         var services = new ServiceCollection();

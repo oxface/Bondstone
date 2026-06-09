@@ -249,18 +249,18 @@ pleasant enough to adopt before adding more durable capabilities.
 
 This phase should exercise the current Phase 1-3 implementation without
 changing the completed phase scope. The first `samples/ModularMonolith`
-project is an adoption-proof harness rather than the final consumer-style
-sample: it should send a durable command through outbox and Rebus, receive it
-through module command execution, persist handler state and inbox markers in
-one EF transaction, and expose API friction while the MVP surface is still
-settling. Once the MVP API is stable, replace or reshape it into a real sample
-that shows the public setup path an application should copy.
+project is an adoption-proof sample rather than the final polished
+consumer-style sample: it should send a durable command through outbox and
+Rebus, receive it through module command execution, persist handler state and
+inbox markers in one EF transaction, and expose API friction while the MVP
+surface is still settling. Once the MVP API is stable, polish or replace it
+with a sample that shows the public setup path an application should copy.
 
 Slices:
 
 1. Create the modular monolith sample according to [samples.md](samples.md):
-   - **Initial adoption-proof harness added in `samples/ModularMonolith`.**
-   - The harness uses `ordering` and `fulfillment` modules with module-owned
+   - **Initial adoption-proof sample added in `samples/ModularMonolith`.**
+   - The sample uses `ordering` and `fulfillment` modules with module-owned
      `DbContext` types and PostgreSQL schemas, sends a durable command across
      module persistence ownership, uses Rebus in-memory transport, and uses
      PostgreSQL-backed EF Core persistence for outbox claiming, inbox handling,
@@ -279,14 +279,38 @@ Slices:
      [ADR 0032](adr/0032-module-owned-durable-ef-persistence.md) and applied
      to the sample after the first sample slice exposed the one-`DbContext`
      limitation.
-   - Follow-up: Rebus-host bootstrap in simple console/sample code still needs
-     application-owned wiring between the running Rebus bus and Bondstone's
-     `IRoutingApi`; production hosts can use normal Rebus host integration, but
-     the verification harness has a small bridge.
-   - Follow-up: replace the Phase 4 verification harness with a consumer-style
-     sample after the MVP public API settles.
+5. Add module-bound PostgreSQL provider registration:
+   - **Done.** ADR 0032 was amended to prefer
+     `module.UsePostgreSqlPersistence<TDbContext>(...)` for module-owned
+     durable EF persistence.
+   - Root-level provider registration remains available for compatibility or
+     advanced composition, while setup docs and the sample prefer the
+     module-bound shape.
+6. Reshape the adoption-proof sample into a normal host-style API project:
+   - **Done.** The sample is a minimal ASP.NET Core API project using normal
+     app registration, Rebus service-provider registration, the Rebus module
+     command endpoint handler, and the durable outbox worker. Verification-only
+     hosted-service startup, database reset, and polling live in the integration
+     test instead of the app entrypoint.
+7. Use existing command handler assembly registration in the host-shaped
+   sample:
+   - **Done.** The sample now splits ordering, fulfillment contracts, and
+     fulfillment implementation into module-owned assemblies and uses
+     `RegisterFromAssemblyContaining<TMarker>()` for module command handlers.
+   - Follow-up: replace or polish the Phase 4 adoption-proof sample after the
+     MVP public API settles.
+8. Move sample module setup into module-owned registration extensions:
+   - **Done.** Ordering and fulfillment assemblies now expose their own
+     `Add...Module` registration methods so the API host composes modules
+     without owning module persistence and command-handler details.
+9. Fold default Rebus module endpoint handler binding into receive topology:
+   - **Done.** Configuring the current single receive endpoint through
+     `ReceiveModule(...)` registers the durable module receive pipeline,
+     endpoint dispatcher, and matching Rebus envelope handler. Low-level
+     explicit endpoint-handler registration remains available for tests and
+     advanced composition.
 
-Remaining in Phase 4: **medium, 1-2 slices**.
+Remaining in Phase 4: **complete for the current adoption-proof surface**.
 
 ### Phase 5: First-Class Events Implementation
 
@@ -316,9 +340,11 @@ Slices:
 3. Stale outbox claim recovery.
 4. Cleanup and maintenance workers.
 5. Dead-letter routing ownership.
-6. Advanced dispatcher and worker options.
+6. Module-targeted outbox workers to avoid noisy-neighbor dispatch across
+   independently owned module outboxes.
+7. Advanced dispatcher and worker options.
 
-Remaining in Phase 6: **medium-large, 5-6 slices**.
+Remaining in Phase 6: **medium-large, 6-7 slices**.
 
 ### Phase 7: Provider And Migration Usefulness
 

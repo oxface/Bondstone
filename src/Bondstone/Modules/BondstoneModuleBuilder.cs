@@ -1,4 +1,5 @@
 using Bondstone.Messaging;
+using Bondstone.Configuration;
 using Bondstone.Utility;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,6 +9,7 @@ public sealed class BondstoneModuleBuilder
 {
     internal BondstoneModuleBuilder(
         IServiceCollection services,
+        BondstoneOutboxBuilder outbox,
         string name,
         IMessageTypeRegistry messageTypeRegistry,
         ModuleCommandRouteRegistry commandRouteRegistry,
@@ -15,12 +17,14 @@ public sealed class BondstoneModuleBuilder
         BondstoneModuleRegistry moduleRegistry)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(outbox);
         ArgumentNullException.ThrowIfNull(messageTypeRegistry);
         ArgumentNullException.ThrowIfNull(commandRouteRegistry);
         ArgumentNullException.ThrowIfNull(eventSubscriberRegistry);
         ArgumentNullException.ThrowIfNull(moduleRegistry);
 
         Services = services;
+        _outbox = outbox;
         Name = name.NormalizeRequired(nameof(name), "Module name");
         _moduleRegistry = moduleRegistry;
         _moduleRegistry.RegisterModule(Name);
@@ -37,6 +41,7 @@ public sealed class BondstoneModuleBuilder
     }
 
     private readonly BondstoneModuleRegistry _moduleRegistry;
+    private readonly BondstoneOutboxBuilder _outbox;
 
     public IServiceCollection Services { get; }
 
@@ -57,6 +62,12 @@ public sealed class BondstoneModuleBuilder
         Type? contextType = null)
     {
         _moduleRegistry.EnablePersistence(Name, providerName, contextType);
+        return this;
+    }
+
+    public BondstoneModuleBuilder UseOutboxPersistenceProvider(string providerName)
+    {
+        _outbox.MarkPersistenceProvider(providerName);
         return this;
     }
 }

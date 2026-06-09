@@ -54,16 +54,21 @@ decision for Bondstone packages.
 ## Current Status
 
 The current `samples/ModularMonolith` project is a Phase 4 adoption-proof
-harness, not the final user-facing sample. It deliberately stays close to the
-implemented command-loop seams so it can validate real library behavior while
-the MVP API is still settling.
+minimal API sample. It is still intentionally small, but its app entrypoint
+uses normal ASP.NET Core, Rebus service-provider registration, Bondstone
+module registration, and the durable outbox worker. Verification-only database
+reset and completion polling live in the integration test, not in the app
+entrypoint.
 
-The harness has `ordering` and `fulfillment` modules with separate
-module-owned `DbContext` types and PostgreSQL schemas, sends a durable command
-from ordering to fulfillment, dispatches the ordering outbox through Rebus
-in-memory transport, receives through the Rebus module command endpoint
-handler, and persists fulfillment state, inbox markers, and operation
-completion through fulfillment EF persistence.
+The sample has `ordering` and `fulfillment` modules split into module-owned
+assemblies with separate module-owned `DbContext` types and PostgreSQL
+schemas. It registers module command handlers through
+`RegisterFromAssemblyContaining<TMarker>()`, sends a durable command from
+ordering to fulfillment, dispatches the ordering outbox through the durable
+outbox worker and Rebus in-memory transport, receives through the Rebus
+topology-bound module command endpoint handler, and persists
+fulfillment state, inbox markers, and operation completion through fulfillment
+EF persistence.
 
 The focused smoke test lives in
 [`tests/Bondstone.Samples.Tests`](../tests/Bondstone.Samples.Tests) and is an
@@ -71,6 +76,5 @@ The focused smoke test lives in
 verification remains `Unit` and `Application` only; run sample smoke coverage
 with the repository integration test entrypoint.
 
-Once the MVP surface settles, replace this harness with a consumer-style sample
-that demonstrates the preferred public API and application structure rather
-than carrying verification-specific bootstrap code.
+Once the MVP surface settles, polish or replace this sample so it demonstrates
+the final preferred public API and application structure.

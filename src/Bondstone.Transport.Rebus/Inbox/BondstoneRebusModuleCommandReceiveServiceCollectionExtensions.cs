@@ -19,6 +19,11 @@ public static class BondstoneRebusModuleCommandReceiveServiceCollectionExtension
         services.TryAddTransient<
             IRebusModuleCommandEndpointDispatcher,
             RebusModuleCommandEndpointDispatcher>();
+        if (endpoints.Count == 1)
+        {
+            services.AddBondstoneRebusModuleCommandEndpointHandler(
+                endpoints.Single().EndpointName);
+        }
 
         return services;
     }

@@ -1,6 +1,8 @@
 using Bondstone.Samples.ModularMonolith;
+using Rebus.Transport.InMem;
 
-string? connectionString = args.FirstOrDefault()
+string? connectionString = args.FirstOrDefault(static arg =>
+        !arg.StartsWith("--", StringComparison.Ordinal))
     ?? Environment.GetEnvironmentVariable("BONDSTONE_SAMPLE_POSTGRES");
 
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -10,14 +12,34 @@ if (string.IsNullOrWhiteSpace(connectionString))
     return 1;
 }
 
-SampleRunResult result = await ModularMonolithSample.RunAsync(
-    connectionString,
-    resetDatabase: true);
+var rebusNetwork = new InMemNetwork();
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-Console.WriteLine(
-    $"Order {result.OrderId} reserved. "
-    + $"Orders={result.OrderCount}, Reservations={result.ReservationCount}, "
-    + $"InboxProcessed={result.ProcessedInboxCount}, OutboxDispatched={result.DispatchedOutboxCount}, "
-    + $"Operation={result.OperationStatus}.");
+builder.Services.AddModularMonolithSample(
+    connectionString,
+    rebusNetwork);
+
+WebApplication app = builder.Build();
+app.MapModularMonolithSample();
+
+bool resetDatabase =
+    args.Contains("--reset-database", StringComparer.Ordinal)
+    || string.Equals(
+        Environment.GetEnvironmentVariable("BONDSTONE_SAMPLE_RESET_DATABASE"),
+        "true",
+        StringComparison.OrdinalIgnoreCase);
+bool prepareDatabase =
+    resetDatabase
+    || string.Equals(
+        Environment.GetEnvironmentVariable("BONDSTONE_SAMPLE_PREPARE_DATABASE"),
+        "true",
+        StringComparison.OrdinalIgnoreCase);
+
+if (prepareDatabase)
+{
+    await app.Services.EnsureModularMonolithDatabaseAsync(resetDatabase);
+}
+
+await app.RunAsync();
 
 return 0;

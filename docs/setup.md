@@ -32,7 +32,6 @@ using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Hosting.Outbox;
 using Bondstone.Messaging;
 using Bondstone.Modules;
-using Bondstone.Transport.Rebus.Inbox;
 using Bondstone.Transport.Rebus.Outbox;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,11 +40,10 @@ builder.Services.AddBondstone(bondstone =>
     bondstone.Module("orders", module =>
     {
         module.UseDurableMessaging();
-        module.UseEntityFrameworkCorePersistence<AppDbContext>();
-        module.Commands.RegisterHandler<CreateOrderCommand, CreateOrderHandler>();
+        module.UsePostgreSqlPersistence<AppDbContext>(connectionString);
+        module.Commands.RegisterFromAssemblyContaining<CreateOrderCommand>();
     });
 
-    bondstone.UsePostgreSqlPersistence<AppDbContext>(connectionString);
     bondstone.UseRebusTransport(rebus =>
         rebus.UseModuleQueueConvention());
     bondstone.Outbox.UseWorker(options =>
@@ -144,13 +142,10 @@ outbox transport adapter and module topology mapping; it does not own the
 whole Rebus host.
 
 The preferred app-facing receive topology is configured through the Rebus
-transport builder and bound to a Rebus input queue with
-`AddBondstoneRebusModuleCommandEndpointHandler(endpointName)`. The receive
-endpoint name must match the Rebus input queue for that handler:
+transport builder. The receive endpoint name must match the Rebus input queue
+configured through Rebus native transport setup:
 
 ```csharp
-builder.Services.AddBondstoneRebusModuleCommandEndpointHandler("fulfillment-commands");
-
 builder.Services.AddRebus(configure => configure
     .Transport(transport => transport.UseInMemoryTransport(
         rebusNetwork,
@@ -162,27 +157,21 @@ builder.Services.AddBondstone(bondstone =>
     bondstone.Module("ordering", module =>
     {
         module.UseDurableMessaging();
-        module.UseEntityFrameworkCorePersistence<OrderingDbContext>();
-        module.Commands.RegisterHandler<PlaceOrderCommand, PlaceOrderHandler>();
+        module.UsePostgreSqlPersistence<OrderingDbContext>(
+            connectionString,
+            schema: "ordering");
+        module.Commands.RegisterFromAssemblyContaining<PlaceOrderCommand>();
     });
 
     bondstone.Module("fulfillment", module =>
     {
         module.UseDurableMessaging();
-        module.UseEntityFrameworkCorePersistence<FulfillmentDbContext>();
-        module.Commands.RegisterHandler<
-            ReserveInventoryCommand,
-            ReserveInventoryHandler>();
+        module.UsePostgreSqlPersistence<FulfillmentDbContext>(
+            connectionString,
+            schema: "fulfillment");
+        module.Commands.RegisterFromAssemblyContaining<ReserveInventoryHandler>();
     });
 
-    bondstone.UsePostgreSqlPersistence<OrderingDbContext>(
-        "ordering",
-        connectionString,
-        schema: "ordering");
-    bondstone.UsePostgreSqlPersistence<FulfillmentDbContext>(
-        "fulfillment",
-        connectionString,
-        schema: "fulfillment");
     bondstone.UseRebusTransport(rebus =>
     {
         rebus
@@ -195,7 +184,8 @@ builder.Services.AddBondstone(bondstone =>
 
 This keeps Rebus broker, serializer, input queue, retry, dead-letter, and
 worker policy Rebus-native while Bondstone owns durable module dispatch,
-message identity, inbox handling, and module command execution.
+message identity, inbox handling, module command execution, and the Rebus
+handler binding needed for the configured module receive endpoint.
 
 In the modular-monolith shape, each module should normally declare its own EF
 `DbContext` and bind that context to PostgreSQL durable persistence. Durable

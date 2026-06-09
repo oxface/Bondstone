@@ -157,6 +157,18 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
             services,
             descriptor => descriptor.ServiceType == typeof(IRebusModuleCommandEndpointDispatcher)
                 && descriptor.ImplementationType?.Name == "RebusModuleCommandEndpointDispatcher");
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(RebusModuleCommandEndpointHandlerOptions)
+                && descriptor.ImplementationInstance
+                    is RebusModuleCommandEndpointHandlerOptions
+                    {
+                        EndpointName: "fulfillment-commands",
+                    });
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IHandleMessages<RebusDurableMessageEnvelope>)
+                && descriptor.ImplementationType == typeof(RebusModuleCommandEndpointHandler));
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         IRebusModuleReceiveEndpointRegistry registry =

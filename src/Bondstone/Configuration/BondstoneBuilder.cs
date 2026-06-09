@@ -40,6 +40,7 @@ public sealed class BondstoneBuilder
     {
         return new BondstoneModuleBuilder(
             Services,
+            Outbox,
             moduleName,
             _messageTypeRegistry,
             _commandRouteRegistry,

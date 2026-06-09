@@ -43,14 +43,16 @@ consumer-owned DbContext and composes the provider-neutral EF registrations,
 including the EF persistence scope and neutral inbox handler executor.
 
 For module-owned durable persistence,
+`module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: ...)`
+is the preferred setup shape. It records EF module persistence metadata and
+binds PostgreSQL durable components for that module's EF context. Root-level
 `UsePostgreSqlPersistence<TDbContext>(moduleName, connectionString, schema:
-...)` binds a module name to PostgreSQL durable components for that module's
-EF context. Those module bindings provide source-module outbox writing,
-target-module inbox handling, target-module operation-state persistence, and
-per-module outbox dispatch. The app-facing dispatcher can aggregate dispatch
-results across configured local module outboxes while each underlying claim,
-lease, and dispatch-record update remains scoped to one module's PostgreSQL
-tables.
+...)` remains available for compatibility and advanced composition. Those
+module bindings provide source-module outbox writing, target-module inbox
+handling, target-module operation-state persistence, and per-module outbox
+dispatch. The app-facing dispatcher can aggregate dispatch results across
+configured local module outboxes while each underlying claim, lease, and
+dispatch-record update remains scoped to one module's PostgreSQL tables.
 
 Application code should prefer this module-aware setup helper over directly
 registering the provider-facing `IDurableModule*` persistence services.

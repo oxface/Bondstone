@@ -1,6 +1,6 @@
 # 0023 Rebus Receive-Side Inbox Integration
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-05
 
@@ -98,6 +98,26 @@ ADRs may add typed handler registration, payload deserialization, module
 identity scopes, EF-specific receive helpers, receive retry state, stale
 receive recovery, metrics, or event publish/subscribe behavior.
 
+## Amendment 2026-06-09: Topology-Owned Module Endpoint Binding
+
+The Rebus module command receive path now has an app-facing topology binding
+above the lower-level receive primitives. Configuring module receive topology
+through the Bondstone Rebus transport builder records the accepted local
+modules, registers the module command receive pipeline and endpoint
+dispatcher, and for the current single-endpoint app-facing shape registers the
+matching Rebus `IHandleMessages<RebusDurableMessageEnvelope>` endpoint
+handler.
+
+Applications still configure Rebus-native infrastructure: broker transport,
+input queue, serializer, worker count, retry, and dead-letter policy.
+Bondstone owns the durable module dispatch binding from the configured Rebus
+endpoint to `IModuleCommandExecutor`.
+
+The low-level explicit endpoint-handler registration remains available for
+tests and advanced composition, including future multiple-endpoint or
+multiple-bus shapes that need more explicit ownership than the current fluent
+single-endpoint path.
+
 ## Related Decisions
 
 - [0014 Inbox Registration Contract](0014-inbox-registration-contract.md)
@@ -113,7 +133,10 @@ receive recovery, metrics, or event publish/subscribe behavior.
   `IRebusDurableInboxHandlerExecutor`, explicit handler identity, and explicit
   commit delegates. Registration is available through low-level
   `AddBondstoneRebusInbox` and the fluent `AddBondstone` path with
-  `UseRebusInbox`.
+  `UseRebusInbox`. The preferred module command receive path binds
+  host-owned Rebus receive topology to `IModuleCommandExecutor`; the current
+  single-endpoint app-facing path registers the matching Rebus envelope
+  handler from the receive topology configuration.
 - Stable docs: Current receive-side transport direction is described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
@@ -125,8 +148,9 @@ receive recovery, metrics, or event publish/subscribe behavior.
   public API, durable behavior, provider, or transport strategy changes.
 - Application evidence: Rebus receive adapter implementation, low-level and
   fluent DI registration, .NET `ActivityContext` traceparent validation,
-  already-received exception, unit tests, cross-package application smoke
-  coverage, and stable docs are applied.
+  already-received exception, Rebus module receive topology, module endpoint
+  dispatcher and handler binding, unit tests, cross-package application smoke
+  coverage, sample coverage, and stable docs are applied.
 - Pending or deferred: Transport-level integration tests, typed handler
   discovery, event publish/subscribe, receive retry state, stale receive
   recovery, EF-specific receive helpers, and broader inbox validation remain
@@ -134,6 +158,8 @@ receive recovery, metrics, or event publish/subscribe behavior.
 
 ## Verification
 
-Read back this ADR and affected stable docs. Ran targeted Rebus tests after
-implementation, targeted composition tests after adding receive composition
-coverage, and `pnpm check` after applying the full slice.
+Read back this ADR and affected stable docs. Ran `dotnet restore
+Bondstone.slnx --disable-build-servers -p:NuGetAudit=false`, `dotnet build
+Bondstone.slnx --configuration Release --no-restore --disable-build-servers`,
+fast `Unit|Application` tests, the sample `Integration` smoke test,
+`pnpm format:check`, and `git diff --check`.

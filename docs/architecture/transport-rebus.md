@@ -40,14 +40,16 @@ bondstone.UseRebusTransport(rebus =>
 
 Receive endpoint bindings are recorded in
 `IRebusModuleReceiveEndpointRegistry`, and configuring one registers the
-module command receive pipeline and endpoint dispatcher. The dispatcher
-accepts an endpoint name and `RebusDurableMessageEnvelope`, verifies the
-endpoint is configured and accepts the envelope target module, then calls the
-module command receive pipeline. `RebusModuleCommandEndpointHandler` binds a
-configured endpoint name to the dispatcher so Rebus can invoke module command
-receive through a normal `IHandleMessages<RebusDurableMessageEnvelope>`
-handler. A module may be accepted by only one Rebus receive endpoint in a
-host; duplicate matching registrations are idempotent. With the default
+module command receive pipeline, endpoint dispatcher, and, for the current
+single-endpoint app-facing shape, the matching
+`RebusModuleCommandEndpointHandler`. The dispatcher accepts an endpoint name
+and `RebusDurableMessageEnvelope`, verifies the endpoint is configured and
+accepts the envelope target module, then calls the module command receive
+pipeline. The endpoint handler binds the configured endpoint name to the
+dispatcher so Rebus can invoke module command receive through a normal
+`IHandleMessages<RebusDurableMessageEnvelope>` handler. A module may be
+accepted by only one Rebus receive endpoint in a host; duplicate matching
+registrations are idempotent. With the default
 convention, module `fulfillment` maps to Rebus endpoint
 `fulfillment-commands`. A custom naming convention can be provided with
 `UseModuleQueueConvention(moduleName => ...)`. The convention can route
@@ -228,10 +230,12 @@ from the receive primitive.
 Host-owned receive endpoint topology can now record which local modules a
 Rebus endpoint accepts. `IRebusModuleCommandEndpointDispatcher` validates the
 endpoint name and target module before calling the module command receive
-pipeline. `AddBondstoneRebusModuleCommandEndpointHandler(endpointName)`
-registers the Rebus handler and binds it to one configured endpoint name.
-Applications still configure Rebus' broker transport, input queue, serializer,
-workers, retry policy, and dead-letter policy through Rebus-native APIs.
+pipeline. Configuring one receive endpoint through the app-facing topology
+builder also registers the Rebus envelope handler bound to that configured
+endpoint name. Low-level explicit endpoint-handler registration remains
+available for tests and advanced composition. Applications still configure
+Rebus' broker transport, input queue, serializer, workers, retry policy, and
+dead-letter policy through Rebus-native APIs.
 
 ## Deferred Rebus Work
 

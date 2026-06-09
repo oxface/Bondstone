@@ -1,6 +1,6 @@
 # 0032 Module-Owned Durable EF Persistence
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-08
 
@@ -17,9 +17,8 @@ state, outbox rows, inbox rows, and operation state in one host `DbContext`.
 That proves the command loop mechanics, but it does not fully prove module
 persistence ownership.
 
-The Phase 4 sample is an adoption-proof harness while the MVP API settles. It
-is expected to expose friction and may later be replaced by a more polished
-consumer-style sample.
+The Phase 4 sample is an adoption-proof sample while the MVP API settles. It
+is expected to expose friction and may later be polished or replaced.
 
 The current EF and PostgreSQL registrations also use normal scoped service
 registrations for durable stores such as `IDurableOutboxWriter`,
@@ -75,9 +74,21 @@ Existing single-`DbContext` setups remain supported. Module-aware resolution
 is the preferred path for modular-monolith samples and applications with
 separate module persistence ownership.
 
+## Amendment 2026-06-08: Module-Bound Provider Registration
+
+The preferred PostgreSQL setup shape is module-bound. Applications should be
+able to configure module-owned EF metadata and PostgreSQL durable provider
+binding through the module builder, for example
+`module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: "...")`.
+
+Root-level PostgreSQL provider binding can remain available for compatibility
+or advanced composition, but stable setup docs and samples should prefer the
+module-bound provider API so module ownership is visible at the registration
+site.
+
 ## Consequences
 
-The Phase 4 modular monolith harness can prove the real adoption pattern:
+The Phase 4 modular monolith sample can prove the real adoption pattern:
 ordering and fulfillment own separate EF persistence boundaries while the
 durable command loop still stages, dispatches, receives, and commits each
 module's durable state correctly.
@@ -113,7 +124,9 @@ outer EF transaction may still be open.
   pending operation-state persistence. Target-module receives resolve
   module-specific inbox handling, successful operation completion, handler
   state, and outgoing outbox persistence. Local module outbox dispatch and
-  operation reads aggregate across configured module stores.
+  operation reads aggregate across configured module stores. PostgreSQL
+  provider binding should be available from the module builder as the
+  preferred public setup shape.
 - Stable docs: Current module-owned durable persistence behavior is described
   in [docs/architecture/modules.md](../architecture/modules.md),
   [docs/architecture/messaging.md](../architecture/messaging.md),
@@ -132,9 +145,17 @@ outer EF transaction may still be open.
   dispatch through `DurableModuleOutboxDispatchAggregator`. EF Core module
   outbox writer and operation-state store wrappers are applied. PostgreSQL
   module-specific inbox handler executor and outbox dispatcher bindings are
-  applied. The modular monolith adoption-proof harness now uses separate
+  applied. The modular monolith adoption-proof sample now uses separate
   `OrderingDbContext` and `FulfillmentDbContext` types with separate
-  PostgreSQL schemas.
+  PostgreSQL schemas. Module-bound PostgreSQL provider registration is applied
+  through `module.UsePostgreSqlPersistence<TDbContext>(...)`. The sample is now
+  a minimal ASP.NET Core API project using Rebus service-provider registration
+  and the durable outbox worker instead of manual Rebus bus startup, routing
+  API bridging, or direct dispatcher calls. Ordering, fulfillment contracts,
+  and fulfillment
+  implementation now live in module-owned sample assemblies, and module
+  command handlers are registered with
+  `RegisterFromAssemblyContaining<TMarker>()`.
 - Pending or deferred: Cross-database distributed transactions, event
   choreography, provider-specific migration helpers, operation-state
   concurrency policy, failure states, stale receive recovery, and richer
@@ -148,6 +169,22 @@ Read back affected stable docs and verified with:
 - `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
 - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --no-build --filter "Category=Unit" --disable-build-servers`
 - `dotnet test tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --no-build --filter "Category=Unit" --disable-build-servers`
+- `dotnet test Bondstone.slnx --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
+- `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
+- `pnpm format:check`
+
+After the 2026-06-08 amendment, read back affected docs and verified the
+module-bound provider API and service-provider hosted sample path with:
+
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --no-build --filter "Category=Unit" --disable-build-servers`
+- `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
+
+After splitting the sample into module-owned assemblies and reshaping the app
+entrypoint into a minimal API, verified with:
+
+- `dotnet restore Bondstone.slnx --disable-build-servers -p:NuGetAudit=false`
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
 - `dotnet test Bondstone.slnx --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
 - `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
 - `pnpm format:check`

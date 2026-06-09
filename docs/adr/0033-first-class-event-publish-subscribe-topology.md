@@ -1,7 +1,7 @@
 # 0033 First-Class Event Publish/Subscribe Topology
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-09
 
 ## Context
@@ -230,9 +230,15 @@ implementation, rather than as only future vocabulary.
   `IModuleEventSubscriberExecutor` and event subscriber pipeline behaviors.
   EF Core event subscriber transaction behavior is applied for modules that
   opt into EF persistence. Rebus receive endpoint event subscription bindings
-  and event envelope receive execution are applied. Native Rebus subscription
-  startup, external event wire formats, provider-specific event queue/address
-  handoff, and event transport-backed tests remain incremental Phase 5 slices.
+  and event envelope receive execution are applied. Rebus in-memory
+  transport-backed event publish/subscribe receive is verified through native
+  Rebus topic subscription and publish APIs. Rebus event subscription
+  diagnostics are applied. The modular monolith sample proves explicit
+  integration event publication and subscriber execution with app-owned
+  native Rebus topic subscription startup. Optional native Rebus subscription
+  startup helpers, external event wire formats, provider-specific event
+  queue/address handoff, and provider-backed event transport tests remain
+  future slices.
   Adapter-diversity proof work should follow after the first-class event loop
   has enough shape and should validate Azure Service Bus, RabbitMQ, and one
   non-EF persistence path with thin proof-oriented slices.
@@ -273,14 +279,22 @@ implementation, rather than as only future vocabulary.
   envelopes by stable event identity to all bound subscribers on the endpoint,
   deserializes event payloads through the shared durable payload serializer,
   derives per-subscriber inbox records, and calls
-  `IModuleEventSubscriberExecutor`.
-- Pending or deferred: Native Rebus subscription startup helpers, event
-  subscription diagnostics,
-  transport-backed event tests, event choreography samples, domain event
-  persistence, automatic integration-event publication, retry state, failure
-  state, stale receive recovery, broker-specific topology creation, Azure
-  Service Bus and RabbitMQ transport proofs, and non-EF persistence proof
-  remain future slices.
+  `IModuleEventSubscriberExecutor`. Rebus in-memory transport-backed
+  integration coverage now verifies native topic subscription and publish
+  handoff into the Bondstone module event subscriber receive path. Event
+  subscription diagnostics now report topic resolution, endpoint/subscriber
+  bindings, subscriber module, stable subscriber identity, and zero-subscriber
+  outcomes. The modular monolith sample now uses an ordering contracts
+  integration event, outbox-backed event publication, Rebus in-memory topic
+  delivery, fulfillment event subscriber execution, per-subscriber inbox
+  handling, and EF subscriber transaction behavior.
+- Pending or deferred: Optional native Rebus subscription startup helpers,
+  provider-backed event transport tests, external event wire formats,
+  provider-specific event queue/address handoff, event choreography samples,
+  domain event persistence, automatic integration-event publication, retry
+  state, failure state, stale receive recovery, broker-specific topology
+  creation, Azure Service Bus and RabbitMQ transport proofs, and non-EF
+  persistence proof remain future slices.
 
 ## Verification
 
@@ -314,3 +328,24 @@ After the Rebus event receive binding slice, verification was rerun with:
 
 After documenting orchestration, durable local-queue boundaries, and adapter
 diversity priority, read back the ADR and affected stable docs.
+
+After the Rebus in-memory transport-backed event receive proof, verification
+was rerun with:
+
+- `dotnet test tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj --configuration Release --filter "Category=Integration" --disable-build-servers`
+
+After the Rebus event subscription diagnostics and modular monolith event
+sample adoption proof, verification was rerun with:
+
+- `dotnet test tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application" --disable-build-servers`
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
+
+Final Phase 5 closeout verification was rerun with:
+
+- `dotnet test Bondstone.slnx --configuration Release --filter "Category=Unit|Category=Application" --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj --configuration Release --filter "Category=Integration" --disable-build-servers`
+- `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --filter "Category=Integration" --disable-build-servers`
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `pnpm format:check`
+- `git diff --check`

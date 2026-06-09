@@ -9,6 +9,7 @@
   <Folder Name="/samples/">
     <Project Path="samples/ModularMonolith.Fulfillment.Contracts/Bondstone.Samples.ModularMonolith.Fulfillment.Contracts.csproj" />
     <Project Path="samples/ModularMonolith.Fulfillment/Bondstone.Samples.ModularMonolith.Fulfillment.csproj" />
+    <Project Path="samples/ModularMonolith.Ordering.Contracts/Bondstone.Samples.ModularMonolith.Ordering.Contracts.csproj" />
     <Project Path="samples/ModularMonolith.Ordering/Bondstone.Samples.ModularMonolith.Ordering.csproj" />
     <Project Path="samples/ModularMonolith/Bondstone.Samples.ModularMonolith.csproj" />
   </Folder>

@@ -133,8 +133,8 @@ Status: **Complete for the current MVP surface**.
 
 Current phase: **Phase 1**.
 
-Current/next slice: **complete; future transport event receive applies the
-same payload boundary when Phase 5 Rebus subscription binding is implemented**.
+Current/next slice: **complete; Rebus event receive applies the same payload
+boundary through Phase 5 subscription binding**.
 
 Accepted decision:
 [ADR 0029](adr/0029-durable-payload-serialization-boundary.md).
@@ -157,7 +157,7 @@ Slices:
    - add focused tests for custom converters/options.
 
 Remaining in Phase 1: **complete for the current command send, event publish,
-and command receive surface; future event receive remains in Phase 5**.
+command receive, and Rebus event receive surface**.
 
 ### Phase 2: Optional Persistence Mapping
 
@@ -230,8 +230,7 @@ Remaining slices:
 2. Command topology diagnostics:
    - **Done for Rebus command destination diagnostics.**
    - Remaining: endpoint-dispatch diagnostics remain deferred until listener
-     binding needs a preflight surface, and event topic/subscription
-     diagnostics remain deferred until first-class events are implemented.
+     binding needs a preflight surface.
 3. Rebus endpoint dispatcher:
    - **Done for explicit `DispatchAsync(endpointName, envelope, ct)` over
      configured receive topology.**
@@ -319,20 +318,26 @@ Remaining in Phase 4: **complete for the current adoption-proof surface**.
 
 ### Phase 5: First-Class Events Implementation
 
+Status: **Complete for the current MVP surface**.
+
 Goal: publish/subscribe is first-class and durable without turning Bondstone
 into a generic bus.
 
 Accepted decision:
 [ADR 0033](adr/0033-first-class-event-publish-subscribe-topology.md).
 
-Current/next slice: **event diagnostics and transport-backed tests**. The
+Current/next slice: **complete; move to Phase 6 adapter diversity proof**. The
 publish-side Rebus dispatch slice is applied: Rebus can resolve event
 identities to topics and dispatch claimed event outbox records through Rebus
 publish/subscribe. Core subscriber execution, per-subscriber receive inbox
 orchestration, EF Core module transaction behavior for event subscribers, and
 Rebus event subscription receive binding are applied. Native Rebus
-subscription startup, event diagnostics, choreography samples, and
-transport-backed event tests remain follow-up slices.
+subscription startup remains app-owned and explicit. Rebus in-memory
+transport-backed event publish/subscribe receive is verified. Rebus event
+subscription diagnostics are applied. The modular monolith sample now proves
+outbox-backed integration event publish, Rebus topic delivery, module event
+subscriber execution, receive inbox handling, and EF subscriber transaction
+behavior.
 
 Slices:
 
@@ -359,7 +364,13 @@ Slices:
    binding:
    - Rebus receive endpoint subscription bindings are applied;
    - native Rebus subscription startup remains app-owned and explicit.
-6. Event diagnostics and transport-backed tests.
+6. Event diagnostics and transport-backed tests:
+   - Rebus in-memory transport-backed event publish/subscribe receive is
+     verified through native Rebus topic subscription and publish APIs;
+   - Rebus event subscription diagnostics report topic resolution,
+     endpoint/subscriber bindings, and zero-subscriber outcomes;
+   - the modular monolith sample proves the durable command loop and the
+     durable integration event loop together.
 
 Execution-shape note: commands and event subscribers keep separate entrypoints
 because route/identity semantics differ. After route or subscriber resolution,
@@ -368,9 +379,10 @@ receive inbox orchestration, and tracing should be factored behind small
 internal helpers when real duplication appears. Do not introduce a generic
 mediator or public message pipeline only to remove thin adapter classes.
 
-Remaining in Phase 5: **medium-small, 1-2 slices after publish-side dispatch,
-core subscriber execution, EF subscriber transactions, and Rebus receive
-binding**.
+Remaining in Phase 5: **complete for the current MVP surface. Provider-backed
+event transport tests, external event wire formats, broker-specific topology
+creation, domain event persistence, and automatic domain-event-to-integration
+event publication remain future ADR-backed work.**
 
 ### Phase 6: Adapter Diversity Proof
 

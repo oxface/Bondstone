@@ -9,6 +9,7 @@ using Bondstone.Persistence;
 using Bondstone.Samples.ModularMonolith.Fulfillment;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Bondstone.Samples.ModularMonolith.Ordering;
+using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
 using Bondstone.Transport.Rebus.Outbox;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -41,6 +42,7 @@ public static class ModularMonolithApplication
                 FulfillmentModule.CommandEndpointName))
             .Serialization(serializer => serializer.UseSystemTextJson())
             .Options(options => options.RetryStrategy("error", maxDeliveryAttempts: 1)));
+        services.AddHostedService<ModularMonolithRebusSubscriptionHostedService>();
         services.AddBondstone(bondstone =>
         {
             bondstone
@@ -50,7 +52,17 @@ public static class ModularMonolithApplication
             {
                 rebus
                     .UseModuleQueueConvention()
-                    .ReceiveModule(FulfillmentModule.ModuleName);
+                    .RouteEvent(OrderingIntegrationEvents.OrderPlaced)
+                    .ToTopic(OrderingIntegrationEvents.OrderPlaced);
+                rebus
+                    .ReceiveEndpoint(FulfillmentModule.CommandEndpointName)
+                    .AcceptModule(FulfillmentModule.ModuleName);
+                rebus
+                    .ReceiveEndpoint(FulfillmentModule.CommandEndpointName)
+                    .SubscribeEvent(
+                        OrderingIntegrationEvents.OrderPlaced,
+                        FulfillmentModule.ModuleName,
+                        "fulfillment.order-placed-projection.v1");
             });
             bondstone.Outbox.UseWorker(options =>
             {
@@ -163,6 +175,7 @@ public static class ModularMonolithApplication
             durableOperationId,
             await orderingContext.Orders.CountAsync(ct),
             await fulfillmentContext.Reservations.CountAsync(ct),
+            await fulfillmentContext.OrderEvents.CountAsync(ct),
             await fulfillmentContext
                 .Set<InboxMessageEntity>()
                 .CountAsync(entity => entity.ProcessedAtUtc != null, ct),
@@ -186,6 +199,7 @@ public sealed record OrderStatusResult(
     Guid DurableOperationId,
     int OrderCount,
     int ReservationCount,
+    int FulfillmentOrderEventCount,
     int ProcessedInboxCount,
     int DispatchedOutboxCount,
     DurableOperationStatus? OperationStatus);

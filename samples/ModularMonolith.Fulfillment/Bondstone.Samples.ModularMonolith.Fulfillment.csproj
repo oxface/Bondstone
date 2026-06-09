@@ -4,5 +4,6 @@
     <ProjectReference Include="..\..\src\Bondstone.EntityFrameworkCore\Bondstone.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Bondstone\Bondstone.csproj" />
     <ProjectReference Include="..\ModularMonolith.Fulfillment.Contracts\Bondstone.Samples.ModularMonolith.Fulfillment.Contracts.csproj" />
+    <ProjectReference Include="..\ModularMonolith.Ordering.Contracts\Bondstone.Samples.ModularMonolith.Ordering.Contracts.csproj" />
   </ItemGroup>
 </Project>

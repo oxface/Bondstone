@@ -1,5 +1,6 @@
 using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Modules;
+using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
 
 namespace Bondstone.Samples.ModularMonolith.Ordering;
 
@@ -25,5 +26,6 @@ public sealed class OrderingBondstoneModule : IBondstoneModule
             _connectionString,
             schema: OrderingModule.ModuleName);
         module.Commands.RegisterFromAssemblyContaining<PlaceOrderHandler>();
+        module.Events.RegisterPublishedEvent<OrderPlacedEvent>();
     }
 }

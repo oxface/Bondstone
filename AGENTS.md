@@ -72,12 +72,13 @@ Start with:
   reads, local composition, or operations that tolerate failure. Domain events
   are module-local/private unless module code explicitly publishes an
   integration event.
-- First-class integration events are Phase 5 work. Follow
+- First-class integration events follow
   [ADR 0033](docs/adr/0033-first-class-event-publish-subscribe-topology.md):
-  implement event publish dispatch, subscriber execution, per-subscriber
-  inbox behavior, Rebus topic/subscription topology, diagnostics, and tests as
-  narrow slices. Do not fold domain event persistence or broad choreography
-  samples into the initial event loop.
+  publish dispatch, subscriber execution, per-subscriber inbox behavior,
+  Rebus topic/subscription topology, diagnostics, and tests are part of the
+  current durable event loop. Keep native broker setup app-owned, and do not
+  fold domain event persistence or broad choreography samples into this event
+  loop without a later ADR.
 - Transport adapter topology should describe durable message topology, such as
   command queues or future event topics/subscriptions, while broker
   connection, worker, retry, dead-letter, serializer, and subscription-storage

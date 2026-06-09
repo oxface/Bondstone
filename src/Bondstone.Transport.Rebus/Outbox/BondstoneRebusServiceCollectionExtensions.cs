@@ -1,4 +1,5 @@
 using Bondstone.Persistence;
+using Bondstone.Transport.Rebus.Inbox;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Rebus.Bus;
@@ -18,17 +19,20 @@ public static class BondstoneRebusServiceCollectionExtensions
             RebusCommandDestinationTopology.FromConfiguredDestinations(
                 destinationAddressesByTargetModule,
                 destinationAddressConvention),
-            RebusEventTopicTopology.Empty);
+            RebusEventTopicTopology.Empty,
+            []);
     }
 
     internal static IServiceCollection AddBondstoneRebusOutboxTransport(
         this IServiceCollection services,
         RebusCommandDestinationTopology commandTopology,
-        RebusEventTopicTopology eventTopicTopology)
+        RebusEventTopicTopology eventTopicTopology,
+        IReadOnlyCollection<RebusEventSubscriptionBinding> eventSubscriptionBindings)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(commandTopology);
         ArgumentNullException.ThrowIfNull(eventTopicTopology);
+        ArgumentNullException.ThrowIfNull(eventSubscriptionBindings);
 
         services.AddSingleton<IRebusOutboxDestinationResolver>(
             new RebusModuleDestinationResolver(commandTopology));
@@ -37,7 +41,9 @@ public static class BondstoneRebusServiceCollectionExtensions
         services.AddSingleton<IRebusCommandTopologyDiagnostics>(
             new RebusCommandTopologyDiagnostics(commandTopology));
         services.AddSingleton<IRebusEventTopologyDiagnostics>(
-            new RebusEventTopologyDiagnostics(eventTopicTopology));
+            new RebusEventTopologyDiagnostics(
+                eventTopicTopology,
+                eventSubscriptionBindings));
         services.TryAddTransient<IDurableOutboxTransport, RebusDurableOutboxTransport>();
 
         return services;

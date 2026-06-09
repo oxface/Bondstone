@@ -151,9 +151,9 @@ implement `IIntegrationEventHandler<TEvent>`. Registration records stable
 message identity, subscriber module, stable subscriber identity, and handler
 type.
 
-First-class subscriber execution is Phase 5 work accepted by
+First-class subscriber execution is accepted by
 [ADR 0033](../adr/0033-first-class-event-publish-subscribe-topology.md). Core
-now provides `IModuleEventSubscriberExecutor`, which resolves subscribers by
+provides `IModuleEventSubscriberExecutor`, which resolves subscribers by
 module, stable event identity, and stable subscriber identity, then executes
 typed `IIntegrationEventHandler<TEvent>` handlers through an event-specific
 subscriber pipeline. System pipeline behaviors set the module execution

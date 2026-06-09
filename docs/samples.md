@@ -53,12 +53,12 @@ decision for Bondstone packages.
 
 ## Current Status
 
-The current `samples/ModularMonolith` project is a Phase 4 adoption-proof
+The current `samples/ModularMonolith` project is a Phase 5 adoption-proof
 minimal API sample. It is still intentionally small, but its app entrypoint
-uses normal ASP.NET Core, Rebus service-provider registration, Bondstone
-module registration, and the durable outbox worker. Verification-only database
-reset and completion polling live in the integration test, not in the app
-entrypoint.
+uses normal ASP.NET Core, Rebus service-provider registration, app-owned
+Rebus topic subscription startup, Bondstone module registration, and the
+durable outbox worker. Verification-only database reset and completion
+polling live in the integration test, not in the app entrypoint.
 
 The sample has `ordering` and `fulfillment` modules split into module-owned
 assemblies with separate module-owned `DbContext` types and PostgreSQL
@@ -66,12 +66,16 @@ schemas. Each implementation assembly exposes a module-owned
 `IBondstoneModule` registration object plus a thin host extension for the
 connection string. The API host composes those module extensions, while the
 module assemblies own durable messaging capability, PostgreSQL persistence
-binding, and `RegisterFromAssemblyContaining<TMarker>()` handler scanning. The
-sample sends a durable command from ordering to fulfillment, dispatches the
-ordering outbox through the durable outbox worker and Rebus in-memory
-transport, receives through the Rebus topology-bound module command endpoint
-handler, and persists fulfillment state, inbox markers, and operation
-completion through fulfillment EF persistence.
+binding, command handler scanning, published integration event registration,
+and event subscriber registration. Ordering publishes an `OrderPlacedEvent`
+from a module-owned contracts assembly and still sends a durable command to
+fulfillment. The ordering outbox dispatches both messages through the durable
+outbox worker and Rebus in-memory transport. Fulfillment receives the command
+through the Rebus topology-bound module command endpoint handler, receives
+the event through app-owned native Rebus topic subscription plus Bondstone
+event subscription binding, and persists fulfillment state, event projection
+state, inbox markers, and command operation completion through fulfillment EF
+persistence.
 
 The focused smoke test lives in
 [`tests/Bondstone.Samples.Tests`](../tests/Bondstone.Samples.Tests) and is an
@@ -82,8 +86,7 @@ with the repository integration test entrypoint.
 Once the MVP surface settles, polish or replace this sample so it demonstrates
 the final preferred public API and application structure.
 
-Phase 5 event samples should remain narrow until subscriber execution is
-implemented. The first event sample update should prove explicit integration
-event publication and Rebus topic dispatch only if it stays small; broader
-event choreography and automatic domain-event publication remain out of the
-sample until later ADR-backed slices accept them.
+The event sample remains intentionally narrow. It proves explicit integration
+event publication and Rebus topic delivery without introducing automatic
+domain-event publication or broad choreography. Broader orchestration samples
+remain out of scope until later ADR-backed slices accept them.

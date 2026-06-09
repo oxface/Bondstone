@@ -77,6 +77,13 @@ and a failure reason when no destination exists. The diagnostic path and
 dispatch path use the same resolution precedence: explicit route, receive
 binding, module queue convention, then missing destination.
 
+`IRebusEventTopologyDiagnostics` describes event topic and subscription
+resolution without dispatching or receiving an event. Topic diagnostics report
+event identity, resolved topic, explicit route or convention source, and
+missing-topic failures. Subscription diagnostics report event identity, topic
+diagnostics, endpoint/subscriber bindings, subscriber module, stable
+subscriber identity, and zero-subscriber failures.
+
 Rebus infrastructure setup remains Rebus-native and outside Bondstone's
 topology builder. Applications still configure the broker transport,
 connection string, serializer, worker count, retry/dead-letter policy, and
@@ -91,9 +98,8 @@ the durable default. The database inbox can still be shared because inbox keys
 include module and handler identity; the transport queue is the operational
 backlog and scale boundary.
 
-Commands should use Rebus queues. Topic or subscription topology is reserved
-for future event publish/subscribe work, where each subscriber needs its own
-copy of an event.
+Commands should use Rebus queues. Integration events use topic or
+subscription topology, where each subscriber needs its own copy of an event.
 
 Event support uses Rebus publish/subscribe vocabulary instead of command
 routing vocabulary. Durable event publish topology maps an integration event
@@ -264,13 +270,16 @@ results throw so Rebus retry/dead-letter policy remains in control.
 Bondstone records the durable subscription binding relationship, but native
 Rebus subscription startup and subscription storage remain application-owned.
 Applications still decide when and how to call Rebus topic subscription APIs
-for the configured topics.
+for the configured topics. The current transport-backed verification uses the
+Rebus in-memory transport with native `IBus.Advanced.Topics.Subscribe` and
+`IBus.Advanced.Topics.Publish`, then dispatches the delivered Bondstone wire
+envelope through the module event subscriber receive path.
 
 ## Deferred Rebus Work
 
-Deferred Rebus work includes native event subscription startup helpers, event
-subscription diagnostics, endpoint dispatch diagnostics, route or destination
-circuit breaking, stale-claim recovery sweeps, dead-letter routing, receive
-retry state, stale receive recovery, and worker metrics. These remain hosting,
-persistence, or future receive-pipeline decisions unless a later ADR accepts a
-transport-specific policy.
+Deferred Rebus work includes optional native event subscription startup
+helpers if API friction proves they are useful, endpoint dispatch diagnostics,
+route or destination circuit breaking, stale-claim recovery sweeps,
+dead-letter routing, receive retry state, stale receive recovery, and worker
+metrics. These remain hosting, persistence, or future receive-pipeline
+decisions unless a later ADR accepts a transport-specific policy.

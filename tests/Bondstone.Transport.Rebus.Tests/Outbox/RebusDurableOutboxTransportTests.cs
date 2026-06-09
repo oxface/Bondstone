@@ -440,6 +440,100 @@ public sealed class RebusDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void DescribeEventSubscriptions_WhenSubscriberBindingExists_ReturnsSubscribersAndTopic()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone =>
+            {
+                bondstone.Module("fulfillment", ConfigureFulfillmentEventSubscriberModule);
+                bondstone.UseRebusTransport(rebus =>
+                {
+                    rebus.RouteEvent("sales.order.submit.v1").ToTopic("sales.order.events");
+                    rebus.ReceiveEndpoint("fulfillment-events").SubscribeEvent(
+                        "sales.order.submit.v1",
+                        "fulfillment",
+                        "fulfillment.order-projection.v1");
+                });
+            });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusEventTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusEventTopologyDiagnostics>();
+
+        RebusEventSubscriptionDiagnostic diagnostic =
+            diagnostics.DescribeEventSubscriptions("sales.order.submit.v1");
+
+        Assert.Equal(DurableMessageTopologyDiagnosticKind.EventSubscription, diagnostic.Kind);
+        Assert.Equal("sales.order.submit.v1", diagnostic.MessageTypeName);
+        Assert.True(diagnostic.HasSubscriptions);
+        Assert.Null(diagnostic.FailureReason);
+        Assert.Equal(RebusEventTopicSource.ExplicitRoute, diagnostic.Topic.Source);
+        Assert.Equal("sales.order.events", diagnostic.Topic.TopicName);
+
+        RebusEventSubscriberDiagnostic subscriber = Assert.Single(diagnostic.Subscribers);
+        Assert.Equal("fulfillment-events", subscriber.EndpointName);
+        Assert.Equal("fulfillment", subscriber.SubscriberModule);
+        Assert.Equal("fulfillment.order-projection.v1", subscriber.SubscriberIdentity);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DescribeEventSubscriptions_WhenNoSubscriberBindingExists_ReturnsMissingDiagnostic()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus.RouteEvent("sales.order.submit.v1").ToTopic("sales.order.events")));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusEventTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusEventTopologyDiagnostics>();
+
+        RebusEventSubscriptionDiagnostic diagnostic =
+            diagnostics.DescribeEventSubscriptions("sales.order.submit.v1");
+
+        Assert.False(diagnostic.HasSubscriptions);
+        Assert.Empty(diagnostic.Subscribers);
+        Assert.Equal("sales.order.events", diagnostic.Topic.TopicName);
+        Assert.Contains("sales.order.submit.v1", diagnostic.FailureReason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DescribeEventSubscriptions_WhenTopicIsMissing_ReturnsSubscribersAndMissingTopic()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone =>
+            {
+                bondstone.Module("fulfillment", ConfigureFulfillmentEventSubscriberModule);
+                bondstone.UseRebusTransport(rebus =>
+                {
+                    rebus.ReceiveEndpoint("fulfillment-events").SubscribeEvent(
+                        "sales.order.submit.v1",
+                        "fulfillment",
+                        "fulfillment.order-projection.v1");
+                });
+            });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusEventTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusEventTopologyDiagnostics>();
+
+        RebusEventSubscriptionDiagnostic diagnostic =
+            diagnostics.DescribeEventSubscriptions("sales.order.submit.v1");
+
+        Assert.True(diagnostic.HasSubscriptions);
+        Assert.Null(diagnostic.FailureReason);
+        Assert.Equal(RebusEventTopicSource.Missing, diagnostic.Topic.Source);
+        Assert.Null(diagnostic.Topic.TopicName);
+        Assert.Contains("sales.order.submit.v1", diagnostic.Topic.FailureReason, StringComparison.Ordinal);
+        Assert.Single(diagnostic.Subscribers);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task AddBondstoneRebusOutboxTransport_RegistersTransportWithModuleDestinations()
     {
         var routingApi = new RecordingRoutingApi();
@@ -667,6 +761,14 @@ public sealed class RebusDurableOutboxTransportTests
         module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
     }
 
+    private static void ConfigureFulfillmentEventSubscriberModule(BondstoneModuleBuilder module)
+    {
+        module.UseDurableMessaging();
+        module.UsePersistence("test persistence");
+        module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderSubmittedHandler>(
+            "fulfillment.order-projection.v1");
+    }
+
     [DurableCommandIdentity("fulfillment.order.reserve.v1")]
     public sealed record ReserveOrderCommand(string OrderId) : IDurableCommand;
 
@@ -674,6 +776,19 @@ public sealed class RebusDurableOutboxTransportTests
     {
         public ValueTask HandleAsync(
             ReserveOrderCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [IntegrationEventIdentity("sales.order.submit.v1")]
+    public sealed record OrderSubmittedEvent(string OrderId) : IIntegrationEvent;
+
+    public sealed class OrderSubmittedHandler : IIntegrationEventHandler<OrderSubmittedEvent>
+    {
+        public ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
             CancellationToken ct = default)
         {
             return ValueTask.CompletedTask;

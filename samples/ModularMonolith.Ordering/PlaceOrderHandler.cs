@@ -1,12 +1,14 @@
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
+using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
 
 namespace Bondstone.Samples.ModularMonolith.Ordering;
 
 public sealed class PlaceOrderHandler(
     OrderingDbContext dbContext,
-    IDurableCommandSender commandSender)
+    IDurableCommandSender commandSender,
+    IDurableEventPublisher eventPublisher)
     : ICommandHandler<PlaceOrderCommand>
 {
     public async ValueTask HandleAsync(
@@ -26,6 +28,15 @@ public sealed class PlaceOrderHandler(
                 command.Sku,
                 command.Quantity),
             FulfillmentModule.ModuleName,
+            partitionKey: command.OrderId.ToString("D"),
+            durableOperationId: command.DurableOperationId,
+            ct: ct);
+
+        await eventPublisher.PublishAsync(
+            new OrderPlacedEvent(
+                command.OrderId,
+                command.Sku,
+                command.Quantity),
             partitionKey: command.OrderId.ToString("D"),
             durableOperationId: command.DurableOperationId,
             ct: ct);

@@ -212,23 +212,37 @@ handler binding needed for the configured module receive endpoint.
 For integration event publish dispatch, configure Rebus event topics on the
 same Bondstone Rebus transport builder. Bondstone dispatches through the
 application-owned Rebus bus, using Rebus routing for commands and Rebus topics
-for events. The first Phase 5 slice is publish-side only: claimed event outbox
-records can be published to topics, while subscriber execution and
-subscription binding remain follow-up work.
+for events. Bondstone records subscription bindings and executes module event
+subscribers, while the application still owns native Rebus topic subscription
+startup, subscription storage, broker setup, workers, serializer, retry, and
+dead-letter policy.
 
 ```csharp
 builder.Services.AddBondstone(bondstone =>
 {
-    bondstone.AddOrderingModule(connectionString);
+    bondstone
+        .AddOrderingModule(connectionString)
+        .AddFulfillmentModule(connectionString);
 
     bondstone.UseRebusTransport(rebus =>
     {
-        rebus.UseEventTopicConvention();
         rebus.RouteEvent("ordering.order.submitted.v1")
             .ToTopic("ordering-events");
+        rebus.ReceiveEndpoint("fulfillment-commands")
+            .SubscribeEvent(
+                "ordering.order.submitted.v1",
+                "fulfillment",
+                "fulfillment.order-projection.v1");
     });
     bondstone.Outbox.UseWorker();
 });
+```
+
+Subscribe the Rebus endpoint to the native topic through Rebus APIs during
+application startup:
+
+```csharp
+await bus.Advanced.Topics.Subscribe("ordering.order.submitted.v1");
 ```
 
 In the modular-monolith shape, each module should normally declare its own EF

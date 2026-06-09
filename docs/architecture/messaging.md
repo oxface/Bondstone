@@ -279,12 +279,12 @@ receive endpoint should usually represent a module-level command backlog so
 that scaling, retry, dead-letter handling, and service extraction can be
 managed per module. Multiple modules may share an endpoint when they share the
 same operational profile, but a general inbox queue is not the default command
-topology. Future event publish/subscribe work can use topic or subscription
-topology because events intentionally fan out to multiple subscribers.
+topology. Integration events use topic or subscription topology because events
+intentionally fan out to zero or more subscribers.
 
 Durable-message diagnostics should specialize by message kind. Current Rebus
 command destination diagnostics report target module, destination, route
-source, and receive endpoint binding. Future event diagnostics can report
+source, and receive endpoint binding. Current Rebus event diagnostics report
 event identity, topic, subscriber module, subscriber identity, subscription
 binding, and zero subscriber outcomes. Shared diagnostics should include
 stable message identity, message kind, source module, payload serialization

@@ -117,9 +117,23 @@ public sealed class RebusModuleCommandEndpointHandlerTransportTests
                 module.UsePersistence("test persistence");
                 module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
             });
+            if (boundEndpointName != "fulfillment-commands")
+            {
+                bondstone.Module("billing", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                    module.Commands.RegisterHandler<RecordBillingCommand, RecordBillingHandler>();
+                });
+            }
+
             bondstone.UseRebusTransport(rebus =>
             {
                 rebus.ReceiveEndpoint("fulfillment-commands").AcceptModule("fulfillment");
+                if (boundEndpointName != "fulfillment-commands")
+                {
+                    rebus.ReceiveEndpoint(boundEndpointName).AcceptModule("billing");
+                }
             });
         });
 
@@ -187,6 +201,9 @@ public sealed class RebusModuleCommandEndpointHandlerTransportTests
     [DurableCommandIdentity("fulfillment.order.reserve.v1")]
     public sealed record ReserveOrderCommand(string OrderId) : IDurableCommand;
 
+    [DurableCommandIdentity("billing.record.v1")]
+    public sealed record RecordBillingCommand(string OrderId) : IDurableCommand;
+
     public sealed class ReserveOrderHandler(ReceivedCommandSignal signal)
         : ICommandHandler<ReserveOrderCommand>
     {
@@ -195,6 +212,16 @@ public sealed class RebusModuleCommandEndpointHandlerTransportTests
             CancellationToken ct = default)
         {
             signal.SetResult(command);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed class RecordBillingHandler : ICommandHandler<RecordBillingCommand>
+    {
+        public ValueTask HandleAsync(
+            RecordBillingCommand command,
+            CancellationToken ct = default)
+        {
             return ValueTask.CompletedTask;
         }
     }

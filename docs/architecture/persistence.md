@@ -23,7 +23,8 @@ do not own transport acknowledgement, retry policy, domain events, or a
 generic mediator. Module command execution and module event subscriber
 execution own handler registration; modules that opt into EF persistence get
 EF transaction pipeline behaviors for command handlers and event subscribers.
-Broader transport-backed event receive orchestration remains future work.
+Transport-backed event receive orchestration is applied in the Rebus adapter
+for the current MVP event loop.
 
 Optional EF Core mapping helpers are accepted in
 [ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md).

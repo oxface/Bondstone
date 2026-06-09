@@ -388,11 +388,9 @@ event publication remain future ADR-backed work.**
 
 ### Phase 6: Adapter Diversity Proof
 
-Current phase: **Phase 6**.
+Status: **Complete for the current adapter-diversity proof surface**.
 
-Current/next slice: **outgoing Service Bus and RabbitMQ proof transports are
-applied; next slices are receive-side adapter proof, broker-backed tests, and
-non-EF persistence proof**.
+Current/next slice: **complete; move to Phase 7 reliability and recovery**.
 Accepted decision:
 [ADR 0034](adr/0034-adapter-diversity-proof-transports.md).
 
@@ -428,9 +426,13 @@ Expected slices:
    - outgoing `IDurableOutboxTransport` proof implemented with diagnostics and
      fast unit coverage.
 4. Non-EF persistence proof, such as direct ADO.NET or Dapper:
-   - implement core outbox/inbox/operation-state contracts directly;
-   - prove module transaction boundaries without `DbContext`;
-   - keep migration/schema strategy narrow and explicit.
+   - **Done by ADR 0035 and `Bondstone.Persistence.Dapper.Postgres`.**
+   - core outbox/inbox/operation-state contracts are implemented directly;
+   - module transaction boundaries are proven without `DbContext`;
+   - migration/schema strategy is narrow and explicit through a proof helper;
+   - extend the modular monolith sample with a small third module, such as
+     billing, that uses the non-EF provider while ordering and fulfillment
+     remain EF-backed. **Done with the billing module.**
 5. Compare API friction found by the adapter proofs and record narrow follow-up
    slices before broad reliability hardening.
    - Follow-up: tighten Rebus receive endpoint ergonomics. Distinguish compact
@@ -452,10 +454,10 @@ Expected slices:
      behavior, channel lifecycle policy, and Service Bus richer send options
      to reliability-oriented slices.
 
-Remaining in Phase 6: **medium-large, proof-oriented 3-4 slices. Outgoing
-Service Bus and RabbitMQ adapter proof work is applied; receive-side broker
-integration, provider-backed reliability tests, and non-EF persistence proof
-remain later slices.**
+Remaining in Phase 6: **complete for the current proof surface. Receive-side
+Service Bus and RabbitMQ workers, broker-backed reliability tests, topology
+declaration, and production migration tooling move to later reliability and
+provider-hardening slices.**
 
 ### Phase 7: Reliability And Recovery
 

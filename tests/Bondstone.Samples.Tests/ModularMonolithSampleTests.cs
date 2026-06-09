@@ -59,7 +59,8 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
             Assert.Equal(1, result.ReservationCount);
             Assert.Equal(1, result.FulfillmentOrderEventCount);
             Assert.Equal(1, result.OrderingInventoryReservationCount);
-            Assert.Equal(3, result.ProcessedInboxCount);
+            Assert.Equal(1, result.BillingInvoiceCount);
+            Assert.Equal(4, result.ProcessedInboxCount);
             Assert.Equal(3, result.DispatchedOutboxCount);
             Assert.Equal(DurableOperationStatus.Completed, result.OperationStatus);
         }
@@ -114,7 +115,8 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
                     ReservationCount: 1,
                     FulfillmentOrderEventCount: 1,
                     OrderingInventoryReservationCount: 1,
-                    ProcessedInboxCount: 3,
+                    BillingInvoiceCount: 1,
+                    ProcessedInboxCount: 4,
                     DispatchedOutboxCount: 3,
                     OperationStatus: DurableOperationStatus.Completed,
                 })

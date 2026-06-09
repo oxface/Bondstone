@@ -18,6 +18,7 @@ Ship one NuGet package per package project. Package IDs match project names:
 - `Bondstone.Hosting`
 - `Bondstone.EntityFrameworkCore`
 - `Bondstone.EntityFrameworkCore.Postgres`
+- `Bondstone.Persistence.Dapper.Postgres`
 - `Bondstone.Transport.Rebus`
 - `Bondstone.Transport.ServiceBus`
 - `Bondstone.Transport.RabbitMq`
@@ -26,9 +27,13 @@ Adapter-diversity proof transport packages are accepted by
 [ADR 0034](adr/0034-adapter-diversity-proof-transports.md). The initial
 Service Bus and RabbitMQ packages are proof-oriented outgoing durable outbox
 transports. Receive workers, provider-backed broker integration tests, and
-broker administration remain future slices. A non-EF persistence provider
-package remains expected later; exact name and support scope still require ADR
-review before package creation.
+broker administration remain future slices.
+
+The non-EF persistence proof package is accepted by
+[ADR 0035](adr/0035-postgresql-dapper-persistence-proof.md).
+`Bondstone.Persistence.Dapper.Postgres` is PostgreSQL-specific and
+Dapper-assisted. It proves durable module messaging persistence without EF
+Core; it is not a generic Dapper provider abstraction.
 
 ## Package Dependencies
 
@@ -41,6 +46,8 @@ Use this dependency direction:
 - `Bondstone.EntityFrameworkCore.Postgres` depends on
   `Bondstone.EntityFrameworkCore` and may reference `Bondstone` directly for
   shared builder extension methods.
+- `Bondstone.Persistence.Dapper.Postgres` depends on `Bondstone`, `Dapper`,
+  and `Npgsql`.
 - `Bondstone.Transport.Rebus` depends on `Bondstone`.
 - `Bondstone.Transport.ServiceBus` depends on `Bondstone` and
   `Azure.Messaging.ServiceBus`.

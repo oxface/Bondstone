@@ -46,6 +46,13 @@ provider-backed broker tests, and broker administration remain later slices.
 See [transport-servicebus.md](transport-servicebus.md) and
 [transport-rabbitmq.md](transport-rabbitmq.md) for the current proof scope.
 
+[ADR 0035](../adr/0035-postgresql-dapper-persistence-proof.md) accepts the
+first non-EF persistence proof package:
+`Bondstone.Persistence.Dapper.Postgres`. Its scope is PostgreSQL-specific,
+Dapper-assisted durable module messaging persistence without EF Core.
+See [persistence-dapper-postgres.md](persistence-dapper-postgres.md) for the
+current proof scope.
+
 ## Topic Docs
 
 - [messaging.md](messaging.md) records durable command, message identity, and
@@ -60,6 +67,8 @@ See [transport-servicebus.md](transport-servicebus.md) and
   store, and persistence-scope rules.
 - [persistence-postgresql.md](persistence-postgresql.md) records PostgreSQL
   provider behavior.
+- [persistence-dapper-postgres.md](persistence-dapper-postgres.md) records
+  PostgreSQL Dapper-assisted non-EF persistence proof behavior.
 - [transport-rebus.md](transport-rebus.md) records Rebus transport adapter
   behavior.
 - [transport-servicebus.md](transport-servicebus.md) records Azure Service

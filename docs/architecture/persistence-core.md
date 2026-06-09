@@ -125,9 +125,10 @@ pending state for the same operation id in the current command loop.
 
 ## Provider Boundaries
 
-Core contracts are intentionally provider-neutral. A future Dapper or direct
-ADO.NET package should implement these contracts directly, own its
-provider-specific connection or transaction boundary in its own package, and
-pass explicit commit delegates to core orchestration primitives where needed.
-Such providers should not depend on EF entity mappings, `DbContext`, or
-`IEntityFrameworkCorePersistenceScope`.
+Core contracts are intentionally provider-neutral.
+`Bondstone.Persistence.Dapper.Postgres` is the accepted first non-EF proof
+provider. It should implement these contracts directly, own its
+PostgreSQL-specific connection/session and transaction boundary in its own
+package, and pass explicit commit delegates to core orchestration primitives
+where needed. Non-EF providers should not depend on EF entity mappings,
+`DbContext`, or `IEntityFrameworkCorePersistenceScope`.

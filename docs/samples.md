@@ -62,9 +62,11 @@ convention, where the stable event identity is the topic name. Verification-only
 database reset and completion polling live in the integration test, not in the
 app entrypoint.
 
-The sample has `ordering` and `fulfillment` modules split into module-owned
-assemblies with separate module-owned `DbContext` types and PostgreSQL
-schemas. Each implementation assembly exposes a module-owned
+The sample has `ordering`, `fulfillment`, and `billing` modules split into
+module-owned assemblies. Ordering and fulfillment use separate module-owned
+`DbContext` types and PostgreSQL schemas. Billing uses the
+PostgreSQL/Dapper non-EF persistence proof with its own schema. Each
+implementation assembly exposes a module-owned
 `IBondstoneModule` registration object plus a thin host extension for the
 connection string. The API host composes those module extensions, while the
 module assemblies own durable messaging capability, PostgreSQL persistence
@@ -73,8 +75,10 @@ and event subscriber registration. Ordering publishes an `OrderPlacedEvent`
 from a module-owned contracts assembly and still sends a durable command to
 fulfillment. Fulfillment publishes an `InventoryReservedEvent` after handling
 the durable command, and ordering records that event through its own event
-subscriber projection. The module outboxes dispatch command and event
-messages through the durable outbox worker and Rebus in-memory transport.
+subscriber projection. Billing also subscribes to `OrderPlacedEvent` and
+records an invoice through Dapper inside the same transaction as its inbox
+marker. The module outboxes dispatch command and event messages through the
+durable outbox worker and Rebus in-memory transport.
 The sample uses one host-level Rebus receive endpoint,
 `modular-monolith-sample`, to keep local proof wiring compact. That endpoint
 binds fulfillment command receive through the Rebus topology-bound module

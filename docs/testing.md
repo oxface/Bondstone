@@ -101,6 +101,11 @@ smoke test under `tests/Bondstone.Samples.Tests`. It is covered by
 `pnpm backend:test:integration` and intentionally stays out of the default
 fast test filter because it starts Testcontainers PostgreSQL.
 
+The PostgreSQL Dapper persistence proof has explicit `Integration` tests under
+`tests/Bondstone.Persistence.Dapper.Postgres.Tests` because the proof depends
+on real PostgreSQL schema, transaction, inbox, outbox, and operation-state
+behavior.
+
 ## Current Status
 
 This testing strategy is accepted and documented. Initial test projects,

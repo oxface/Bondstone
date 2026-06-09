@@ -89,6 +89,10 @@ Start with:
   receive/broker reliability as explicit follow-up slices, and at least one
   non-EF persistence adapter before hardening too deeply around Rebus, EF Core,
   or PostgreSQL.
+- `Bondstone.Persistence.Dapper.Postgres` is accepted by ADR 0035 as the first
+  non-EF persistence proof. Keep it PostgreSQL-specific and Dapper-assisted,
+  not a generic Dapper abstraction; it should prove durable module messaging
+  persistence and mixed-persistence samples without depending on EF Core.
 - Durable behavior, public API shape, package boundaries, provider support,
   transport support, migration strategy, and compatibility policy require ADRs
   before broad implementation.

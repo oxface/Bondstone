@@ -4,10 +4,12 @@ using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 
 namespace Bondstone.Samples.ModularMonolith.Fulfillment;
 
-public sealed class ReserveInventoryHandler(FulfillmentDbContext dbContext)
+public sealed class ReserveInventoryHandler(
+    FulfillmentDbContext dbContext,
+    IDurableEventPublisher eventPublisher)
     : ICommandHandler<ReserveInventoryCommand>
 {
-    public ValueTask HandleAsync(
+    public async ValueTask HandleAsync(
         ReserveInventoryCommand command,
         CancellationToken ct = default)
     {
@@ -19,6 +21,12 @@ public sealed class ReserveInventoryHandler(FulfillmentDbContext dbContext)
             Quantity = command.Quantity,
         });
 
-        return ValueTask.CompletedTask;
+        await eventPublisher.PublishAsync(
+            new InventoryReservedEvent(
+                command.OrderId,
+                command.Sku,
+                command.Quantity),
+            partitionKey: command.OrderId.ToString("D"),
+            ct: ct);
     }
 }

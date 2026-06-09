@@ -1,3 +1,4 @@
+using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
 using Microsoft.Extensions.Hosting;
 using Rebus.Bus;
@@ -12,6 +13,7 @@ public sealed class ModularMonolithRebusSubscriptionHostedService(IBus bus)
         ct.ThrowIfCancellationRequested();
 
         await bus.Advanced.Topics.Subscribe(OrderingIntegrationEvents.OrderPlaced);
+        await bus.Advanced.Topics.Subscribe(FulfillmentIntegrationEvents.InventoryReserved);
     }
 
     public Task StopAsync(CancellationToken ct)

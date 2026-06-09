@@ -26,6 +26,8 @@ namespace Bondstone.Samples.ModularMonolith;
 
 public static class ModularMonolithApplication
 {
+    private const string RebusReceiveEndpointName = "modular-monolith-sample";
+
     public static IServiceCollection AddModularMonolithSample(
         this IServiceCollection services,
         string connectionString,
@@ -39,7 +41,7 @@ public static class ModularMonolithApplication
         services.AddRebus(configure => configure
             .Transport(transport => transport.UseInMemoryTransport(
                 rebusNetwork,
-                FulfillmentModule.CommandEndpointName))
+                RebusReceiveEndpointName))
             .Serialization(serializer => serializer.UseSystemTextJson())
             .Options(options => options.RetryStrategy("error", maxDeliveryAttempts: 1)));
         services.AddHostedService<ModularMonolithRebusSubscriptionHostedService>();
@@ -52,17 +54,22 @@ public static class ModularMonolithApplication
             {
                 rebus
                     .UseModuleQueueConvention()
-                    .RouteEvent(OrderingIntegrationEvents.OrderPlaced)
-                    .ToTopic(OrderingIntegrationEvents.OrderPlaced);
+                    .UseEventTopicConvention();
                 rebus
-                    .ReceiveEndpoint(FulfillmentModule.CommandEndpointName)
+                    .ReceiveEndpoint(RebusReceiveEndpointName)
                     .AcceptModule(FulfillmentModule.ModuleName);
                 rebus
-                    .ReceiveEndpoint(FulfillmentModule.CommandEndpointName)
+                    .ReceiveEndpoint(RebusReceiveEndpointName)
                     .SubscribeEvent(
                         OrderingIntegrationEvents.OrderPlaced,
                         FulfillmentModule.ModuleName,
                         "fulfillment.order-placed-projection.v1");
+                rebus
+                    .ReceiveEndpoint(RebusReceiveEndpointName)
+                    .SubscribeEvent(
+                        FulfillmentIntegrationEvents.InventoryReserved,
+                        OrderingModule.ModuleName,
+                        "ordering.inventory-reserved-projection.v1");
             });
             bondstone.Outbox.UseWorker(options =>
             {
@@ -169,6 +176,20 @@ public static class ModularMonolithApplication
 
         DurableOperationState? operationState =
             await operationReader.GetStateAsync(durableOperationId, ct);
+        int processedInboxCount =
+            await fulfillmentContext
+                .Set<InboxMessageEntity>()
+                .CountAsync(entity => entity.ProcessedAtUtc != null, ct)
+            + await orderingContext
+                .Set<InboxMessageEntity>()
+                .CountAsync(entity => entity.ProcessedAtUtc != null, ct);
+        int dispatchedOutboxCount =
+            await orderingContext
+                .Set<OutboxMessageEntity>()
+                .CountAsync(entity => entity.Status == DurableOutboxStatus.Dispatched, ct)
+            + await fulfillmentContext
+                .Set<OutboxMessageEntity>()
+                .CountAsync(entity => entity.Status == DurableOutboxStatus.Dispatched, ct);
 
         return new OrderStatusResult(
             orderId,
@@ -176,12 +197,9 @@ public static class ModularMonolithApplication
             await orderingContext.Orders.CountAsync(ct),
             await fulfillmentContext.Reservations.CountAsync(ct),
             await fulfillmentContext.OrderEvents.CountAsync(ct),
-            await fulfillmentContext
-                .Set<InboxMessageEntity>()
-                .CountAsync(entity => entity.ProcessedAtUtc != null, ct),
-            await orderingContext
-                .Set<OutboxMessageEntity>()
-                .CountAsync(entity => entity.Status == DurableOutboxStatus.Dispatched, ct),
+            await orderingContext.InventoryReservations.CountAsync(ct),
+            processedInboxCount,
+            dispatchedOutboxCount,
             operationState?.Status);
     }
 }
@@ -200,6 +218,7 @@ public sealed record OrderStatusResult(
     int OrderCount,
     int ReservationCount,
     int FulfillmentOrderEventCount,
+    int OrderingInventoryReservationCount,
     int ProcessedInboxCount,
     int DispatchedOutboxCount,
     DurableOperationStatus? OperationStatus);

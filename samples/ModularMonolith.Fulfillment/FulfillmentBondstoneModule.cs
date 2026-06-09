@@ -27,6 +27,7 @@ public sealed class FulfillmentBondstoneModule : IBondstoneModule
             _connectionString,
             schema: FulfillmentModule.ModuleName);
         module.Commands.RegisterFromAssemblyContaining<ReserveInventoryHandler>();
+        module.Events.RegisterPublishedEvent<InventoryReservedEvent>();
         module.Events.RegisterSubscriber<OrderPlacedEvent, RecordOrderPlacedHandler>(
             "fulfillment.order-placed-projection.v1");
     }

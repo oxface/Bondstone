@@ -83,10 +83,12 @@ Start with:
   command queues or future event topics/subscriptions, while broker
   connection, worker, retry, dead-letter, serializer, and subscription-storage
   setup stays provider-native.
-- After first-class events have enough shape, use thin adapter-diversity proof
-  slices for future transports such as Azure Service Bus and RabbitMQ, and at
-  least one non-EF persistence adapter, before hardening too deeply around
-  Rebus, EF Core, or PostgreSQL.
+- Adapter-diversity proof packages for Azure Service Bus and RabbitMQ are
+  accepted by ADR 0034. Keep these slices proof-oriented: provider-native
+  topology vocabulary, app-owned broker setup, outgoing outbox dispatch first,
+  receive/broker reliability as explicit follow-up slices, and at least one
+  non-EF persistence adapter before hardening too deeply around Rebus, EF Core,
+  or PostgreSQL.
 - Durable behavior, public API shape, package boundaries, provider support,
   transport support, migration strategy, and compatibility policy require ADRs
   before broad implementation.

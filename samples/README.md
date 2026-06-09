@@ -2,7 +2,7 @@
 
 ## Modular Monolith
 
-[`ModularMonolith`](ModularMonolith) is the current Phase 5 adoption-proof
+[`ModularMonolith`](ModularMonolith) is the current Phase 5/6 adoption-proof
 minimal API sample. It proves the current durable command and integration
 event loops with:
 
@@ -10,13 +10,15 @@ event loops with:
 - module-owned assemblies with `IBondstoneModule` registration objects,
   assembly-scanned command handler registration, and explicit event
   registration;
-- an ordering contract assembly that publishes `OrderPlacedEvent`;
+- ordering and fulfillment contract assemblies that publish
+  `OrderPlacedEvent` and `InventoryReservedEvent`;
 - separate module-owned EF Core `DbContext` types and PostgreSQL schemas;
 - outbox-backed durable command sending from ordering to fulfillment;
-- outbox-backed durable event publishing from ordering;
+- outbox-backed durable event publishing from ordering and fulfillment;
 - durable outbox worker dispatch through Rebus in-memory transport;
-- Rebus service-provider registration, module receive endpoint binding, and
-  app-owned native topic subscription startup;
+- Rebus service-provider registration, one host-level sample receive endpoint,
+  module receive binding, event topic convention, and app-owned native topic
+  subscription startup;
 - module command and event subscriber execution with receive inbox handling
   and handler state saved in the same EF transaction.
 

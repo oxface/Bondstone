@@ -1,5 +1,6 @@
 using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Modules;
+using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
 
 namespace Bondstone.Samples.ModularMonolith.Ordering;
@@ -27,5 +28,7 @@ public sealed class OrderingBondstoneModule : IBondstoneModule
             schema: OrderingModule.ModuleName);
         module.Commands.RegisterFromAssemblyContaining<PlaceOrderHandler>();
         module.Events.RegisterPublishedEvent<OrderPlacedEvent>();
+        module.Events.RegisterSubscriber<InventoryReservedEvent, RecordInventoryReservedHandler>(
+            "ordering.inventory-reserved-projection.v1");
     }
 }

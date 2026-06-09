@@ -38,6 +38,14 @@ adapter such as direct ADO.NET or Dapper. The goal is to expose abstraction
 gaps early while keeping each provider's topology and transaction model
 native.
 
+[ADR 0034](../adr/0034-adapter-diversity-proof-transports.md) accepts the
+first transport proof packages: `Bondstone.Transport.ServiceBus` and
+`Bondstone.Transport.RabbitMq`. Their first scope is outgoing durable outbox
+dispatch with provider-native topology vocabulary. Receive workers,
+provider-backed broker tests, and broker administration remain later slices.
+See [transport-servicebus.md](transport-servicebus.md) and
+[transport-rabbitmq.md](transport-rabbitmq.md) for the current proof scope.
+
 ## Topic Docs
 
 - [messaging.md](messaging.md) records durable command, message identity, and
@@ -54,6 +62,10 @@ native.
   provider behavior.
 - [transport-rebus.md](transport-rebus.md) records Rebus transport adapter
   behavior.
+- [transport-servicebus.md](transport-servicebus.md) records Azure Service
+  Bus outgoing transport proof behavior.
+- [transport-rabbitmq.md](transport-rabbitmq.md) records RabbitMQ outgoing
+  transport proof behavior.
 
 ## Related Docs
 

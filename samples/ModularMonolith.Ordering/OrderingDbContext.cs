@@ -9,6 +9,9 @@ public sealed class OrderingDbContext(
 {
     public DbSet<Order> Orders => Set<Order>();
 
+    public DbSet<OrderInventoryReservation> InventoryReservations =>
+        Set<OrderInventoryReservation>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Order>(entity =>
@@ -16,6 +19,14 @@ public sealed class OrderingDbContext(
             entity.ToTable("orders", OrderingModule.ModuleName);
             entity.HasKey(order => order.Id);
             entity.Property(order => order.Sku).IsRequired();
+        });
+
+        modelBuilder.Entity<OrderInventoryReservation>(entity =>
+        {
+            entity.ToTable("inventory_reservations", OrderingModule.ModuleName);
+            entity.HasKey(reservation => reservation.Id);
+            entity.Property(reservation => reservation.OrderId).IsRequired();
+            entity.Property(reservation => reservation.Sku).IsRequired();
         });
 
         modelBuilder.ApplyBondstonePersistence(OrderingModule.ModuleName);

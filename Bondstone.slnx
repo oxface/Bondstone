@@ -3,7 +3,9 @@
     <Project Path="src/Bondstone.EntityFrameworkCore.Postgres/Bondstone.EntityFrameworkCore.Postgres.csproj" />
     <Project Path="src/Bondstone.EntityFrameworkCore/Bondstone.EntityFrameworkCore.csproj" />
     <Project Path="src/Bondstone.Hosting/Bondstone.Hosting.csproj" />
+    <Project Path="src/Bondstone.Transport.RabbitMq/Bondstone.Transport.RabbitMq.csproj" />
     <Project Path="src/Bondstone.Transport.Rebus/Bondstone.Transport.Rebus.csproj" />
+    <Project Path="src/Bondstone.Transport.ServiceBus/Bondstone.Transport.ServiceBus.csproj" />
     <Project Path="src/Bondstone/Bondstone.csproj" />
   </Folder>
   <Folder Name="/samples/">
@@ -18,6 +20,8 @@
     <Project Path="tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj" />
     <Project Path="tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj" />
     <Project Path="tests/Bondstone.Hosting.Tests/Bondstone.Hosting.Tests.csproj" />
+    <Project Path="tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj" />
+    <Project Path="tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj" />
     <Project Path="tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj" />
     <Project Path="tests/Bondstone.Tests/Bondstone.Tests.csproj" />
     <Project Path="tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj" />

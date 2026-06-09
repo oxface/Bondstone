@@ -268,8 +268,10 @@ Slices:
      module persistence ownership, uses Rebus in-memory transport, and uses
      PostgreSQL-backed EF Core persistence for outbox claiming, inbox handling,
      operation state, and module state.
-   - It binds one Rebus receive endpoint, `fulfillment-commands`, to the
-     fulfillment module command backlog.
+   - It binds one host-level Rebus receive endpoint,
+     `modular-monolith-sample`, to fulfillment command receive and the sample
+     event subscribers. This keeps the adoption proof compact; production
+     topology should still choose queues or endpoints by operational ownership.
 2. Add a focused sample verification entrypoint or test shape:
    - **Initial smoke test added in `tests/Bondstone.Samples.Tests`.**
    - It is categorized as `Integration`, so default verification remains fast
@@ -386,6 +388,14 @@ event publication remain future ADR-backed work.**
 
 ### Phase 6: Adapter Diversity Proof
 
+Current phase: **Phase 6**.
+
+Current/next slice: **outgoing Service Bus and RabbitMQ proof transports are
+applied; next slices are receive-side adapter proof, broker-backed tests, and
+non-EF persistence proof**.
+Accepted decision:
+[ADR 0034](adr/0034-adapter-diversity-proof-transports.md).
+
 Goal: test Bondstone's abstractions against more than Rebus, EF Core, and
 PostgreSQL before hardening reliability policy too deeply around the first
 implementation path.
@@ -398,28 +408,54 @@ deep reliability, migration, and operational polish to later work.
 Expected slices:
 
 1. ADR/design for adapter-diversity proof scope:
+   - **Done by ADR 0034 for outgoing transport proof scope.**
    - supported proof adapters and package names;
    - provider-native topology vocabulary;
    - minimum command/event send and receive behavior to prove;
    - integration-test expectations and required external infrastructure.
 2. Azure Service Bus transport proof:
-   - command send to queue;
-   - event publish/subscription shape using Service Bus topics/subscriptions;
-   - provider-native setup remains app-owned.
+   - command send to queue: **outgoing proof applied**;
+   - event publish/subscription shape using Service Bus topics/subscriptions:
+     **topic publish proof applied; subscription receive deferred**;
+   - provider-native setup remains app-owned;
+   - outgoing `IDurableOutboxTransport` proof implemented with diagnostics and
+     fast unit coverage.
 3. RabbitMQ transport proof:
    - command send through RabbitMQ-native exchange/routing-key/queue
-     vocabulary;
+     vocabulary: **outgoing exchange/routing-key proof applied**;
    - event publish/subscription shape through exchange/binding semantics;
-   - provider-native setup remains app-owned.
+   - provider-native setup remains app-owned;
+   - outgoing `IDurableOutboxTransport` proof implemented with diagnostics and
+     fast unit coverage.
 4. Non-EF persistence proof, such as direct ADO.NET or Dapper:
    - implement core outbox/inbox/operation-state contracts directly;
    - prove module transaction boundaries without `DbContext`;
    - keep migration/schema strategy narrow and explicit.
 5. Compare API friction found by the adapter proofs and record narrow follow-up
    slices before broad reliability hardening.
+   - Follow-up: tighten Rebus receive endpoint ergonomics. Distinguish compact
+     modular-monolith host endpoints from per-module operational queues, add
+     diagnostics that explain shared endpoint bindings, and decide whether
+     native Rebus event subscription startup can be generated from Bondstone
+     subscription topology without taking ownership of broker setup.
+   - Follow-up: define provider-specific event sink or queue handoff topology
+     for cases where an external broker component owns fan-out. This should
+     stay below core integration event semantics and should not make events
+     silently fall back to command-style routing.
+   - Follow-up: decide whether `AddBondstone` should validate one active
+     outbox transport or support explicit transport selection by module or
+     message kind.
+   - Follow-up: revisit shared durable transport envelope mapping after
+     receive-side Service Bus and RabbitMQ slices prove whether mapper
+     duplication is real design pressure.
+   - Follow-up: defer RabbitMQ publisher confirms, mandatory/unroutable
+     behavior, channel lifecycle policy, and Service Bus richer send options
+     to reliability-oriented slices.
 
-Remaining in Phase 6: **medium-large, proof-oriented 4-5 slices after Phase 5
-has enough command/event loop shape**.
+Remaining in Phase 6: **medium-large, proof-oriented 3-4 slices. Outgoing
+Service Bus and RabbitMQ adapter proof work is applied; receive-side broker
+integration, provider-backed reliability tests, and non-EF persistence proof
+remain later slices.**
 
 ### Phase 7: Reliability And Recovery
 
@@ -435,6 +471,9 @@ Slices:
 6. Module-targeted outbox workers to avoid noisy-neighbor dispatch across
    independently owned module outboxes.
 7. Advanced dispatcher and worker options.
+8. Provider-specific event queue/sink handoff behavior where events are sent
+   to a queue, address, exchange route, or broker-specific sink because fan-out
+   is owned outside Bondstone.
 
 Remaining in Phase 7: **medium-large, 6-7 slices**.
 

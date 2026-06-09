@@ -119,8 +119,9 @@ subscriber identity metadata, and durable receive orchestration. The current
 implementation can stage durable event publish envelopes and record event
 subscriber metadata, publish event outbox records through configured Rebus
 topics, and execute registered event subscribers through a core module
-subscriber executor. Transport event receive, subscription binding, and
-provider transaction composition for event handlers remain follow-up slices.
+subscriber executor. Rebus event receive, subscription binding, and EF
+transaction composition for event handlers are applied for the current MVP
+event loop. Other transport receive implementations remain follow-up slices.
 Advanced APIs may later expose separate inbox, outbox, subscriber, or
 operation-state pieces, but they should not be the common path.
 

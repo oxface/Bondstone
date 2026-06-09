@@ -73,9 +73,10 @@ The durable event publisher is a narrow core contract. `IDurableEventPublisher`
 accepts an `IIntegrationEvent`, requires current source-module context, stages
 a `MessageKind.Event` envelope through the outbox, and returns
 `DurableEventPublishResult` instead of subscriber results. Event envelopes do
-not specify `TargetModule`. Transport dispatch for event fan-out is Phase 5
-work. The first transport slice publishes claimed event outbox records to
-configured event topics.
+not specify `TargetModule`. Current Rebus event dispatch publishes claimed
+event outbox records to configured topics. Phase 6 proof adapters add outgoing
+Service Bus topic publish and RabbitMQ exchange/routing-key publish without
+adding receive-side workers yet.
 
 Event handlers are typed integration event handlers registered as module
 subscriber metadata through `IIntegrationEventHandler<TEvent>` and
@@ -219,13 +220,14 @@ subscription startup and subscription storage remain app-owned.
 
 Durable payload serialization is shared command/event infrastructure. Current
 command send, event publish, Rebus typed command receive, and Rebus module
-command receive use `IDurablePayloadSerializer`. The default implementation
+command and event receive use `IDurablePayloadSerializer`. The default implementation
 uses `System.Text.Json` with durable-payload-specific
 `DurablePayloadJsonOptions`, so consumers configure payload JSON options and
 converters once instead of repeating transport-specific serializer options.
 Applications can call `ConfigureBondstoneDurablePayloadJson` for the default
 JSON implementation or replace `IDurablePayloadSerializer` when a custom
-serializer is needed. Future event receive must use the same boundary.
+serializer is needed. Future transport event receive implementations must use
+the same boundary.
 Transport adapters must not rely on transport CLR type headers for Bondstone
 durable identity. Content type, non-JSON payloads, schema registries, payload
 encryption, compression, and stored-payload migration remain deferred.

@@ -1,3 +1,4 @@
+using Bondstone.Transport.ServiceBus.Inbox;
 using Bondstone.Utility;
 
 namespace Bondstone.Transport.ServiceBus.Outbox;
@@ -8,6 +9,8 @@ public sealed class BondstoneServiceBusTransportBuilder
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, ServiceBusEventDestination> _eventDestinationsByMessageTypeName =
         new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ServiceBusReceiveSourceRegistration> _receiveSources =
+        new(StringComparer.Ordinal);
     private Func<string, string>? _queueNameConvention;
     private ServiceBusEventDestinationConvention? _eventDestinationConvention;
 
@@ -16,6 +19,9 @@ public sealed class BondstoneServiceBusTransportBuilder
 
     internal ServiceBusEventDestinationTopology EventDestinationTopology =>
         new(_eventDestinationsByMessageTypeName, _eventDestinationConvention);
+
+    internal ServiceBusReceiveTopology ReceiveTopology =>
+        new(_receiveSources);
 
     public BondstoneServiceBusModuleRouteBuilder RouteModule(
         string targetModule)
@@ -57,6 +63,27 @@ public sealed class BondstoneServiceBusTransportBuilder
         return new BondstoneServiceBusEventRouteBuilder(
             this,
             normalizedMessageTypeName);
+    }
+
+    public BondstoneServiceBusReceiveSourceBuilder ReceiveQueue(
+        string queueName)
+    {
+        ServiceBusReceiveSource source = ServiceBusReceiveSource.ForQueue(queueName);
+        EnsureReceiveSource(source);
+
+        return new BondstoneServiceBusReceiveSourceBuilder(this, source);
+    }
+
+    public BondstoneServiceBusReceiveSourceBuilder ReceiveSubscription(
+        string topicName,
+        string subscriptionName)
+    {
+        ServiceBusReceiveSource source = ServiceBusReceiveSource.ForSubscription(
+            topicName,
+            subscriptionName);
+        EnsureReceiveSource(source);
+
+        return new BondstoneServiceBusReceiveSourceBuilder(this, source);
     }
 
     public BondstoneServiceBusTransportBuilder UseEventTopicConvention()
@@ -143,5 +170,44 @@ public sealed class BondstoneServiceBusTransportBuilder
         }
 
         _eventDestinationsByMessageTypeName.Add(messageTypeName, destination);
+    }
+
+    internal void AddReceiveSourceAcceptedModule(
+        ServiceBusReceiveSource source,
+        string moduleName)
+    {
+        ServiceBusReceiveSourceRegistration registration = EnsureReceiveSource(source);
+        registration.AddAcceptedModule(moduleName);
+    }
+
+    internal void AddReceiveSourceEventSubscription(
+        ServiceBusReceiveSource source,
+        string messageTypeName,
+        string subscriberModule,
+        string subscriberIdentity)
+    {
+        ServiceBusReceiveSourceRegistration registration = EnsureReceiveSource(source);
+        registration.AddEventSubscription(
+            messageTypeName,
+            subscriberModule,
+            subscriberIdentity);
+    }
+
+    private ServiceBusReceiveSourceRegistration EnsureReceiveSource(
+        ServiceBusReceiveSource source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        if (_receiveSources.TryGetValue(
+            source.Key,
+            out ServiceBusReceiveSourceRegistration? registration))
+        {
+            return registration;
+        }
+
+        var createdRegistration = new ServiceBusReceiveSourceRegistration(source);
+        _receiveSources.Add(source.Key, createdRegistration);
+
+        return createdRegistration;
     }
 }

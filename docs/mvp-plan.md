@@ -55,6 +55,8 @@ Implemented surface includes:
 - outgoing Azure Service Bus and RabbitMQ direct transport proof packages;
 - RabbitMQ receive queue topology and dispatcher proof over the neutral
   receive pipelines;
+- Service Bus receive source topology and dispatcher proof over the neutral
+  receive pipelines;
 - modular monolith sample using EF-backed ordering/fulfillment modules,
   PostgreSQL Dapper-assisted billing, explicit integration events, a durable
   outbox worker, and explicit local queue transport over the neutral receive
@@ -208,6 +210,11 @@ Applied in this slice:
   `IRabbitMqReceivedMessageDispatcher` as the first direct receive proof. This
   maps received Bondstone RabbitMQ messages into the neutral command/event
   receive pipelines but does not yet run a hosted broker consumer.
+- add Service Bus receive source bindings and
+  `IServiceBusReceivedMessageDispatcher` as the first Service Bus receive
+  proof. This maps received Bondstone Service Bus messages from queues or
+  topic subscriptions into the neutral command/event receive pipelines but
+  does not yet run hosted Service Bus processors.
 
 Remaining slices:
 
@@ -215,9 +222,9 @@ Remaining slices:
    broker consumer/channel lifecycle, command queue receive, event queue
    receive, acknowledgement, retry/dead-letter handoff, and provider-backed
    tests.
-2. Implement Service Bus receive worker proof:
-   command queue processor, event topic subscription or event queue processor,
-   acknowledgement, retry/dead-letter handoff, diagnostics, and
+2. Complete Service Bus receive worker proof:
+   processor lifecycle, command queue processor, event topic subscription or
+   event queue processor, acknowledgement, retry/dead-letter handoff, and
    provider-backed tests.
 3. Decide persistence package naming:
    whether `Bondstone.Persistence.Dapper.Postgres` becomes

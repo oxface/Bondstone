@@ -177,12 +177,13 @@ Direct transport packages contribute `IDurableOutboxTransportRoute` entries.
 one provider route matches the message. Zero matches and ambiguous matches are
 loud configuration errors.
 
-RabbitMQ has a receive queue dispatcher proof that maps received Bondstone
-RabbitMQ transport messages into the neutral receive pipelines. Provider-backed
-receive workers for RabbitMQ and Service Bus are still planned follow-up
-slices. Those slices should cover command receive, event subscriber receive,
-acknowledgement semantics, retry/dead-letter behavior, diagnostics, and
-provider-backed integration tests.
+RabbitMQ has a receive queue dispatcher proof and Service Bus has a receive
+source dispatcher proof. Both map received Bondstone transport messages into
+the neutral receive pipelines. Provider-backed receive workers for RabbitMQ
+and Service Bus are still planned follow-up slices. Those slices should cover
+command receive, event subscriber receive, acknowledgement semantics,
+retry/dead-letter behavior, diagnostics, and provider-backed integration
+tests.
 
 ## Diagnostics
 

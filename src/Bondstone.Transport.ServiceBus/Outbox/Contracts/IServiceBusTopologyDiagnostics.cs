@@ -1,3 +1,5 @@
+using Bondstone.Transport.ServiceBus.Inbox;
+
 namespace Bondstone.Transport.ServiceBus.Outbox;
 
 public interface IServiceBusTopologyDiagnostics
@@ -7,4 +9,7 @@ public interface IServiceBusTopologyDiagnostics
 
     ServiceBusEventDestinationDiagnostic DescribeEventDestination(
         string messageTypeName);
+
+    ServiceBusReceiveSourceDiagnostic DescribeReceiveSource(
+        ServiceBusReceiveSource source);
 }

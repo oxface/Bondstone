@@ -134,6 +134,33 @@ This amendment does not add a hosted RabbitMQ consumer, broker topology
 declaration, retry policy, channel lifecycle management, or provider-backed
 integration tests. Those remain follow-up slices.
 
+## Amendment 2026-06-09: Service Bus Receive Dispatcher Proof
+
+Service Bus receive work should mirror the RabbitMQ dispatcher proof while
+keeping Service Bus receive vocabulary native. `Bondstone.Transport.ServiceBus`
+will own receive source bindings and a dispatcher that maps a received
+Bondstone Service Bus transport message back to the neutral durable envelope.
+
+Service Bus receive topology is configured through receive sources:
+
+- queues for command processors or direct event queues;
+- topic subscriptions for broker fan-out event subscribers.
+
+A receive source can accept command target modules and bind event subscriber
+identities. Outgoing command/event destination topology remains separate:
+applications still own queues, topics, subscriptions, rules, processors, retry,
+dead-letter policy, credentials, and administration.
+
+The dispatcher calls `IModuleCommandReceivePipeline` for command envelopes and
+`IModuleEventReceivePipeline` once per configured event subscriber. It returns
+only after receive processing succeeds. Provider-native processors should
+complete Service Bus messages only after the dispatcher returns and should let
+thrown exceptions flow into the app's Service Bus retry/dead-letter policy.
+
+This amendment does not add a hosted Service Bus processor, processor lifecycle
+management, broker topology declaration, retry policy, or provider-backed
+integration tests. Those remain follow-up slices.
+
 ## Consequences
 
 The transport surface becomes easier to reason about: Bondstone owns durable
@@ -192,10 +219,13 @@ diagnostics, and provider-backed integration tests.
   claimed durable message. RabbitMQ now has receive queue topology, receive
   queue diagnostics, and an `IRabbitMqReceivedMessageDispatcher` proof that
   dispatches received Bondstone envelopes through the neutral receive
-  pipelines.
-- Pending or deferred: Add hosted RabbitMQ consumers, direct Service Bus
-  receive, provider-backed receive tests, persistence package naming cleanup,
-  and replacement or supplementation of local sample transport with a
+  pipelines. Service Bus now has receive source topology for queues and topic
+  subscriptions, receive source diagnostics, and an
+  `IServiceBusReceivedMessageDispatcher` proof that dispatches received
+  Bondstone envelopes through the neutral receive pipelines.
+- Pending or deferred: Add hosted RabbitMQ consumers, hosted Service Bus
+  processors, provider-backed receive tests, persistence package naming
+  cleanup, and replacement or supplementation of local sample transport with a
   preferred direct provider receive path.
 
 ## Verification
@@ -234,3 +264,8 @@ After RabbitMQ receive dispatcher proof:
 
 - `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
 - `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
+
+After Service Bus receive dispatcher proof:
+
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`

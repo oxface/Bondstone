@@ -6,7 +6,8 @@ adapter behavior.
 ## Current Scope
 
 The current adapter is a Phase 6 proof-oriented outgoing durable outbox
-transport. `ServiceBusDurableOutboxTransport` implements
+transport plus a Phase 6.5 receive dispatcher proof.
+`ServiceBusDurableOutboxTransport` implements
 `IDurableOutboxTransport` for claimed outbox records and maps Bondstone
 durable envelopes to Azure Service Bus messages through a provider-local
 envelope mapper.
@@ -37,11 +38,34 @@ Diagnostic services report the same resolution results used by dispatch so
 applications and tests can explain missing queues, topics, or destinations
 without sending messages.
 
+Receive topology is declared with Service Bus receive source vocabulary:
+
+```csharp
+bondstone.UseServiceBusTransport(serviceBus =>
+{
+    serviceBus.ReceiveQueue("fulfillment-commands")
+        .AcceptModule("fulfillment");
+
+    serviceBus.ReceiveSubscription("sales-events", "fulfillment")
+        .SubscribeEvent(
+            "sales.order.submitted.v1",
+            "fulfillment",
+            "fulfillment.sales-order-projection.v1");
+});
+```
+
+`IServiceBusReceivedMessageDispatcher` maps a received Service Bus transport
+message back to a Bondstone durable envelope. Command messages dispatch
+through `IModuleCommandReceivePipeline`; event messages dispatch through
+`IModuleEventReceivePipeline` once per subscriber binding on the receive
+source. A Service Bus processor should complete the broker message only after
+the dispatcher returns.
+
 ## App-Owned Setup
 
-Bondstone does not create queues, topics, subscriptions, rules, processors,
-retry policy, dead-letter policy, credentials, connection strings, or
-administrative clients. Applications register and configure the Azure
+Bondstone does not create queues, topics, subscriptions, rules, long-running
+processors, retry policy, dead-letter policy, credentials, connection strings,
+or administrative clients. Applications register and configure the Azure
 `ServiceBusClient` and own native Service Bus infrastructure setup.
 
 The adapter sends the Bondstone-owned durable envelope as the message body and
@@ -52,7 +76,6 @@ remain separate ADR-backed decisions.
 
 ## Deferred Work
 
-Receive-side Service Bus processors, command queue listeners, event topic
-subscription or event queue binding, acknowledgement behavior,
-retry/dead-letter policy, broker-backed integration tests, and topology
-declaration are future slices.
+Receive-side Service Bus hosted processors, acknowledgement integration,
+retry/dead-letter policy handoff, broker-backed integration tests, and
+topology declaration are future slices.

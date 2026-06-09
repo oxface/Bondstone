@@ -20,6 +20,34 @@ internal static class ServiceBusDurableEnvelopeMapper
             CreateApplicationProperties(envelope, messageId));
     }
 
+    public static DurableMessageEnvelope ReadEnvelope(
+        string body)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(body);
+
+        ServiceBusDurableMessageEnvelope envelope =
+            JsonSerializer.Deserialize<ServiceBusDurableMessageEnvelope>(body)
+            ?? throw new InvalidOperationException(
+                "Service Bus message body did not contain a Bondstone durable envelope.");
+        MessageKind messageKind = Enum.Parse<MessageKind>(
+            envelope.MessageKind,
+            ignoreCase: false);
+
+        return new DurableMessageEnvelope(
+            envelope.MessageId,
+            messageKind,
+            envelope.MessageTypeName,
+            envelope.SourceModule,
+            envelope.TargetModule,
+            envelope.Payload,
+            envelope.CreatedAtUtc,
+            envelope.DurableOperationId,
+            CreateTraceContext(envelope),
+            envelope.CausationId,
+            envelope.PartitionKey,
+            envelope.Metadata);
+    }
+
     private static IReadOnlyDictionary<string, object> CreateApplicationProperties(
         DurableMessageEnvelope envelope,
         string messageId)
@@ -75,5 +103,16 @@ internal static class ServiceBusDurableEnvelopeMapper
         {
             properties[key] = value;
         }
+    }
+
+    private static MessageTraceContext? CreateTraceContext(
+        ServiceBusDurableMessageEnvelope envelope)
+    {
+        return string.IsNullOrWhiteSpace(envelope.TraceParent)
+            ? null
+            : new MessageTraceContext(
+                envelope.TraceParent,
+                envelope.TraceState,
+                envelope.TraceBaggage);
     }
 }

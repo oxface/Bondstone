@@ -1,8 +1,11 @@
+using Bondstone.Transport.ServiceBus.Inbox;
+
 namespace Bondstone.Transport.ServiceBus.Outbox;
 
 internal sealed class ServiceBusTopologyDiagnostics(
     ServiceBusCommandDestinationTopology commandTopology,
-    ServiceBusEventDestinationTopology eventDestinationTopology)
+    ServiceBusEventDestinationTopology eventDestinationTopology,
+    ServiceBusReceiveTopology receiveTopology)
     : IServiceBusTopologyDiagnostics
 {
     public ServiceBusCommandDestinationDiagnostic DescribeCommandDestination(
@@ -15,5 +18,11 @@ internal sealed class ServiceBusTopologyDiagnostics(
         string messageTypeName)
     {
         return eventDestinationTopology.DescribeDestination(messageTypeName);
+    }
+
+    public ServiceBusReceiveSourceDiagnostic DescribeReceiveSource(
+        ServiceBusReceiveSource source)
+    {
+        return receiveTopology.DescribeSource(source);
     }
 }

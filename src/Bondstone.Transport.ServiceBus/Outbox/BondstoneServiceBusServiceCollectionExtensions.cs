@@ -1,5 +1,6 @@
 using Azure.Messaging.ServiceBus;
 using Bondstone.Persistence;
+using Bondstone.Transport.ServiceBus.Inbox;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -23,14 +24,17 @@ public static class BondstoneServiceBusServiceCollectionExtensions
     internal static IServiceCollection AddBondstoneServiceBusOutboxTransport(
         this IServiceCollection services,
         ServiceBusCommandDestinationTopology commandTopology,
-        ServiceBusEventDestinationTopology eventDestinationTopology)
+        ServiceBusEventDestinationTopology eventDestinationTopology,
+        ServiceBusReceiveTopology receiveTopology)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(commandTopology);
         ArgumentNullException.ThrowIfNull(eventDestinationTopology);
+        ArgumentNullException.ThrowIfNull(receiveTopology);
 
         services.AddSingleton(commandTopology);
         services.AddSingleton(eventDestinationTopology);
+        services.AddSingleton(receiveTopology);
         services.AddTransient<IServiceBusOutboxDestinationResolver>(
             serviceProvider => new ServiceBusModuleQueueResolver(
                 serviceProvider.GetRequiredService<ServiceBusCommandDestinationTopology>()));
@@ -38,7 +42,11 @@ public static class BondstoneServiceBusServiceCollectionExtensions
             serviceProvider => new ServiceBusEventDestinationResolver(
                 serviceProvider.GetRequiredService<ServiceBusEventDestinationTopology>()));
         services.AddSingleton<IServiceBusTopologyDiagnostics>(
-            new ServiceBusTopologyDiagnostics(commandTopology, eventDestinationTopology));
+            new ServiceBusTopologyDiagnostics(
+                commandTopology,
+                eventDestinationTopology,
+                receiveTopology));
+        services.TryAddScoped<IServiceBusReceivedMessageDispatcher, ServiceBusReceivedMessageDispatcher>();
         services.AddTransient<IDurableOutboxTransportRoute, ServiceBusDurableOutboxTransportRoute>();
         services.TryAddTransient<IDurableOutboxTransport, RoutedDurableOutboxTransport>();
 

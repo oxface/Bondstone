@@ -17,16 +17,17 @@ Current implementation and verification state is summarized in
 
 ## Cross-Cutting Rules
 
-Core persistence contracts stay independent from EF Core, PostgreSQL, Rebus,
-SQL locking, schema migration, and background dispatch mechanics.
+Core persistence contracts stay independent from EF Core, PostgreSQL,
+transport adapters, SQL locking, schema migration, and background dispatch
+mechanics.
 
 EF Core components stage data and expose transaction/save boundaries, but they
 do not own transport acknowledgement, retry policy, domain events, or a
 generic mediator. Module command execution and module event subscriber
 execution own handler registration; modules that opt into EF persistence get
 EF transaction pipeline behaviors for command handlers and event subscribers.
-Transport-backed event receive orchestration is applied in the Rebus adapter
-for the current MVP event loop.
+Transport-backed receive orchestration belongs in direct provider adapters
+that call the provider-neutral module receive pipelines.
 
 Optional EF Core mapping helpers are accepted in
 [ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md).

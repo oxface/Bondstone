@@ -5,6 +5,6 @@ public interface IServiceBusTopologyDiagnostics
     ServiceBusCommandDestinationDiagnostic DescribeCommandDestination(
         string targetModule);
 
-    ServiceBusEventTopicDiagnostic DescribeEventTopic(
+    ServiceBusEventDestinationDiagnostic DescribeEventDestination(
         string messageTypeName);
 }

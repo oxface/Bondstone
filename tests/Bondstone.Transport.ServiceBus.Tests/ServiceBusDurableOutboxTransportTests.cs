@@ -60,6 +60,29 @@ public sealed class ServiceBusDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenEventIsClaimed_SendsMessageToResolvedQueue()
+    {
+        var sender = new RecordingServiceBusMessageSender();
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            sender,
+            serviceBus => serviceBus.RouteEvent("sales.order.submitted.v1").ToQueue("sales-events"));
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+
+        await transport.SendAsync(CreateRecord(
+            MessageKind.Event,
+            targetModule: null,
+            messageTypeName: "sales.order.submitted.v1"));
+
+        Assert.Equal("sales-events", sender.EntityName);
+        Assert.NotNull(sender.Message);
+        Assert.Equal("sales.order.submitted.v1", sender.Message.Subject);
+        Assert.False(sender.Message.ApplicationProperties.ContainsKey(
+            BondstoneServiceBusHeaders.TargetModule));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void DescribeCommandDestination_WhenConventionExists_ReturnsQueueConvention()
     {
         var services = new ServiceCollection();
@@ -83,7 +106,7 @@ public sealed class ServiceBusDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void DescribeEventTopic_WhenTopicIsMissing_ReturnsMissingDiagnostic()
+    public void DescribeEventDestination_WhenDestinationIsMissing_ReturnsMissingDiagnostic()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
@@ -94,11 +117,11 @@ public sealed class ServiceBusDurableOutboxTransportTests
         IServiceBusTopologyDiagnostics diagnostics =
             serviceProvider.GetRequiredService<IServiceBusTopologyDiagnostics>();
 
-        ServiceBusEventTopicDiagnostic diagnostic =
-            diagnostics.DescribeEventTopic("sales.order.submitted.v1");
+        ServiceBusEventDestinationDiagnostic diagnostic =
+            diagnostics.DescribeEventDestination("sales.order.submitted.v1");
 
-        Assert.Equal(ServiceBusEventTopicSource.Missing, diagnostic.Source);
-        Assert.False(diagnostic.HasTopic);
+        Assert.Equal(ServiceBusEventDestinationSource.Missing, diagnostic.Source);
+        Assert.False(diagnostic.HasDestination);
         Assert.Contains("sales.order.submitted.v1", diagnostic.FailureReason, StringComparison.Ordinal);
     }
 

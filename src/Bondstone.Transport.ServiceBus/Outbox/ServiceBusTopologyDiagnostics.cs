@@ -2,7 +2,7 @@ namespace Bondstone.Transport.ServiceBus.Outbox;
 
 internal sealed class ServiceBusTopologyDiagnostics(
     ServiceBusCommandDestinationTopology commandTopology,
-    ServiceBusEventTopicTopology eventTopicTopology)
+    ServiceBusEventDestinationTopology eventDestinationTopology)
     : IServiceBusTopologyDiagnostics
 {
     public ServiceBusCommandDestinationDiagnostic DescribeCommandDestination(
@@ -11,9 +11,9 @@ internal sealed class ServiceBusTopologyDiagnostics(
         return commandTopology.DescribeDestination(targetModule);
     }
 
-    public ServiceBusEventTopicDiagnostic DescribeEventTopic(
+    public ServiceBusEventDestinationDiagnostic DescribeEventDestination(
         string messageTypeName)
     {
-        return eventTopicTopology.DescribeTopic(messageTypeName);
+        return eventDestinationTopology.DescribeDestination(messageTypeName);
     }
 }

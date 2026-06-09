@@ -1,5 +1,4 @@
 using Bondstone.Samples.ModularMonolith;
-using Rebus.Transport.InMem;
 
 string? connectionString = args.FirstOrDefault(static arg =>
         !arg.StartsWith("--", StringComparison.Ordinal))
@@ -12,12 +11,9 @@ if (string.IsNullOrWhiteSpace(connectionString))
     return 1;
 }
 
-var rebusNetwork = new InMemNetwork();
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddModularMonolithSample(
-    connectionString,
-    rebusNetwork);
+builder.Services.AddModularMonolithSample(connectionString);
 
 WebApplication app = builder.Build();
 app.MapModularMonolithSample();

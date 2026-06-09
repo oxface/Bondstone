@@ -4,7 +4,6 @@ using Bondstone.Samples.ModularMonolith;
 using Bondstone.Samples.ModularMonolith.Ordering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Rebus.Transport.InMem;
 using Xunit;
 
 namespace Bondstone.Samples.Tests;
@@ -17,9 +16,7 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
     public async Task AppRegistrations_WhenDurableCommandIsSent_ReceivesThroughModuleEndpoint()
     {
         var services = new ServiceCollection();
-        services.AddModularMonolithSample(
-            fixture.ConnectionString,
-            new InMemNetwork());
+        services.AddModularMonolithSample(fixture.ConnectionString);
 
         await using ServiceProvider serviceProvider = services.BuildServiceProvider(
             new ServiceProviderOptions

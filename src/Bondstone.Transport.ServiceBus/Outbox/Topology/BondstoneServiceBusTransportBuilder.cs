@@ -6,16 +6,16 @@ public sealed class BondstoneServiceBusTransportBuilder
 {
     private readonly Dictionary<string, string> _queueNamesByTargetModule =
         new(StringComparer.Ordinal);
-    private readonly Dictionary<string, string> _topicNamesByMessageTypeName =
+    private readonly Dictionary<string, ServiceBusEventDestination> _eventDestinationsByMessageTypeName =
         new(StringComparer.Ordinal);
     private Func<string, string>? _queueNameConvention;
-    private Func<string, string>? _topicNameConvention;
+    private ServiceBusEventDestinationConvention? _eventDestinationConvention;
 
     internal ServiceBusCommandDestinationTopology CommandDestinationTopology =>
         new(_queueNamesByTargetModule, _queueNameConvention);
 
-    internal ServiceBusEventTopicTopology EventTopicTopology =>
-        new(_topicNamesByMessageTypeName, _topicNameConvention);
+    internal ServiceBusEventDestinationTopology EventDestinationTopology =>
+        new(_eventDestinationsByMessageTypeName, _eventDestinationConvention);
 
     public BondstoneServiceBusModuleRouteBuilder RouteModule(
         string targetModule)
@@ -69,10 +69,30 @@ public sealed class BondstoneServiceBusTransportBuilder
     {
         ArgumentNullException.ThrowIfNull(topicNameFactory);
 
-        _topicNameConvention = messageTypeName =>
-            topicNameFactory(messageTypeName).NormalizeRequired(
+        _eventDestinationConvention = new ServiceBusEventDestinationConvention(
+            ServiceBusEventDestinationKind.Topic,
+            messageTypeName => topicNameFactory(messageTypeName).NormalizeRequired(
                 nameof(topicNameFactory),
-                "Service Bus topic name");
+                "Service Bus topic name"));
+
+        return this;
+    }
+
+    public BondstoneServiceBusTransportBuilder UseEventQueueConvention()
+    {
+        return UseEventQueueConvention(static messageTypeName => messageTypeName);
+    }
+
+    public BondstoneServiceBusTransportBuilder UseEventQueueConvention(
+        Func<string, string> queueNameFactory)
+    {
+        ArgumentNullException.ThrowIfNull(queueNameFactory);
+
+        _eventDestinationConvention = new ServiceBusEventDestinationConvention(
+            ServiceBusEventDestinationKind.Queue,
+            messageTypeName => queueNameFactory(messageTypeName).NormalizeRequired(
+                nameof(queueNameFactory),
+                "Service Bus queue name"));
 
         return this;
     }
@@ -101,27 +121,27 @@ public sealed class BondstoneServiceBusTransportBuilder
         _queueNamesByTargetModule.Add(targetModule, normalizedQueueName);
     }
 
-    internal void SetEventTopicName(
+    internal void SetEventDestination(
         string messageTypeName,
-        string topicName)
+        ServiceBusEventDestinationKind kind,
+        string entityName)
     {
-        string normalizedTopicName = topicName.NormalizeRequired(
-            nameof(topicName),
-            "Service Bus topic name");
+        var destination = new ServiceBusEventDestination(kind, entityName);
 
-        if (_topicNamesByMessageTypeName.TryGetValue(
+        if (_eventDestinationsByMessageTypeName.TryGetValue(
             messageTypeName,
-            out string? existingTopicName))
+            out ServiceBusEventDestination? existingDestination))
         {
-            if (existingTopicName == normalizedTopicName)
+            if (existingDestination.Kind == destination.Kind
+                && existingDestination.EntityName == destination.EntityName)
             {
                 return;
             }
 
             throw new InvalidOperationException(
-                $"Message type '{messageTypeName}' already publishes to Service Bus topic '{existingTopicName}'.");
+                $"Message type '{messageTypeName}' already publishes to Service Bus {existingDestination.Kind.ToString().ToLowerInvariant()} '{existingDestination.EntityName}'.");
         }
 
-        _topicNamesByMessageTypeName.Add(messageTypeName, normalizedTopicName);
+        _eventDestinationsByMessageTypeName.Add(messageTypeName, destination);
     }
 }

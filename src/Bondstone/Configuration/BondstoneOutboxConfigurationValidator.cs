@@ -14,14 +14,14 @@ internal sealed class BondstoneOutboxConfigurationValidator(BondstoneOutboxBuild
         {
             throw new InvalidOperationException(
                 "Bondstone outbox dispatching requires an outbox persistence provider. "
-                + "Register a provider such as PostgreSQL before enabling the dispatcher or worker.");
+                + "Register a persistence provider before enabling the dispatcher or worker.");
         }
 
         if (!outbox.HasTransport)
         {
             throw new InvalidOperationException(
                 "Bondstone outbox dispatching requires an outbox transport. "
-                + "Register a transport such as Rebus before enabling the dispatcher or worker.");
+                + "Register a transport before enabling the dispatcher or worker.");
         }
     }
 }

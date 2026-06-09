@@ -1,342 +1,191 @@
 # Messaging Architecture
 
-## Command Boundaries
+## Durable Message Kinds
 
-`IDurableCommand` is reserved for asynchronous commands accepted for durable
-outbox delivery. It is not the general in-process command abstraction for every
-module call.
+Commands and integration events are both durable messages. They share stable
+message identity, outbox staging, durable payload serialization, trace and
+causation metadata, and receive-side inbox concepts.
 
-Direct in-process calls between modules can use consumer-owned `.Contracts`
-references without Bondstone mediation. Bondstone adds command execution
-abstractions only when they protect a durable boundary concern such as outbox
-persistence, inbox handling, validation, tracing, module persistence, or
-service-extraction continuity.
+The distinction is behavioral:
 
-Bondstone should avoid generic mediator or message-bus APIs for ordinary
-in-process calls. They often hide call graphs, weaken discoverability, add
-dispatch overhead, and provide little durable-boundary value when normal typed
-contracts are sufficient.
+- commands represent directed work for one target module;
+- integration events represent facts from one source module and may have zero
+  or more subscribers.
 
-Durable commands are different from ordinary in-process collaboration. When a
-workflow changes state across distinct module persistence boundaries, direct
-calls should be reserved for operations that tolerate failure without a durable
-retry/deduplication boundary. The usual shape should be a durable command to a
-target module or event choreography when multiple subscribers react to a
-completed fact.
+Bondstone should not collapse this into a generic mediator or generic message
+bus. Ordinary in-process module collaboration can use typed `.Contracts`
+references. Durable commands and integration events are for cross-persistence
+state changes that need retry, deduplication, and service-extraction
+continuity.
 
-Module command execution is the narrow exception. Commands handled by a
-Bondstone module can be registered through module command routes and executed
-through `IModuleCommandExecutor`. The executor uses startup reflection
-registration and cached runtime route metadata to run typed
-`ICommandHandler<TCommand>` handlers through pipeline behaviors such as
-validation. Bondstone-owned runtime concerns use ordered system pipeline
-behaviors that wrap application behaviors; current system behaviors cover
-source-module execution context, receive-side inbox handling, and EF
-transaction ownership for EF-backed modules. Later pipeline behaviors will add
-operation-state updates and receive tracing.
+## Commands
 
 `ICommand` is the base marker for module command pipeline execution.
 `IDurableCommand` extends `ICommand` for commands accepted for durable outbox
-delivery and transport receive. Commands and integration events are both
-durable messages: they share stable identity, outbox staging, payload
-serialization, trace/causation metadata, and receive-side inbox concepts. The
-distinction is behavioral. Commands represent directed work for one target
-module; integration events represent source-module facts that may have zero
-or more subscribers.
+delivery and transport receive.
+
+`IDurableCommandSender` accepts a durable command, a required target module,
+and optional metadata such as partition key, durable operation id, trace
+context, and causation id. The default sender requires a current module
+execution context, uses the executing module as the source module, serializes
+the command through `IDurablePayloadSerializer`, and stages a command envelope
+through `IDurableOutboxWriter`.
+
+Module command execution is registered through module command routes and
+executed through `IModuleCommandExecutor`. The executor runs typed
+`ICommandHandler<TCommand>` handlers through ordered system and application
+pipeline behaviors. System behaviors currently cover source-module execution
+context, receive-side inbox handling, durable operation completion, and
+module-owned persistence behavior supplied by provider packages.
+
+## Integration Events
 
 `IIntegrationEvent` is reserved for durable cross-module facts. Integration
-events are not commands: they do not target one module and fan out to
-independently identified subscribers. The accepted guardrail for this shape is
-tracked in [ADR 0026](../adr/0026-event-shape-guardrail.md). First-class
-event publish/subscribe topology and execution direction is accepted in
-[ADR 0033](../adr/0033-first-class-event-publish-subscribe-topology.md), and
-implementation sequencing is tracked in [../mvp-plan.md](../mvp-plan.md).
+events are not commands: they do not target one module and they fan out to
+independently identified subscribers. The accepted guardrail is tracked in
+[ADR 0026](../adr/0026-event-shape-guardrail.md), and first-class event
+publish/subscribe direction is tracked in
+[ADR 0033](../adr/0033-first-class-event-publish-subscribe-topology.md).
 
-Event-driven orchestration composes these durable message intents rather than
-collapsing them. An event subscriber, saga, process manager, or orchestrator
-can react to an integration event and send durable commands as follow-up work.
-The event keeps per-subscriber receive identity; each command keeps a single
-target module and command receive path.
+`IDurableEventPublisher` accepts an integration event, requires current
+source-module context, serializes the event through
+`IDurablePayloadSerializer`, stages a `MessageKind.Event` envelope without
+`TargetModule`, and returns a publish result. It does not wait for subscriber
+results.
 
-Durable commands and integration events are the durable boundary for
-cross-persistence state changes. Direct `.Contracts` calls remain appropriate
-for reads, local composition, and operations that tolerate failure without a
-retry or deduplication boundary. Bondstone should not introduce a generic
-mediator or message-bus layer for ordinary module collaboration.
-
-Outbox and inbox are the durable default. A future local, in-memory, or
-development transport can be useful only when its durability contract is
-explicit. If it bypasses outbox or inbox, it should be documented as a
-non-durable or test-oriented path, not as equivalent durable module messaging.
-
-The durable event publisher is a narrow core contract. `IDurableEventPublisher`
-accepts an `IIntegrationEvent`, requires current source-module context, stages
-a `MessageKind.Event` envelope through the outbox, and returns
-`DurableEventPublishResult` instead of subscriber results. Event envelopes do
-not specify `TargetModule`. Current Rebus event dispatch publishes claimed
-event outbox records to configured topics. Phase 6 proof adapters add outgoing
-Service Bus topic publish and RabbitMQ exchange/routing-key publish without
-adding receive-side workers yet.
-
-Event handlers are typed integration event handlers registered as module
-subscriber metadata through `IIntegrationEventHandler<TEvent>` and
+Event subscribers are typed `IIntegrationEventHandler<TEvent>` handlers
+registered as module-owned subscriber metadata through
 `module.Events.RegisterSubscriber`. A subscriber belongs to a module and
-carries stable consumer-owned subscriber identity. Subscriber identity must
-not be derived from handler CLR names. Core subscriber execution uses
-`IModuleEventSubscriberExecutor`. It resolves registered subscribers by
-module, stable event identity, and stable subscriber identity, then executes
-the typed handler through an event-specific subscriber pipeline rather than
-the module command executor or a generic mediator. System pipeline behaviors
-provide per-subscriber inbox handling and set the module execution context for
-the subscriber module while the handler runs.
+carries a stable consumer-owned subscriber identity. Subscriber identity must
+not be derived from handler CLR names.
 
-Event inbox identity is per subscriber: durable message id, subscriber module,
-and stable subscriber identity. It is not based on command target module
-because events intentionally have no target module. Each subscriber receives
-its own handle-once boundary and retry/dead-letter outcome through the
-transport endpoint or subscription that delivers that subscriber's copy. Core
-subscriber execution can accept an explicit receive context with the
-per-subscriber inbox record; the receive-inbox pipeline behavior composes
-`IDurableInboxHandlerExecutor`. Modules that opt into EF persistence get an
-EF event subscriber transaction behavior that saves event handler state, inbox
-markers, and outgoing messages together inside the subscriber module
-transaction boundary.
+Core subscriber execution uses `IModuleEventSubscriberExecutor`. It resolves a
+subscriber by module, stable event identity, and stable subscriber identity,
+then executes the typed handler through event subscriber pipeline behaviors.
+System behaviors provide per-subscriber inbox handling and set the module
+execution context for the subscriber module.
 
-Domain events are module-local facts raised inside a module's domain model.
-They are not automatically integration events, and Bondstone does not
-currently collect, persist, dispatch, or publish them. Proposed future domain
-event persistence should remain an explicit module capability and should not
-force consumers into a Bondstone aggregate model. That proposal is tracked in
+Event-driven orchestration composes commands and events rather than erasing
+their distinction. A subscriber, saga, process manager, or orchestrator can
+react to an integration event and send durable commands as follow-up work.
+
+Domain events remain module-local/private. Bondstone does not currently
+collect, persist, dispatch, or publish domain events automatically. Proposed
+future domain event persistence is tracked in
 [ADR 0028](../adr/0028-domain-event-persistence-capability.md).
 
-Durable command sending is represented by `IDurableCommandSender`. The sender
-accepts a durable command, a required target module, and optional explicit
-metadata parameters. It returns a send result and does not promise an
-immediate command result.
-
-The default sender stages a `DurableMessageEnvelope` through
-`IDurableOutboxWriter`. It requires a current module execution context and uses
-the executing module as the envelope source module. That context is established
-by `IModuleCommandExecutor`, so durable sends from HTTP endpoints or local
-application code should normally happen inside a module command handler rather
-than from arbitrary services.
-
-The common send overload accepts only the command, target module, and
-cancellation token. The advanced overload adds parameters in the order callers
-are most likely to override them: `partitionKey`, `durableOperationId`,
-`traceContext`, and `causationId`.
-
-`partitionKey` is an optional ordering or sharding key, commonly an aggregate
-id or tenant id. Bondstone should not infer it from arbitrary command property
-names through reflection. If derivation becomes useful later, prefer an
-explicit interface or mapping policy.
-
-`durableOperationId` is an optional logical operation id for idempotent
-operation tracking or later operation-status lookup. A sender implementation
-can generate it when absent, but callers that need retry-safe operation
-tracking can provide it explicitly.
-
-`traceContext` carries distributed tracing metadata, such as W3C `traceparent`,
-`tracestate`, and baggage. It can be captured from `Activity.Current` in normal
-.NET execution and can be mapped to or from transport adapters such as Rebus.
-`MessageTraceContext` exposes W3C trace-id parsing through .NET
-`ActivityContext` APIs so transport adapters do not need handwritten
-traceparent parsers. This replaces loose correlation-id parameters for
-cross-layer tracing.
-
-`causationId` identifies the immediate Bondstone message that caused the send.
-It is separate from distributed tracing: trace context follows the workflow,
-while causation points to the direct message parent when one exists.
-
-Durable operation tracking is represented by `DurableOperationState`,
-`DurableOperationStatus`, and `IDurableOperationReader`. The reader returns
-`null` when an operation id is unknown. Operation states are persistence-neutral
-read models that expose a `Status` enum.
-
-Operation state is not the delivery ledger. Outbox records track staged and
-dispatched durable messages; inbox records track receive idempotency and
-processed markers. A durable operation id is a caller-visible logical handle
-that can correlate with durable messages and provide a coarse status for the
-workflow the caller started.
-
-The current command loop records operation state only for caller-supplied
-operation ids. The default command sender does not generate an operation id.
-When a durable command send includes one, Bondstone stages `Pending` operation
-state if the operation is unknown and requires `IDurableOperationStateStore` to
-be registered. Repeated sends with an existing operation id do not downgrade
-the existing state.
-
-When a Rebus module command receive envelope carries a durable operation id,
-the module command execution metadata carries that id into the command
-pipeline. After the durable handler path completes successfully, Bondstone
-stages `Completed` operation state inside module command execution. With EF
-module persistence, that completion update is saved in the same module
-transaction as handler state, receive inbox markers, and any outgoing outbox
-messages.
-
-When module-owned durable EF persistence is configured, `Pending` operation
-state is staged in the source module persistence context during send and
-`Completed` operation state is staged in the target module persistence context
-during receive. `IDurableOperationReader` can aggregate configured module
-operation stores and returns completed state ahead of pending state for the
-same operation id.
-
-Operation states do not define polling, timeout, result deserialization,
-`send and wait` behavior, running-state reporting, failure-state reporting,
-retry state, or stale receive recovery. Handler exceptions still roll back the
-module transaction and flow to Rebus retry/dead-letter policy.
+## Inbox Identity
 
 Receive-side handle-once execution is represented by
-`IDurableInboxHandlerExecutor`. The executor is not a mediator and does not
-discover handlers. It accepts a durable inbox record, a caller-supplied handler
-delegate, and a caller-supplied commit delegate. It runs the handler only when
-the inbox record is newly registered, stages the processed marker after the
-handler completes, invokes the commit delegate, and returns a
-`DurableInboxHandleResult`. Already processed records are skipped. Already
-received but unprocessed records are also skipped because Bondstone does not
-yet have an inbox lease or stale receive recovery model that can prove a second
-handler execution is safe.
+`IDurableInboxHandlerExecutor`. It accepts a durable inbox record, a handler
+delegate, and a commit delegate. It runs the handler only when the inbox record
+is newly registered, stages the processed marker after the handler completes,
+invokes the commit delegate, and returns a `DurableInboxHandleResult`.
+
+Command inbox identity is:
+
+- Bondstone message id;
+- target module;
+- stable command handler identity.
+
+Event inbox identity is per subscriber:
+
+- Bondstone message id;
+- subscriber module;
+- stable subscriber identity.
+
+Already processed records are skipped. Already received but unprocessed
+records are operationally loud through `DurableInboxAlreadyReceivedException`
+when using the module receive pipeline, because Bondstone does not yet have an
+inbox lease or stale receive recovery model that can prove a second handler
+execution is safe.
+
+## Neutral Receive Pipeline
+
+Core exposes provider-neutral receive pipelines over
+`DurableMessageEnvelope`:
+
+- `IModuleCommandReceivePipeline`
+- `IModuleEventReceivePipeline`
+
+These pipelines resolve stable message identities, deserialize payloads
+through the shared durable payload serializer, derive inbox records, execute
+the module command or event subscriber executor, and surface stale receive
+state. They do not configure broker listeners, discover handlers from broker
+messages, own retry/dead-letter policy, or replace provider-native
+acknowledgement behavior.
+
+Direct transport receive adapters should parse their provider-native body into
+the neutral durable envelope and call these pipelines inside the provider
+message acknowledgement boundary.
+
+## Durable Envelope
 
 `DurableMessageEnvelope` represents the persistence- and transport-neutral
-shape of a durable message before EF Core entities, provider claiming, or
-transport headers are involved. Command envelopes require a target module;
-event envelopes do not specify one. Envelope metadata remains explicit:
-operation ids, trace context, causation, partition key, payload, and optional
-metadata are stored as separate boundary fields instead of being inferred from
-CLR names or transport details.
+shape of a durable message before provider stores or transport headers are
+involved. Command envelopes require `TargetModule`; event envelopes must not
+specify one. Envelope metadata remains explicit: operation ids, trace context,
+causation, partition key, payload, and optional metadata are stored as
+separate boundary fields instead of being inferred from CLR names or transport
+details.
 
-`Bondstone.Transport.Rebus` maps outgoing command envelopes to Rebus explicit
-routing sends through native Rebus routing APIs. Phase 5 adds outgoing event
-publish dispatch by mapping event identities to Rebus topics and publishing
-the same Bondstone wire envelope through native Rebus topics APIs. The adapter
-preserves Bondstone message identity in Bondstone-specific headers and maps
-trace context to W3C transport headers. Rebus receive dispatch can route
-Bondstone wire envelopes by `MessageKind`. Command envelopes derive inbox keys
-from message id, target module, and explicit handler identity. Event envelopes
-resolve endpoint event subscription bindings, derive inbox keys from message
-id, subscriber module, and stable subscriber identity, and execute typed event
-subscribers through `IModuleEventSubscriberExecutor`. Native Rebus
-subscription startup and subscription storage remain app-owned.
+Durable payload serialization is shared through `IDurablePayloadSerializer`.
+The default implementation uses System.Text.Json options configured through
+Bondstone's durable payload JSON surface.
 
-Durable payload serialization is shared command/event infrastructure. Current
-command send, event publish, Rebus typed command receive, and Rebus module
-command and event receive use `IDurablePayloadSerializer`. The default implementation
-uses `System.Text.Json` with durable-payload-specific
-`DurablePayloadJsonOptions`, so consumers configure payload JSON options and
-converters once instead of repeating transport-specific serializer options.
-Applications can call `ConfigureBondstoneDurablePayloadJson` for the default
-JSON implementation or replace `IDurablePayloadSerializer` when a custom
-serializer is needed. Future transport event receive implementations must use
-the same boundary.
-Transport adapters must not rely on transport CLR type headers for Bondstone
-durable identity. Content type, non-JSON payloads, schema registries, payload
-encryption, compression, and stored-payload migration remain deferred.
+## Operation State
 
-The typed Rebus command receive pipeline uses `IMessageTypeRegistry` to
-resolve stable message type names to durable command CLR types, deserializes
-payloads through `IDurablePayloadSerializer`, starts a .NET/OTel consumer
-`Activity` from accepted W3C trace context, and invokes caller-registered
-typed command handlers with explicit stable handler identity.
+Durable operation tracking is represented by `DurableOperationState`,
+`DurableOperationStatus`, and `IDurableOperationReader`. Operation state is a
+caller-visible logical handle; it is not the delivery ledger. Outbox records
+track staged and dispatched durable messages, and inbox records track receive
+idempotency and processed markers.
 
-The current typed Rebus pipeline is a lower-level transport primitive. The
-preferred app-facing receive shape binds host Rebus topology to
-`IModuleCommandExecutor` so application code does not repeat handler and
-commit delegates per command.
+The current command loop records operation state only for caller-supplied
+operation ids. Sending a command with an operation id stages `Pending` if the
+operation is unknown. Successful module command receive stages `Completed` in
+the target module persistence boundary. Operation states do not yet define
+polling, timeout, result deserialization, running state, failure state, retry
+state, or stale receive recovery.
 
-Rebus module command receive groundwork now resolves a Bondstone wire envelope
-to a registered module command route, derives the stable handler identity from
-route metadata, passes the durable inbox record into `IModuleCommandExecutor`,
-and receives the inbox result from `ModuleCommandExecutionResult`. Host
-receive topology can now bind Rebus endpoint names to accepted local modules
-and registers the module command receive pipeline plus
-`IRebusModuleCommandEndpointDispatcher`. For the current single-endpoint
-app-facing shape, receive topology also registers the Rebus module command
-endpoint handler bound to the configured endpoint. The endpoint dispatcher
-validates that the named endpoint exists and accepts the envelope target
-module before delegating to the module command receive pipeline, allowing
-Rebus to invoke durable module command receive through a normal
-`RebusDurableMessageEnvelope` handler while the application keeps Rebus
-infrastructure configuration. Receive bindings also derive outgoing command
-destinations for accepted modules, with explicit `RouteModule` mappings
-reserved as overrides and module queue conventions as fallback routing for
-extracted or otherwise remote target modules.
+## Transport Adapters
 
-Rebus command destination diagnostics can describe how a target module would
-be addressed before dispatch. Diagnostics report command destination kind,
-target module, resolved destination address, and whether resolution came from
-an explicit route, receive endpoint binding, module queue convention, or no
-configured destination. Receive endpoint binding diagnostics include the
-endpoint name that supplied the destination.
+[ADR 0036](../adr/0036-direct-transport-adapters-and-rebus-removal.md)
+removes the Rebus adapter and makes direct provider adapters the reference
+transport architecture.
 
-Durable command loop validation now runs during `AddBondstone` composition.
-Modules that opt into durable messaging must declare persistence, durable
-command handlers and durable event subscribers must belong to
-durable-messaging modules, and Rebus receive endpoints must target registered
-local modules that use durable messaging and have durable command handlers.
-These checks cover incomplete local durable receive topology before the Rebus
-listener starts handling messages.
+Current direct transport packages:
 
-For durable commands, prefer queue-backed point-to-point delivery. A Rebus
-receive endpoint should usually represent a module-level command backlog so
-that scaling, retry, dead-letter handling, and service extraction can be
-managed per module. Multiple modules may share an endpoint when they share the
-same operational profile, but a general inbox queue is not the default command
-topology. Integration events use topic or subscription topology because events
-intentionally fan out to zero or more subscribers.
+- `Bondstone.Transport.RabbitMq`
+- `Bondstone.Transport.ServiceBus`
+- `Bondstone.Transport.Local`
 
-Durable-message diagnostics should specialize by message kind. Current Rebus
-command destination diagnostics report target module, destination, route
-source, and receive endpoint binding. Current Rebus event diagnostics report
-event identity, topic, subscriber module, subscriber identity, subscription
-binding, and zero subscriber outcomes. Shared diagnostics should include
-stable message identity, message kind, source module, payload serialization
-policy, trace context, and causation information without assuming every
-durable message is a command. Core now has
-`DurableMessageTopologyDiagnosticKind` values for command routes, command
-destinations, command receive endpoints, event topics, and event
-subscriptions.
+RabbitMQ and Azure Service Bus are the production-oriented direct provider
+adapters. Their implemented scope is outgoing durable outbox dispatch. RabbitMQ
+uses exchange, routing-key, and queue vocabulary. Azure Service Bus uses queue,
+topic, and event destination vocabulary. Provider connection, credentials,
+queue/topic/exchange/binding creation, workers, retry, dead-letter,
+serializer, and administration remain app-owned or provider-native unless a
+later ADR accepts a bounded helper.
 
-Modules that send or receive durable commands should opt into one durable
-messaging capability, such as `UseDurableMessaging`, rather than making normal
-applications choose separate inbox and outbox toggles. The capability should
-represent the inbox/outbox-backed path for durable commands. Plain direct
-module collaboration should use `.Contracts` references or regular
-`ICommand` execution, not a local durable queue substitute.
+`Bondstone.Transport.Local` is explicit local queue routing for samples, tests,
+and local development. It uses the neutral receive pipelines and preserves
+outbox/inbox semantics, but it is not a broker durability layer or fallback.
 
-Future envelope fields remain open. Content type is the most likely next
-addition if Bondstone needs to support non-JSON payloads or make JSON explicit.
-Neutral headers may be added if multiple adapters need cross-cutting metadata
-that does not deserve a first-class field. Scheduling, TTL, priority, reply-to,
-tenant id, and transport-native headers should stay deferred until persistence,
-transport, or samples prove a durable need.
+Direct transport packages contribute `IDurableOutboxTransportRoute` entries.
+`RoutedDurableOutboxTransport` sends a claimed outbox record only when exactly
+one provider route matches the message. Zero matches and ambiguous matches are
+loud configuration errors.
 
-Deferred durable-command work remains tracked:
+Provider-backed receive workers for RabbitMQ and Service Bus are planned
+follow-up slices. Those slices should cover command receive, event subscriber
+receive, acknowledgement semantics, retry/dead-letter behavior, diagnostics,
+and provider-backed integration tests.
 
-- any `send and wait` helper and timeout/polling policy;
-- trace context and causation propagation rules;
-- dispatcher configuration, advanced retry policy, and dead-letter routing
-  ownership;
-- transport-specific receive adapters and publish/subscribe behavior;
-- inbox handler discovery, receive retry policy, stale receive recovery, and
-  transport acknowledgement coordination;
-- deeper partition-key ordering and scaling semantics;
-- content type or neutral header support if adapters need it;
-- scheduling, TTL, priority, reply-to, tenant, or transport-native metadata if
-  a later durable scenario justifies it;
-- receive adapter, receive-side transport integration, and additional
-  transport-backed verification;
-- durable-messaging validation beyond the current module capability, Rebus
-  receive binding, EF outbox/inbox mapping checks, and Rebus command
-  destination diagnostics, including deeper transaction behaviors and
-  service-shaped samples.
+## Diagnostics
 
-## Message Identity Names
-
-Bondstone keeps durable message identity strings free-form for compatibility
-with existing systems and consumer naming policies. It should not derive
-identities from CLR names.
-
-Docs, tests, and samples should prefer lowercase dotted identities with an
-explicit version suffix. A good default shape is
-`{module}.{aggregate}.{message}.v{major}`, such as
-`sales.customer.registered.v1`.
+Durable-message diagnostics should specialize by message kind and provider.
+Command diagnostics should describe target-module routing. Event diagnostics
+should describe publish subjects, subscriber bindings, and missing-subscriber
+outcomes. Core keeps shared durable-message vocabulary, while provider
+packages expose provider-native diagnostic details.

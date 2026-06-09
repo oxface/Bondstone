@@ -19,21 +19,31 @@ Ship one NuGet package per package project. Package IDs match project names:
 - `Bondstone.EntityFrameworkCore`
 - `Bondstone.EntityFrameworkCore.Postgres`
 - `Bondstone.Persistence.Dapper.Postgres`
-- `Bondstone.Transport.Rebus`
+- `Bondstone.Transport.Local`
 - `Bondstone.Transport.ServiceBus`
 - `Bondstone.Transport.RabbitMq`
 
-Adapter-diversity proof transport packages are accepted by
-[ADR 0034](adr/0034-adapter-diversity-proof-transports.md). The initial
-Service Bus and RabbitMQ packages are proof-oriented outgoing durable outbox
-transports. Receive workers, provider-backed broker integration tests, and
-broker administration remain future slices.
+Direct transport adapter direction is accepted by
+[ADR 0036](adr/0036-direct-transport-adapters-and-rebus-removal.md).
+`Bondstone.Transport.ServiceBus` and `Bondstone.Transport.RabbitMq` are the
+active transport proof packages. Their current implemented scope is outgoing
+durable outbox dispatch with provider-native topology vocabulary. Receive
+workers, provider-backed broker integration tests, broker administration, and
+provider-backed receive reliability remain follow-up slices. Multi-transport
+outbox selection is implemented through provider route candidates and
+`RoutedDurableOutboxTransport`.
+
+`Bondstone.Transport.Local` is an explicit local queue adapter for samples,
+tests, and local development. It exercises outbox/inbox receive semantics
+through the provider-neutral receive pipelines, but it is not a production
+broker adapter or hidden fallback.
 
 The non-EF persistence proof package is accepted by
 [ADR 0035](adr/0035-postgresql-dapper-persistence-proof.md).
 `Bondstone.Persistence.Dapper.Postgres` is PostgreSQL-specific and
 Dapper-assisted. It proves durable module messaging persistence without EF
-Core; it is not a generic Dapper provider abstraction.
+Core; it is not a generic Dapper provider abstraction. A later packaging slice
+may rename this package to hide Dapper as an implementation detail.
 
 ## Package Dependencies
 
@@ -48,17 +58,15 @@ Use this dependency direction:
   shared builder extension methods.
 - `Bondstone.Persistence.Dapper.Postgres` depends on `Bondstone`, `Dapper`,
   and `Npgsql`.
-- `Bondstone.Transport.Rebus` depends on `Bondstone`.
+- `Bondstone.Transport.Local` depends on `Bondstone`.
 - `Bondstone.Transport.ServiceBus` depends on `Bondstone` and
   `Azure.Messaging.ServiceBus`.
 - `Bondstone.Transport.RabbitMq` depends on `Bondstone` and
   `RabbitMQ.Client`.
 
-Provider-specific packages contain provider-specific behavior only. A provider
-package may also reference `Bondstone` directly for shared builder extension
-methods when its normal provider dependency already reaches core transitively.
-Transport-specific packages contain transport adapter behavior only.
-Reusable hosted worker composition belongs in `Bondstone.Hosting`.
+Provider-specific packages contain provider-specific behavior only. Transport
+packages adapt broker/client SDKs directly instead of adapting another bus
+library. Reusable hosted worker composition belongs in `Bondstone.Hosting`.
 Core domain, command, messaging, and module abstractions stay in `Bondstone`
 unless a later ADR defines a narrower package split.
 

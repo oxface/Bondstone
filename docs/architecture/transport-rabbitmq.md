@@ -12,10 +12,12 @@ durable envelopes to RabbitMQ publish messages through a provider-local
 envelope mapper.
 
 Commands publish to a configured command exchange with a routing key resolved
-by target module. Integration events publish to a configured event exchange
-with a routing key resolved by stable event identity. This keeps RabbitMQ
-exchange/routing-key vocabulary native while preserving Bondstone's durable
-command versus integration event semantics.
+by target module. Integration events publish to event destinations resolved by
+stable event identity. Event destinations can be a configured event exchange
+with a routing key, or a direct queue publish through RabbitMQ's default
+exchange. This keeps RabbitMQ exchange/routing-key/queue vocabulary native
+while preserving Bondstone's durable command versus integration event
+semantics.
 
 Applications configure topology with the RabbitMQ transport builder:
 
@@ -36,6 +38,9 @@ services report the same resolution results used by dispatch so applications
 and tests can explain missing exchanges or routing keys without publishing
 messages.
 
+Use `.ToQueue(...)` or `UseEventQueueConvention(...)` when an event should be
+sent directly to a queue.
+
 ## App-Owned Setup
 
 Bondstone does not declare exchanges, queues, bindings, consumers,
@@ -46,13 +51,12 @@ or connections. Applications register and configure the RabbitMQ
 The adapter publishes the Bondstone-owned durable envelope as the message body
 and copies durable identity, module metadata, operation id, partition key, and
 W3C trace context into RabbitMQ properties and headers where appropriate.
-External event handoff, direct queue convenience, unwrapped payloads,
-CloudEvents, and schema-specific envelopes remain separate ADR-backed
-decisions.
+External event handoff beyond provider-native queue destinations, unwrapped
+payloads, CloudEvents, and schema-specific envelopes remain separate
+ADR-backed decisions.
 
 ## Deferred Work
 
 Receive-side RabbitMQ consumers, command queue binding, event queue binding,
 acknowledgement behavior, retry/dead-letter policy, broker-backed integration
-tests, direct queue send convenience, and topology declaration are future
-slices.
+tests, and topology declaration are future slices.

@@ -10,4 +10,11 @@ public sealed class BondstoneRabbitMqEventRouteBuilder(
         transportBuilder.SetEventRoutingKey(messageTypeName, routingKey);
         return transportBuilder;
     }
+
+    public BondstoneRabbitMqTransportBuilder ToQueue(
+        string queueName)
+    {
+        transportBuilder.SetEventQueue(messageTypeName, queueName);
+        return transportBuilder;
+    }
 }

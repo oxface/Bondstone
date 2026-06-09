@@ -1,8 +1,11 @@
 # 0030 Rebus Command Topology Diagnostics
 
-Status: Accepted
-Application: Applied
+Status: Superseded
+Application: Not Applicable
 Date: 2026-06-08
+
+Superseded by
+[ADR 0036 Direct Transport Adapters And Rebus Removal](0036-direct-transport-adapters-and-rebus-removal.md).
 
 ## Context
 

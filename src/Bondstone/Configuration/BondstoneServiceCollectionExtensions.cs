@@ -33,6 +33,8 @@ public static class BondstoneServiceCollectionExtensions
 
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
         services.TryAddScoped<IModuleEventSubscriberExecutor, ModuleEventSubscriberExecutor>();
+        services.TryAddScoped<IModuleCommandReceivePipeline, ModuleCommandReceivePipeline>();
+        services.TryAddScoped<IModuleEventReceivePipeline, ModuleEventReceivePipeline>();
         services.TryAddScoped(serviceProvider =>
             new DurableModuleOutboxWriterResolver(
                 serviceProvider.GetServices<IDurableModuleOutboxWriter>(),

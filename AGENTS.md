@@ -75,20 +75,22 @@ Start with:
 - First-class integration events follow
   [ADR 0033](docs/adr/0033-first-class-event-publish-subscribe-topology.md):
   publish dispatch, subscriber execution, per-subscriber inbox behavior,
-  Rebus topic/subscription topology, diagnostics, and tests are part of the
-  current durable event loop. Keep native broker setup app-owned, and do not
-  fold domain event persistence or broad choreography samples into this event
-  loop without a later ADR.
+  diagnostics, and tests are part of the current durable event loop. Keep
+  native broker setup app-owned, and do not fold domain event persistence or
+  broad choreography samples into this event loop without a later ADR.
 - Transport adapter topology should describe durable message topology, such as
-  command queues or future event topics/subscriptions, while broker
+  command queues, event destinations, and event subscriptions, while broker
   connection, worker, retry, dead-letter, serializer, and subscription-storage
   setup stays provider-native.
+- Direct provider transport adapters are the current direction according to
+  [ADR 0036](docs/adr/0036-direct-transport-adapters-and-rebus-removal.md).
+  Do not adapt another bus abstraction as a supported transport package.
+- `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
+  tests, and local development. It must not become a hidden fallback or be
+  presented as production broker durability.
 - Adapter-diversity proof packages for Azure Service Bus and RabbitMQ are
-  accepted by ADR 0034. Keep these slices proof-oriented: provider-native
-  topology vocabulary, app-owned broker setup, outgoing outbox dispatch first,
-  receive/broker reliability as explicit follow-up slices, and at least one
-  non-EF persistence adapter before hardening too deeply around Rebus, EF Core,
-  or PostgreSQL.
+  accepted by ADR 0034. Keep these slices provider-native, app-owned,
+  proof-oriented, and explicit about receive/broker reliability follow-ups.
 - `Bondstone.Persistence.Dapper.Postgres` is accepted by ADR 0035 as the first
   non-EF persistence proof. Keep it PostgreSQL-specific and Dapper-assisted,
   not a generic Dapper abstraction; it should prove durable module messaging

@@ -3,18 +3,15 @@ using Bondstone.EntityFrameworkCore.Persistence;
 using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Hosting.Outbox;
 using Bondstone.Messaging;
+using Bondstone.Modules;
 using Bondstone.Persistence;
-using Bondstone.Transport.Rebus.Inbox;
-using Bondstone.Transport.Rebus.Outbox;
+using Bondstone.Transport.RabbitMq.Outbox;
+using Bondstone.Transport.ServiceBus.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Rebus.Bus;
-using Rebus.Bus.Advanced;
-using Rebus.Routing;
-using System.Reflection;
 using Xunit;
 
 namespace Bondstone.Composition.Tests;
@@ -23,11 +20,11 @@ public sealed class AddBondstoneCompositionTests
 {
     [Fact]
     [Trait("Category", "Application")]
-    public void AddBondstone_WithPostgreSqlRebusAndWorker_ComposesResolvableOutboxGraph()
+    public void AddBondstone_WithPostgreSqlRabbitMqAndWorker_ComposesResolvableOutboxGraph()
     {
         var services = new ServiceCollection();
         services.AddOptions();
-        services.AddSingleton(CreateBus());
+        services.AddSingleton<IRabbitMqMessagePublisher, NoOpRabbitMqMessagePublisher>();
         services.AddSingleton<ILogger<DurableOutboxWorker>>(
             NullLogger<DurableOutboxWorker>.Instance);
 
@@ -35,8 +32,13 @@ public sealed class AddBondstoneCompositionTests
         {
             bondstone.UsePostgreSqlPersistence<CompositionDbContext>(
                 "Host=localhost;Database=bondstone");
-            bondstone.UseRebusTransport(
-                rebus => rebus.UseModuleQueueConvention());
+            bondstone.UseRabbitMqTransport(rabbitMq =>
+            {
+                rabbitMq.UseCommandExchange("bondstone.commands");
+                rabbitMq.UseEventExchange("bondstone.events");
+                rabbitMq.UseModuleRoutingKeyConvention();
+                rabbitMq.UseEventRoutingKeyConvention();
+            });
             bondstone.Outbox.UseWorker(options =>
             {
                 options.WorkerId = "composition-smoke-test";
@@ -58,7 +60,7 @@ public sealed class AddBondstoneCompositionTests
         using IServiceScope scope = serviceProvider.CreateScope();
         Assert.IsType<DurableOutboxDispatcher>(
             scope.ServiceProvider.GetRequiredService<IDurableOutboxDispatcher>());
-        Assert.IsType<RebusDurableOutboxTransport>(
+        Assert.IsType<RoutedDurableOutboxTransport>(
             scope.ServiceProvider.GetRequiredService<IDurableOutboxTransport>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IDurableOutboxClaimer>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IDurableOutboxLeaseRenewer>());
@@ -67,67 +69,62 @@ public sealed class AddBondstoneCompositionTests
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task AddBondstone_WithPostgreSqlAndRebusInbox_ComposesReceiveWithExplicitCommitBoundary()
+    public async Task AddBondstone_WithTwoTransports_RoutesOutboxRecordsByProviderTopology()
     {
-        var coreExecutor = new CapturingInboxHandlerExecutor();
+        var rabbitMqPublisher = new RecordingRabbitMqMessagePublisher();
+        var serviceBusSender = new RecordingServiceBusMessageSender();
         var services = new ServiceCollection();
-        services.AddSingleton<IDurableInboxHandlerExecutor>(coreExecutor);
+        services.AddSingleton<IRabbitMqMessagePublisher>(rabbitMqPublisher);
+        services.AddSingleton<IServiceBusMessageSender>(serviceBusSender);
 
         services.AddBondstone(bondstone =>
         {
-            bondstone.UsePostgreSqlPersistence<CompositionDbContext>(
-                "Host=localhost;Database=bondstone");
-            bondstone.UseRebusInbox();
+            bondstone.UseRabbitMqTransport(rabbitMq =>
+            {
+                rabbitMq.UseCommandExchange("bondstone.commands");
+                rabbitMq.RouteModule("fulfillment").ToRoutingKey("fulfillment.commands");
+            });
+            bondstone.UseServiceBusTransport(serviceBus =>
+                serviceBus.RouteModule("billing").ToQueue("billing-commands"));
         });
 
-        using ServiceProvider serviceProvider = services.BuildServiceProvider(
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider(
             new ServiceProviderOptions
             {
                 ValidateOnBuild = true,
                 ValidateScopes = true,
             });
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
 
-        using IServiceScope scope = serviceProvider.CreateScope();
-        var receiveExecutor =
-            scope.ServiceProvider.GetRequiredService<IRebusDurableInboxHandlerExecutor>();
-        var persistenceScope =
-            scope.ServiceProvider.GetRequiredService<IEntityFrameworkCorePersistenceScope>();
-        DurableMessageEnvelope? handledEnvelope = null;
+        await transport.SendAsync(CreateOutboxRecord(targetModule: "fulfillment"));
 
-        DurableInboxHandleResult result = await receiveExecutor.HandleOnceAsync(
-            CreateEnvelope(),
-            "composition-handler",
-            (message, _) =>
-            {
-                handledEnvelope = message;
-                return ValueTask.CompletedTask;
-            },
-            persistenceScope.SaveChangesAsync);
+        Assert.Equal("fulfillment.commands", rabbitMqPublisher.Destination?.RoutingKey);
+        Assert.Null(serviceBusSender.EntityName);
 
-        Assert.Equal(DurableInboxHandleStatus.Handled, result.Status);
-        Assert.NotNull(handledEnvelope);
-        Assert.Equal(MessageKind.Command, handledEnvelope.MessageKind);
-        Assert.NotNull(coreExecutor.Record);
-        Assert.Equal(CreateEnvelope().MessageId, coreExecutor.Record.Key.MessageId);
-        Assert.Equal("fulfillment", coreExecutor.Record.Key.ModuleName);
-        Assert.Equal("composition-handler", coreExecutor.Record.Key.HandlerIdentity);
-        Assert.Equal(1, coreExecutor.HandlerCalls);
-        Assert.Equal(1, coreExecutor.CommitCalls);
+        await transport.SendAsync(CreateOutboxRecord(targetModule: "billing"));
+
+        Assert.Equal("billing-commands", serviceBusSender.EntityName);
     }
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task AddBondstone_WithPostgreSqlAndTypedRebusReceive_ComposesTypedReceivePipeline()
+    public async Task AddBondstone_WithModuleReceivePipeline_ComposesReceiveThroughInbox()
     {
-        var rebusExecutor = new CapturingRebusInboxHandlerExecutor();
+        var inboxExecutor = new CapturingInboxHandlerExecutor();
         var services = new ServiceCollection();
-        services.AddSingleton<IRebusDurableInboxHandlerExecutor>(rebusExecutor);
+        services.AddSingleton<CommandCallLog>();
+        services.AddSingleton<IDurableInboxHandlerExecutor>(inboxExecutor);
 
         services.AddBondstone(bondstone =>
         {
-            bondstone.UsePostgreSqlPersistence<CompositionDbContext>(
-                "Host=localhost;Database=bondstone");
-            bondstone.UseRebusTypedCommandReceivePipeline();
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("composition test persistence");
+                module.Commands.RegisterHandler<TypedCompositionCommand, TypedCompositionHandler>(
+                    "fulfillment.order.reserve.v1");
+            });
         });
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider(
@@ -138,51 +135,57 @@ public sealed class AddBondstoneCompositionTests
             });
 
         using IServiceScope scope = serviceProvider.CreateScope();
-        scope.ServiceProvider
-            .GetRequiredService<IMessageTypeRegistry>()
-            .Register<TypedCompositionCommand>("fulfillment.order.reserve.v1");
-        var receivePipeline =
-            scope.ServiceProvider.GetRequiredService<IRebusTypedCommandReceivePipeline>();
-        var persistenceScope =
-            scope.ServiceProvider.GetRequiredService<IEntityFrameworkCorePersistenceScope>();
-        TypedCompositionCommand? handledCommand = null;
+        IModuleCommandReceivePipeline receivePipeline =
+            scope.ServiceProvider.GetRequiredService<IModuleCommandReceivePipeline>();
 
-        DurableInboxHandleResult result =
-            await receivePipeline.HandleOnceAsync<TypedCompositionCommand>(
-                CreateEnvelope(),
-                "typed-composition-handler",
-                (command, _) =>
-                {
-                    handledCommand = command;
-                    return ValueTask.CompletedTask;
-                },
-                persistenceScope.SaveChangesAsync);
+        DurableInboxHandleResult result = await receivePipeline.HandleOnceAsync(CreateEnvelope());
 
         Assert.Equal(DurableInboxHandleStatus.Handled, result.Status);
-        Assert.Equal("A-100", handledCommand?.OrderId);
-        Assert.Equal(CreateEnvelope().MessageId, rebusExecutor.Envelope?.MessageId);
-        Assert.Equal("typed-composition-handler", rebusExecutor.HandlerIdentity);
-        Assert.Equal(1, rebusExecutor.HandlerCalls);
-        Assert.Equal(1, rebusExecutor.CommitCalls);
+        Assert.NotNull(inboxExecutor.Record);
+        Assert.Equal(CreateEnvelope().MessageId, inboxExecutor.Record.Key.MessageId);
+        Assert.Equal("fulfillment", inboxExecutor.Record.Key.ModuleName);
+        Assert.Equal("fulfillment.order.reserve.v1", inboxExecutor.Record.Key.HandlerIdentity);
+        Assert.Equal(1, inboxExecutor.HandlerCalls);
+        Assert.Equal(
+            ["handle:A-100"],
+            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
     }
 
-    private static RebusDurableMessageEnvelope CreateEnvelope()
+    private static DurableMessageEnvelope CreateEnvelope()
     {
-        return new RebusDurableMessageEnvelope(
+        return new DurableMessageEnvelope(
             Guid.Parse("c370a6dd-9f1e-43b0-9506-a0f984ef03cf"),
-            MessageKind.Command.ToString(),
+            MessageKind.Command,
             "fulfillment.order.reserve.v1",
             "sales",
             "fulfillment",
             """{"orderId":"A-100"}""",
-            null,
             DateTimeOffset.Parse("2026-06-05T12:00:00+00:00"),
-            DurableOperationId: null,
-            TraceParent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
-            TraceState: null,
-            TraceBaggage: null,
-            CausationId: null,
-            PartitionKey: "orders/A-100");
+            traceContext: new MessageTraceContext(
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00"),
+            partitionKey: "orders/A-100");
+    }
+
+    private static DurableOutboxRecord CreateOutboxRecord(
+        string targetModule)
+    {
+        var envelope = new DurableMessageEnvelope(
+            Guid.NewGuid(),
+            MessageKind.Command,
+            "fulfillment.order.reserve.v1",
+            "sales",
+            targetModule,
+            """{"orderId":"A-100"}""",
+            DateTimeOffset.Parse("2026-06-05T12:00:00+00:00"));
+
+        return new DurableOutboxRecord(
+            envelope,
+            DateTimeOffset.Parse("2026-06-05T12:00:01+00:00"),
+            new DurableOutboxDispatchState(
+                DurableOutboxStatus.Processing,
+                attemptCount: 1,
+                claimedBy: "worker-1",
+                claimedUntilUtc: DateTimeOffset.Parse("2026-06-05T12:05:00+00:00")));
     }
 
     private sealed class CompositionDbContext(DbContextOptions<CompositionDbContext> options)
@@ -194,121 +197,24 @@ public sealed class AddBondstoneCompositionTests
         }
     }
 
+    [DurableCommandIdentity("fulfillment.order.reserve.v1")]
     private sealed record TypedCompositionCommand(string OrderId) : IDurableCommand;
 
-    private static IBus CreateBus()
+    private sealed class TypedCompositionHandler(CommandCallLog log)
+        : ICommandHandler<TypedCompositionCommand>
     {
-        IBus bus = DispatchProxy.Create<IBus, RebusBusProxy>();
-        var proxy = (RebusBusProxy)(object)bus;
-        proxy.AdvancedApi = CreateAdvancedApi();
-        return bus;
-    }
-
-    private static IAdvancedApi CreateAdvancedApi()
-    {
-        IAdvancedApi advancedApi =
-            DispatchProxy.Create<IAdvancedApi, RebusAdvancedApiProxy>();
-        var proxy = (RebusAdvancedApiProxy)(object)advancedApi;
-        proxy.RoutingApi = new NoOpRoutingApi();
-        proxy.TopicsApi = new NoOpTopicsApi();
-        return advancedApi;
-    }
-
-    private class RebusBusProxy : DispatchProxy
-    {
-        public IAdvancedApi AdvancedApi { get; set; } = null!;
-
-        protected override object? Invoke(
-            MethodInfo? targetMethod,
-            object?[]? args)
+        public ValueTask HandleAsync(
+            TypedCompositionCommand command,
+            CancellationToken ct = default)
         {
-            if (targetMethod?.Name == "get_Advanced")
-            {
-                return AdvancedApi;
-            }
-
-            if (targetMethod?.Name == nameof(IDisposable.Dispose))
-            {
-                return null;
-            }
-
-            if (targetMethod?.ReturnType == typeof(Task))
-            {
-                return Task.CompletedTask;
-            }
-
-            throw new NotSupportedException(
-                $"Rebus bus member '{targetMethod?.Name}' is not supported by this test proxy.");
+            log.Calls.Add($"handle:{command.OrderId}");
+            return ValueTask.CompletedTask;
         }
     }
 
-    private class RebusAdvancedApiProxy : DispatchProxy
+    private sealed class CommandCallLog
     {
-        public IRoutingApi RoutingApi { get; set; } = null!;
-
-        public ITopicsApi TopicsApi { get; set; } = null!;
-
-        protected override object? Invoke(
-            MethodInfo? targetMethod,
-            object?[]? args)
-        {
-            return targetMethod?.Name switch
-            {
-                "get_Routing" => RoutingApi,
-                "get_Topics" => TopicsApi,
-                _ => throw new NotSupportedException(
-                    $"Rebus advanced API member '{targetMethod?.Name}' is not supported by this test proxy."),
-            };
-        }
-    }
-
-    private sealed class NoOpRoutingApi : IRoutingApi
-    {
-        public Task Send(
-            string destinationAddress,
-            object explicitlyRoutedMessage,
-            IDictionary<string, string> optionalHeaders = null!)
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task SendRoutingSlip(
-            Itinerary itinerary,
-            object message,
-            IDictionary<string, string> optionalHeaders = null!)
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task Defer(
-            string destinationAddress,
-            TimeSpan delay,
-            object message,
-            IDictionary<string, string> optionalHeaders = null!)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class NoOpTopicsApi : ITopicsApi
-    {
-        public Task Publish(
-            string topic,
-            object message,
-            IDictionary<string, string> optionalHeaders = null!)
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task Subscribe(string topic)
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task Unsubscribe(string topic)
-        {
-            return Task.CompletedTask;
-        }
+        public List<string> Calls { get; } = [];
     }
 
     private sealed class CapturingInboxHandlerExecutor : IDurableInboxHandlerExecutor
@@ -316,8 +222,6 @@ public sealed class AddBondstoneCompositionTests
         public DurableInboxRecord? Record { get; private set; }
 
         public int HandlerCalls { get; private set; }
-
-        public int CommitCalls { get; private set; }
 
         public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
             DurableInboxRecord record,
@@ -328,7 +232,6 @@ public sealed class AddBondstoneCompositionTests
             Record = record;
             HandlerCalls++;
             await handler(ct);
-            CommitCalls++;
             await commit(ct);
 
             return new DurableInboxHandleResult(
@@ -337,58 +240,42 @@ public sealed class AddBondstoneCompositionTests
         }
     }
 
-    private sealed class CapturingRebusInboxHandlerExecutor : IRebusDurableInboxHandlerExecutor
+    private sealed class NoOpRabbitMqMessagePublisher : IRabbitMqMessagePublisher
     {
-        public RebusDurableMessageEnvelope? Envelope { get; private set; }
-
-        public string? HandlerIdentity { get; private set; }
-
-        public int HandlerCalls { get; private set; }
-
-        public int CommitCalls { get; private set; }
-
-        public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
-            RebusDurableMessageEnvelope envelope,
-            string handlerIdentity,
-            Func<DurableMessageEnvelope, CancellationToken, ValueTask> handler,
-            Func<CancellationToken, ValueTask> commit,
+        public ValueTask PublishAsync(
+            RabbitMqPublishDestination destination,
+            RabbitMqTransportMessage message,
             CancellationToken ct = default)
         {
-            Envelope = envelope;
-            HandlerIdentity = handlerIdentity;
-            HandlerCalls++;
-            await handler(CreateDurableEnvelope(envelope), ct);
-            CommitCalls++;
-            await commit(ct);
-
-            var record = new DurableInboxRecord(
-                new DurableInboxMessageKey(
-                    envelope.MessageId,
-                    envelope.TargetModule!,
-                    handlerIdentity),
-                DateTimeOffset.Parse("2026-06-05T12:01:00+00:00"));
-
-            return new DurableInboxHandleResult(
-                DurableInboxHandleStatus.Handled,
-                record.MarkProcessed(record.ReceivedAtUtc.AddMinutes(5)));
+            return ValueTask.CompletedTask;
         }
+    }
 
-        private static DurableMessageEnvelope CreateDurableEnvelope(
-            RebusDurableMessageEnvelope envelope)
+    private sealed class RecordingRabbitMqMessagePublisher : IRabbitMqMessagePublisher
+    {
+        public RabbitMqPublishDestination? Destination { get; private set; }
+
+        public ValueTask PublishAsync(
+            RabbitMqPublishDestination destination,
+            RabbitMqTransportMessage message,
+            CancellationToken ct = default)
         {
-            return new DurableMessageEnvelope(
-                envelope.MessageId,
-                MessageKind.Command,
-                envelope.MessageTypeName,
-                envelope.SourceModule,
-                envelope.TargetModule,
-                envelope.Payload,
-                envelope.CreatedAtUtc,
-                durableOperationId: envelope.DurableOperationId,
-                traceContext: null,
-                causationId: envelope.CausationId,
-                partitionKey: envelope.PartitionKey,
-                metadata: envelope.Metadata);
+            Destination = destination;
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingServiceBusMessageSender : IServiceBusMessageSender
+    {
+        public string? EntityName { get; private set; }
+
+        public ValueTask SendAsync(
+            string entityName,
+            ServiceBusTransportMessage message,
+            CancellationToken ct = default)
+        {
+            EntityName = entityName;
+            return ValueTask.CompletedTask;
         }
     }
 }

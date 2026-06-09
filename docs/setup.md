@@ -1,253 +1,158 @@
-# Library Setup
+# Setup
 
-This document is the single home for library-user setup examples. Keep
-architecture docs focused on contracts and decisions; update this page when the
-preferred application wiring changes.
+This document shows the current host setup shape for Bondstone.
 
 ## Packages
 
-Install only the packages needed by the host:
+Install the packages needed for the host:
 
-- `Bondstone` for core messaging, persistence contracts, module registration,
-  and command execution.
-- `Bondstone.EntityFrameworkCore` when the host maps Bondstone persistence into
-  an EF Core `DbContext`.
-- `Bondstone.EntityFrameworkCore.Postgres` when the host uses PostgreSQL-backed
-  stores and outbox claiming.
-- `Bondstone.Transport.Rebus` when the host sends durable commands through
-  Rebus.
+- `Bondstone` for core module, command, event, inbox/outbox, and durable
+  message contracts.
 - `Bondstone.Hosting` when the host runs the durable outbox worker.
+- `Bondstone.EntityFrameworkCore` for EF Core durable persistence mappings and
+  module transaction behavior.
+- `Bondstone.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
+  classification and provider registration.
+- `Bondstone.Persistence.Dapper.Postgres` for the PostgreSQL non-EF
+  persistence proof.
+- `Bondstone.Transport.RabbitMq` or `Bondstone.Transport.ServiceBus` when the
+  host dispatches durable outbox records through a direct provider adapter.
+- `Bondstone.Transport.Local` when a sample, test, or local development host
+  explicitly wants in-process queue routing through the durable receive
+  pipelines.
 
-## Current App Wiring Shape
+## Minimal Durable Outbox Host
 
-The preferred setup path is the fluent `AddBondstone` builder. The Bondstone
-portion of a host that maps persistence into a consumer-owned `DbContext`,
-registers a module, routes outgoing durable commands to Rebus, and starts the
-outbox worker looks like this:
+The current direct transport packages implement outgoing durable outbox
+dispatch. They keep provider connection, credentials, retry, dead-letter,
+topology declaration, workers, and administration app-owned or provider-native.
+
+RabbitMQ example:
 
 ```csharp
 using Bondstone.Configuration;
-using Bondstone.EntityFrameworkCore.Persistence;
 using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Hosting.Outbox;
-using Bondstone.Messaging;
-using Bondstone.Modules;
-using Bondstone.Transport.Rebus.Outbox;
-using Microsoft.EntityFrameworkCore;
+using Bondstone.Transport.RabbitMq.Outbox;
+using RabbitMQ.Client;
+
+builder.Services.AddBondstoneRabbitMqConnection(rabbitMqConnection);
 
 builder.Services.AddBondstone(bondstone =>
 {
-    bondstone.Module("orders", module =>
+    bondstone.UsePostgreSqlPersistence<AppDbContext>(
+        builder.Configuration.GetConnectionString("App")!);
+
+    bondstone.UseRabbitMqTransport(rabbitMq =>
     {
-        module.UseDurableMessaging();
-        module.UsePostgreSqlPersistence<AppDbContext>(connectionString);
-        module.Commands.RegisterFromAssemblyContaining<CreateOrderCommand>();
+        rabbitMq.UseCommandExchange("bondstone.commands");
+        rabbitMq.UseEventExchange("bondstone.events");
+        rabbitMq.UseModuleRoutingKeyConvention();
+        rabbitMq.UseEventRoutingKeyConvention();
     });
 
-    bondstone.UseRebusTransport(rebus =>
-        rebus.UseModuleQueueConvention());
     bondstone.Outbox.UseWorker(options =>
     {
-        options.WorkerId = "orders-api-1";
-        options.BatchSize = 100;
+        options.WorkerId = "app-outbox-worker";
+        options.BatchSize = 25;
+        options.PollingInterval = TimeSpan.FromSeconds(1);
     });
 });
-
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
-    : DbContext(options)
-{
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.ApplyBondstonePersistence();
-    }
-}
-
-[DurableCommandIdentity("orders.order.create.v1")]
-public sealed record CreateOrderCommand(string OrderId) : IDurableCommand;
-
-public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand>
-{
-    public ValueTask HandleAsync(
-        CreateOrderCommand command,
-        CancellationToken ct = default)
-    {
-        return ValueTask.CompletedTask;
-    }
-}
 ```
 
-Inline `Module(...)` registration is fine for small apps and tests. For a
-module-owned assembly, prefer a module-provided registration object and keep a
-thin host extension for environment-specific values:
+Azure Service Bus uses the same Bondstone composition shape with
+`UseServiceBusTransport`, queues for commands, and topic or queue
+destinations for integration events.
+
+When more than one direct transport is registered, Bondstone routes each
+claimed outbox record through the provider whose topology matches that
+message. If no provider or more than one provider matches, dispatch fails
+instead of guessing.
+
+## Module Registration
+
+Register modules through module-owned `IBondstoneModule` objects or thin host
+extensions that create those objects. Module assemblies should own their
+durable messaging capability, persistence binding, command handler
+registration, published integration event registration, and event subscriber
+registration.
 
 ```csharp
-public sealed class OrdersBondstoneModule(string connectionString)
+builder.Services.AddBondstone(bondstone =>
+{
+    bondstone.AddOrderingModule(connectionString);
+    bondstone.AddFulfillmentModule(connectionString);
+});
+```
+
+Durable messaging modules must also declare persistence:
+
+```csharp
+public sealed class FulfillmentBondstoneModule(string connectionString)
     : IBondstoneModule
 {
-    public string Name => "orders";
+    public string Name => FulfillmentModule.ModuleName;
 
     public void Configure(BondstoneModuleBuilder module)
     {
         module.UseDurableMessaging();
-        module.UsePostgreSqlPersistence<OrdersDbContext>(
+        module.UsePostgreSqlPersistence<FulfillmentDbContext>(
             connectionString,
-            schema: "orders");
-        module.Commands.RegisterFromAssemblyContaining<CreateOrderHandler>();
-    }
-}
-
-public static class OrdersModuleRegistration
-{
-    public static BondstoneBuilder AddOrdersModule(
-        this BondstoneBuilder bondstone,
-        string connectionString)
-    {
-        return bondstone.AddModule(new OrdersBondstoneModule(connectionString));
-    }
-}
-
-builder.Services.AddBondstone(bondstone =>
-{
-    bondstone.AddOrdersModule(connectionString);
-});
-```
-
-`ApplyBondstonePersistence` maps the full current Bondstone durable persistence
-shape. Modules that use `UseDurableMessaging` with EF persistence currently
-need outbox and inbox mappings. Hosts that only need selected durable pieces
-can map them explicitly:
-
-```csharp
-modelBuilder.ApplyBondstoneOutbox();
-modelBuilder.ApplyBondstoneInbox();
-modelBuilder.ApplyBondstoneOperationState();
-```
-
-For a module that only wants EF-backed module command transactions, omit
-`UseDurableMessaging` and map only the module's own tables:
-
-```csharp
-builder.Services.AddBondstone(bondstone =>
-{
-    bondstone.Module("catalog", module =>
-    {
-        module.UseEntityFrameworkCorePersistence<CatalogDbContext>();
-        module.Commands.RegisterFromAssemblyContaining<UpdateCatalogItemCommand>();
-    });
-});
-
-public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
-    : DbContext(options)
-{
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<CatalogItem>();
+            schema: FulfillmentModule.ModuleName);
+        module.Commands.RegisterFromAssemblyContaining<ReserveInventoryHandler>();
+        module.Events.RegisterPublishedEvent<InventoryReservedEvent>();
+        module.Events.RegisterSubscriber<OrderPlacedEvent, RecordOrderPlacedHandler>(
+            "fulfillment.order-placed-projection.v1");
     }
 }
 ```
 
-For durable messaging with a granular model, map at least outbox and inbox:
+## Sending Commands
+
+Durable commands are sent from inside a module execution context. The default
+sender stages a command envelope in the current module outbox and uses the
+current module as the source module.
 
 ```csharp
-builder.Services.AddBondstone(bondstone =>
-{
-    bondstone.Module("orders", module =>
-    {
-        module.UseDurableMessaging();
-        module.UseEntityFrameworkCorePersistence<OrdersDbContext>();
-        module.Commands.RegisterFromAssemblyContaining<CreateOrderCommand>();
-    });
-});
-
-public sealed class OrdersDbContext(DbContextOptions<OrdersDbContext> options)
-    : DbContext(options)
-{
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Order>();
-        modelBuilder.ApplyBondstoneOutbox();
-        modelBuilder.ApplyBondstoneInbox();
-    }
-}
+await durableCommandSender.SendAsync(
+    new ReserveInventoryCommand(orderId, sku, quantity),
+    targetModule: FulfillmentModule.ModuleName,
+    durableOperationId: operationId,
+    ct);
 ```
 
-Configure Rebus itself through the normal Rebus host APIs for the application's
-chosen transport, serializer, endpoint, retry, and worker settings before
-building the service provider. Bondstone's Rebus package supplies the durable
-outbox transport adapter and module topology mapping; it does not own the
-whole Rebus host.
+The send result means the message was accepted into the source module outbox.
+It does not mean the target module has handled it.
 
-The preferred app-facing receive topology is configured through the Rebus
-transport builder. The receive endpoint name must match the Rebus input queue
-configured through Rebus native transport setup:
+## Publishing Events
+
+Integration events are explicit durable facts. Publishing stages an event
+envelope in the source module outbox. Event envelopes do not have
+`TargetModule`; subscribers own their stable subscriber identities and inbox
+keys.
 
 ```csharp
-builder.Services.AddRebus(configure => configure
-    .Transport(transport => transport.UseInMemoryTransport(
-        rebusNetwork,
-        "fulfillment-commands"))
-    .Serialization(serializer => serializer.UseSystemTextJson()));
-
-builder.Services.AddBondstone(bondstone =>
-{
-    bondstone
-        .AddOrderingModule(connectionString)
-        .AddFulfillmentModule(connectionString);
-
-    bondstone.UseRebusTransport(rebus =>
-    {
-        rebus
-            .UseModuleQueueConvention()
-            .ReceiveModule("fulfillment");
-    });
-    bondstone.Outbox.UseWorker();
-});
+await durableEventPublisher.PublishAsync(
+    new OrderPlacedEvent(orderId, sku, quantity),
+    partitionKey: orderId.ToString("D"),
+    ct: ct);
 ```
 
-This keeps Rebus broker, serializer, input queue, retry, dead-letter, and
-worker policy Rebus-native while Bondstone owns durable module dispatch,
-message identity, inbox handling, module command execution, and the Rebus
-handler binding needed for the configured module receive endpoint.
+## Receive Direction
 
-For integration event publish dispatch, configure Rebus event topics on the
-same Bondstone Rebus transport builder. Bondstone dispatches through the
-application-owned Rebus bus, using Rebus routing for commands and Rebus topics
-for events. Bondstone records subscription bindings and executes module event
-subscribers, while the application still owns native Rebus topic subscription
-startup, subscription storage, broker setup, workers, serializer, retry, and
-dead-letter policy.
+Core now exposes provider-neutral module receive pipelines over
+`DurableMessageEnvelope`:
 
-```csharp
-builder.Services.AddBondstone(bondstone =>
-{
-    bondstone
-        .AddOrderingModule(connectionString)
-        .AddFulfillmentModule(connectionString);
+- `IModuleCommandReceivePipeline`
+- `IModuleEventReceivePipeline`
 
-    bondstone.UseRebusTransport(rebus =>
-    {
-        rebus.RouteEvent("ordering.order.submitted.v1")
-            .ToTopic("ordering-events");
-        rebus.ReceiveEndpoint("fulfillment-commands")
-            .SubscribeEvent(
-                "ordering.order.submitted.v1",
-                "fulfillment",
-                "fulfillment.order-projection.v1");
-    });
-    bondstone.Outbox.UseWorker();
-});
-```
+Direct provider receive adapters should parse their provider-native message
+body into the neutral durable envelope, acknowledge only after the receive
+pipeline completes, and let failures flow to provider-native retry and
+dead-letter policy. Service Bus and RabbitMQ receive workers are planned
+follow-up slices; do not document app-facing broker receive setup as complete
+until those adapters exist.
 
-Subscribe the Rebus endpoint to the native topic through Rebus APIs during
-application startup:
-
-```csharp
-await bus.Advanced.Topics.Subscribe("ordering.order.submitted.v1");
-```
-
-In the modular-monolith shape, each module should normally declare its own EF
-`DbContext`, expose module-owned Bondstone registration, and bind that context
-to PostgreSQL durable persistence. Durable sends write to the source module
-outbox; durable receives write handler state, inbox markers, operation
-completion, and any outgoing outbox messages through the target module
-transaction.
+The current sample uses explicit `Bondstone.Transport.Local` queue routing to
+exercise the durable loop without presenting local transport as a production
+broker adapter.

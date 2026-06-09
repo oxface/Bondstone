@@ -2,7 +2,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Bondstone.EntityFrameworkCore.Postgres\Bondstone.EntityFrameworkCore.Postgres.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Hosting\Bondstone.Hosting.csproj" />
-    <ProjectReference Include="..\..\src\Bondstone.Transport.Rebus\Bondstone.Transport.Rebus.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Transport.RabbitMq\Bondstone.Transport.RabbitMq.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Transport.ServiceBus\Bondstone.Transport.ServiceBus.csproj" />
   </ItemGroup>
 
   <ItemGroup>

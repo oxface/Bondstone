@@ -1,6 +1,6 @@
 # 0034 Adapter Diversity Proof Transports
 
-Status: Accepted
+Status: Amended
 Application: Partially Applied
 Date: 2026-06-09
 
@@ -77,6 +77,16 @@ integration events to stress event vocabulary, but it remains a Rebus sample
 until a later sample or test fixture intentionally demonstrates a different
 transport. Do not turn the sample into a broker matrix.
 
+## Amendment 2026-06-09: Event Destinations
+
+Direct provider adapters should use event destination vocabulary when the
+provider supports more than topics for event publication. Service Bus event
+routes can publish to a topic for broker fan-out or to a queue when another
+piece of infrastructure owns fan-out. RabbitMQ event routes can publish
+through an exchange/routing key or directly to a queue through the default
+exchange. These are explicit provider-native choices, not a generic core
+endpoint abstraction.
+
 ## Consequences
 
 Bondstone gets early design pressure from Service Bus and RabbitMQ without
@@ -102,9 +112,15 @@ slices.
 
 ## Application Notes
 
+- 2026-06-09 reset: The Rebus sample/reference-adapter portions of this ADR
+  have been superseded by
+  [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md). Direct
+  Service Bus and RabbitMQ adapters are now the active transport direction.
 - Current contract: Phase 6 adapter-diversity proof starts with outgoing
   Service Bus and RabbitMQ durable outbox transports. Each adapter keeps
-  provider-native topology vocabulary and app-owned broker setup.
+  provider-native topology vocabulary and app-owned broker setup. Event
+  publication routes to provider-native destinations: Service Bus topic or
+  queue, and RabbitMQ exchange/routing-key or queue.
 - Stable docs: Package names and proof scope are reflected in
   [docs/packaging.md](../packaging.md),
   [docs/architecture/README.md](../architecture/README.md),
@@ -118,10 +134,12 @@ slices.
 - Application evidence: Package scaffolds, outgoing dispatch implementations,
   diagnostics, service registration, and focused fast tests are applied for
   `Bondstone.Transport.ServiceBus` and `Bondstone.Transport.RabbitMq`. The
-  modular monolith sample now includes a second explicit integration event,
-  `InventoryReservedEvent`, so the Rebus sample proves command delivery plus
-  event publication in both module directions without becoming a broker
-  matrix.
+  Service Bus adapter now supports event topic and event queue destinations.
+  The RabbitMQ adapter now supports event exchange/routing-key destinations
+  and event queue destinations through the default exchange. The modular
+  monolith sample includes a second explicit integration event,
+  `InventoryReservedEvent`, so the sample proves command delivery plus event
+  publication in both module directions without becoming a broker matrix.
 - Pending or deferred: Receive-side Service Bus and RabbitMQ adapters,
   provider-backed broker integration tests, broker topology declaration,
   acknowledgement/retry/dead-letter semantics, external event wire formats,
@@ -142,3 +160,9 @@ Executable verification for the first applied slice:
 - `dotnet test Bondstone.slnx --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
 - `pnpm format:check`
 - `git diff --check`
+
+After the event destination amendment, focused verification was rerun with:
+
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`

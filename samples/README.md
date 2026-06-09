@@ -2,9 +2,8 @@
 
 ## Modular Monolith
 
-[`ModularMonolith`](ModularMonolith) is the current Phase 5/6 adoption-proof
-minimal API sample. It proves the current durable command and integration
-event loops with:
+[`ModularMonolith`](ModularMonolith) is the current adoption-proof minimal API
+sample. It proves the current durable command and integration event loop with:
 
 - module registration for `ordering`, `fulfillment`, and `billing`;
 - mixed persistence with EF-backed ordering/fulfillment modules and a
@@ -18,12 +17,15 @@ event loops with:
 - a billing schema using `Bondstone.Persistence.Dapper.Postgres`;
 - outbox-backed durable command sending from ordering to fulfillment;
 - outbox-backed durable event publishing from ordering and fulfillment;
-- durable outbox worker dispatch through Rebus in-memory transport;
-- Rebus service-provider registration, one host-level sample receive endpoint,
-  module receive binding, event topic convention, and app-owned native topic
-  subscription startup;
+- durable outbox worker dispatch through explicit
+  `Bondstone.Transport.Local` queue routing that calls the provider-neutral
+  module receive pipelines;
 - module command and event subscriber execution with receive inbox handling
-  and handler state saved in the same EF transaction.
+  and handler state saved in the subscriber module transaction boundary.
+
+The local transport is not a production broker adapter or hidden fallback. It
+exists to keep the sample proving the durable core while direct RabbitMQ and
+Service Bus receive adapters are still follow-up slices.
 
 Run the app with a PostgreSQL connection string:
 

@@ -1,8 +1,8 @@
 # Core Persistence
 
 Core persistence contracts live in `Bondstone` and stay independent from EF
-Core, PostgreSQL, Rebus, SQL locking, schema migration, and background
-dispatch mechanics.
+Core, PostgreSQL, transport adapters, SQL locking, schema migration, and
+background dispatch mechanics.
 
 ## Outbox
 
@@ -13,8 +13,8 @@ needs atomic source-state-plus-outbox behavior.
 
 Durable commands and integration events share this outbox boundary. Commands
 dispatch to one target module destination. Integration events dispatch to
-transport event topology, such as a Rebus topic, and each subscriber's receive
-copy owns its own inbox outcome.
+transport event topology, such as a Service Bus topic or RabbitMQ exchange,
+and each subscriber's receive copy owns its own inbox outcome.
 
 `DurableOutboxRecord` is a persistence-neutral record for a stored envelope,
 the UTC time it was stored, and its current `DurableOutboxDispatchState`.

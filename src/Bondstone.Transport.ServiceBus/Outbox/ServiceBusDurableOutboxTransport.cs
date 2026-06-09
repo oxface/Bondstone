@@ -6,15 +6,15 @@ namespace Bondstone.Transport.ServiceBus.Outbox;
 public sealed class ServiceBusDurableOutboxTransport(
     IServiceBusMessageSender messageSender,
     IServiceBusOutboxDestinationResolver destinationResolver,
-    IServiceBusOutboxEventTopicResolver eventTopicResolver)
+    IServiceBusOutboxEventDestinationResolver eventDestinationResolver)
     : IDurableOutboxTransport
 {
     private readonly IServiceBusMessageSender _messageSender =
         messageSender ?? throw new ArgumentNullException(nameof(messageSender));
     private readonly IServiceBusOutboxDestinationResolver _destinationResolver =
         destinationResolver ?? throw new ArgumentNullException(nameof(destinationResolver));
-    private readonly IServiceBusOutboxEventTopicResolver _eventTopicResolver =
-        eventTopicResolver ?? throw new ArgumentNullException(nameof(eventTopicResolver));
+    private readonly IServiceBusOutboxEventDestinationResolver _eventDestinationResolver =
+        eventDestinationResolver ?? throw new ArgumentNullException(nameof(eventDestinationResolver));
 
     public async ValueTask SendAsync(
         DurableOutboxRecord record,
@@ -35,8 +35,9 @@ public sealed class ServiceBusDurableOutboxTransport(
 
         if (envelope.MessageKind == MessageKind.Event)
         {
-            string topicName = _eventTopicResolver.ResolveTopicName(record);
-            await _messageSender.SendAsync(topicName, message, ct);
+            ServiceBusEventDestination destination =
+                _eventDestinationResolver.ResolveDestination(record);
+            await _messageSender.SendAsync(destination.EntityName, message, ct);
             return;
         }
 

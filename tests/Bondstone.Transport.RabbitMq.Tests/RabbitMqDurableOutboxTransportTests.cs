@@ -70,6 +70,31 @@ public sealed class RabbitMqDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenEventIsClaimed_PublishesMessageToResolvedQueue()
+    {
+        var publisher = new RecordingRabbitMqMessagePublisher();
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            publisher,
+            rabbitMq => rabbitMq.RouteEvent("sales.order.submitted.v1").ToQueue("sales-events"));
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+
+        await transport.SendAsync(CreateRecord(
+            MessageKind.Event,
+            targetModule: null,
+            messageTypeName: "sales.order.submitted.v1"));
+
+        Assert.NotNull(publisher.Destination);
+        Assert.Equal(RabbitMqPublishDestinationKind.Queue, publisher.Destination.Kind);
+        Assert.Equal(string.Empty, publisher.Destination.ExchangeName);
+        Assert.Equal("sales-events", publisher.Destination.RoutingKey);
+        Assert.NotNull(publisher.Message);
+        Assert.Equal("sales.order.submitted.v1", publisher.Message.MessageTypeName);
+        Assert.False(publisher.Message.Headers.ContainsKey(BondstoneRabbitMqHeaders.TargetModule));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void DescribeCommandRoute_WhenConventionExists_ReturnsConventionRoute()
     {
         var services = new ServiceCollection();

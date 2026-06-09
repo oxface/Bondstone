@@ -5,7 +5,7 @@ core abstractions.
 
 The package depends on `Bondstone` and
 `Microsoft.Extensions.Hosting`/options/logging abstractions. It does not own EF
-Core mappings, PostgreSQL SQL, Rebus routing, transport envelopes, handler
+Core mappings, PostgreSQL SQL, provider routing, transport envelopes, handler
 discovery, or broker configuration.
 
 ## Outbox Worker

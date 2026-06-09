@@ -21,8 +21,8 @@ internal sealed class RabbitMqEventRouteResolver(
         RabbitMqEventRoutingDiagnostic diagnostic =
             topology.DescribeRoute(record.Envelope.MessageTypeName);
 
-        return diagnostic.HasRoute
-            ? new RabbitMqPublishDestination(diagnostic.ExchangeName!, diagnostic.RoutingKey!)
+        return diagnostic.Destination is not null
+            ? diagnostic.Destination
             : throw new InvalidOperationException(diagnostic.FailureReason);
     }
 }

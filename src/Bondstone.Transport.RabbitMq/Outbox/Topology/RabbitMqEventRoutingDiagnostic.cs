@@ -8,35 +8,33 @@ public sealed class RabbitMqEventRoutingDiagnostic
     public RabbitMqEventRoutingDiagnostic(
         string messageTypeName,
         RabbitMqEventRoutingSource source,
-        string? exchangeName,
-        string? routingKey,
+        RabbitMqPublishDestination? destination,
         string? failureReason = null)
     {
         MessageTypeName = messageTypeName.NormalizeRequired(
             nameof(messageTypeName),
             "Message type name");
         Source = source;
-        ExchangeName = exchangeName?.NormalizeRequired(
-            nameof(exchangeName),
-            "RabbitMQ exchange name");
-        RoutingKey = routingKey?.NormalizeRequired(
-            nameof(routingKey),
-            "RabbitMQ routing key");
+        Destination = destination;
         FailureReason = failureReason;
     }
 
     public DurableMessageTopologyDiagnosticKind Kind =>
-        DurableMessageTopologyDiagnosticKind.EventTopic;
+        DurableMessageTopologyDiagnosticKind.EventDestination;
 
     public string MessageTypeName { get; }
 
     public RabbitMqEventRoutingSource Source { get; }
 
-    public string? ExchangeName { get; }
+    public RabbitMqPublishDestination? Destination { get; }
 
-    public string? RoutingKey { get; }
+    public RabbitMqPublishDestinationKind? DestinationKind => Destination?.Kind;
+
+    public string? ExchangeName => Destination?.ExchangeName;
+
+    public string? RoutingKey => Destination?.RoutingKey;
 
     public string? FailureReason { get; }
 
-    public bool HasRoute => ExchangeName is not null && RoutingKey is not null;
+    public bool HasRoute => Destination is not null;
 }

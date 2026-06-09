@@ -12,7 +12,7 @@ using Bondstone.Samples.ModularMonolith.Fulfillment;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Bondstone.Samples.ModularMonolith.Ordering;
 using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
-using Bondstone.Transport.Rebus.Outbox;
+using Bondstone.Transport.Local.Outbox;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -20,62 +20,47 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using Rebus.Config;
-using Rebus.Retry.Simple;
-using Rebus.Serialization.Json;
-using Rebus.Transport.InMem;
 
 namespace Bondstone.Samples.ModularMonolith;
 
 public static class ModularMonolithApplication
 {
-    private const string RebusReceiveEndpointName = "modular-monolith-sample";
-
     public static IServiceCollection AddModularMonolithSample(
         this IServiceCollection services,
-        string connectionString,
-        InMemNetwork rebusNetwork)
+        string connectionString)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
-        ArgumentNullException.ThrowIfNull(rebusNetwork);
 
         services.AddLogging();
-        services.AddRebus(configure => configure
-            .Transport(transport => transport.UseInMemoryTransport(
-                rebusNetwork,
-                RebusReceiveEndpointName))
-            .Serialization(serializer => serializer.UseSystemTextJson())
-            .Options(options => options.RetryStrategy("error", maxDeliveryAttempts: 1)));
-        services.AddHostedService<ModularMonolithRebusSubscriptionHostedService>();
         services.AddBondstone(bondstone =>
         {
             bondstone
                 .AddOrderingModule(connectionString)
                 .AddFulfillmentModule(connectionString)
                 .AddBillingModule(connectionString);
-            bondstone.UseRebusTransport(rebus =>
+            bondstone.UseLocalTransport(local =>
             {
-                rebus
-                    .UseModuleQueueConvention()
-                    .UseEventTopicConvention();
-                rebus
-                    .ReceiveEndpoint(RebusReceiveEndpointName)
+                local.RouteModule(FulfillmentModule.ModuleName)
+                    .ToQueue("fulfillment.commands");
+                local.Queue("fulfillment.commands")
                     .AcceptModule(FulfillmentModule.ModuleName);
-                rebus
-                    .ReceiveEndpoint(RebusReceiveEndpointName)
+
+                local.RouteEvent(OrderingIntegrationEvents.OrderPlaced)
+                    .ToQueue("ordering.order-placed");
+                local.Queue("ordering.order-placed")
                     .SubscribeEvent(
                         OrderingIntegrationEvents.OrderPlaced,
                         FulfillmentModule.ModuleName,
-                        "fulfillment.order-placed-projection.v1");
-                rebus
-                    .ReceiveEndpoint(RebusReceiveEndpointName)
+                        "fulfillment.order-placed-projection.v1")
                     .SubscribeEvent(
                         OrderingIntegrationEvents.OrderPlaced,
                         BillingModule.ModuleName,
                         "billing.order-invoice-projection.v1");
-                rebus
-                    .ReceiveEndpoint(RebusReceiveEndpointName)
+
+                local.RouteEvent(FulfillmentIntegrationEvents.InventoryReserved)
+                    .ToQueue("fulfillment.inventory-reserved");
+                local.Queue("fulfillment.inventory-reserved")
                     .SubscribeEvent(
                         FulfillmentIntegrationEvents.InventoryReserved,
                         OrderingModule.ModuleName,

@@ -70,10 +70,10 @@ Testcontainers-backed transport tests for the real persistence, retry,
 acknowledgement, and dead-letter contract.
 
 For first-class events, keep the same split. Unit and application tests should
-cover event topic resolution, publish dispatch, subscriber registration,
-subscriber inbox-key identity, and diagnostics. Rebus publish/subscribe
-delivery and provider-backed acknowledgement, retry, dead-letter, or
-subscription-storage behavior belongs in explicit `Integration` tests.
+cover event route/topic resolution, publish dispatch, subscriber registration,
+subscriber inbox-key identity, and diagnostics. Provider-backed delivery,
+acknowledgement, retry, dead-letter, or subscription-storage behavior belongs
+in explicit `Integration` tests.
 
 ## Verification Surface
 

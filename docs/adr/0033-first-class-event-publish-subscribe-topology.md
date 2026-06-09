@@ -221,6 +221,14 @@ implementation, rather than as only future vocabulary.
 
 ## Application Notes
 
+- 2026-06-09 reset: Rebus-specific transport application described below has
+  been superseded by
+  [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md). The current
+  durable event contract that remains applied is core event publish staging,
+  module subscriber registration/execution, per-subscriber inbox identity,
+  EF/PostgreSQL persistence behavior, and the sample proof over the
+  provider-neutral receive pipelines. Direct RabbitMQ and Service Bus receive
+  adapters are follow-up slices.
 - Current contract: Accepted Phase 5 event topology and execution direction.
   Core event publish staging and module event registration metadata already
   exist. Rebus event publish dispatch and topic diagnostics are applied using

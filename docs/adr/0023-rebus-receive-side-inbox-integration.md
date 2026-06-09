@@ -1,8 +1,11 @@
 # 0023 Rebus Receive-Side Inbox Integration
 
-Status: Amended
-Application: Applied
+Status: Superseded
+Application: Not Applicable
 Date: 2026-06-05
+
+Superseded by
+[ADR 0036 Direct Transport Adapters And Rebus Removal](0036-direct-transport-adapters-and-rebus-removal.md).
 
 ## Context
 

@@ -29,13 +29,18 @@ public static class BondstoneRabbitMqServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(commandTopology);
         ArgumentNullException.ThrowIfNull(eventTopology);
 
-        services.AddSingleton<IRabbitMqOutboxCommandRouteResolver>(
-            new RabbitMqCommandRouteResolver(commandTopology));
-        services.AddSingleton<IRabbitMqOutboxEventRouteResolver>(
-            new RabbitMqEventRouteResolver(eventTopology));
+        services.AddSingleton(commandTopology);
+        services.AddSingleton(eventTopology);
+        services.AddTransient<IRabbitMqOutboxCommandRouteResolver>(
+            serviceProvider => new RabbitMqCommandRouteResolver(
+                serviceProvider.GetRequiredService<RabbitMqCommandRoutingTopology>()));
+        services.AddTransient<IRabbitMqOutboxEventRouteResolver>(
+            serviceProvider => new RabbitMqEventRouteResolver(
+                serviceProvider.GetRequiredService<RabbitMqEventRoutingTopology>()));
         services.AddSingleton<IRabbitMqTopologyDiagnostics>(
             new RabbitMqTopologyDiagnostics(commandTopology, eventTopology));
-        services.TryAddTransient<IDurableOutboxTransport, RabbitMqDurableOutboxTransport>();
+        services.AddTransient<IDurableOutboxTransportRoute, RabbitMqDurableOutboxTransportRoute>();
+        services.TryAddTransient<IDurableOutboxTransport, RoutedDurableOutboxTransport>();
 
         return services;
     }

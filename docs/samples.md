@@ -13,14 +13,10 @@ library packages.
 
 ## First Sample Shape
 
-Start and maintain an early sample application once enough package scaffold
-exists to make it useful.
-
-The first sample should be intentionally small and operationally boring:
+The first sample should stay intentionally small and operationally boring:
 
 - no authentication;
 - no product-grade UI;
-- if a UI exists, use bare controls such as buttons and simple status displays;
 - no product-specific domain depth beyond what is needed to exercise
   Bondstone behavior;
 - no deployment story beyond local verification unless a later ADR accepts it.
@@ -36,57 +32,33 @@ The sample should demonstrate:
 
 ## Local Orchestration
 
-Use Aspire as the preferred local orchestration host for samples.
-
-The sample AppHost should start local dependencies and processes needed to
-exercise Bondstone behavior, such as:
-
-- databases;
-- transport infrastructure;
-- cache infrastructure when a sample needs it;
-- backend hosts or workers;
-- migrators;
-- optional frontend processes.
-
-Aspire is a local sample orchestration choice. It is not a deployment platform
-decision for Bondstone packages.
+Use Aspire as the preferred local orchestration host for future samples when a
+sample needs multiple processes or local infrastructure. The current minimal
+API sample is still a direct ASP.NET Core entrypoint plus Testcontainers-backed
+integration tests.
 
 ## Current Status
 
-The current `samples/ModularMonolith` project is a Phase 5/6 adoption-proof
-minimal API sample. It is still intentionally small, but its app entrypoint
-uses normal ASP.NET Core, Rebus service-provider registration, app-owned
-Rebus topic subscription startup, Bondstone module registration, and the
-durable outbox worker. Event publish topics use the Rebus event topic
-convention, where the stable event identity is the topic name. Verification-only
-database reset and completion polling live in the integration test, not in the
-app entrypoint.
+The current `samples/ModularMonolith` project is an adoption-proof minimal API
+sample. It composes `ordering`, `fulfillment`, and `billing` modules through
+module-owned `IBondstoneModule` registration objects.
 
-The sample has `ordering`, `fulfillment`, and `billing` modules split into
-module-owned assemblies. Ordering and fulfillment use separate module-owned
-`DbContext` types and PostgreSQL schemas. Billing uses the
-PostgreSQL/Dapper non-EF persistence proof with its own schema. Each
-implementation assembly exposes a module-owned
-`IBondstoneModule` registration object plus a thin host extension for the
-connection string. The API host composes those module extensions, while the
-module assemblies own durable messaging capability, PostgreSQL persistence
-binding, command handler scanning, published integration event registration,
-and event subscriber registration. Ordering publishes an `OrderPlacedEvent`
-from a module-owned contracts assembly and still sends a durable command to
-fulfillment. Fulfillment publishes an `InventoryReservedEvent` after handling
-the durable command, and ordering records that event through its own event
-subscriber projection. Billing also subscribes to `OrderPlacedEvent` and
-records an invoice through Dapper inside the same transaction as its inbox
-marker. The module outboxes dispatch command and event messages through the
-durable outbox worker and Rebus in-memory transport.
-The sample uses one host-level Rebus receive endpoint,
-`modular-monolith-sample`, to keep local proof wiring compact. That endpoint
-binds fulfillment command receive through the Rebus topology-bound module
-command endpoint handler, while both modules receive event copies through
-app-owned native Rebus topic subscription plus Bondstone event subscription
-binding. Handler state, projection state, inbox markers, operation state, and
-outgoing durable messages are saved through each subscriber module's EF
-persistence boundary.
+Ordering and fulfillment use separate module-owned EF Core `DbContext` types
+and PostgreSQL schemas. Billing uses the PostgreSQL/Dapper non-EF persistence
+proof with its own schema. Ordering publishes `OrderPlacedEvent` and sends a
+durable command to fulfillment. Fulfillment handles the command, records
+state, and publishes `InventoryReservedEvent`. Ordering and billing subscribe
+to integration events and record projections/invoices through their own module
+persistence boundaries.
+
+After ADR 0036, the sample no longer depends on the removed Rebus adapter.
+Until direct RabbitMQ and Service Bus receive workers exist, the sample uses
+`Bondstone.Transport.Local` through explicit local queue routing. The local
+adapter dispatches claimed outbox records into the provider-neutral
+`IModuleCommandReceivePipeline` and `IModuleEventReceivePipeline`. This keeps
+the sample proving outbox claiming, outbox dispatch recording, inbox handling,
+command/event execution, module transactions, mixed persistence, and operation
+state without presenting local transport as production broker guidance.
 
 The focused smoke test lives in
 [`tests/Bondstone.Samples.Tests`](../tests/Bondstone.Samples.Tests) and is an
@@ -94,13 +66,6 @@ The focused smoke test lives in
 verification remains `Unit` and `Application` only; run sample smoke coverage
 with the repository integration test entrypoint.
 
-Once the MVP surface settles, polish or replace this sample so it demonstrates
-the final preferred public API and application structure.
-
-The event sample remains intentionally narrow. It proves explicit integration
-event publication in both module directions and Rebus topic delivery without
-introducing automatic domain-event publication, saga orchestration, or a
-broker matrix. The single sample receive endpoint is not a recommendation to
-share operational queues across independently scaled modules. Broader
-orchestration samples remain out of scope until later ADR-backed slices accept
-them.
+Once the direct provider receive adapters settle, replace or supplement the
+local transport sample path with one preferred provider-backed sample path. Do
+not turn the first sample into a broker matrix.

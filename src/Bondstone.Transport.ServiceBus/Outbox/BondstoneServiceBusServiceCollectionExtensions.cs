@@ -23,19 +23,24 @@ public static class BondstoneServiceBusServiceCollectionExtensions
     internal static IServiceCollection AddBondstoneServiceBusOutboxTransport(
         this IServiceCollection services,
         ServiceBusCommandDestinationTopology commandTopology,
-        ServiceBusEventTopicTopology eventTopicTopology)
+        ServiceBusEventDestinationTopology eventDestinationTopology)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(commandTopology);
-        ArgumentNullException.ThrowIfNull(eventTopicTopology);
+        ArgumentNullException.ThrowIfNull(eventDestinationTopology);
 
-        services.AddSingleton<IServiceBusOutboxDestinationResolver>(
-            new ServiceBusModuleQueueResolver(commandTopology));
-        services.AddSingleton<IServiceBusOutboxEventTopicResolver>(
-            new ServiceBusEventTopicResolver(eventTopicTopology));
+        services.AddSingleton(commandTopology);
+        services.AddSingleton(eventDestinationTopology);
+        services.AddTransient<IServiceBusOutboxDestinationResolver>(
+            serviceProvider => new ServiceBusModuleQueueResolver(
+                serviceProvider.GetRequiredService<ServiceBusCommandDestinationTopology>()));
+        services.AddTransient<IServiceBusOutboxEventDestinationResolver>(
+            serviceProvider => new ServiceBusEventDestinationResolver(
+                serviceProvider.GetRequiredService<ServiceBusEventDestinationTopology>()));
         services.AddSingleton<IServiceBusTopologyDiagnostics>(
-            new ServiceBusTopologyDiagnostics(commandTopology, eventTopicTopology));
-        services.TryAddTransient<IDurableOutboxTransport, ServiceBusDurableOutboxTransport>();
+            new ServiceBusTopologyDiagnostics(commandTopology, eventDestinationTopology));
+        services.AddTransient<IDurableOutboxTransportRoute, ServiceBusDurableOutboxTransportRoute>();
+        services.TryAddTransient<IDurableOutboxTransport, RoutedDurableOutboxTransport>();
 
         return services;
     }

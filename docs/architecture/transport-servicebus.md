@@ -12,10 +12,12 @@ durable envelopes to Azure Service Bus messages through a provider-local
 envelope mapper.
 
 Commands send to queues resolved by target module. Integration events publish
-to topics resolved by stable event identity. The adapter keeps command queue
-topology and event topic topology separate because the durable intent differs:
-commands target one module, while events publish facts for zero or more
-subscribers.
+to event destinations resolved by stable event identity. Event destinations
+can be Service Bus topics for broker fan-out or queues when another
+infrastructure component owns fan-out. The adapter keeps command queue
+topology and event destination topology separate because the durable intent
+differs: commands target one module, while events publish facts for zero or
+more subscribers.
 
 Applications configure topology with the Service Bus transport builder:
 
@@ -29,9 +31,11 @@ bondstone.UseServiceBusTransport(serviceBus =>
 });
 ```
 
-Explicit module queue and event topic routes override conventions. Diagnostic
-services report the same resolution results used by dispatch so applications
-and tests can explain missing queues or topics without sending messages.
+Use `.ToQueue(...)` when an event should be sent to a queue instead of a topic.
+Explicit module queue and event destination routes override conventions.
+Diagnostic services report the same resolution results used by dispatch so
+applications and tests can explain missing queues, topics, or destinations
+without sending messages.
 
 ## App-Owned Setup
 
@@ -49,5 +53,6 @@ remain separate ADR-backed decisions.
 ## Deferred Work
 
 Receive-side Service Bus processors, command queue listeners, event topic
-subscription binding, acknowledgement behavior, retry/dead-letter policy,
-broker-backed integration tests, and topology declaration are future slices.
+subscription or event queue binding, acknowledgement behavior,
+retry/dead-letter policy, broker-backed integration tests, and topology
+declaration are future slices.

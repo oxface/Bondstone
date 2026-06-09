@@ -12,7 +12,7 @@ public sealed class DurableMessageTopologyDiagnosticKindTests
         Assert.Equal(1, (int)DurableMessageTopologyDiagnosticKind.CommandRoute);
         Assert.Equal(2, (int)DurableMessageTopologyDiagnosticKind.CommandDestination);
         Assert.Equal(3, (int)DurableMessageTopologyDiagnosticKind.CommandReceiveEndpoint);
-        Assert.Equal(4, (int)DurableMessageTopologyDiagnosticKind.EventTopic);
+        Assert.Equal(4, (int)DurableMessageTopologyDiagnosticKind.EventDestination);
         Assert.Equal(5, (int)DurableMessageTopologyDiagnosticKind.EventSubscription);
     }
 }

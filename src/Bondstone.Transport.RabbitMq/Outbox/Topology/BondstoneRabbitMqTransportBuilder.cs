@@ -6,12 +6,12 @@ public sealed class BondstoneRabbitMqTransportBuilder
 {
     private readonly Dictionary<string, string> _routingKeysByTargetModule =
         new(StringComparer.Ordinal);
-    private readonly Dictionary<string, string> _routingKeysByMessageTypeName =
+    private readonly Dictionary<string, RabbitMqEventRouteRegistration> _eventRoutesByMessageTypeName =
         new(StringComparer.Ordinal);
     private string? _commandExchangeName;
     private string? _eventExchangeName;
     private Func<string, string>? _commandRoutingKeyConvention;
-    private Func<string, string>? _eventRoutingKeyConvention;
+    private RabbitMqEventDestinationConvention? _eventDestinationConvention;
 
     internal RabbitMqCommandRoutingTopology CommandRoutingTopology =>
         new(
@@ -22,8 +22,8 @@ public sealed class BondstoneRabbitMqTransportBuilder
     internal RabbitMqEventRoutingTopology EventRoutingTopology =>
         new(
             _eventExchangeName,
-            _routingKeysByMessageTypeName,
-            _eventRoutingKeyConvention);
+            _eventRoutesByMessageTypeName,
+            _eventDestinationConvention);
 
     public BondstoneRabbitMqTransportBuilder UseCommandExchange(
         string exchangeName)
@@ -97,10 +97,30 @@ public sealed class BondstoneRabbitMqTransportBuilder
     {
         ArgumentNullException.ThrowIfNull(routingKeyFactory);
 
-        _eventRoutingKeyConvention = messageTypeName =>
-            routingKeyFactory(messageTypeName).NormalizeRequired(
+        _eventDestinationConvention = new RabbitMqEventDestinationConvention(
+            RabbitMqPublishDestinationKind.ExchangeRoute,
+            messageTypeName => routingKeyFactory(messageTypeName).NormalizeRequired(
                 nameof(routingKeyFactory),
-                "RabbitMQ routing key");
+                "RabbitMQ routing key"));
+
+        return this;
+    }
+
+    public BondstoneRabbitMqTransportBuilder UseEventQueueConvention()
+    {
+        return UseEventQueueConvention(static messageTypeName => messageTypeName);
+    }
+
+    public BondstoneRabbitMqTransportBuilder UseEventQueueConvention(
+        Func<string, string> queueNameFactory)
+    {
+        ArgumentNullException.ThrowIfNull(queueNameFactory);
+
+        _eventDestinationConvention = new RabbitMqEventDestinationConvention(
+            RabbitMqPublishDestinationKind.Queue,
+            messageTypeName => queueNameFactory(messageTypeName).NormalizeRequired(
+                nameof(queueNameFactory),
+                "RabbitMQ queue name"));
 
         return this;
     }
@@ -137,19 +157,42 @@ public sealed class BondstoneRabbitMqTransportBuilder
             nameof(routingKey),
             "RabbitMQ routing key");
 
-        if (_routingKeysByMessageTypeName.TryGetValue(
+        SetEventRoute(
             messageTypeName,
-            out string? existingRoutingKey))
+            new RabbitMqEventRouteRegistration(
+                RabbitMqPublishDestinationKind.ExchangeRoute,
+                normalizedRoutingKey));
+    }
+
+    internal void SetEventQueue(
+        string messageTypeName,
+        string queueName)
+    {
+        SetEventRoute(
+            messageTypeName,
+            new RabbitMqEventRouteRegistration(
+                RabbitMqPublishDestinationKind.Queue,
+                queueName));
+    }
+
+    private void SetEventRoute(
+        string messageTypeName,
+        RabbitMqEventRouteRegistration route)
+    {
+        if (_eventRoutesByMessageTypeName.TryGetValue(
+            messageTypeName,
+            out RabbitMqEventRouteRegistration? existingRoute))
         {
-            if (existingRoutingKey == normalizedRoutingKey)
+            if (existingRoute.Kind == route.Kind
+                && existingRoute.DestinationName == route.DestinationName)
             {
                 return;
             }
 
             throw new InvalidOperationException(
-                $"Message type '{messageTypeName}' already publishes to RabbitMQ routing key '{existingRoutingKey}'.");
+                $"Message type '{messageTypeName}' already publishes to RabbitMQ {existingRoute.Kind.ToString().ToLowerInvariant()} '{existingRoute.DestinationName}'.");
         }
 
-        _routingKeysByMessageTypeName.Add(messageTypeName, normalizedRoutingKey);
+        _eventRoutesByMessageTypeName.Add(messageTypeName, route);
     }
 }

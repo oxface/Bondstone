@@ -28,37 +28,39 @@ because a module moves from in-process composition to a separate service.
 - Service extraction should be a supported evolution path, not a separate
   rewrite story.
 
-## Adapter Diversity
+## Direct Provider Adapters
 
-Rebus, EF Core, and PostgreSQL are the first implementation path, not a
-compatibility ceiling. After the first-class event loop has enough shape,
-Bondstone should add thin adapter proof slices for additional transports such
-as Azure Service Bus and RabbitMQ, and for at least one non-EF persistence
-adapter such as direct ADO.NET or Dapper. The goal is to expose abstraction
-gaps early while keeping each provider's topology and transaction model
-native.
+[ADR 0036](../adr/0036-direct-transport-adapters-and-rebus-removal.md)
+removes the Rebus adapter and makes direct provider adapters the current
+transport direction. Bondstone transport packages should adapt broker/client
+SDKs directly while keeping provider-native topology vocabulary and app-owned
+broker setup.
 
 [ADR 0034](../adr/0034-adapter-diversity-proof-transports.md) accepts the
 first transport proof packages: `Bondstone.Transport.ServiceBus` and
-`Bondstone.Transport.RabbitMq`. Their first scope is outgoing durable outbox
-dispatch with provider-native topology vocabulary. Receive workers,
-provider-backed broker tests, and broker administration remain later slices.
+`Bondstone.Transport.RabbitMq`. Their first applied scope is outgoing durable
+outbox dispatch. Receive workers, provider-backed broker tests, broker
+administration, and provider-backed receive reliability remain later slices.
 See [transport-servicebus.md](transport-servicebus.md) and
-[transport-rabbitmq.md](transport-rabbitmq.md) for the current proof scope.
+[transport-rabbitmq.md](transport-rabbitmq.md).
+
+`Bondstone.Transport.Local` is an explicit local queue adapter for samples,
+tests, and local development while direct provider receive workers are still
+being hardened. It is not a fallback and does not replace broker durability.
+See [transport-local.md](transport-local.md).
 
 [ADR 0035](../adr/0035-postgresql-dapper-persistence-proof.md) accepts the
 first non-EF persistence proof package:
 `Bondstone.Persistence.Dapper.Postgres`. Its scope is PostgreSQL-specific,
 Dapper-assisted durable module messaging persistence without EF Core.
-See [persistence-dapper-postgres.md](persistence-dapper-postgres.md) for the
-current proof scope.
+See [persistence-dapper-postgres.md](persistence-dapper-postgres.md).
 
 ## Topic Docs
 
-- [messaging.md](messaging.md) records durable command, message identity, and
-  messaging-boundary rules.
-- [modules.md](modules.md) records module ownership, host topology, and
-  module command execution rules.
+- [messaging.md](messaging.md) records durable command, integration event,
+  message identity, receive pipeline, and messaging-boundary rules.
+- [modules.md](modules.md) records module ownership, module registration, and
+  module command/event execution rules.
 - [hosting.md](hosting.md) records reusable hosted worker composition rules.
 - [persistence.md](persistence.md) is the persistence entrypoint.
 - [persistence-core.md](persistence-core.md) records provider-neutral durable
@@ -69,12 +71,12 @@ current proof scope.
   provider behavior.
 - [persistence-dapper-postgres.md](persistence-dapper-postgres.md) records
   PostgreSQL Dapper-assisted non-EF persistence proof behavior.
-- [transport-rebus.md](transport-rebus.md) records Rebus transport adapter
-  behavior.
-- [transport-servicebus.md](transport-servicebus.md) records Azure Service
-  Bus outgoing transport proof behavior.
+- [transport-servicebus.md](transport-servicebus.md) records Azure Service Bus
+  outgoing transport proof behavior.
 - [transport-rabbitmq.md](transport-rabbitmq.md) records RabbitMQ outgoing
   transport proof behavior.
+- [transport-local.md](transport-local.md) records explicit local queue
+  transport behavior for samples, tests, and local development.
 
 ## Related Docs
 

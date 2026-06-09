@@ -4,6 +4,14 @@ using Bondstone.Utility;
 
 namespace Bondstone.Transport.Rebus.Inbox;
 
+public interface IRebusModuleCommandEndpointDispatcher
+{
+    ValueTask<DurableInboxHandleResult> DispatchAsync(
+        string endpointName,
+        RebusDurableMessageEnvelope envelope,
+        CancellationToken ct = default);
+}
+
 internal sealed class RebusModuleCommandEndpointDispatcher(
     IRebusModuleReceiveEndpointRegistry receiveEndpointRegistry,
     IRebusModuleCommandReceivePipeline receivePipeline)

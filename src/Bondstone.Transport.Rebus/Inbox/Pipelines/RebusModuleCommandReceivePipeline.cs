@@ -7,6 +7,13 @@ using Bondstone.Utility;
 
 namespace Bondstone.Transport.Rebus.Inbox;
 
+public interface IRebusModuleCommandReceivePipeline
+{
+    ValueTask<DurableInboxHandleResult> HandleOnceAsync(
+        RebusDurableMessageEnvelope envelope,
+        CancellationToken ct = default);
+}
+
 public sealed class RebusModuleCommandReceivePipeline(
     IMessageTypeRegistry messageTypeRegistry,
     IModuleCommandRouteRegistry routeRegistry,

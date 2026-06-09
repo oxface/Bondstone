@@ -161,6 +161,49 @@ This amendment does not add a hosted Service Bus processor, processor lifecycle
 management, broker topology declaration, retry policy, or provider-backed
 integration tests. Those remain follow-up slices.
 
+## Amendment 2026-06-09: Native Receive Message Mapping
+
+Direct transport receive should expose a small native-message mapping layer
+before Bondstone owns any hosted consumer lifecycle. RabbitMQ and Service Bus
+adapters will map provider-native received messages into their package-local
+Bondstone transport message shapes:
+
+- RabbitMQ maps `BasicDeliverEventArgs` or body plus
+  `IReadOnlyBasicProperties` into `RabbitMqTransportMessage`;
+- Service Bus maps `ServiceBusReceivedMessage` into
+  `ServiceBusTransportMessage`.
+
+The mapping layer reads the Bondstone durable envelope body and stable message
+identity from native message fields first, with Bondstone header/application
+property fallback where appropriate. It does not acknowledge, complete,
+abandon, dead-letter, retry, or start consumers/processors. Applications
+remain responsible for native acknowledgement timing and should settle broker
+messages only after the Bondstone receive dispatcher succeeds.
+
+## Amendment 2026-06-09: Receive Settlement Handler Helpers
+
+Direct transport adapters may provide small handler helpers that compose native
+message mapping, Bondstone receive dispatch, and caller-supplied settlement
+callbacks. These helpers are not hosted consumers or processors. They exist to
+make the required ordering explicit:
+
+1. map the native received message into the Bondstone transport message shape;
+2. dispatch through the neutral receive pipeline;
+3. acknowledge or complete the native broker message only after dispatch
+   succeeds.
+
+RabbitMQ provides `IRabbitMqReceivedMessageHandler`, which accepts a queue
+name, `BasicDeliverEventArgs`, and a caller-supplied acknowledgement delegate.
+Service Bus provides `IServiceBusReceivedMessageHandler`, which accepts a
+receive source, `ServiceBusReceivedMessage`, and a caller-supplied completion
+delegate. If dispatch throws, the helper must not acknowledge or complete the
+message; the exception remains visible to the caller so native retry and
+dead-letter policy can apply.
+
+The helpers still do not own RabbitMQ channel lifecycle, Service Bus processor
+lifecycle, retry policy, dead-letter behavior, broker topology declaration, or
+provider-backed integration tests.
+
 ## Consequences
 
 The transport surface becomes easier to reason about: Bondstone owns durable
@@ -219,10 +262,16 @@ diagnostics, and provider-backed integration tests.
   claimed durable message. RabbitMQ now has receive queue topology, receive
   queue diagnostics, and an `IRabbitMqReceivedMessageDispatcher` proof that
   dispatches received Bondstone envelopes through the neutral receive
-  pipelines. Service Bus now has receive source topology for queues and topic
-  subscriptions, receive source diagnostics, and an
+  pipelines. RabbitMQ also maps native received deliveries into
+  `RabbitMqTransportMessage`. Service Bus now has receive source topology for
+  queues and topic subscriptions, receive source diagnostics, and an
   `IServiceBusReceivedMessageDispatcher` proof that dispatches received
-  Bondstone envelopes through the neutral receive pipelines.
+  Bondstone envelopes through the neutral receive pipelines. Service Bus also
+  maps native `ServiceBusReceivedMessage` instances into
+  `ServiceBusTransportMessage`.
+- Provider receive handler helpers now prove the common settlement ordering:
+  native acknowledgement/completion happens only after Bondstone dispatch
+  succeeds, and failures propagate without settling the broker message.
 - Pending or deferred: Add hosted RabbitMQ consumers, hosted Service Bus
   processors, provider-backed receive tests, persistence package naming
   cleanup, and replacement or supplementation of local sample transport with a
@@ -268,4 +317,16 @@ After RabbitMQ receive dispatcher proof:
 After Service Bus receive dispatcher proof:
 
 - `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
+
+After native receive message mapping:
+
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
+
+After receive settlement handler helpers:
+
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
 - `dotnet test tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`

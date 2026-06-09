@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Modules;
@@ -6,6 +7,8 @@ using Bondstone.Persistence;
 using Bondstone.Transport.RabbitMq.Inbox;
 using Bondstone.Transport.RabbitMq.Outbox;
 using Microsoft.Extensions.DependencyInjection;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using Xunit;
 
 namespace Bondstone.Transport.RabbitMq.Tests;
@@ -122,6 +125,119 @@ public sealed class RabbitMqReceiveDispatcherTests
         Assert.Contains("is not bound", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void FromBasicDeliver_WhenPropertiesContainIdentity_ReturnsTransportMessage()
+    {
+        RabbitMqTransportMessage source = CreateMessage();
+        var properties = new BasicProperties
+        {
+            MessageId = source.MessageId,
+            Type = source.MessageTypeName,
+            CorrelationId = source.CorrelationId,
+            Headers = source.Headers.ToDictionary(
+                static entry => entry.Key,
+                static entry => (object?)entry.Value,
+                StringComparer.Ordinal),
+        };
+        var delivery = new BasicDeliverEventArgs(
+            "consumer-1",
+            deliveryTag: 1,
+            redelivered: false,
+            exchange: "bondstone.commands",
+            routingKey: "fulfillment.commands",
+            properties,
+            Encoding.UTF8.GetBytes(source.Body),
+            CancellationToken.None);
+
+        RabbitMqTransportMessage mapped =
+            RabbitMqReceivedMessageMapper.FromBasicDeliver(delivery);
+
+        Assert.Equal(source.Body, mapped.Body);
+        Assert.Equal(source.MessageId, mapped.MessageId);
+        Assert.Equal(source.MessageTypeName, mapped.MessageTypeName);
+        Assert.Equal(source.CorrelationId, mapped.CorrelationId);
+        Assert.Equal(
+            MessageKind.Command.ToString(),
+            mapped.Headers[BondstoneRabbitMqHeaders.MessageKind]);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void FromBodyAndProperties_WhenIdentityIsOnlyInHeaders_ReturnsTransportMessage()
+    {
+        RabbitMqTransportMessage source = CreateMessage();
+        var properties = new BasicProperties
+        {
+            Headers = new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                [BondstoneRabbitMqHeaders.MessageId] = Encoding.UTF8.GetBytes(source.MessageId),
+                [BondstoneRabbitMqHeaders.MessageTypeName] = source.MessageTypeName,
+            },
+        };
+
+        RabbitMqTransportMessage mapped =
+            RabbitMqReceivedMessageMapper.FromBodyAndProperties(
+                Encoding.UTF8.GetBytes(source.Body),
+                properties);
+
+        Assert.Equal(source.MessageId, mapped.MessageId);
+        Assert.Equal(source.MessageTypeName, mapped.MessageTypeName);
+        Assert.Equal(source.MessageId, mapped.CorrelationId);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task HandleAsync_WhenDispatchSucceeds_AcknowledgesDelivery()
+    {
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            new RecordingCommandReceivePipeline(),
+            new RecordingEventReceivePipeline(),
+            rabbitMq =>
+                rabbitMq.ReceiveQueue("fulfillment.commands")
+                    .AcceptModule("fulfillment"));
+        IRabbitMqReceivedMessageHandler handler =
+            serviceProvider.GetRequiredService<IRabbitMqReceivedMessageHandler>();
+        BasicDeliverEventArgs delivery = CreateDelivery(CreateMessage());
+        ulong? acknowledgedDeliveryTag = null;
+
+        await handler.HandleAsync(
+            "fulfillment.commands",
+            delivery,
+            (deliveryTag, _) =>
+            {
+                acknowledgedDeliveryTag = deliveryTag;
+                return ValueTask.CompletedTask;
+            });
+
+        Assert.Equal(delivery.DeliveryTag, acknowledgedDeliveryTag);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task HandleAsync_WhenDispatchFails_DoesNotAcknowledgeDelivery()
+    {
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            new RecordingCommandReceivePipeline(),
+            new RecordingEventReceivePipeline(),
+            _ => { });
+        IRabbitMqReceivedMessageHandler handler =
+            serviceProvider.GetRequiredService<IRabbitMqReceivedMessageHandler>();
+        bool acknowledged = false;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await handler.HandleAsync(
+                "fulfillment.commands",
+                CreateDelivery(CreateMessage()),
+                (_, _) =>
+                {
+                    acknowledged = true;
+                    return ValueTask.CompletedTask;
+                }));
+
+        Assert.False(acknowledged);
+    }
+
     private static ServiceProvider CreateServiceProvider(
         RecordingCommandReceivePipeline commandPipeline,
         RecordingEventReceivePipeline eventPipeline,
@@ -169,6 +285,31 @@ public sealed class RabbitMqReceiveDispatcherTests
                 [BondstoneRabbitMqHeaders.MessageKind] = messageKind.ToString(),
                 [BondstoneRabbitMqHeaders.MessageTypeName] = messageTypeName,
             });
+    }
+
+    private static BasicDeliverEventArgs CreateDelivery(
+        RabbitMqTransportMessage message)
+    {
+        var properties = new BasicProperties
+        {
+            MessageId = message.MessageId,
+            Type = message.MessageTypeName,
+            CorrelationId = message.CorrelationId,
+            Headers = message.Headers.ToDictionary(
+                static entry => entry.Key,
+                static entry => (object?)entry.Value,
+                StringComparer.Ordinal),
+        };
+
+        return new BasicDeliverEventArgs(
+            "consumer-1",
+            deliveryTag: 42,
+            redelivered: false,
+            exchange: "bondstone.commands",
+            routingKey: "fulfillment.commands",
+            properties,
+            Encoding.UTF8.GetBytes(message.Body),
+            CancellationToken.None);
     }
 
     private static DurableInboxHandleResult CreateHandledResult(

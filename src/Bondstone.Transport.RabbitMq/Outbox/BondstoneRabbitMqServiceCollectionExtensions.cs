@@ -44,6 +44,7 @@ public static class BondstoneRabbitMqServiceCollectionExtensions
         services.AddSingleton<IRabbitMqTopologyDiagnostics>(
             new RabbitMqTopologyDiagnostics(commandTopology, eventTopology, receiveTopology));
         services.TryAddScoped<IRabbitMqReceivedMessageDispatcher, RabbitMqReceivedMessageDispatcher>();
+        services.TryAddScoped<IRabbitMqReceivedMessageHandler, RabbitMqReceivedMessageHandler>();
         services.AddTransient<IDurableOutboxTransportRoute, RabbitMqDurableOutboxTransportRoute>();
         services.TryAddTransient<IDurableOutboxTransport, RoutedDurableOutboxTransport>();
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Azure.Messaging.ServiceBus;
 using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Modules;
@@ -132,6 +133,110 @@ public sealed class ServiceBusReceiveDispatcherTests
         Assert.Contains("is not bound", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void FromReceivedMessage_WhenMessageContainsIdentity_ReturnsTransportMessage()
+    {
+        ServiceBusTransportMessage source = CreateMessage();
+        ServiceBusReceivedMessage receivedMessage =
+            ServiceBusModelFactory.ServiceBusReceivedMessage(
+                body: BinaryData.FromString(source.Body),
+                messageId: source.MessageId,
+                partitionKey: source.PartitionKey,
+                correlationId: source.CorrelationId,
+                subject: source.Subject,
+                properties: source.ApplicationProperties.ToDictionary(
+                    static entry => entry.Key,
+                    static entry => entry.Value,
+                    StringComparer.Ordinal));
+
+        ServiceBusTransportMessage mapped =
+            ServiceBusReceivedMessageMapper.FromReceivedMessage(receivedMessage);
+
+        Assert.Equal(source.Body, mapped.Body);
+        Assert.Equal(source.MessageId, mapped.MessageId);
+        Assert.Equal(source.Subject, mapped.Subject);
+        Assert.Equal(source.CorrelationId, mapped.CorrelationId);
+        Assert.Equal(source.PartitionKey, mapped.PartitionKey);
+        Assert.Equal(
+            MessageKind.Command.ToString(),
+            mapped.ApplicationProperties[BondstoneServiceBusHeaders.MessageKind]);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void FromReceivedMessage_WhenIdentityIsOnlyInApplicationProperties_ReturnsTransportMessage()
+    {
+        ServiceBusTransportMessage source = CreateMessage();
+        ServiceBusReceivedMessage receivedMessage =
+            ServiceBusModelFactory.ServiceBusReceivedMessage(
+                body: BinaryData.FromString(source.Body),
+                properties: new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    [BondstoneServiceBusHeaders.MessageId] = source.MessageId,
+                    [BondstoneServiceBusHeaders.MessageTypeName] = source.Subject,
+                });
+
+        ServiceBusTransportMessage mapped =
+            ServiceBusReceivedMessageMapper.FromReceivedMessage(receivedMessage);
+
+        Assert.Equal(source.MessageId, mapped.MessageId);
+        Assert.Equal(source.Subject, mapped.Subject);
+        Assert.Equal(source.MessageId, mapped.CorrelationId);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task HandleAsync_WhenDispatchSucceeds_CompletesMessage()
+    {
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            new RecordingCommandReceivePipeline(),
+            new RecordingEventReceivePipeline(),
+            serviceBus =>
+                serviceBus.ReceiveQueue("fulfillment-commands")
+                    .AcceptModule("fulfillment"));
+        IServiceBusReceivedMessageHandler handler =
+            serviceProvider.GetRequiredService<IServiceBusReceivedMessageHandler>();
+        ServiceBusReceivedMessage message = CreateReceivedMessage(CreateMessage());
+        ServiceBusReceivedMessage? completedMessage = null;
+
+        await handler.HandleAsync(
+            ServiceBusReceiveSource.ForQueue("fulfillment-commands"),
+            message,
+            (receivedMessage, _) =>
+            {
+                completedMessage = receivedMessage;
+                return ValueTask.CompletedTask;
+            });
+
+        Assert.Same(message, completedMessage);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task HandleAsync_WhenDispatchFails_DoesNotCompleteMessage()
+    {
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            new RecordingCommandReceivePipeline(),
+            new RecordingEventReceivePipeline(),
+            _ => { });
+        IServiceBusReceivedMessageHandler handler =
+            serviceProvider.GetRequiredService<IServiceBusReceivedMessageHandler>();
+        bool completed = false;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await handler.HandleAsync(
+                ServiceBusReceiveSource.ForQueue("fulfillment-commands"),
+                CreateReceivedMessage(CreateMessage()),
+                (_, _) =>
+                {
+                    completed = true;
+                    return ValueTask.CompletedTask;
+                }));
+
+        Assert.False(completed);
+    }
+
     private static ServiceProvider CreateServiceProvider(
         RecordingCommandReceivePipeline commandPipeline,
         RecordingEventReceivePipeline eventPipeline,
@@ -180,6 +285,21 @@ public sealed class ServiceBusReceiveDispatcherTests
                 [BondstoneServiceBusHeaders.MessageKind] = messageKind.ToString(),
                 [BondstoneServiceBusHeaders.MessageTypeName] = messageTypeName,
             });
+    }
+
+    private static ServiceBusReceivedMessage CreateReceivedMessage(
+        ServiceBusTransportMessage message)
+    {
+        return ServiceBusModelFactory.ServiceBusReceivedMessage(
+            body: BinaryData.FromString(message.Body),
+            messageId: message.MessageId,
+            partitionKey: message.PartitionKey,
+            correlationId: message.CorrelationId,
+            subject: message.Subject,
+            properties: message.ApplicationProperties.ToDictionary(
+                static entry => entry.Key,
+                static entry => entry.Value,
+                StringComparer.Ordinal));
     }
 
     private static DurableInboxHandleResult CreateHandledResult(

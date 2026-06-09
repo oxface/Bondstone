@@ -57,6 +57,10 @@ Implemented surface includes:
   receive pipelines;
 - Service Bus receive source topology and dispatcher proof over the neutral
   receive pipelines;
+- native received message mappers for RabbitMQ and Service Bus into
+  Bondstone transport message shapes;
+- receive settlement handler helpers for RabbitMQ and Service Bus that settle
+  native messages only after Bondstone dispatch succeeds;
 - modular monolith sample using EF-backed ordering/fulfillment modules,
   PostgreSQL Dapper-assisted billing, explicit integration events, a durable
   outbox worker, and explicit local queue transport over the neutral receive
@@ -215,6 +219,13 @@ Applied in this slice:
   proof. This maps received Bondstone Service Bus messages from queues or
   topic subscriptions into the neutral command/event receive pipelines but
   does not yet run hosted Service Bus processors.
+- add native receive message mappers so RabbitMQ `BasicDeliverEventArgs` and
+  Service Bus `ServiceBusReceivedMessage` can be converted into Bondstone
+  transport messages before dispatch while leaving native acknowledgement
+  timing app-owned.
+- add receive settlement handler helpers so app-owned RabbitMQ consumers and
+  Service Bus processors can compose native mapping, Bondstone dispatch, and
+  caller-supplied acknowledgement/completion in the correct order.
 
 Remaining slices:
 

@@ -65,6 +65,14 @@ message back to a Bondstone durable envelope. Command messages dispatch through
 queue. A RabbitMQ consumer should acknowledge the broker delivery only after
 the dispatcher returns.
 
+`RabbitMqReceivedMessageMapper` converts native `BasicDeliverEventArgs`, or a
+body plus `IReadOnlyBasicProperties`, into `RabbitMqTransportMessage`. This is
+the adapter boundary for app-owned consumers before they call the dispatcher.
+
+`IRabbitMqReceivedMessageHandler` composes native delivery mapping, dispatcher
+execution, and a caller-supplied acknowledgement delegate. It acknowledges only
+after dispatch succeeds and leaves failures visible to the caller.
+
 ## App-Owned Setup
 
 Bondstone does not declare exchanges, queues, bindings, long-running

@@ -61,6 +61,14 @@ through `IModuleCommandReceivePipeline`; event messages dispatch through
 source. A Service Bus processor should complete the broker message only after
 the dispatcher returns.
 
+`ServiceBusReceivedMessageMapper` converts native `ServiceBusReceivedMessage`
+instances into `ServiceBusTransportMessage`. This is the adapter boundary for
+app-owned processors before they call the dispatcher.
+
+`IServiceBusReceivedMessageHandler` composes native message mapping,
+dispatcher execution, and a caller-supplied completion delegate. It completes
+only after dispatch succeeds and leaves failures visible to the caller.
+
 ## App-Owned Setup
 
 Bondstone does not create queues, topics, subscriptions, rules, long-running

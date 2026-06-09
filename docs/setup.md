@@ -156,6 +156,23 @@ RabbitMQ consumers and hosted Service Bus processors are still planned
 follow-up slices. Do not document app-facing broker receive setup as complete
 until those adapters exist.
 
+Provider packages also expose native receive message mappers:
+
+- `RabbitMqReceivedMessageMapper` for RabbitMQ deliveries;
+- `ServiceBusReceivedMessageMapper` for Service Bus received messages.
+
+Use those mappers inside app-owned consumers/processors before calling the
+Bondstone dispatcher.
+
+Provider packages also expose small handler helpers:
+
+- `IRabbitMqReceivedMessageHandler`
+- `IServiceBusReceivedMessageHandler`
+
+These helpers call the mapper and dispatcher, then invoke a caller-supplied
+acknowledge/complete delegate only after dispatch succeeds. They still do not
+own hosted consumer or processor lifecycle.
+
 The current sample uses explicit `Bondstone.Transport.Local` queue routing to
 exercise the durable loop without presenting local transport as a production
 broker adapter.

@@ -47,6 +47,7 @@ public static class BondstoneServiceBusServiceCollectionExtensions
                 eventDestinationTopology,
                 receiveTopology));
         services.TryAddScoped<IServiceBusReceivedMessageDispatcher, ServiceBusReceivedMessageDispatcher>();
+        services.TryAddScoped<IServiceBusReceivedMessageHandler, ServiceBusReceivedMessageHandler>();
         services.AddTransient<IDurableOutboxTransportRoute, ServiceBusDurableOutboxTransportRoute>();
         services.TryAddTransient<IDurableOutboxTransport, RoutedDurableOutboxTransport>();
 

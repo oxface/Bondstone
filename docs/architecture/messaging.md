@@ -179,9 +179,12 @@ loud configuration errors.
 
 RabbitMQ has a receive queue dispatcher proof and Service Bus has a receive
 source dispatcher proof. Both map received Bondstone transport messages into
-the neutral receive pipelines. Provider-backed receive workers for RabbitMQ
-and Service Bus are still planned follow-up slices. Those slices should cover
-command receive, event subscriber receive, acknowledgement semantics,
+the neutral receive pipelines. Provider packages also expose native received
+message mappers so app-owned consumers/processors can convert broker messages
+before dispatch, plus handler helpers that invoke caller-supplied native
+settlement only after dispatch succeeds. Provider-backed receive workers for
+RabbitMQ and Service Bus are still planned follow-up slices. Those slices
+should cover command receive, event subscriber receive, hosted lifecycle,
 retry/dead-letter behavior, diagnostics, and provider-backed integration
 tests.
 

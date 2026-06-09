@@ -18,4 +18,18 @@ public sealed class BondstoneRebusReceiveEndpointBuilder
         _transportBuilder.AcceptModuleOnEndpoint(_endpointName, moduleName);
         return _transportBuilder;
     }
+
+    public BondstoneRebusTransportBuilder SubscribeEvent(
+        string messageTypeName,
+        string subscriberModule,
+        string subscriberIdentity)
+    {
+        _transportBuilder.SubscribeEventOnEndpoint(
+            _endpointName,
+            messageTypeName,
+            subscriberModule,
+            subscriberIdentity);
+
+        return _transportBuilder;
+    }
 }

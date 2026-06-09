@@ -325,13 +325,14 @@ into a generic bus.
 Accepted decision:
 [ADR 0033](adr/0033-first-class-event-publish-subscribe-topology.md).
 
-Current/next slice: **event receive transaction and Rebus subscription
-binding**. The publish-side Rebus dispatch slice is applied: Rebus can resolve
-event identities to topics and dispatch claimed event outbox records through
-Rebus publish/subscribe. Core subscriber execution and per-subscriber receive
-inbox orchestration are applied. Provider-specific event transaction
-composition, Rebus subscription binding, transport receive, choreography
-samples, and transport-backed event tests remain follow-up slices.
+Current/next slice: **event diagnostics and transport-backed tests**. The
+publish-side Rebus dispatch slice is applied: Rebus can resolve event
+identities to topics and dispatch claimed event outbox records through Rebus
+publish/subscribe. Core subscriber execution, per-subscriber receive inbox
+orchestration, EF Core module transaction behavior for event subscribers, and
+Rebus event subscription receive binding are applied. Native Rebus
+subscription startup, event diagnostics, choreography samples, and
+transport-backed event tests remain follow-up slices.
 
 Slices:
 
@@ -345,21 +346,31 @@ Slices:
    - core subscriber execution through `IModuleEventSubscriberExecutor` is
      applied with stable event identity, subscriber identity, typed handler
      invocation, application pipeline behaviors, and module execution context;
-   - provider-specific transaction behavior for subscriber handlers remains a
-     follow-up slice.
+   - EF Core transaction behavior for subscriber handlers is applied for
+     modules that opt into EF persistence.
 3. Event subscriber identity and inbox behavior:
    - per-subscriber inbox identity is already defined from Phase 0;
    - core per-subscriber inbox orchestration is applied for explicit receive
      contexts through an event subscriber receive-inbox system behavior;
-   - transport-backed event receive and provider transaction save behavior
-     remain follow-up slices.
+   - Rebus event receive now derives per-subscriber inbox records from
+     endpoint subscription bindings.
 4. Rebus event publish topology with topic/exchange naming.
 5. Rebus event subscription topology with subscriber endpoint/subscription
-   binding.
+   binding:
+   - Rebus receive endpoint subscription bindings are applied;
+   - native Rebus subscription startup remains app-owned and explicit.
 6. Event diagnostics and transport-backed tests.
 
-Remaining in Phase 5: **medium-large, 3-4 slices after publish-side dispatch
-and core subscriber execution**.
+Execution-shape note: commands and event subscribers keep separate entrypoints
+because route/identity semantics differ. After route or subscriber resolution,
+shared behavior such as module transactions, module execution context,
+receive inbox orchestration, and tracing should be factored behind small
+internal helpers when real duplication appears. Do not introduce a generic
+mediator or public message pipeline only to remove thin adapter classes.
+
+Remaining in Phase 5: **medium-small, 1-2 slices after publish-side dispatch,
+core subscriber execution, EF subscriber transactions, and Rebus receive
+binding**.
 
 ### Phase 6: Adapter Diversity Proof
 
@@ -478,7 +489,7 @@ Current automated coverage includes:
   through command send and event publish;
 - EF Core unit and application tests for mapping, service registration, store
   staging, persistence-scope validation, module persistence opt-in, and module
-  transaction/save behavior;
+  command and event subscriber transaction/save behavior;
 - PostgreSQL Testcontainers integration tests for real schema creation,
   transactions, savepoints, unique constraints, inbox registration, outbox
   claiming, lease renewal, dispatch recording, dispatcher composition, EF

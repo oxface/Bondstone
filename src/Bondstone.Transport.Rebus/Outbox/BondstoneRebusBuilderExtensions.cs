@@ -18,13 +18,16 @@ public static class BondstoneRebusBuilderExtensions
         builder.Services.AddBondstoneRebusOutboxTransport(
             rebus.CommandDestinationTopology,
             rebus.EventTopicTopology);
-        if (rebus.ReceiveEndpointBindings.Count > 0)
+        if (rebus.ReceiveEndpointBindings.Count > 0
+            || rebus.EventSubscriptionBindings.Count > 0)
         {
             builder.AddConfigurationValidator(
                 new RebusReceiveTopologyConfigurationValidator(
-                    rebus.ReceiveEndpointBindings));
-            builder.Services.AddBondstoneRebusModuleCommandReceiveTopology(
-                rebus.ReceiveEndpointBindings);
+                    rebus.ReceiveEndpointBindings,
+                    rebus.EventSubscriptionBindings));
+            builder.Services.AddBondstoneRebusDurableMessageReceiveTopology(
+                rebus.ReceiveEndpointBindings,
+                rebus.EventSubscriptionBindings);
         }
 
         builder.Outbox.MarkTransport("Rebus");

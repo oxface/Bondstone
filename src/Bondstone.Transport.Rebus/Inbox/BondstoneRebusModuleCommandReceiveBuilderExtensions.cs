@@ -13,5 +13,16 @@ public static class BondstoneRebusModuleCommandReceiveBuilderExtensions
 
         return builder;
     }
-}
 
+    public static BondstoneBuilder UseRebusModuleEventReceiveTopology(
+        this BondstoneBuilder builder,
+        IReadOnlyCollection<RebusEventSubscriptionBinding> subscriptions)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(subscriptions);
+
+        builder.Services.AddBondstoneRebusModuleEventReceiveTopology(subscriptions);
+
+        return builder;
+    }
+}

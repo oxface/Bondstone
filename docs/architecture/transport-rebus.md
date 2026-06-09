@@ -237,11 +237,40 @@ available for tests and advanced composition. Applications still configure
 Rebus' broker transport, input queue, serializer, workers, retry policy, and
 dead-letter policy through Rebus-native APIs.
 
+The Rebus endpoint handler dispatches Bondstone wire envelopes by
+`MessageKind`. Command envelopes continue through the module command endpoint
+dispatcher. Event envelopes resolve configured event subscription bindings for
+the current endpoint and stable event identity, then execute each bound
+subscriber through `IRebusModuleEventReceivePipeline`.
+
+Rebus event receive binding is configured on receive endpoints:
+
+```csharp
+rebus
+    .ReceiveEndpoint("fulfillment-events")
+    .SubscribeEvent(
+        "sales.order.submitted.v1",
+        "fulfillment",
+        "fulfillment.order-projection.v1");
+```
+
+The event receive pipeline resolves the stable message identity, deserializes
+the durable payload through `IDurablePayloadSerializer`, creates a
+per-subscriber inbox key from message id, subscriber module, and stable
+subscriber identity, and invokes `IModuleEventSubscriberExecutor`. Already
+processed duplicates complete normally; already-received but unprocessed
+results throw so Rebus retry/dead-letter policy remains in control.
+
+Bondstone records the durable subscription binding relationship, but native
+Rebus subscription startup and subscription storage remain application-owned.
+Applications still decide when and how to call Rebus topic subscription APIs
+for the configured topics.
+
 ## Deferred Rebus Work
 
-Deferred Rebus work includes event subscription binding, event subscriber
-execution, event subscription diagnostics, endpoint dispatch diagnostics,
-route or destination circuit breaking, stale-claim recovery sweeps,
-dead-letter routing, receive retry state, stale receive recovery, and worker
-metrics. These remain hosting, persistence, or future receive-pipeline
-decisions unless a later ADR accepts a transport-specific policy.
+Deferred Rebus work includes native event subscription startup helpers, event
+subscription diagnostics, endpoint dispatch diagnostics, route or destination
+circuit breaking, stale-claim recovery sweeps, dead-letter routing, receive
+retry state, stale receive recovery, and worker metrics. These remain hosting,
+persistence, or future receive-pipeline decisions unless a later ADR accepts a
+transport-specific policy.

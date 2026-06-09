@@ -158,11 +158,11 @@ module, stable event identity, and stable subscriber identity, then executes
 typed `IIntegrationEventHandler<TEvent>` handlers through an event-specific
 subscriber pipeline. System pipeline behaviors set the module execution
 context for the subscriber module and can wrap handler execution with a
-per-subscriber receive inbox record. Provider-specific transaction behavior
-that commits event handler state, inbox markers, and outgoing durable messages
-inside the subscriber module boundary remains a follow-up slice. Transport
-subscription binding is separate from event publish dispatch and core
-subscriber execution.
+per-subscriber receive inbox record. Modules that opt into EF persistence get
+an EF event subscriber transaction behavior that commits event handler state,
+inbox markers, and outgoing durable messages inside the subscriber module
+boundary. Transport subscription binding is separate from event publish
+dispatch and core subscriber execution.
 
 ## Persistence Capability
 
@@ -202,13 +202,14 @@ Transport adapters can pass a durable inbox record when dispatching into
 envelope and module command route metadata.
 
 When an inbox record is present, a Bondstone-owned inbox system behavior
-wraps the rest of the module command pipeline with `IDurableInboxHandlerExecutor`.
-The lower-level inbox executor still stages receive and processed markers, but
-the module behavior supplies a no-op commit delegate so the outer module
-transaction behavior can save handler state, outbox messages, and inbox
-markers together. The executor returns `ModuleCommandExecutionResult`, which
-allows transport adapters to inspect the inbox result without using ambient
-receive state.
+wraps the rest of the module command or event subscriber pipeline with
+`IDurableInboxHandlerExecutor`. The lower-level inbox executor still stages
+receive and processed markers, but the module behavior supplies a no-op
+commit delegate so the outer module transaction behavior can save handler
+state, outbox messages, and inbox markers together. Command execution returns
+`ModuleCommandExecutionResult`; event subscriber execution returns
+`ModuleEventSubscriberExecutionResult`. Transport adapters can inspect the
+inbox result without using ambient receive state.
 
 ## Source-Module Scope
 

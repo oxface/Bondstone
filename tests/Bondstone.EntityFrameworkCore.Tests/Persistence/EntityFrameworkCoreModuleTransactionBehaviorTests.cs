@@ -267,6 +267,108 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
     }
 
     [Fact]
+    [Trait("Category", "Application")]
+    public async Task ModuleEventSubscribers_WhenModuleUsesEntityFrameworkCorePersistence_SavesChangesAfterHandler()
+    {
+        string databaseName = Guid.NewGuid().ToString("N");
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+        services.AddDbContext<FullDurableMappingDbContext>(options =>
+            options
+                .UseInMemoryDatabase(databaseName)
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UseEntityFrameworkCorePersistence<FullDurableMappingDbContext>();
+                module.Events.RegisterSubscriber<
+                    StoreDurableHandledEvent,
+                    StoreDurableHandledEventHandler>("fulfillment.store-event.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            await scope.ServiceProvider
+                .GetRequiredService<IModuleEventSubscriberExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    "fulfillment.store-event.v1",
+                    "fulfillment.store-event.v1",
+                    new StoreDurableHandledEvent("E-100"));
+        }
+
+        using IServiceScope verificationScope = serviceProvider.CreateScope();
+        FullDurableMappingDbContext context =
+            verificationScope.ServiceProvider.GetRequiredService<FullDurableMappingDbContext>();
+        HandledCommandEntity handledEvent = await context.HandledCommands.SingleAsync();
+
+        Assert.Equal("event:E-100", handledEvent.Id);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ModuleEventSubscribers_WhenReceiveContextExists_SavesHandlerStateInModuleTransaction()
+    {
+        string databaseName = Guid.NewGuid().ToString("N");
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+        services.AddSingleton<IDurableInboxHandlerExecutor>(
+            new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.Handled));
+        services.AddDbContext<FullDurableMappingDbContext>(options =>
+            options
+                .UseInMemoryDatabase(databaseName)
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UseEntityFrameworkCorePersistence<FullDurableMappingDbContext>();
+                module.Events.RegisterSubscriber<
+                    StoreDurableHandledEvent,
+                    StoreDurableHandledEventHandler>("fulfillment.store-event.v1");
+            });
+        });
+
+        var inboxRecord = new DurableInboxRecord(
+            DurableInboxMessageKey.ForEventSubscriber(
+                Guid.Parse("1e7e4d66-a402-401f-9324-d2ac7efa7741"),
+                "fulfillment",
+                "fulfillment.store-event.v1"),
+            DateTimeOffset.Parse("2026-06-09T12:00:00+00:00"));
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            ModuleEventSubscriberExecutionResult result = await scope.ServiceProvider
+                .GetRequiredService<IModuleEventSubscriberExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    "fulfillment.store-event.v1",
+                    "fulfillment.store-event.v1",
+                    new StoreDurableHandledEvent("E-100"),
+                    new ModuleEventSubscriberReceiveContext(inboxRecord));
+
+            Assert.Equal(DurableInboxHandleStatus.Handled, result.ReceiveInboxResult?.Status);
+        }
+
+        using IServiceScope verificationScope = serviceProvider.CreateScope();
+        FullDurableMappingDbContext context =
+            verificationScope.ServiceProvider.GetRequiredService<FullDurableMappingDbContext>();
+        HandledCommandEntity handledEvent = await context.HandledCommands.SingleAsync();
+
+        Assert.Equal("event:E-100", handledEvent.Id);
+    }
+
+    [Fact]
     [Trait("Category", "Unit")]
     public void UseEntityFrameworkCorePersistence_WhenCalled_RecordsModulePersistenceMetadata()
     {
@@ -305,9 +407,14 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
             });
         });
 
-        Type[] systemBehaviorTypes = services
+        Type[] commandSystemBehaviorTypes = services
             .Where(static descriptor =>
                 descriptor.ServiceType == typeof(IModuleCommandSystemPipelineBehavior<>))
+            .Select(static descriptor => descriptor.ImplementationType!)
+            .ToArray();
+        Type[] eventSystemBehaviorTypes = services
+            .Where(static descriptor =>
+                descriptor.ServiceType == typeof(IModuleEventSubscriberSystemPipelineBehavior<>))
             .Select(static descriptor => descriptor.ImplementationType!)
             .ToArray();
         Type[] applicationBehaviorTypes = services
@@ -317,11 +424,17 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
             .ToArray();
 
         Assert.Contains(
-            systemBehaviorTypes,
+            commandSystemBehaviorTypes,
             type => type.FullName == "Bondstone.EntityFrameworkCore.Persistence.EntityFrameworkCoreModuleTransactionBehavior`1");
         Assert.Contains(
-            systemBehaviorTypes,
+            commandSystemBehaviorTypes,
             type => type.FullName == "Bondstone.Modules.ModuleExecutionContextPipelineBehavior`1");
+        Assert.Contains(
+            eventSystemBehaviorTypes,
+            type => type.FullName == "Bondstone.EntityFrameworkCore.Persistence.EntityFrameworkCoreModuleEventSubscriberTransactionBehavior`1");
+        Assert.Contains(
+            eventSystemBehaviorTypes,
+            type => type.FullName == "Bondstone.Modules.ModuleEventSubscriberExecutionContextPipelineBehavior`1");
         Assert.Contains(
             applicationBehaviorTypes,
             type => type.FullName == "Bondstone.Modules.ValidationModuleCommandPipelineBehavior`1");
@@ -484,6 +597,24 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
         {
             log.Calls.Add($"handle:{command.Id}");
             context.HandledCommands.Add(new HandledCommandEntity(command.Id));
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [IntegrationEventIdentity("fulfillment.store-event.v1")]
+    public sealed record StoreDurableHandledEvent(string Id) : IIntegrationEvent;
+
+    public sealed class StoreDurableHandledEventHandler(
+        FullDurableMappingDbContext context,
+        CommandCallLog log)
+        : IIntegrationEventHandler<StoreDurableHandledEvent>
+    {
+        public ValueTask HandleAsync(
+            StoreDurableHandledEvent integrationEvent,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"handle-event:{integrationEvent.Id}");
+            context.HandledCommands.Add(new HandledCommandEntity($"event:{integrationEvent.Id}"));
             return ValueTask.CompletedTask;
         }
     }

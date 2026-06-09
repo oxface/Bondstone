@@ -13,6 +13,7 @@ public sealed class BondstoneRebusTransportBuilder
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _endpointNamesByAcceptedModuleName =
         new(StringComparer.Ordinal);
+    private readonly List<RebusEventSubscriptionBinding> _eventSubscriptionBindings = [];
     private Func<string, string>? _moduleQueueNameConvention;
     private Func<string, string>? _eventTopicNameConvention;
 
@@ -23,6 +24,9 @@ public sealed class BondstoneRebusTransportBuilder
                 entry.Key,
                 entry.Value))
             .ToArray();
+
+    internal IReadOnlyCollection<RebusEventSubscriptionBinding> EventSubscriptionBindings =>
+        _eventSubscriptionBindings.ToArray();
 
     internal RebusCommandDestinationTopology CommandDestinationTopology =>
         new(
@@ -205,5 +209,31 @@ public sealed class BondstoneRebusTransportBuilder
 
         moduleNames.Add(normalizedModuleName);
         _endpointNamesByAcceptedModuleName.Add(normalizedModuleName, endpointName);
+    }
+
+    internal void SubscribeEventOnEndpoint(
+        string endpointName,
+        string messageTypeName,
+        string subscriberModule,
+        string subscriberIdentity)
+    {
+        var subscription = new RebusEventSubscriptionBinding(
+            endpointName,
+            messageTypeName,
+            subscriberModule,
+            subscriberIdentity);
+
+        bool exists = _eventSubscriptionBindings.Any(existing =>
+            StringComparer.Ordinal.Equals(existing.EndpointName, subscription.EndpointName)
+            && StringComparer.Ordinal.Equals(existing.MessageTypeName, subscription.MessageTypeName)
+            && StringComparer.Ordinal.Equals(existing.SubscriberModule, subscription.SubscriberModule)
+            && StringComparer.Ordinal.Equals(existing.SubscriberIdentity, subscription.SubscriberIdentity));
+
+        if (exists)
+        {
+            return;
+        }
+
+        _eventSubscriptionBindings.Add(subscription);
     }
 }

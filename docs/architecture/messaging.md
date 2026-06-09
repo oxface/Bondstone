@@ -96,9 +96,10 @@ its own handle-once boundary and retry/dead-letter outcome through the
 transport endpoint or subscription that delivers that subscriber's copy. Core
 subscriber execution can accept an explicit receive context with the
 per-subscriber inbox record; the receive-inbox pipeline behavior composes
-`IDurableInboxHandlerExecutor`. Provider-specific transaction behavior that
-saves event handler state, inbox markers, and outgoing messages together
-remains a follow-up Phase 5 slice.
+`IDurableInboxHandlerExecutor`. Modules that opt into EF persistence get an
+EF event subscriber transaction behavior that saves event handler state, inbox
+markers, and outgoing messages together inside the subscriber module
+transaction boundary.
 
 Domain events are module-local facts raised inside a module's domain model.
 They are not automatically integration events, and Bondstone does not
@@ -208,14 +209,13 @@ routing sends through native Rebus routing APIs. Phase 5 adds outgoing event
 publish dispatch by mapping event identities to Rebus topics and publishing
 the same Bondstone wire envelope through native Rebus topics APIs. The adapter
 preserves Bondstone message identity in Bondstone-specific headers and maps
-trace context to W3C transport headers. Receive-side Rebus inbox integration
-is command-only until Rebus event subscription binding and transport receive
-are implemented. Rebus handlers can receive Bondstone wire envelopes, derive
-command inbox keys from message id, target module, and explicit handler
-identity, compose `IRebusDurableInboxHandlerExecutor`, and acknowledge only
-after handle-once execution and its commit boundary succeed. Future Rebus
-event receive will derive inbox keys from message id, subscriber module, and
-stable subscriber identity.
+trace context to W3C transport headers. Rebus receive dispatch can route
+Bondstone wire envelopes by `MessageKind`. Command envelopes derive inbox keys
+from message id, target module, and explicit handler identity. Event envelopes
+resolve endpoint event subscription bindings, derive inbox keys from message
+id, subscriber module, and stable subscriber identity, and execute typed event
+subscribers through `IModuleEventSubscriberExecutor`. Native Rebus
+subscription startup and subscription storage remain app-owned.
 
 Durable payload serialization is shared command/event infrastructure. Current
 command send, event publish, Rebus typed command receive, and Rebus module

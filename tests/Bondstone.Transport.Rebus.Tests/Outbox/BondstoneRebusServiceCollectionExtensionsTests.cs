@@ -262,6 +262,57 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void UseRebusTransport_WhenEventSubscriptionIsConfigured_RegistersEventReceiveTopology()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstone(builder =>
+        {
+            builder.Module("fulfillment", module =>
+            {
+                ConfigureDurableEventSubscriber<OrderSubmittedEvent, OrderSubmittedHandler>(
+                    module,
+                    "fulfillment.order-projection.v1");
+            });
+            builder.UseRebusTransport(rebus =>
+            {
+                rebus
+                    .ReceiveEndpoint("fulfillment-events")
+                    .SubscribeEvent(
+                        "sales.order.submitted.v1",
+                        "fulfillment",
+                        "fulfillment.order-projection.v1");
+            });
+        });
+
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IRebusEventSubscriptionRegistry)
+                && descriptor.ImplementationInstance is RebusEventSubscriptionRegistry);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IRebusModuleEventReceivePipeline)
+                && descriptor.ImplementationType == typeof(RebusModuleEventReceivePipeline));
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IRebusDurableMessageEndpointDispatcher)
+                && descriptor.ImplementationType?.Name == "RebusDurableMessageEndpointDispatcher");
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusEventSubscriptionRegistry registry =
+            serviceProvider.GetRequiredService<IRebusEventSubscriptionRegistry>();
+
+        RebusEventSubscriptionBinding subscription = Assert.Single(
+            registry.GetSubscriptions(
+                "fulfillment-events",
+                "sales.order.submitted.v1"));
+
+        Assert.Equal("fulfillment", subscription.SubscriberModule);
+        Assert.Equal("fulfillment.order-projection.v1", subscription.SubscriberIdentity);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void UseRebusTransport_WhenReceiveEndpointTargetsMissingModule_Throws()
     {
         var services = new ServiceCollection();
@@ -324,6 +375,37 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
         Assert.Contains("fulfillment-commands", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
         Assert.Contains("durable command handlers", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UseRebusTransport_WhenEventSubscriptionTargetsMissingSubscriber_Throws()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(builder =>
+            {
+                builder.Module("fulfillment", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                });
+                builder.UseRebusTransport(rebus =>
+                {
+                    rebus
+                        .ReceiveEndpoint("fulfillment-events")
+                        .SubscribeEvent(
+                            "sales.order.submitted.v1",
+                            "fulfillment",
+                            "fulfillment.order-projection.v1");
+                });
+            }));
+
+        Assert.Contains("fulfillment-events", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales.order.submitted.v1", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment.order-projection.v1", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("no matching event subscriber", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -463,6 +545,21 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
         Assert.Contains("fulfillment-commands", exception.Message);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void SubscribeEvent_WhenArgumentsAreBlank_Throws()
+    {
+        var builder = new BondstoneRebusTransportBuilder();
+        BondstoneRebusReceiveEndpointBuilder endpoint = builder.ReceiveEndpoint("fulfillment-events");
+
+        Assert.Throws<ArgumentException>(
+            () => endpoint.SubscribeEvent(" ", "fulfillment", "fulfillment.order-projection.v1"));
+        Assert.Throws<ArgumentException>(
+            () => endpoint.SubscribeEvent("sales.order.submitted.v1", " ", "fulfillment.order-projection.v1"));
+        Assert.Throws<ArgumentException>(
+            () => endpoint.SubscribeEvent("sales.order.submitted.v1", "fulfillment", " "));
+    }
+
     private static void ConfigureDurableModule<TCommand, THandler>(
         BondstoneModuleBuilder module)
         where TCommand : IDurableCommand
@@ -471,6 +568,17 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
         module.UseDurableMessaging();
         module.UsePersistence("test persistence");
         module.Commands.RegisterHandler<TCommand, THandler>();
+    }
+
+    private static void ConfigureDurableEventSubscriber<TEvent, THandler>(
+        BondstoneModuleBuilder module,
+        string subscriberIdentity)
+        where TEvent : IIntegrationEvent
+        where THandler : class, IIntegrationEventHandler<TEvent>
+    {
+        module.UseDurableMessaging();
+        module.UsePersistence("test persistence");
+        module.Events.RegisterSubscriber<TEvent, THandler>(subscriberIdentity);
     }
 
     [DurableCommandIdentity("fulfillment.order.reserve.v1")]
@@ -493,6 +601,19 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
     {
         public ValueTask HandleAsync(
             CapturePaymentCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [IntegrationEventIdentity("sales.order.submitted.v1")]
+    public sealed record OrderSubmittedEvent(string OrderId) : IIntegrationEvent;
+
+    public sealed class OrderSubmittedHandler : IIntegrationEventHandler<OrderSubmittedEvent>
+    {
+        public ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
             CancellationToken ct = default)
         {
             return ValueTask.CompletedTask;

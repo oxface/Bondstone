@@ -20,9 +20,10 @@ SQL locking, schema migration, and background dispatch mechanics.
 
 EF Core components stage data and expose transaction/save boundaries, but they
 do not own transport acknowledgement, retry policy, domain events, or a
-generic mediator. Module command execution owns handler registration and now
-has EF transaction pipeline groundwork for modules that opt into EF
-persistence. Broader inbox/outbox receive orchestration remains future work.
+generic mediator. Module command execution and module event subscriber
+execution own handler registration; modules that opt into EF persistence get
+EF transaction pipeline behaviors for command handlers and event subscribers.
+Broader transport-backed event receive orchestration remains future work.
 
 Optional EF Core mapping helpers are accepted in
 [ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md).

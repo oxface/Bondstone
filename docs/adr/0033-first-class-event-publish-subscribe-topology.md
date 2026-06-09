@@ -228,13 +228,14 @@ implementation, rather than as only future vocabulary.
   `IBus.Advanced.Topics` for events. Core subscriber execution and
   per-subscriber inbox orchestration are applied through
   `IModuleEventSubscriberExecutor` and event subscriber pipeline behaviors.
-  Subscription binding, provider-specific event receive transaction behavior,
-  external event wire formats,
-  provider-specific event queue/address handoff, and event transport-backed
-  tests remain incremental Phase 5 slices. Adapter-diversity proof work should
-  follow after the first-class event loop has enough shape and should validate
-  Azure Service Bus, RabbitMQ, and one non-EF persistence path with thin
-  proof-oriented slices.
+  EF Core event subscriber transaction behavior is applied for modules that
+  opt into EF persistence. Rebus receive endpoint event subscription bindings
+  and event envelope receive execution are applied. Native Rebus subscription
+  startup, external event wire formats, provider-specific event queue/address
+  handoff, and event transport-backed tests remain incremental Phase 5 slices.
+  Adapter-diversity proof work should follow after the first-class event loop
+  has enough shape and should validate Azure Service Bus, RabbitMQ, and one
+  non-EF persistence path with thin proof-oriented slices.
 - Stable docs: Current Phase 5 event direction is described in
   [docs/architecture/README.md](../architecture/README.md),
   [docs/architecture/messaging.md](../architecture/messaging.md),
@@ -264,9 +265,17 @@ implementation, rather than as only future vocabulary.
   inbox records for explicit receive contexts through a system behavior; skips
   already processed inbox records; supports application subscriber pipeline
   behaviors; and validates that durable event subscribers belong to
-  durable-messaging modules.
-- Pending or deferred: Provider-specific event receive transaction behavior,
-  Rebus subscription binding, event subscription diagnostics,
+  durable-messaging modules. The EF Core package now registers event
+  subscriber transaction behavior for module-owned EF persistence so event
+  handler state, receive inbox markers, and outgoing outbox messages can be
+  saved in the subscriber module transaction boundary. The Rebus adapter now
+  supports receive endpoint event subscription bindings, dispatches event
+  envelopes by stable event identity to all bound subscribers on the endpoint,
+  deserializes event payloads through the shared durable payload serializer,
+  derives per-subscriber inbox records, and calls
+  `IModuleEventSubscriberExecutor`.
+- Pending or deferred: Native Rebus subscription startup helpers, event
+  subscription diagnostics,
   transport-backed event tests, event choreography samples, domain event
   persistence, automatic integration-event publication, retry state, failure
   state, stale receive recovery, broker-specific topology creation, Azure
@@ -289,6 +298,15 @@ After the core event subscriber execution and per-subscriber inbox slice,
 verification was rerun with:
 
 - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --filter "Category=Unit" --disable-build-servers`
+
+After the EF Core event subscriber transaction slice, verification was rerun
+with:
+
+- `dotnet test tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application" --disable-build-servers`
+
+After the Rebus event receive binding slice, verification was rerun with:
+
+- `dotnet test tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application" --disable-build-servers`
 - `dotnet test Bondstone.slnx --configuration Release --filter "Category=Unit|Category=Application" --disable-build-servers`
 - `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
 - `pnpm format:check`

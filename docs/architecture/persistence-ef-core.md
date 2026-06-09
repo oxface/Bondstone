@@ -35,10 +35,11 @@ provider-specific migration conventions in the generic EF Core package.
 
 For modules that use the current `UseDurableMessaging` capability with EF
 persistence, Bondstone validates the module DbContext model during module
-command execution. The model must include outbox and inbox mappings, either by
-calling `ApplyBondstoneOutbox` and `ApplyBondstoneInbox`, or by using the full
-`ApplyBondstonePersistence` helper. Operation-state mapping validation remains
-tied to later operation-state integration.
+command and event subscriber execution. The model must include outbox and
+inbox mappings, either by calling `ApplyBondstoneOutbox` and
+`ApplyBondstoneInbox`, or by using the full `ApplyBondstonePersistence`
+helper. Operation-state mapping validation remains tied to operation-state
+store usage.
 
 ## Registration And Stores
 
@@ -60,15 +61,15 @@ Core durable stores does not force every DbContext model to map every
 Bondstone table; callers choose the full or granular mappings in
 `OnModelCreating` according to the capabilities the DbContext supports.
 
-Modules opt into EF-backed command transactions with
+Modules opt into EF-backed command and event subscriber transactions with
 `UseEntityFrameworkCorePersistence<TDbContext>` on `BondstoneModuleBuilder`.
 That module-owned registration records EF persistence metadata, reuses the
-provider-neutral EF durable store registrations, and attaches an EF command
-system pipeline behavior for modules that declare that capability. System
-behaviors are ordered by the module command runtime, so the EF transaction
-boundary wraps normal application pipeline behaviors. The host still owns the
-environment-specific DbContext provider configuration, connection strings,
-schema policy, and operational topology.
+provider-neutral EF durable store registrations, and attaches EF system
+pipeline behaviors for modules that declare that capability. System behaviors
+are ordered by the module command and event subscriber runtimes, so the EF
+transaction boundary wraps normal application pipeline behaviors. The host
+still owns the environment-specific DbContext provider configuration,
+connection strings, schema policy, and operational topology.
 
 For modular-monolith durable messaging, the command loop resolves durable EF
 stores by module name when module-specific provider registrations are present.
@@ -121,15 +122,16 @@ capture domain events, or introduce a generic mediator.
 The EF persistence scope is not a core abstraction and is not a required shape
 for non-EF providers.
 
-Module command pipeline behavior wraps `IEntityFrameworkCorePersistenceScope`
-so validation, handler state changes, inbox markers, outbox messages,
-operation-state updates, `SaveChangesAsync`, and transaction commit happen in
-one module boundary when those capabilities are used. The current applied EF
-module behavior wraps opted-in module command execution and saves handler
-changes, receive inbox markers, outgoing outbox messages, and successful
-operation-state completion updates through the EF scope. Receive failure
-state, retry state, stale receive recovery, and receive acknowledgement policy
-remain future durable-boundary pieces. The EF scope remains the lower-level
+Module command and event subscriber pipeline behaviors wrap
+`IEntityFrameworkCorePersistenceScope` so validation, handler state changes,
+inbox markers, outbox messages, operation-state updates where applicable,
+`SaveChangesAsync`, and transaction commit happen in one module boundary when
+those capabilities are used. The current applied EF module behavior wraps
+opted-in module command execution and event subscriber execution. Command
+receive can also save successful operation-state completion updates through
+the EF scope. Event receive operation-state completion, receive failure state,
+retry state, stale receive recovery, and receive acknowledgement policy remain
+future durable-boundary pieces. The EF scope remains the lower-level
 transaction companion, not a standalone public unit-of-work API.
 
 Sample and integration verification should assert persisted state after the EF

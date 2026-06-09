@@ -7,12 +7,12 @@ namespace Bondstone.Transport.Rebus.Inbox;
 
 public sealed class RebusModuleCommandEndpointHandler(
     RebusModuleCommandEndpointHandlerOptions options,
-    IRebusModuleCommandEndpointDispatcher endpointDispatcher)
+    IRebusDurableMessageEndpointDispatcher endpointDispatcher)
     : IHandleMessages<RebusDurableMessageEnvelope>
 {
     private readonly RebusModuleCommandEndpointHandlerOptions _options =
         options ?? throw new ArgumentNullException(nameof(options));
-    private readonly IRebusModuleCommandEndpointDispatcher _endpointDispatcher =
+    private readonly IRebusDurableMessageEndpointDispatcher _endpointDispatcher =
         endpointDispatcher ?? throw new ArgumentNullException(nameof(endpointDispatcher));
 
     public async Task Handle(RebusDurableMessageEnvelope message)

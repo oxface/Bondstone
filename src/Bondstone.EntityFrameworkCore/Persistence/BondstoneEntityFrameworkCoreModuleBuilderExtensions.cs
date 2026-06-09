@@ -17,16 +17,19 @@ public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
             EntityFrameworkCoreModulePersistence.ProviderName,
             typeof(TDbContext));
         module.Services.AddBondstoneEntityFrameworkCorePersistence<TDbContext>();
-        module.Services.TryAddEntityFrameworkCoreModuleTransactionSystemBehavior();
+        module.Services.TryAddEntityFrameworkCoreModuleTransactionSystemBehaviors();
 
         return module;
     }
 
-    private static void TryAddEntityFrameworkCoreModuleTransactionSystemBehavior(
+    private static void TryAddEntityFrameworkCoreModuleTransactionSystemBehaviors(
         this IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped(
             typeof(IModuleCommandSystemPipelineBehavior<>),
             typeof(EntityFrameworkCoreModuleTransactionBehavior<>)));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped(
+            typeof(IModuleEventSubscriberSystemPipelineBehavior<>),
+            typeof(EntityFrameworkCoreModuleEventSubscriberTransactionBehavior<>)));
     }
 }

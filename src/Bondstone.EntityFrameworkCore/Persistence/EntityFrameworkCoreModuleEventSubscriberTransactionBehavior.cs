@@ -3,25 +3,25 @@ using Bondstone.Modules;
 
 namespace Bondstone.EntityFrameworkCore.Persistence;
 
-internal sealed class EntityFrameworkCoreModuleTransactionBehavior<TCommand>(
+internal sealed class EntityFrameworkCoreModuleEventSubscriberTransactionBehavior<TEvent>(
     IServiceProvider serviceProvider,
     IBondstoneModuleRegistry moduleRegistry)
-    : IModuleCommandSystemPipelineBehavior<TCommand>
-    where TCommand : ICommand
+    : IModuleEventSubscriberSystemPipelineBehavior<TEvent>
+    where TEvent : IIntegrationEvent
 {
     private readonly EntityFrameworkCoreModuleTransactionRunner _transactionRunner = new(
         serviceProvider,
         moduleRegistry);
 
-    public int Order => ModuleCommandSystemPipelineOrder.Transaction;
+    public int Order => ModuleEventSubscriberSystemPipelineOrder.Transaction;
 
     public async ValueTask HandleAsync(
-        TCommand command,
-        ModuleCommandExecutionContext context,
-        ModuleCommandPipelineNext next,
+        TEvent integrationEvent,
+        ModuleEventSubscriberExecutionContext context,
+        ModuleEventSubscriberPipelineNext next,
         CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(integrationEvent);
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(next);
 

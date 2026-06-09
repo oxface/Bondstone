@@ -133,8 +133,8 @@ Status: **Complete for the current MVP surface**.
 
 Current phase: **Phase 1**.
 
-Current/next slice: **complete; future event receive applies the same boundary
-when Phase 5 event subscriber execution is implemented**.
+Current/next slice: **complete; future transport event receive applies the
+same payload boundary when Phase 5 Rebus subscription binding is implemented**.
 
 Accepted decision:
 [ADR 0029](adr/0029-durable-payload-serialization-boundary.md).
@@ -325,12 +325,13 @@ into a generic bus.
 Accepted decision:
 [ADR 0033](adr/0033-first-class-event-publish-subscribe-topology.md).
 
-Current/next slice: **module event subscriber execution path**. The first
-publish-side implementation slice is applied: Rebus can resolve event
-identities to topics and dispatch claimed event outbox records through Rebus
-publish/subscribe. Subscriber execution, subscription binding, event receive
-inbox behavior, choreography samples, and transport-backed event tests remain
-follow-up slices.
+Current/next slice: **event receive transaction and Rebus subscription
+binding**. The publish-side Rebus dispatch slice is applied: Rebus can resolve
+event identities to topics and dispatch claimed event outbox records through
+Rebus publish/subscribe. Core subscriber execution and per-subscriber receive
+inbox orchestration are applied. Provider-specific event transaction
+composition, Rebus subscription binding, transport receive, choreography
+samples, and transport-backed event tests remain follow-up slices.
 
 Slices:
 
@@ -341,14 +342,24 @@ Slices:
      applied with focused unit coverage.
 2. Module event handler/subscriber registration execution path:
    - subscriber registration metadata is already applied from Phase 0;
-   - subscriber execution remains the next Phase 5 slice.
-3. Event subscriber identity and inbox behavior.
+   - core subscriber execution through `IModuleEventSubscriberExecutor` is
+     applied with stable event identity, subscriber identity, typed handler
+     invocation, application pipeline behaviors, and module execution context;
+   - provider-specific transaction behavior for subscriber handlers remains a
+     follow-up slice.
+3. Event subscriber identity and inbox behavior:
+   - per-subscriber inbox identity is already defined from Phase 0;
+   - core per-subscriber inbox orchestration is applied for explicit receive
+     contexts through an event subscriber receive-inbox system behavior;
+   - transport-backed event receive and provider transaction save behavior
+     remain follow-up slices.
 4. Rebus event publish topology with topic/exchange naming.
 5. Rebus event subscription topology with subscriber endpoint/subscription
    binding.
 6. Event diagnostics and transport-backed tests.
 
-Remaining in Phase 5: **large, 4-5 slices after publish-side Rebus dispatch**.
+Remaining in Phase 5: **medium-large, 3-4 slices after publish-side dispatch
+and core subscriber execution**.
 
 ### Phase 6: Adapter Diversity Proof
 
@@ -461,8 +472,8 @@ Current automated coverage includes:
 - neutral unit tests for module command registration, startup scanning,
   validation, route lookup, module execution context, source-module scoped
   durable sending, source-module scoped durable event publishing, module event
-  registration metadata, event subscriber inbox-key naming, receive inbox
-  behavior, and direct handler execution;
+  registration metadata, event subscriber execution, event subscriber
+  inbox-key naming, receive inbox behavior, and direct handler execution;
 - neutral unit tests for durable payload JSON converter configuration flowing
   through command send and event publish;
 - EF Core unit and application tests for mapping, service registration, store

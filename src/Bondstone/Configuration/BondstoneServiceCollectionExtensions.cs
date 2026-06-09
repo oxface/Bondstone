@@ -32,6 +32,7 @@ public static class BondstoneServiceCollectionExtensions
         services.AddBondstoneDurablePayloadSerialization();
 
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
+        services.TryAddScoped<IModuleEventSubscriberExecutor, ModuleEventSubscriberExecutor>();
         services.TryAddScoped(serviceProvider =>
             new DurableModuleOutboxWriterResolver(
                 serviceProvider.GetServices<IDurableModuleOutboxWriter>(),
@@ -75,6 +76,12 @@ public static class BondstoneServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped(
             typeof(IModuleCommandPipelineBehavior<>),
             typeof(ValidationModuleCommandPipelineBehavior<>)));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped(
+            typeof(IModuleEventSubscriberSystemPipelineBehavior<>),
+            typeof(ModuleEventSubscriberReceiveInboxPipelineBehavior<>)));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped(
+            typeof(IModuleEventSubscriberSystemPipelineBehavior<>),
+            typeof(ModuleEventSubscriberExecutionContextPipelineBehavior<>)));
 
         var builder = new BondstoneBuilder(
             services,

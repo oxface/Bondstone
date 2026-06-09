@@ -7,10 +7,12 @@ public sealed class BondstoneConfigurationValidationContext
 {
     internal BondstoneConfigurationValidationContext(
         IReadOnlyCollection<BondstoneModuleRegistration> modules,
-        IReadOnlyCollection<ModuleCommandRoute> commandRoutes)
+        IReadOnlyCollection<ModuleCommandRoute> commandRoutes,
+        IReadOnlyCollection<ModuleEventSubscriberRegistration> eventSubscribers)
     {
         Modules = modules;
         CommandRoutes = commandRoutes;
+        EventSubscribers = eventSubscribers;
         ModulesByName = modules.ToDictionary(
             static module => module.Name,
             StringComparer.Ordinal);
@@ -26,6 +28,8 @@ public sealed class BondstoneConfigurationValidationContext
     public IReadOnlyCollection<ModuleCommandRoute> CommandRoutes { get; }
 
     public IReadOnlyCollection<ModuleCommandRoute> DurableCommandRoutes { get; }
+
+    public IReadOnlyCollection<ModuleEventSubscriberRegistration> EventSubscribers { get; }
 
     public bool ModuleHasDurableCommandHandlers(string moduleName)
     {

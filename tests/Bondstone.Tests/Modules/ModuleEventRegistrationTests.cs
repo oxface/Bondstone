@@ -42,6 +42,7 @@ public sealed class ModuleEventRegistrationTests
         {
             bondstone.Module("fulfillment", module =>
             {
+                ConfigureDurableMessaging(module);
                 module.Events.RegisterSubscriber<CustomerRegisteredEvent, CustomerRegisteredHandler>(
                     " fulfillment.customer-cache.v1 ");
             });
@@ -72,6 +73,7 @@ public sealed class ModuleEventRegistrationTests
         {
             bondstone.Module("fulfillment", module =>
             {
+                ConfigureDurableMessaging(module);
                 module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderSubmittedHandler>(
                     "sales.order.completed.v2",
                     "fulfillment.order-projector.v1");
@@ -114,16 +116,23 @@ public sealed class ModuleEventRegistrationTests
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
-                bondstone.Module("fulfillment", module =>
-                {
-                    module.Events.RegisterSubscriber<CustomerRegisteredEvent, CustomerRegisteredHandler>(
-                        "fulfillment.customer-cache.v1");
-                    module.Events.RegisterSubscriber<CustomerRegisteredEvent, AlternateCustomerRegisteredHandler>(
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Events.RegisterSubscriber<CustomerRegisteredEvent, CustomerRegisteredHandler>(
+                    "fulfillment.customer-cache.v1");
+                module.Events.RegisterSubscriber<CustomerRegisteredEvent, AlternateCustomerRegisteredHandler>(
                         "fulfillment.customer-cache.v1");
                 });
             }));
 
         Assert.Contains("already has an event subscriber", exception.Message, StringComparison.Ordinal);
+    }
+
+    private static void ConfigureDurableMessaging(BondstoneModuleBuilder module)
+    {
+        module.UseDurableMessaging();
+        module.UsePersistence("test persistence");
     }
 
     [IntegrationEventIdentity("sales.customer.registered.v1")]

@@ -225,8 +225,11 @@ implementation, rather than as only future vocabulary.
   Core event publish staging and module event registration metadata already
   exist. Rebus event publish dispatch and topic diagnostics are applied using
   native Rebus `IBus.Advanced.Routing` for commands and
-  `IBus.Advanced.Topics` for events. Subscription binding, subscriber
-  execution, event inbox receive behavior, external event wire formats,
+  `IBus.Advanced.Topics` for events. Core subscriber execution and
+  per-subscriber inbox orchestration are applied through
+  `IModuleEventSubscriberExecutor` and event subscriber pipeline behaviors.
+  Subscription binding, provider-specific event receive transaction behavior,
+  external event wire formats,
   provider-specific event queue/address handoff, and event transport-backed
   tests remain incremental Phase 5 slices. Adapter-diversity proof work should
   follow after the first-class event loop has enough shape and should validate
@@ -254,8 +257,16 @@ implementation, rather than as only future vocabulary.
   envelopes and headers; Rebus command and event outbox dispatch are separated
   behind the `IDurableOutboxTransport` adapter; focused unit tests cover topic
   resolution, diagnostics, missing-topic failure, and fluent builder dispatch.
-- Pending or deferred: Module event subscriber execution, event receive inbox
-  behavior, Rebus subscription binding, event subscription diagnostics,
+  The core module event subscriber executor now resolves subscribers by module,
+  stable event identity, and subscriber identity; executes typed event
+  handlers through event subscriber pipeline behaviors; sets the subscriber
+  module execution context through a system behavior; composes per-subscriber
+  inbox records for explicit receive contexts through a system behavior; skips
+  already processed inbox records; supports application subscriber pipeline
+  behaviors; and validates that durable event subscribers belong to
+  durable-messaging modules.
+- Pending or deferred: Provider-specific event receive transaction behavior,
+  Rebus subscription binding, event subscription diagnostics,
   transport-backed event tests, event choreography samples, domain event
   persistence, automatic integration-event publication, retry state, failure
   state, stale receive recovery, broker-specific topology creation, Azure
@@ -273,6 +284,11 @@ topology implementation slice with:
 After the native Rebus bus clarification, verification was rerun with:
 
 - `dotnet test tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application" --disable-build-servers`
+
+After the core event subscriber execution and per-subscriber inbox slice,
+verification was rerun with:
+
+- `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --filter "Category=Unit" --disable-build-servers`
 - `dotnet test Bondstone.slnx --configuration Release --filter "Category=Unit|Category=Application" --disable-build-servers`
 - `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
 - `pnpm format:check`

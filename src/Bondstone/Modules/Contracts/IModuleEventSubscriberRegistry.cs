@@ -6,4 +6,9 @@ public interface IModuleEventSubscriberRegistry
 
     IReadOnlyCollection<ModuleEventSubscriberRegistration> GetByMessageTypeName(
         string messageTypeName);
+
+    ModuleEventSubscriberRegistration GetSubscriber(
+        string moduleName,
+        string messageTypeName,
+        string subscriberIdentity);
 }

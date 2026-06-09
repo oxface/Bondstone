@@ -35,6 +35,35 @@ internal sealed class ModuleEventSubscriberRegistry : IModuleEventSubscriberRegi
         }
     }
 
+    public ModuleEventSubscriberRegistration GetSubscriber(
+        string moduleName,
+        string messageTypeName,
+        string subscriberIdentity)
+    {
+        string normalizedModuleName = moduleName.NormalizeRequired(
+            nameof(moduleName),
+            "Module name");
+        string normalizedMessageTypeName = messageTypeName.NormalizeRequired(
+            nameof(messageTypeName),
+            "Message type name");
+        string normalizedSubscriberIdentity = subscriberIdentity.NormalizeRequired(
+            nameof(subscriberIdentity),
+            "Subscriber identity");
+
+        var key = new SubscriberKey(
+            normalizedModuleName,
+            normalizedMessageTypeName,
+            normalizedSubscriberIdentity);
+
+        lock (_subscribers)
+        {
+            return _subscribers.TryGetValue(key, out ModuleEventSubscriberRegistration? subscriber)
+                ? subscriber
+                : throw new InvalidOperationException(
+                    $"Module '{normalizedModuleName}' has no event subscriber '{normalizedSubscriberIdentity}' for message type '{normalizedMessageTypeName}'.");
+        }
+    }
+
     internal ModuleEventSubscriberRegistration Register(
         ModuleEventSubscriberRegistration subscriber)
     {

@@ -52,7 +52,8 @@ public sealed class BondstoneBuilder
     {
         var context = new BondstoneConfigurationValidationContext(
             _moduleRegistry.Modules,
-            _commandRouteRegistry.Routes);
+            _commandRouteRegistry.Routes,
+            _eventSubscriberRegistry.Subscribers);
         foreach (IBondstoneConfigurationValidator validator in _configurationValidators)
         {
             validator.Validate(context);

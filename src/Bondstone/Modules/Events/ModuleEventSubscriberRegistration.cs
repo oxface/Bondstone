@@ -1,5 +1,6 @@
 using Bondstone.Messaging;
 using Bondstone.Utility;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bondstone.Modules;
 
@@ -10,11 +11,13 @@ public sealed class ModuleEventSubscriberRegistration
         Type eventType,
         MessageTypeRegistration messageTypeRegistration,
         string subscriberIdentity,
-        Type handlerType)
+        Type handlerType,
+        Func<IServiceProvider, object, ModuleEventSubscriberRegistration, ModuleEventSubscriberReceiveContext?, CancellationToken, ValueTask<ModuleEventSubscriberExecutionResult>> execute)
     {
         ArgumentNullException.ThrowIfNull(eventType);
         ArgumentNullException.ThrowIfNull(messageTypeRegistration);
         ArgumentNullException.ThrowIfNull(handlerType);
+        ArgumentNullException.ThrowIfNull(execute);
 
         if (!typeof(IIntegrationEvent).IsAssignableFrom(eventType))
         {
@@ -44,7 +47,10 @@ public sealed class ModuleEventSubscriberRegistration
             nameof(subscriberIdentity),
             "Subscriber identity");
         HandlerType = handlerType;
+        _execute = execute;
     }
+
+    private readonly Func<IServiceProvider, object, ModuleEventSubscriberRegistration, ModuleEventSubscriberReceiveContext?, CancellationToken, ValueTask<ModuleEventSubscriberExecutionResult>> _execute;
 
     public string ModuleName { get; }
 
@@ -58,6 +64,23 @@ public sealed class ModuleEventSubscriberRegistration
 
     public Type HandlerType { get; }
 
+    internal ValueTask<ModuleEventSubscriberExecutionResult> ExecuteAsync(
+        IServiceProvider serviceProvider,
+        object integrationEvent,
+        ModuleEventSubscriberReceiveContext? receiveContext,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+        ArgumentNullException.ThrowIfNull(integrationEvent);
+
+        return _execute(
+            serviceProvider,
+            integrationEvent,
+            this,
+            receiveContext,
+            ct);
+    }
+
     internal static ModuleEventSubscriberRegistration Create<TEvent, THandler>(
         string moduleName,
         MessageTypeRegistration messageTypeRegistration,
@@ -70,6 +93,107 @@ public sealed class ModuleEventSubscriberRegistration
             typeof(TEvent),
             messageTypeRegistration,
             subscriberIdentity,
-            typeof(THandler));
+            typeof(THandler),
+            ExecuteAsync<TEvent, THandler>);
+    }
+
+    private static async ValueTask<ModuleEventSubscriberExecutionResult> ExecuteAsync<TEvent, THandler>(
+        IServiceProvider serviceProvider,
+        object integrationEvent,
+        ModuleEventSubscriberRegistration subscriber,
+        ModuleEventSubscriberReceiveContext? receiveContext,
+        CancellationToken ct)
+        where TEvent : IIntegrationEvent
+        where THandler : class, IIntegrationEventHandler<TEvent>
+    {
+        if (integrationEvent is not TEvent typedEvent)
+        {
+            throw new ArgumentException(
+                $"Event subscriber '{subscriber.SubscriberIdentity}' for '{typeof(TEvent).FullName}' cannot handle '{integrationEvent.GetType().FullName}'.",
+                nameof(integrationEvent));
+        }
+
+        ModuleEventSubscriberPipelineNext handler = CreateHandler<TEvent, THandler>(
+            serviceProvider,
+            typedEvent);
+        IReadOnlyList<IModuleEventSubscriberPipelineBehavior<TEvent>> behaviors =
+            GetPipelineBehaviors<TEvent>(serviceProvider);
+        ModuleEventSubscriberPipeline pipeline = BuildPipeline(
+            typedEvent,
+            subscriber,
+            receiveContext,
+            behaviors,
+            handler);
+
+        await pipeline.InvokeAsync(ct);
+        return new ModuleEventSubscriberExecutionResult(pipeline.Context.ReceiveInboxResult);
+    }
+
+    private static ModuleEventSubscriberPipelineNext CreateHandler<TEvent, THandler>(
+        IServiceProvider serviceProvider,
+        TEvent integrationEvent)
+        where TEvent : IIntegrationEvent
+        where THandler : class, IIntegrationEventHandler<TEvent>
+    {
+        return async handlerCt =>
+        {
+            THandler handler = serviceProvider.GetRequiredService<THandler>();
+            await handler.HandleAsync(integrationEvent, handlerCt);
+        };
+    }
+
+    private static IReadOnlyList<IModuleEventSubscriberPipelineBehavior<TEvent>> GetPipelineBehaviors<TEvent>(
+        IServiceProvider serviceProvider)
+        where TEvent : IIntegrationEvent
+    {
+        IReadOnlyList<IModuleEventSubscriberPipelineBehavior<TEvent>> systemBehaviors = serviceProvider
+            .GetServices<IModuleEventSubscriberSystemPipelineBehavior<TEvent>>()
+            .OrderBy(static behavior => behavior.Order)
+            .Cast<IModuleEventSubscriberPipelineBehavior<TEvent>>()
+            .ToArray();
+        IReadOnlyList<IModuleEventSubscriberPipelineBehavior<TEvent>> applicationBehaviors = serviceProvider
+            .GetServices<IModuleEventSubscriberPipelineBehavior<TEvent>>()
+            .ToArray();
+
+        return systemBehaviors
+            .Concat(applicationBehaviors)
+            .ToArray();
+    }
+
+    private static ModuleEventSubscriberPipeline BuildPipeline<TEvent>(
+        TEvent integrationEvent,
+        ModuleEventSubscriberRegistration subscriber,
+        ModuleEventSubscriberReceiveContext? receiveContext,
+        IReadOnlyList<IModuleEventSubscriberPipelineBehavior<TEvent>> behaviors,
+        ModuleEventSubscriberPipelineNext handler)
+        where TEvent : IIntegrationEvent
+    {
+        var context = new ModuleEventSubscriberExecutionContext(
+            subscriber,
+            receiveContext);
+        ModuleEventSubscriberPipelineNext next = handler;
+
+        for (int index = behaviors.Count - 1; index >= 0; index--)
+        {
+            IModuleEventSubscriberPipelineBehavior<TEvent> behavior = behaviors[index];
+            ModuleEventSubscriberPipelineNext current = next;
+            next = behaviorCt => behavior.HandleAsync(
+                integrationEvent,
+                context,
+                current,
+                behaviorCt);
+        }
+
+        return new ModuleEventSubscriberPipeline(context, next);
+    }
+
+    private sealed record ModuleEventSubscriberPipeline(
+        ModuleEventSubscriberExecutionContext Context,
+        ModuleEventSubscriberPipelineNext Next)
+    {
+        public ValueTask InvokeAsync(CancellationToken ct)
+        {
+            return Next(ct);
+        }
     }
 }

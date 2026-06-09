@@ -75,22 +75,30 @@ a `MessageKind.Event` envelope through the outbox, and returns
 `DurableEventPublishResult` instead of subscriber results. Event envelopes do
 not specify `TargetModule`. Transport dispatch for event fan-out is Phase 5
 work. The first transport slice publishes claimed event outbox records to
-configured event topics; it does not imply subscriber execution has
-completed.
+configured event topics.
 
 Event handlers are typed integration event handlers registered as module
 subscriber metadata through `IIntegrationEventHandler<TEvent>` and
 `module.Events.RegisterSubscriber`. A subscriber belongs to a module and
 carries stable consumer-owned subscriber identity. Subscriber identity must
-not be derived from handler CLR names. Subscriber execution is Phase 5 work
-and uses an event-specific module execution path rather than the module
-command executor or a generic mediator.
+not be derived from handler CLR names. Core subscriber execution uses
+`IModuleEventSubscriberExecutor`. It resolves registered subscribers by
+module, stable event identity, and stable subscriber identity, then executes
+the typed handler through an event-specific subscriber pipeline rather than
+the module command executor or a generic mediator. System pipeline behaviors
+provide per-subscriber inbox handling and set the module execution context for
+the subscriber module while the handler runs.
 
 Event inbox identity is per subscriber: durable message id, subscriber module,
 and stable subscriber identity. It is not based on command target module
 because events intentionally have no target module. Each subscriber receives
 its own handle-once boundary and retry/dead-letter outcome through the
-transport endpoint or subscription that delivers that subscriber's copy.
+transport endpoint or subscription that delivers that subscriber's copy. Core
+subscriber execution can accept an explicit receive context with the
+per-subscriber inbox record; the receive-inbox pipeline behavior composes
+`IDurableInboxHandlerExecutor`. Provider-specific transaction behavior that
+saves event handler state, inbox markers, and outgoing messages together
+remains a follow-up Phase 5 slice.
 
 Domain events are module-local facts raised inside a module's domain model.
 They are not automatically integration events, and Bondstone does not
@@ -201,11 +209,13 @@ publish dispatch by mapping event identities to Rebus topics and publishing
 the same Bondstone wire envelope through native Rebus topics APIs. The adapter
 preserves Bondstone message identity in Bondstone-specific headers and maps
 trace context to W3C transport headers. Receive-side Rebus inbox integration
-is command-only until event subscriber execution is implemented. Rebus handlers can
-receive Bondstone wire envelopes, derive inbox keys from message id, target
-module, and explicit handler identity, compose
-`IRebusDurableInboxHandlerExecutor`, and acknowledge only after handle-once
-execution and its commit boundary succeed.
+is command-only until Rebus event subscription binding and transport receive
+are implemented. Rebus handlers can receive Bondstone wire envelopes, derive
+command inbox keys from message id, target module, and explicit handler
+identity, compose `IRebusDurableInboxHandlerExecutor`, and acknowledge only
+after handle-once execution and its commit boundary succeed. Future Rebus
+event receive will derive inbox keys from message id, subscriber module, and
+stable subscriber identity.
 
 Durable payload serialization is shared command/event infrastructure. Current
 command send, event publish, Rebus typed command receive, and Rebus module
@@ -258,10 +268,11 @@ endpoint name that supplied the destination.
 
 Durable command loop validation now runs during `AddBondstone` composition.
 Modules that opt into durable messaging must declare persistence, durable
-command handlers must belong to durable-messaging modules, and Rebus receive
-endpoints must target registered local modules that use durable messaging and
-have durable command handlers. These checks cover incomplete local durable
-receive topology before the Rebus listener starts handling messages.
+command handlers and durable event subscribers must belong to
+durable-messaging modules, and Rebus receive endpoints must target registered
+local modules that use durable messaging and have durable command handlers.
+These checks cover incomplete local durable receive topology before the Rebus
+listener starts handling messages.
 
 For durable commands, prefer queue-backed point-to-point delivery. A Rebus
 receive endpoint should usually represent a module-level command backlog so

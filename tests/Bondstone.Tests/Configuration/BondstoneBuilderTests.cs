@@ -222,6 +222,28 @@ public sealed class BondstoneBuilderTests
         Assert.Contains("sales.test.command.v1", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenEventSubscriberModuleDoesNotUseDurableMessaging_Throws()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    module.Events.RegisterSubscriber<TestEvent, TestEventHandler>(
+                        "fulfillment.test-event.v1");
+                });
+            }));
+
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("durable messaging", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("sales.test.event.v1", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment.test-event.v1", exception.Message, StringComparison.Ordinal);
+    }
+
     [DurableCommandIdentity("sales.test.command.v1")]
     public sealed record TestCommand : IDurableCommand;
 
@@ -229,6 +251,19 @@ public sealed class BondstoneBuilderTests
     {
         public ValueTask HandleAsync(
             TestCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [IntegrationEventIdentity("sales.test.event.v1")]
+    public sealed record TestEvent : IIntegrationEvent;
+
+    public sealed class TestEventHandler : IIntegrationEventHandler<TestEvent>
+    {
+        public ValueTask HandleAsync(
+            TestEvent integrationEvent,
             CancellationToken ct = default)
         {
             return ValueTask.CompletedTask;

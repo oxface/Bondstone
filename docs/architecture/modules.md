@@ -117,9 +117,12 @@ durable send, publish, receive, and subscribe: outbox writing, inbox
 registration/storage, module transaction behavior, source-module scope,
 subscriber identity metadata, and durable receive orchestration. The current
 implementation can stage durable event publish envelopes and record event
-subscriber metadata, but event fan-out dispatch and subscriber execution are
-deferred. Advanced APIs may later expose separate inbox, outbox, subscriber,
-or operation-state pieces, but they should not be the common path.
+subscriber metadata, publish event outbox records through configured Rebus
+topics, and execute registered event subscribers through a core module
+subscriber executor. Transport event receive, subscription binding, and
+provider transaction composition for event handlers remain follow-up slices.
+Advanced APIs may later expose separate inbox, outbox, subscriber, or
+operation-state pieces, but they should not be the common path.
 
 Current core registration records module metadata and durable messaging
 capability through `IBondstoneModuleRegistry`. When a module combines
@@ -136,9 +139,10 @@ that mapping.
 host configuration runs. A module that calls `UseDurableMessaging` must
 declare persistence through `UsePersistence` or a provider-specific opt-in
 such as `UseEntityFrameworkCorePersistence<TDbContext>`. A durable command
-handler can be registered only on a module that uses durable messaging. These
-checks fail during composition with module, handler, and message identity
-details so incomplete durable command loops do not reach runtime dispatch.
+handler or durable event subscriber can be registered only on a module that
+uses durable messaging. These checks fail during composition with module,
+handler, subscriber, and message identity details so incomplete durable
+message loops do not reach runtime dispatch.
 
 Module event registration lives under `module.Events`. Published integration
 events can be registered with `RegisterPublishedEvent`; event subscribers can
@@ -148,12 +152,17 @@ message identity, subscriber module, stable subscriber identity, and handler
 type.
 
 First-class subscriber execution is Phase 5 work accepted by
-[ADR 0033](../adr/0033-first-class-event-publish-subscribe-topology.md). It
-will use a module event execution path rather than `IModuleCommandExecutor`.
-That path must preserve module-owned persistence boundaries so event handler
-state, inbox markers, and outgoing durable messages commit in the subscriber
-module boundary. Transport subscription binding and subscriber execution are
-separate slices from event publish dispatch.
+[ADR 0033](../adr/0033-first-class-event-publish-subscribe-topology.md). Core
+now provides `IModuleEventSubscriberExecutor`, which resolves subscribers by
+module, stable event identity, and stable subscriber identity, then executes
+typed `IIntegrationEventHandler<TEvent>` handlers through an event-specific
+subscriber pipeline. System pipeline behaviors set the module execution
+context for the subscriber module and can wrap handler execution with a
+per-subscriber receive inbox record. Provider-specific transaction behavior
+that commits event handler state, inbox markers, and outgoing durable messages
+inside the subscriber module boundary remains a follow-up slice. Transport
+subscription binding is separate from event publish dispatch and core
+subscriber execution.
 
 ## Persistence Capability
 

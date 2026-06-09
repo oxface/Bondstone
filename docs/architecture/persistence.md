@@ -56,6 +56,9 @@ Future non-EF providers such as Dapper or direct ADO.NET packages should
 implement the core `Bondstone` persistence contracts directly and own their
 connection or transaction boundary in their own package. They should not depend
 on EF entity mappings, `DbContext`, or `IEntityFrameworkCorePersistenceScope`.
+After first-class events have enough shape, at least one non-EF persistence
+adapter should be built as an adapter-diversity proof before reliability work
+hardens too deeply around EF Core.
 
 ## Deferred Persistence Decisions
 

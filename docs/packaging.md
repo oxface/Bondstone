@@ -20,6 +20,12 @@ Ship one NuGet package per package project. Package IDs match project names:
 - `Bondstone.EntityFrameworkCore.Postgres`
 - `Bondstone.Transport.Rebus`
 
+Future adapter-diversity proof packages are expected once the first-class
+event loop has enough shape. Likely package IDs include
+`Bondstone.Transport.ServiceBus`, `Bondstone.Transport.RabbitMq`, and a
+non-EF persistence provider package. Exact names, dependency direction, and
+support scope require ADR review before package creation.
+
 ## Package Dependencies
 
 Use this dependency direction:

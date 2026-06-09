@@ -28,6 +28,16 @@ because a module moves from in-process composition to a separate service.
 - Service extraction should be a supported evolution path, not a separate
   rewrite story.
 
+## Adapter Diversity
+
+Rebus, EF Core, and PostgreSQL are the first implementation path, not a
+compatibility ceiling. After the first-class event loop has enough shape,
+Bondstone should add thin adapter proof slices for additional transports such
+as Azure Service Bus and RabbitMQ, and for at least one non-EF persistence
+adapter such as direct ADO.NET or Dapper. The goal is to expose abstraction
+gaps early while keeping each provider's topology and transaction model
+native.
+
 ## Topic Docs
 
 - [messaging.md](messaging.md) records durable command, message identity, and

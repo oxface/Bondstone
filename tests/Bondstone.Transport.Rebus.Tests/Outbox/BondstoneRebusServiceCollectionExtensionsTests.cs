@@ -44,7 +44,15 @@ public sealed class BondstoneRebusServiceCollectionExtensionsTests
                 && descriptor.ImplementationInstance is RebusModuleDestinationResolver);
         Assert.Contains(
             services,
+            descriptor => descriptor.ServiceType == typeof(IRebusOutboxEventTopicResolver)
+                && descriptor.ImplementationInstance is RebusEventTopicResolver);
+        Assert.Contains(
+            services,
             descriptor => descriptor.ServiceType == typeof(IRebusCommandTopologyDiagnostics)
+                && descriptor.ImplementationInstance is not null);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IRebusEventTopologyDiagnostics)
                 && descriptor.ImplementationInstance is not null);
     }
 

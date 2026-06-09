@@ -144,8 +144,16 @@ Module event registration lives under `module.Events`. Published integration
 events can be registered with `RegisterPublishedEvent`; event subscribers can
 be registered with `RegisterSubscriber<TEvent, THandler>` where handlers
 implement `IIntegrationEventHandler<TEvent>`. Registration records stable
-message identity and stable subscriber identity only. It does not execute
-subscribers or bind transport subscriptions yet.
+message identity, subscriber module, stable subscriber identity, and handler
+type.
+
+First-class subscriber execution is Phase 5 work accepted by
+[ADR 0033](../adr/0033-first-class-event-publish-subscribe-topology.md). It
+will use a module event execution path rather than `IModuleCommandExecutor`.
+That path must preserve module-owned persistence boundaries so event handler
+state, inbox markers, and outgoing durable messages commit in the subscriber
+module boundary. Transport subscription binding and subscriber execution are
+separate slices from event publish dispatch.
 
 ## Persistence Capability
 
@@ -248,12 +256,12 @@ of the same host-level processing unit. A shared database inbox is fine; a
 shared transport queue should be chosen deliberately because it couples
 backlog, throughput, and failure recovery.
 
-Future event topology should use topic and subscription language instead of
-command route language. A durable event topic represents the publish side of
-an integration event identity, while a subscriber endpoint or subscription
-binding represents one module subscriber's copy and inbox identity. Hosts own
-the concrete topic, exchange, queue, subscription storage, listener, retry,
-and dead-letter configuration through the transport provider.
+Event topology uses topic and subscription language instead of command route
+language. A durable event topic represents the publish side of an integration
+event identity, while a subscriber endpoint or subscription binding represents
+one module subscriber's copy and inbox identity. Hosts own the concrete topic,
+exchange, queue, subscription storage, listener, retry, and dead-letter
+configuration through the transport provider.
 
 Topic-based transports may expose different topology while keeping the same
 module concepts: route outgoing durable commands by stable target module, bind

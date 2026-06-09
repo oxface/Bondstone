@@ -209,6 +209,28 @@ worker policy Rebus-native while Bondstone owns durable module dispatch,
 message identity, inbox handling, module command execution, and the Rebus
 handler binding needed for the configured module receive endpoint.
 
+For integration event publish dispatch, configure Rebus event topics on the
+same Bondstone Rebus transport builder. Bondstone dispatches through the
+application-owned Rebus bus, using Rebus routing for commands and Rebus topics
+for events. The first Phase 5 slice is publish-side only: claimed event outbox
+records can be published to topics, while subscriber execution and
+subscription binding remain follow-up work.
+
+```csharp
+builder.Services.AddBondstone(bondstone =>
+{
+    bondstone.AddOrderingModule(connectionString);
+
+    bondstone.UseRebusTransport(rebus =>
+    {
+        rebus.UseEventTopicConvention();
+        rebus.RouteEvent("ordering.order.submitted.v1")
+            .ToTopic("ordering-events");
+    });
+    bondstone.Outbox.UseWorker();
+});
+```
+
 In the modular-monolith shape, each module should normally declare its own EF
 `DbContext`, expose module-owned Bondstone registration, and bind that context
 to PostgreSQL durable persistence. Durable sends write to the source module

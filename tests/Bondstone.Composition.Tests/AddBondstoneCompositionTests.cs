@@ -11,8 +11,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Rebus.Bus;
 using Rebus.Bus.Advanced;
 using Rebus.Routing;
+using System.Reflection;
 using Xunit;
 
 namespace Bondstone.Composition.Tests;
@@ -25,7 +27,7 @@ public sealed class AddBondstoneCompositionTests
     {
         var services = new ServiceCollection();
         services.AddOptions();
-        services.AddSingleton<IRoutingApi, NoOpRoutingApi>();
+        services.AddSingleton(CreateBus());
         services.AddSingleton<ILogger<DurableOutboxWorker>>(
             NullLogger<DurableOutboxWorker>.Instance);
 
@@ -194,6 +196,72 @@ public sealed class AddBondstoneCompositionTests
 
     private sealed record TypedCompositionCommand(string OrderId) : IDurableCommand;
 
+    private static IBus CreateBus()
+    {
+        IBus bus = DispatchProxy.Create<IBus, RebusBusProxy>();
+        var proxy = (RebusBusProxy)(object)bus;
+        proxy.AdvancedApi = CreateAdvancedApi();
+        return bus;
+    }
+
+    private static IAdvancedApi CreateAdvancedApi()
+    {
+        IAdvancedApi advancedApi =
+            DispatchProxy.Create<IAdvancedApi, RebusAdvancedApiProxy>();
+        var proxy = (RebusAdvancedApiProxy)(object)advancedApi;
+        proxy.RoutingApi = new NoOpRoutingApi();
+        proxy.TopicsApi = new NoOpTopicsApi();
+        return advancedApi;
+    }
+
+    private class RebusBusProxy : DispatchProxy
+    {
+        public IAdvancedApi AdvancedApi { get; set; } = null!;
+
+        protected override object? Invoke(
+            MethodInfo? targetMethod,
+            object?[]? args)
+        {
+            if (targetMethod?.Name == "get_Advanced")
+            {
+                return AdvancedApi;
+            }
+
+            if (targetMethod?.Name == nameof(IDisposable.Dispose))
+            {
+                return null;
+            }
+
+            if (targetMethod?.ReturnType == typeof(Task))
+            {
+                return Task.CompletedTask;
+            }
+
+            throw new NotSupportedException(
+                $"Rebus bus member '{targetMethod?.Name}' is not supported by this test proxy.");
+        }
+    }
+
+    private class RebusAdvancedApiProxy : DispatchProxy
+    {
+        public IRoutingApi RoutingApi { get; set; } = null!;
+
+        public ITopicsApi TopicsApi { get; set; } = null!;
+
+        protected override object? Invoke(
+            MethodInfo? targetMethod,
+            object?[]? args)
+        {
+            return targetMethod?.Name switch
+            {
+                "get_Routing" => RoutingApi,
+                "get_Topics" => TopicsApi,
+                _ => throw new NotSupportedException(
+                    $"Rebus advanced API member '{targetMethod?.Name}' is not supported by this test proxy."),
+            };
+        }
+    }
+
     private sealed class NoOpRoutingApi : IRoutingApi
     {
         public Task Send(
@@ -217,6 +285,27 @@ public sealed class AddBondstoneCompositionTests
             TimeSpan delay,
             object message,
             IDictionary<string, string> optionalHeaders = null!)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class NoOpTopicsApi : ITopicsApi
+    {
+        public Task Publish(
+            string topic,
+            object message,
+            IDictionary<string, string> optionalHeaders = null!)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task Subscribe(string topic)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task Unsubscribe(string topic)
         {
             return Task.CompletedTask;
         }

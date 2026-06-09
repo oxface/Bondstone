@@ -16,7 +16,8 @@ public static class BondstoneRebusBuilderExtensions
         configure(rebus);
 
         builder.Services.AddBondstoneRebusOutboxTransport(
-            rebus.CommandDestinationTopology);
+            rebus.CommandDestinationTopology,
+            rebus.EventTopicTopology);
         if (rebus.ReceiveEndpointBindings.Count > 0)
         {
             builder.AddConfigurationValidator(
@@ -42,7 +43,8 @@ public static class BondstoneRebusBuilderExtensions
         configure(rebus);
 
         outbox.Services.AddBondstoneRebusOutboxTransport(
-            rebus.CommandDestinationTopology);
+            rebus.CommandDestinationTopology,
+            rebus.EventTopicTopology);
         outbox.MarkTransport("Rebus");
 
         return outbox;

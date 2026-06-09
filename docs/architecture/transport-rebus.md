@@ -2,18 +2,14 @@
 
 `Bondstone.Transport.Rebus` owns Rebus-specific transport adapter behavior.
 
-## Outgoing Commands
+## Outgoing Messages
 
 `RebusDurableOutboxTransport` implements `IDurableOutboxTransport` for claimed
-command outbox records. It sends one command through Rebus' explicit routing
-API after resolving a destination address from the claimed
-`DurableOutboxRecord`.
-
-The first adapter supports `MessageKind.Command` dispatch only. Core can stage
-`MessageKind.Event` envelopes through `IDurableEventPublisher`, but Rebus
-event publish/subscribe semantics remain deferred because Rebus topic
-ownership, subscription storage, and module event topology need their own
-transport decision.
+outbox records over the application-owned Rebus `IBus`. It sends commands
+through `IBus.Advanced.Routing` after resolving a destination address from the
+claimed `DurableOutboxRecord`. Phase 5 adds event publish dispatch: claimed
+`MessageKind.Event` records are published through `IBus.Advanced.Topics`
+after resolving a topic from the stable integration event identity.
 
 `RebusModuleDestinationResolver` maps Bondstone target modules to Rebus
 destination addresses. This keeps module identity separate from endpoint
@@ -99,19 +95,23 @@ Commands should use Rebus queues. Topic or subscription topology is reserved
 for future event publish/subscribe work, where each subscriber needs its own
 copy of an event.
 
-Future event support should use Rebus publish/subscribe vocabulary instead of
-command routing vocabulary. Durable event publish topology may map an
-integration event identity to a Rebus topic or equivalent publish subject.
-Durable event subscription topology may bind a subscriber module and stable
-subscriber identity to a Rebus endpoint/subscription. Bondstone topology
-metadata should describe those durable message relationships; applications
-still configure Rebus-native subscription storage, broker transport,
-connection string, serializer, worker count, retry/dead-letter policy, and
-input queue through Rebus.
+Event support uses Rebus publish/subscribe vocabulary instead of command
+routing vocabulary. Durable event publish topology maps an integration event
+identity to a Rebus topic. Durable event subscription topology binds a
+subscriber module and stable subscriber identity to a Rebus
+endpoint/subscription. Bondstone topology metadata describes those durable
+message relationships; applications still configure Rebus-native subscription
+storage, broker transport, connection string, serializer, worker count,
+retry/dead-letter policy, and input queue through Rebus.
 
-Subscriber inbox identity is per subscriber. A future Rebus event receive
-pipeline should derive event inbox keys from Bondstone message id, subscriber
-module, and stable subscriber identity, not from command target module.
+External event handoff to a queue or address, where another infrastructure
+component owns fan-out, remains a separate provider-specific topology slice.
+It should be explicit when added; Bondstone should not silently treat event
+publish fallback as command-style routing.
+
+Subscriber inbox identity is per subscriber. A Rebus event receive pipeline
+must derive event inbox keys from Bondstone message id, subscriber module, and
+stable subscriber identity, not from command target module.
 Each subscription's copy can then be retried, dead-lettered, and marked
 processed independently.
 
@@ -239,9 +239,9 @@ dead-letter policy through Rebus-native APIs.
 
 ## Deferred Rebus Work
 
-Deferred Rebus work includes event publish/subscribe semantics, endpoint
-dispatch diagnostics, route or destination circuit breaking, stale-claim
-recovery sweeps, dead-letter routing, receive retry state, stale receive
-recovery, event topic/subscription diagnostics, and worker metrics. These
-remain hosting, persistence, or future receive-pipeline decisions unless a
-later ADR accepts a transport-specific policy.
+Deferred Rebus work includes event subscription binding, event subscriber
+execution, event subscription diagnostics, endpoint dispatch diagnostics,
+route or destination circuit breaking, stale-claim recovery sweeps,
+dead-letter routing, receive retry state, stale receive recovery, and worker
+metrics. These remain hosting, persistence, or future receive-pipeline
+decisions unless a later ADR accepts a transport-specific policy.

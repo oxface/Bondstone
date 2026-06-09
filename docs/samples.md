@@ -81,3 +81,9 @@ with the repository integration test entrypoint.
 
 Once the MVP surface settles, polish or replace this sample so it demonstrates
 the final preferred public API and application structure.
+
+Phase 5 event samples should remain narrow until subscriber execution is
+implemented. The first event sample update should prove explicit integration
+event publication and Rebus topic dispatch only if it stays small; broader
+event choreography and automatic domain-event publication remain out of the
+sample until later ADR-backed slices accept them.

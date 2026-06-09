@@ -11,6 +11,11 @@ accepts a `DurableMessageEnvelope`; provider implementations persist that
 envelope inside the caller's local persistence transaction when the caller
 needs atomic source-state-plus-outbox behavior.
 
+Durable commands and integration events share this outbox boundary. Commands
+dispatch to one target module destination. Integration events dispatch to
+transport event topology, such as a Rebus topic, and each subscriber's receive
+copy owns its own inbox outcome.
+
 `DurableOutboxRecord` is a persistence-neutral record for a stored envelope,
 the UTC time it was stored, and its current `DurableOutboxDispatchState`.
 
@@ -67,8 +72,12 @@ such as PostgreSQL module persistence registration.
 ## Inbox
 
 `DurableInboxMessageKey` identifies receive-side deduplication by stable
-message id, target module name, and handler identity. Handler identity is
-free-form stable text; it should not be derived from handler CLR names.
+message id, module name, and handler or subscriber identity. For commands, the
+module name is the command target module and the identity is the stable
+handler identity. For integration events, the module name is the subscriber
+module and the identity is the stable subscriber identity. Handler and
+subscriber identities are free-form stable text; they should not be derived
+from handler CLR names.
 
 `DurableInboxRecord` represents the persistence-neutral receive-side inbox
 state for that key. It records when a message was received and, when complete,

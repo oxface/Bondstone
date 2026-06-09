@@ -72,13 +72,20 @@ Start with:
   reads, local composition, or operations that tolerate failure. Domain events
   are module-local/private unless module code explicitly publishes an
   integration event.
-- Core can stage durable integration events through the outbox, but event
-  fan-out, Rebus publish/subscribe dispatch, subscriber execution, and
-  choreography samples remain later MVP work.
+- First-class integration events are Phase 5 work. Follow
+  [ADR 0033](docs/adr/0033-first-class-event-publish-subscribe-topology.md):
+  implement event publish dispatch, subscriber execution, per-subscriber
+  inbox behavior, Rebus topic/subscription topology, diagnostics, and tests as
+  narrow slices. Do not fold domain event persistence or broad choreography
+  samples into the initial event loop.
 - Transport adapter topology should describe durable message topology, such as
   command queues or future event topics/subscriptions, while broker
   connection, worker, retry, dead-letter, serializer, and subscription-storage
   setup stays provider-native.
+- After first-class events have enough shape, use thin adapter-diversity proof
+  slices for future transports such as Azure Service Bus and RabbitMQ, and at
+  least one non-EF persistence adapter, before hardening too deeply around
+  Rebus, EF Core, or PostgreSQL.
 - Durable behavior, public API shape, package boundaries, provider support,
   transport support, migration strategy, and compatibility policy require ADRs
   before broad implementation.

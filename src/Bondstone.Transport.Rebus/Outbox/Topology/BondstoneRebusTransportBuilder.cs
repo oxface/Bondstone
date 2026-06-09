@@ -7,11 +7,14 @@ public sealed class BondstoneRebusTransportBuilder
 {
     private readonly Dictionary<string, string> _destinationAddressesByTargetModule =
         new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _topicNamesByMessageTypeName =
+        new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _acceptedModuleNamesByEndpointName =
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _endpointNamesByAcceptedModuleName =
         new(StringComparer.Ordinal);
     private Func<string, string>? _moduleQueueNameConvention;
+    private Func<string, string>? _eventTopicNameConvention;
 
     internal IReadOnlyCollection<RebusModuleReceiveEndpointBinding> ReceiveEndpointBindings =>
         _acceptedModuleNamesByEndpointName
@@ -26,6 +29,11 @@ public sealed class BondstoneRebusTransportBuilder
             _destinationAddressesByTargetModule,
             _endpointNamesByAcceptedModuleName,
             _moduleQueueNameConvention);
+
+    internal RebusEventTopicTopology EventTopicTopology =>
+        new(
+            _topicNamesByMessageTypeName,
+            _eventTopicNameConvention);
 
     public BondstoneRebusModuleRouteBuilder RouteModule(string targetModule)
     {
@@ -52,6 +60,33 @@ public sealed class BondstoneRebusTransportBuilder
                 "Rebus module queue name");
 
         return this;
+    }
+
+    public BondstoneRebusTransportBuilder UseEventTopicConvention()
+    {
+        return UseEventTopicConvention(static messageTypeName => messageTypeName);
+    }
+
+    public BondstoneRebusTransportBuilder UseEventTopicConvention(
+        Func<string, string> topicNameFactory)
+    {
+        ArgumentNullException.ThrowIfNull(topicNameFactory);
+
+        _eventTopicNameConvention = messageTypeName =>
+            topicNameFactory(messageTypeName).NormalizeRequired(
+                nameof(topicNameFactory),
+                "Rebus event topic name");
+
+        return this;
+    }
+
+    public BondstoneRebusEventRouteBuilder RouteEvent(string messageTypeName)
+    {
+        string normalizedMessageTypeName = messageTypeName.NormalizeRequired(
+            nameof(messageTypeName),
+            "Message type name");
+
+        return new BondstoneRebusEventRouteBuilder(this, normalizedMessageTypeName);
     }
 
     public BondstoneRebusTransportBuilder ReceiveModule(string moduleName)
@@ -111,6 +146,32 @@ public sealed class BondstoneRebusTransportBuilder
         _destinationAddressesByTargetModule.Add(
             targetModule,
             normalizedDestinationAddress);
+    }
+
+    internal void SetEventTopicName(
+        string messageTypeName,
+        string topicName)
+    {
+        string normalizedTopicName = topicName.NormalizeRequired(
+            nameof(topicName),
+            "Rebus event topic name");
+
+        if (_topicNamesByMessageTypeName.TryGetValue(
+            messageTypeName,
+            out string? existingTopicName))
+        {
+            if (existingTopicName == normalizedTopicName)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Message type '{messageTypeName}' already publishes to Rebus event topic '{existingTopicName}'.");
+        }
+
+        _topicNamesByMessageTypeName.Add(
+            messageTypeName,
+            normalizedTopicName);
     }
 
     internal void AcceptModuleOnEndpoint(

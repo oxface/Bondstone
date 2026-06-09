@@ -44,6 +44,10 @@ Implemented surface includes:
 - Rebus outgoing command transport for claimed outbox records, including
   destination resolution, command destination diagnostics, wire-envelope
   mapping, durable headers, and W3C trace headers;
+- Rebus outgoing event publish transport for claimed event outbox records,
+  including explicit event-topic mapping, event-topic convention fallback,
+  event-topic diagnostics, wire-envelope mapping, durable headers, and W3C
+  trace headers;
 - Rebus low-level receive inbox adapter and typed command receive pipeline;
 - Rebus module command receive pipeline groundwork that dispatches wire
   envelopes into `IModuleCommandExecutor` with explicit durable inbox records;
@@ -318,19 +322,72 @@ Remaining in Phase 4: **complete for the current adoption-proof surface**.
 Goal: publish/subscribe is first-class and durable without turning Bondstone
 into a generic bus.
 
+Accepted decision:
+[ADR 0033](adr/0033-first-class-event-publish-subscribe-topology.md).
+
+Current/next slice: **module event subscriber execution path**. The first
+publish-side implementation slice is applied: Rebus can resolve event
+identities to topics and dispatch claimed event outbox records through Rebus
+publish/subscribe. Subscriber execution, subscription binding, event receive
+inbox behavior, choreography samples, and transport-backed event tests remain
+follow-up slices.
+
 Slices:
 
-1. Event outbox staging and dispatch after the guardrail abstractions settle.
-2. Module event handler/subscriber registration execution path.
+1. Event outbox staging and dispatch after the guardrail abstractions settle:
+   - event staging through `IDurableEventPublisher` is already applied from
+     Phase 0;
+   - Rebus event topic resolution, diagnostics, and publish dispatch are
+     applied with focused unit coverage.
+2. Module event handler/subscriber registration execution path:
+   - subscriber registration metadata is already applied from Phase 0;
+   - subscriber execution remains the next Phase 5 slice.
 3. Event subscriber identity and inbox behavior.
 4. Rebus event publish topology with topic/exchange naming.
 5. Rebus event subscription topology with subscriber endpoint/subscription
    binding.
 6. Event diagnostics and transport-backed tests.
 
-Remaining in Phase 5: **large, 5-6 slices**.
+Remaining in Phase 5: **large, 4-5 slices after publish-side Rebus dispatch**.
 
-### Phase 6: Reliability And Recovery
+### Phase 6: Adapter Diversity Proof
+
+Goal: test Bondstone's abstractions against more than Rebus, EF Core, and
+PostgreSQL before hardening reliability policy too deeply around the first
+implementation path.
+
+This phase should be proof-oriented, not a broad production-support promise.
+Each adapter slice should be thin enough to reveal API, topology,
+transaction-boundary, testing-fixture, and package-boundary gaps while leaving
+deep reliability, migration, and operational polish to later work.
+
+Expected slices:
+
+1. ADR/design for adapter-diversity proof scope:
+   - supported proof adapters and package names;
+   - provider-native topology vocabulary;
+   - minimum command/event send and receive behavior to prove;
+   - integration-test expectations and required external infrastructure.
+2. Azure Service Bus transport proof:
+   - command send to queue;
+   - event publish/subscription shape using Service Bus topics/subscriptions;
+   - provider-native setup remains app-owned.
+3. RabbitMQ transport proof:
+   - command send through RabbitMQ-native exchange/routing-key/queue
+     vocabulary;
+   - event publish/subscription shape through exchange/binding semantics;
+   - provider-native setup remains app-owned.
+4. Non-EF persistence proof, such as direct ADO.NET or Dapper:
+   - implement core outbox/inbox/operation-state contracts directly;
+   - prove module transaction boundaries without `DbContext`;
+   - keep migration/schema strategy narrow and explicit.
+5. Compare API friction found by the adapter proofs and record narrow follow-up
+   slices before broad reliability hardening.
+
+Remaining in Phase 6: **medium-large, proof-oriented 4-5 slices after Phase 5
+has enough command/event loop shape**.
+
+### Phase 7: Reliability And Recovery
 
 Goal: the happy path is operationally resilient.
 
@@ -345,9 +402,9 @@ Slices:
    independently owned module outboxes.
 7. Advanced dispatcher and worker options.
 
-Remaining in Phase 6: **medium-large, 6-7 slices**.
+Remaining in Phase 7: **medium-large, 6-7 slices**.
 
-### Phase 7: Provider And Migration Usefulness
+### Phase 8: Provider And Migration Usefulness
 
 Goal: persistence providers are usable in real applications without relying on
 hidden project conventions.
@@ -360,9 +417,9 @@ Slices:
 4. Broader provider fixtures.
 5. Operation-state optimistic concurrency policy.
 
-Remaining in Phase 7: **medium, 4-5 slices**.
+Remaining in Phase 8: **medium, 4-5 slices**.
 
-### Phase 8: Domain Event Persistence Capability
+### Phase 9: Domain Event Persistence Capability
 
 Goal: support transactional collection and persistence of module-local domain
 events without forcing consumers to adopt a Bondstone aggregate model or
@@ -394,7 +451,7 @@ Slices:
 4. Optional mapping helper from domain events to integration events only after
    first-class integration events exist, keeping publication explicit.
 
-Remaining in Phase 8: **medium, 3-4 slices**.
+Remaining in Phase 9: **medium, 3-4 slices**.
 
 ## Verification Surface
 
@@ -451,6 +508,8 @@ transport integration tests when a slice changes provider behavior.
 - Scheduling, TTL, priority, reply-to, tenant, or transport-native metadata if
   a later durable scenario justifies it.
 - Partition-key ordering and scaling semantics.
+- Adapter-diversity proof beyond the current Rebus, EF Core, and PostgreSQL
+  path remains scheduled after first-class event loop work has enough shape.
 - Provider-specific dispatch behavior beyond PostgreSQL claiming.
 - Additional integration tests with neutral Bondstone fixtures.
 

@@ -4,9 +4,11 @@ using Bondstone.Modules;
 using Bondstone.Persistence;
 using Bondstone.Transport.Rebus.Outbox;
 using Microsoft.Extensions.DependencyInjection;
+using Rebus.Bus;
 using Rebus.Bus.Advanced;
 using Rebus.Messages;
 using Rebus.Routing;
+using System.Reflection;
 using Xunit;
 
 namespace Bondstone.Transport.Rebus.Tests.Outbox;
@@ -19,9 +21,9 @@ public sealed class RebusDurableOutboxTransportTests
     {
         DurableOutboxRecord record = CreateRecord();
         var routingApi = new RecordingRoutingApi();
-        var transport = new RebusDurableOutboxTransport(
+        var transport = CreateTransport(
             routingApi,
-            new RebusModuleDestinationResolver(
+            destinationResolver: new RebusModuleDestinationResolver(
                 new Dictionary<string, string>
                 {
                     ["fulfillment"] = "fulfillment-queue",
@@ -55,9 +57,9 @@ public sealed class RebusDurableOutboxTransportTests
     {
         DurableOutboxRecord record = CreateRecord();
         var routingApi = new RecordingRoutingApi();
-        var transport = new RebusDurableOutboxTransport(
+        var transport = CreateTransport(
             routingApi,
-            new RebusModuleDestinationResolver(
+            destinationResolver: new RebusModuleDestinationResolver(
                 new Dictionary<string, string>
                 {
                     ["fulfillment"] = "fulfillment-queue",
@@ -90,9 +92,9 @@ public sealed class RebusDurableOutboxTransportTests
     {
         DurableOutboxRecord record = CreateRecord();
         var routingApi = new RecordingRoutingApi();
-        var transport = new RebusDurableOutboxTransport(
+        var transport = CreateTransport(
             routingApi,
-            new RebusModuleDestinationResolver(
+            destinationResolver: new RebusModuleDestinationResolver(
                 new Dictionary<string, string>(),
                 static targetModule => $"module-{targetModule}"));
 
@@ -107,9 +109,9 @@ public sealed class RebusDurableOutboxTransportTests
     {
         DurableOutboxRecord record = CreateRecord();
         var routingApi = new RecordingRoutingApi();
-        var transport = new RebusDurableOutboxTransport(
+        var transport = CreateTransport(
             routingApi,
-            new RebusModuleDestinationResolver(
+            destinationResolver: new RebusModuleDestinationResolver(
                 new Dictionary<string, string>
                 {
                     ["fulfillment"] = "fulfillment-priority",
@@ -127,9 +129,9 @@ public sealed class RebusDurableOutboxTransportTests
     {
         DurableOutboxRecord record = CreateRecord(includeTraceContext: false);
         var routingApi = new RecordingRoutingApi();
-        var transport = new RebusDurableOutboxTransport(
+        var transport = CreateTransport(
             routingApi,
-            new RebusModuleDestinationResolver(
+            destinationResolver: new RebusModuleDestinationResolver(
                 new Dictionary<string, string>
                 {
                     ["fulfillment"] = "fulfillment-queue",
@@ -151,9 +153,9 @@ public sealed class RebusDurableOutboxTransportTests
         DurableOutboxRecord record = CreateRecord(
             traceContext: new MessageTraceContext("legacy-correlation-id"));
         var routingApi = new RecordingRoutingApi();
-        var transport = new RebusDurableOutboxTransport(
+        var transport = CreateTransport(
             routingApi,
-            new RebusModuleDestinationResolver(
+            destinationResolver: new RebusModuleDestinationResolver(
                 new Dictionary<string, string>
                 {
                     ["fulfillment"] = "fulfillment-queue",
@@ -170,17 +172,63 @@ public sealed class RebusDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task SendAsync_WhenEnvelopeIsEvent_Throws()
+    public async Task SendAsync_WhenEventIsClaimed_PublishesWireEnvelopeToResolvedTopic()
     {
         DurableOutboxRecord record = CreateRecord(
             messageKind: MessageKind.Event,
             targetModule: null);
-        var transport = new RebusDurableOutboxTransport(
-            new RecordingRoutingApi(),
-            new RebusModuleDestinationResolver(new Dictionary<string, string>()));
+        var routingApi = new RecordingRoutingApi();
+        var topicsApi = new RecordingTopicsApi();
+        var transport = CreateTransport(
+            routingApi,
+            topicsApi: topicsApi,
+            eventTopicResolver: new RebusEventTopicResolver(
+                new Dictionary<string, string>
+                {
+                    ["sales.order.submit.v1"] = "sales.order.events",
+                }));
 
-        await Assert.ThrowsAsync<NotSupportedException>(
+        await transport.SendAsync(record);
+
+        Assert.Null(routingApi.DestinationAddress);
+        Assert.Equal("sales.order.events", topicsApi.TopicName);
+
+        RebusDurableMessageEnvelope rebusEnvelope =
+            Assert.IsType<RebusDurableMessageEnvelope>(topicsApi.Message);
+        Assert.Equal(record.Envelope.MessageId, rebusEnvelope.MessageId);
+        Assert.Equal(MessageKind.Event.ToString(), rebusEnvelope.MessageKind);
+        Assert.Equal(record.Envelope.MessageTypeName, rebusEnvelope.MessageTypeName);
+        Assert.Equal(record.Envelope.SourceModule, rebusEnvelope.SourceModule);
+        Assert.Null(rebusEnvelope.TargetModule);
+        Assert.Equal(record.Envelope.Payload, rebusEnvelope.Payload);
+        Assert.Equal(record.Envelope.Metadata, rebusEnvelope.Metadata);
+
+        Assert.NotNull(topicsApi.Headers);
+        IReadOnlyDictionary<string, string> headers = topicsApi.Headers;
+        Assert.Equal(record.Envelope.MessageId.ToString("D"), headers[Headers.MessageId]);
+        Assert.Equal(MessageKind.Event.ToString(), headers[BondstoneRebusHeaders.MessageKind]);
+        Assert.Equal(record.Envelope.MessageTypeName, headers[BondstoneRebusHeaders.MessageTypeName]);
+        Assert.Equal(record.Envelope.SourceModule, headers[BondstoneRebusHeaders.SourceModule]);
+        Assert.False(headers.ContainsKey(BondstoneRebusHeaders.TargetModule));
+        Assert.False(headers.ContainsKey(Headers.Type));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenEventTopicIsMissing_Throws()
+    {
+        DurableOutboxRecord record = CreateRecord(
+            messageKind: MessageKind.Event,
+            targetModule: null);
+        var transport = CreateTransport(
+            new RecordingRoutingApi(),
+            topicsApi: new RecordingTopicsApi(),
+            eventTopicResolver: new RebusEventTopicResolver(new Dictionary<string, string>()));
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await transport.SendAsync(record));
+
+        Assert.Contains("sales.order.submit.v1", exception.Message);
     }
 
     [Fact]
@@ -188,9 +236,9 @@ public sealed class RebusDurableOutboxTransportTests
     public async Task SendAsync_WhenNoDestinationIsConfiguredForTargetModule_Throws()
     {
         DurableOutboxRecord record = CreateRecord();
-        var transport = new RebusDurableOutboxTransport(
+        var transport = CreateTransport(
             new RecordingRoutingApi(),
-            new RebusModuleDestinationResolver(new Dictionary<string, string>()));
+            destinationResolver: new RebusModuleDestinationResolver(new Dictionary<string, string>()));
 
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await transport.SendAsync(record));
@@ -325,11 +373,78 @@ public sealed class RebusDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void DescribeEventTopic_WhenExplicitRouteExists_ReturnsExplicitRoute()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus.RouteEvent("sales.order.submit.v1").ToTopic("sales.order.events")));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusEventTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusEventTopologyDiagnostics>();
+
+        RebusEventTopicDiagnostic diagnostic =
+            diagnostics.DescribeEventTopic("sales.order.submit.v1");
+
+        Assert.Equal(DurableMessageTopologyDiagnosticKind.EventTopic, diagnostic.Kind);
+        Assert.Equal("sales.order.submit.v1", diagnostic.MessageTypeName);
+        Assert.Equal(RebusEventTopicSource.ExplicitRoute, diagnostic.Source);
+        Assert.Equal("sales.order.events", diagnostic.TopicName);
+        Assert.Null(diagnostic.FailureReason);
+        Assert.True(diagnostic.HasTopic);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DescribeEventTopic_WhenConventionExists_ReturnsConventionTopic()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus.UseEventTopicConvention(
+                    static messageTypeName => $"topic.{messageTypeName}")));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusEventTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusEventTopologyDiagnostics>();
+
+        RebusEventTopicDiagnostic diagnostic =
+            diagnostics.DescribeEventTopic("sales.order.submit.v1");
+
+        Assert.Equal(RebusEventTopicSource.Convention, diagnostic.Source);
+        Assert.Equal("topic.sales.order.submit.v1", diagnostic.TopicName);
+        Assert.Null(diagnostic.FailureReason);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DescribeEventTopic_WhenTopicIsMissing_ReturnsMissingDiagnostic()
+    {
+        var services = new ServiceCollection();
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(_ => { }));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IRebusEventTopologyDiagnostics diagnostics =
+            serviceProvider.GetRequiredService<IRebusEventTopologyDiagnostics>();
+
+        RebusEventTopicDiagnostic diagnostic =
+            diagnostics.DescribeEventTopic("sales.order.submit.v1");
+
+        Assert.Equal(RebusEventTopicSource.Missing, diagnostic.Source);
+        Assert.Null(diagnostic.TopicName);
+        Assert.Contains("sales.order.submit.v1", diagnostic.FailureReason, StringComparison.Ordinal);
+        Assert.False(diagnostic.HasTopic);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task AddBondstoneRebusOutboxTransport_RegistersTransportWithModuleDestinations()
     {
         var routingApi = new RecordingRoutingApi();
         var services = new ServiceCollection();
-        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddSingleton(CreateBus(routingApi));
         services.AddBondstoneRebusOutboxTransport(
             new Dictionary<string, string>
             {
@@ -350,7 +465,7 @@ public sealed class RebusDurableOutboxTransportTests
     {
         var routingApi = new RecordingRoutingApi();
         var services = new ServiceCollection();
-        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddSingleton(CreateBus(routingApi));
         services.AddBondstone(
             bondstone => bondstone.UseRebusTransport(
                 rebus => rebus.RouteModule("fulfillment").ToQueue("fulfillment-queue")));
@@ -370,7 +485,7 @@ public sealed class RebusDurableOutboxTransportTests
     {
         var routingApi = new RecordingRoutingApi();
         var services = new ServiceCollection();
-        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddSingleton(CreateBus(routingApi));
         services.AddBondstone(
             bondstone =>
             {
@@ -394,7 +509,7 @@ public sealed class RebusDurableOutboxTransportTests
     {
         var routingApi = new RecordingRoutingApi();
         var services = new ServiceCollection();
-        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddSingleton(CreateBus(routingApi));
         services.AddBondstone(
             bondstone =>
             {
@@ -422,7 +537,7 @@ public sealed class RebusDurableOutboxTransportTests
     {
         var routingApi = new RecordingRoutingApi();
         var services = new ServiceCollection();
-        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddSingleton(CreateBus(routingApi));
         services.AddBondstone(
             bondstone =>
             {
@@ -448,7 +563,7 @@ public sealed class RebusDurableOutboxTransportTests
     {
         var routingApi = new RecordingRoutingApi();
         var services = new ServiceCollection();
-        services.AddSingleton<IRoutingApi>(routingApi);
+        services.AddSingleton(CreateBus(routingApi));
         services.AddBondstone(
             bondstone => bondstone.UseRebusTransport(
                 rebus => rebus.UseModuleQueueConvention()));
@@ -460,6 +575,52 @@ public sealed class RebusDurableOutboxTransportTests
         await transport.SendAsync(CreateRecord());
 
         Assert.Equal("fulfillment-commands", routingApi.DestinationAddress);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task UseRebusTransport_WhenEventTopicIsConfigured_PublishesEventToTopic()
+    {
+        var routingApi = new RecordingRoutingApi();
+        var topicsApi = new RecordingTopicsApi();
+        var services = new ServiceCollection();
+        services.AddSingleton(CreateBus(routingApi, topicsApi));
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus.RouteEvent("sales.order.submit.v1").ToTopic("sales.order.events")));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+
+        await transport.SendAsync(CreateRecord(
+            messageKind: MessageKind.Event,
+            targetModule: null));
+
+        Assert.Null(routingApi.DestinationAddress);
+        Assert.Equal("sales.order.events", topicsApi.TopicName);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task UseRebusTransport_WhenEventTopicConventionIsConfigured_PublishesEventByIdentity()
+    {
+        var topicsApi = new RecordingTopicsApi();
+        var services = new ServiceCollection();
+        services.AddSingleton(CreateBus(new RecordingRoutingApi(), topicsApi));
+        services.AddBondstone(
+            bondstone => bondstone.UseRebusTransport(
+                rebus => rebus.UseEventTopicConvention()));
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+
+        await transport.SendAsync(CreateRecord(
+            messageKind: MessageKind.Event,
+            targetModule: null));
+
+        Assert.Equal("sales.order.submit.v1", topicsApi.TopicName);
     }
 
     private static DurableOutboxRecord CreateRecord(
@@ -519,6 +680,91 @@ public sealed class RebusDurableOutboxTransportTests
         }
     }
 
+    private static RebusDurableOutboxTransport CreateTransport(
+        RecordingRoutingApi routingApi,
+        IRebusOutboxDestinationResolver? destinationResolver = null,
+        RecordingTopicsApi? topicsApi = null,
+        IRebusOutboxEventTopicResolver? eventTopicResolver = null)
+    {
+        return new RebusDurableOutboxTransport(
+            CreateBus(routingApi, topicsApi),
+            destinationResolver ?? new RebusModuleDestinationResolver(new Dictionary<string, string>()),
+            eventTopicResolver ?? new RebusEventTopicResolver(new Dictionary<string, string>()));
+    }
+
+    private static IBus CreateBus(
+        RecordingRoutingApi routingApi,
+        RecordingTopicsApi? topicsApi = null)
+    {
+        IBus bus = DispatchProxy.Create<IBus, RebusBusProxy>();
+        var proxy = (RebusBusProxy)(object)bus;
+        proxy.RoutingApi = routingApi;
+        proxy.TopicsApi = topicsApi ?? new RecordingTopicsApi();
+        return bus;
+    }
+
+    private class RebusBusProxy : DispatchProxy
+    {
+        public RecordingRoutingApi RoutingApi { get; set; } = null!;
+
+        public RecordingTopicsApi TopicsApi { get; set; } = null!;
+
+        protected override object? Invoke(
+            MethodInfo? targetMethod,
+            object?[]? args)
+        {
+            if (targetMethod?.Name == "get_Advanced")
+            {
+                return CreateAdvancedApi(RoutingApi, TopicsApi);
+            }
+
+            if (targetMethod?.Name == nameof(IDisposable.Dispose))
+            {
+                return null;
+            }
+
+            if (targetMethod?.ReturnType == typeof(Task))
+            {
+                return Task.CompletedTask;
+            }
+
+            throw new NotSupportedException(
+                $"Rebus bus member '{targetMethod?.Name}' is not supported by this test proxy.");
+        }
+    }
+
+    private static IAdvancedApi CreateAdvancedApi(
+        RecordingRoutingApi routingApi,
+        RecordingTopicsApi topicsApi)
+    {
+        IAdvancedApi advancedApi =
+            DispatchProxy.Create<IAdvancedApi, RebusAdvancedApiProxy>();
+        var proxy = (RebusAdvancedApiProxy)(object)advancedApi;
+        proxy.RoutingApi = routingApi;
+        proxy.TopicsApi = topicsApi;
+        return advancedApi;
+    }
+
+    private class RebusAdvancedApiProxy : DispatchProxy
+    {
+        public RecordingRoutingApi RoutingApi { get; set; } = null!;
+
+        public RecordingTopicsApi TopicsApi { get; set; } = null!;
+
+        protected override object? Invoke(
+            MethodInfo? targetMethod,
+            object?[]? args)
+        {
+            return targetMethod?.Name switch
+            {
+                "get_Routing" => RoutingApi,
+                "get_Topics" => TopicsApi,
+                _ => throw new NotSupportedException(
+                    $"Rebus advanced API member '{targetMethod?.Name}' is not supported by this test proxy."),
+            };
+        }
+    }
+
     private sealed class RecordingRoutingApi : IRoutingApi
     {
         public string? DestinationAddress { get; private set; }
@@ -552,6 +798,37 @@ public sealed class RebusDurableOutboxTransportTests
             TimeSpan delay,
             object message,
             IDictionary<string, string> optionalHeaders = null!)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class RecordingTopicsApi : ITopicsApi
+    {
+        public string? TopicName { get; private set; }
+
+        public object? Message { get; private set; }
+
+        public IReadOnlyDictionary<string, string> Headers { get; private set; } =
+            new Dictionary<string, string>();
+
+        public Task Publish(
+            string topic,
+            object message,
+            IDictionary<string, string> optionalHeaders = null!)
+        {
+            TopicName = topic;
+            Message = message;
+            Headers = new Dictionary<string, string>(optionalHeaders, StringComparer.Ordinal);
+            return Task.CompletedTask;
+        }
+
+        public Task Subscribe(string topic)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task Unsubscribe(string topic)
         {
             throw new NotSupportedException();
         }

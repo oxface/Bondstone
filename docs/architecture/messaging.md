@@ -37,18 +37,26 @@ operation-state updates and receive tracing.
 
 `ICommand` is the base marker for module command pipeline execution.
 `IDurableCommand` extends `ICommand` for commands accepted for durable outbox
-delivery and transport receive. The currently applied durable identity,
-outbox, inbox, and operation-state behavior is command-first; integration
-event publish/subscribe will apply those durable concepts through separate
-event-specific runtime slices.
+delivery and transport receive. Commands and integration events are both
+durable messages: they share stable identity, outbox staging, payload
+serialization, trace/causation metadata, and receive-side inbox concepts. The
+distinction is behavioral. Commands represent directed work for one target
+module; integration events represent source-module facts that may have zero
+or more subscribers.
 
 `IIntegrationEvent` is reserved for durable cross-module facts. Integration
-events are not commands: they do not target one module and should eventually
-fan out to independently identified subscribers. First-class event
-publish/subscribe is not implemented yet. The accepted guardrail for this
-shape is tracked in
-[ADR 0026](../adr/0026-event-shape-guardrail.md), and implementation
-sequencing is tracked in [../mvp-plan.md](../mvp-plan.md).
+events are not commands: they do not target one module and fan out to
+independently identified subscribers. The accepted guardrail for this shape is
+tracked in [ADR 0026](../adr/0026-event-shape-guardrail.md). First-class
+event publish/subscribe topology and execution direction is accepted in
+[ADR 0033](../adr/0033-first-class-event-publish-subscribe-topology.md), and
+implementation sequencing is tracked in [../mvp-plan.md](../mvp-plan.md).
+
+Event-driven orchestration composes these durable message intents rather than
+collapsing them. An event subscriber, saga, process manager, or orchestrator
+can react to an integration event and send durable commands as follow-up work.
+The event keeps per-subscriber receive identity; each command keeps a single
+target module and command receive path.
 
 Durable commands and integration events are the durable boundary for
 cross-persistence state changes. Direct `.Contracts` calls remain appropriate
@@ -56,19 +64,27 @@ for reads, local composition, and operations that tolerate failure without a
 retry or deduplication boundary. Bondstone should not introduce a generic
 mediator or message-bus layer for ordinary module collaboration.
 
+Outbox and inbox are the durable default. A future local, in-memory, or
+development transport can be useful only when its durability contract is
+explicit. If it bypasses outbox or inbox, it should be documented as a
+non-durable or test-oriented path, not as equivalent durable module messaging.
+
 The durable event publisher is a narrow core contract. `IDurableEventPublisher`
 accepts an `IIntegrationEvent`, requires current source-module context, stages
 a `MessageKind.Event` envelope through the outbox, and returns
 `DurableEventPublishResult` instead of subscriber results. Event envelopes do
-not specify `TargetModule`. Transport dispatch for event fan-out remains
-deferred, so publishing is an outbox-backed core shape rather than a complete
-broker publish/subscribe path.
+not specify `TargetModule`. Transport dispatch for event fan-out is Phase 5
+work. The first transport slice publishes claimed event outbox records to
+configured event topics; it does not imply subscriber execution has
+completed.
 
 Event handlers are typed integration event handlers registered as module
 subscriber metadata through `IIntegrationEventHandler<TEvent>` and
 `module.Events.RegisterSubscriber`. A subscriber belongs to a module and
 carries stable consumer-owned subscriber identity. Subscriber identity must
-not be derived from handler CLR names. Subscriber execution remains deferred.
+not be derived from handler CLR names. Subscriber execution is Phase 5 work
+and uses an event-specific module execution path rather than the module
+command executor or a generic mediator.
 
 Event inbox identity is per subscriber: durable message id, subscriber module,
 and stable subscriber identity. It is not based on command target module
@@ -179,15 +195,17 @@ operation ids, trace context, causation, partition key, payload, and optional
 metadata are stored as separate boundary fields instead of being inferred from
 CLR names or transport details.
 
-`Bondstone.Transport.Rebus` currently maps outgoing command envelopes to Rebus
-explicit routing sends. The adapter preserves Bondstone message identity in
-Bondstone-specific headers and maps trace context to W3C transport headers.
-Receive-side Rebus inbox integration is command-only. Rebus handlers can
+`Bondstone.Transport.Rebus` maps outgoing command envelopes to Rebus explicit
+routing sends through native Rebus routing APIs. Phase 5 adds outgoing event
+publish dispatch by mapping event identities to Rebus topics and publishing
+the same Bondstone wire envelope through native Rebus topics APIs. The adapter
+preserves Bondstone message identity in Bondstone-specific headers and maps
+trace context to W3C transport headers. Receive-side Rebus inbox integration
+is command-only until event subscriber execution is implemented. Rebus handlers can
 receive Bondstone wire envelopes, derive inbox keys from message id, target
 module, and explicit handler identity, compose
 `IRebusDurableInboxHandlerExecutor`, and acknowledge only after handle-once
-execution and its commit boundary succeed. Event publish/subscribe remains
-deferred.
+execution and its commit boundary succeed.
 
 Durable payload serialization is shared command/event infrastructure. Current
 command send, event publish, Rebus typed command receive, and Rebus module

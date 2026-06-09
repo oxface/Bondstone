@@ -1,15 +1,29 @@
 using Bondstone.Messaging;
 using Bondstone.Persistence;
-using Rebus.Bus.Advanced;
-using Rebus.Messages;
+using Rebus.Bus;
 
 namespace Bondstone.Transport.Rebus.Outbox;
 
-public sealed class RebusDurableOutboxTransport(
-    IRoutingApi routingApi,
-    IRebusOutboxDestinationResolver destinationResolver)
-    : IDurableOutboxTransport
+public sealed class RebusDurableOutboxTransport : IDurableOutboxTransport
 {
+    private readonly RebusCommandOutboxTransport _commandTransport;
+    private readonly RebusEventOutboxTransport _eventTransport;
+
+    public RebusDurableOutboxTransport(
+        IBus bus,
+        IRebusOutboxDestinationResolver destinationResolver,
+        IRebusOutboxEventTopicResolver eventTopicResolver)
+    {
+        ArgumentNullException.ThrowIfNull(bus);
+
+        _commandTransport = new RebusCommandOutboxTransport(
+            bus,
+            destinationResolver ?? throw new ArgumentNullException(nameof(destinationResolver)));
+        _eventTransport = new RebusEventOutboxTransport(
+            bus,
+            eventTopicResolver ?? throw new ArgumentNullException(nameof(eventTopicResolver)));
+    }
+
     public async ValueTask SendAsync(
         DurableOutboxRecord record,
         CancellationToken ct = default)
@@ -18,73 +32,20 @@ public sealed class RebusDurableOutboxTransport(
         ct.ThrowIfCancellationRequested();
 
         DurableMessageEnvelope envelope = record.Envelope;
-        if (envelope.MessageKind != MessageKind.Command)
+
+        if (envelope.MessageKind == MessageKind.Command)
         {
-            throw new NotSupportedException(
-                "The first Rebus outbox transport supports command envelopes only.");
+            await _commandTransport.SendAsync(record);
+            return;
         }
 
-        string destinationAddress = destinationResolver.ResolveDestinationAddress(record);
-        RebusDurableMessageEnvelope rebusEnvelope = RebusDurableMessageEnvelope.From(envelope);
-        Dictionary<string, string> headers = CreateHeaders(envelope);
-
-        await routingApi.Send(destinationAddress, rebusEnvelope, headers);
-    }
-
-    private static Dictionary<string, string> CreateHeaders(DurableMessageEnvelope envelope)
-    {
-        string messageId = envelope.MessageId.ToString("D");
-        var headers = new Dictionary<string, string>(StringComparer.Ordinal)
+        if (envelope.MessageKind == MessageKind.Event)
         {
-            [Headers.MessageId] = messageId,
-            [Headers.CorrelationId] = CreateCorrelationId(envelope, messageId),
-            [BondstoneRebusHeaders.MessageId] = messageId,
-            [BondstoneRebusHeaders.MessageKind] = envelope.MessageKind.ToString(),
-            [BondstoneRebusHeaders.MessageTypeName] = envelope.MessageTypeName,
-            [BondstoneRebusHeaders.SourceModule] = envelope.SourceModule,
-        };
-
-        AddOptional(headers, BondstoneRebusHeaders.TargetModule, envelope.TargetModule);
-        AddOptional(headers, BondstoneRebusHeaders.DurableOperationId, envelope.DurableOperationId?.ToString("D"));
-        AddOptional(headers, BondstoneRebusHeaders.CausationId, envelope.CausationId?.ToString("D"));
-        AddOptional(headers, BondstoneRebusHeaders.PartitionKey, envelope.PartitionKey);
-
-        if (envelope.CausationId is not null)
-        {
-            headers[Headers.InReplyTo] = envelope.CausationId.Value.ToString("D");
+            await _eventTransport.PublishAsync(record);
+            return;
         }
 
-        MessageTraceContext? traceContext = envelope.TraceContext;
-        if (traceContext is not null)
-        {
-            headers[BondstoneRebusHeaders.TraceParent] = traceContext.TraceParent;
-            AddOptional(headers, BondstoneRebusHeaders.TraceState, traceContext.TraceState);
-            AddOptional(headers, BondstoneRebusHeaders.Baggage, traceContext.Baggage);
-        }
-
-        return headers;
-    }
-
-    private static string CreateCorrelationId(
-        DurableMessageEnvelope envelope,
-        string messageId)
-    {
-        if (envelope.TraceContext?.TryGetW3CTraceId(out string? traceId) == true)
-        {
-            return traceId!;
-        }
-
-        return envelope.DurableOperationId?.ToString("D") ?? messageId;
-    }
-
-    private static void AddOptional(
-        Dictionary<string, string> headers,
-        string key,
-        string? value)
-    {
-        if (!string.IsNullOrWhiteSpace(value))
-        {
-            headers[key] = value;
-        }
+        throw new NotSupportedException(
+            $"Rebus outbox transport does not support message kind '{envelope.MessageKind}'.");
     }
 }

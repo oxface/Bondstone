@@ -2,7 +2,6 @@ using Bondstone.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Rebus.Bus;
-using Rebus.Bus.Advanced;
 
 namespace Bondstone.Transport.Rebus.Outbox;
 
@@ -18,22 +17,27 @@ public static class BondstoneRebusServiceCollectionExtensions
         return services.AddBondstoneRebusOutboxTransport(
             RebusCommandDestinationTopology.FromConfiguredDestinations(
                 destinationAddressesByTargetModule,
-                destinationAddressConvention));
+                destinationAddressConvention),
+            RebusEventTopicTopology.Empty);
     }
 
     internal static IServiceCollection AddBondstoneRebusOutboxTransport(
         this IServiceCollection services,
-        RebusCommandDestinationTopology topology)
+        RebusCommandDestinationTopology commandTopology,
+        RebusEventTopicTopology eventTopicTopology)
     {
         ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(topology);
+        ArgumentNullException.ThrowIfNull(commandTopology);
+        ArgumentNullException.ThrowIfNull(eventTopicTopology);
 
-        services.TryAddTransient<IRoutingApi>(
-            static serviceProvider => serviceProvider.GetRequiredService<IBus>().Advanced.Routing);
         services.AddSingleton<IRebusOutboxDestinationResolver>(
-            new RebusModuleDestinationResolver(topology));
+            new RebusModuleDestinationResolver(commandTopology));
+        services.AddSingleton<IRebusOutboxEventTopicResolver>(
+            new RebusEventTopicResolver(eventTopicTopology));
         services.AddSingleton<IRebusCommandTopologyDiagnostics>(
-            new RebusCommandTopologyDiagnostics(topology));
+            new RebusCommandTopologyDiagnostics(commandTopology));
+        services.AddSingleton<IRebusEventTopologyDiagnostics>(
+            new RebusEventTopologyDiagnostics(eventTopicTopology));
         services.TryAddTransient<IDurableOutboxTransport, RebusDurableOutboxTransport>();
 
         return services;

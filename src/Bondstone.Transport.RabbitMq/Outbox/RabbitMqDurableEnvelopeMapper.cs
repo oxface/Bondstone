@@ -19,6 +19,34 @@ internal static class RabbitMqDurableEnvelopeMapper
             CreateHeaders(envelope, messageId));
     }
 
+    public static DurableMessageEnvelope ReadEnvelope(
+        string body)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(body);
+
+        RabbitMqDurableMessageEnvelope envelope =
+            JsonSerializer.Deserialize<RabbitMqDurableMessageEnvelope>(body)
+            ?? throw new InvalidOperationException(
+                "RabbitMQ message body did not contain a Bondstone durable envelope.");
+        MessageKind messageKind = Enum.Parse<MessageKind>(
+            envelope.MessageKind,
+            ignoreCase: false);
+
+        return new DurableMessageEnvelope(
+            envelope.MessageId,
+            messageKind,
+            envelope.MessageTypeName,
+            envelope.SourceModule,
+            envelope.TargetModule,
+            envelope.Payload,
+            envelope.CreatedAtUtc,
+            envelope.DurableOperationId,
+            CreateTraceContext(envelope),
+            envelope.CausationId,
+            envelope.PartitionKey,
+            envelope.Metadata);
+    }
+
     private static IReadOnlyDictionary<string, object> CreateHeaders(
         DurableMessageEnvelope envelope,
         string messageId)
@@ -74,5 +102,16 @@ internal static class RabbitMqDurableEnvelopeMapper
         {
             headers[key] = value;
         }
+    }
+
+    private static MessageTraceContext? CreateTraceContext(
+        RabbitMqDurableMessageEnvelope envelope)
+    {
+        return string.IsNullOrWhiteSpace(envelope.TraceParent)
+            ? null
+            : new MessageTraceContext(
+                envelope.TraceParent,
+                envelope.TraceState,
+                envelope.TraceBaggage);
     }
 }

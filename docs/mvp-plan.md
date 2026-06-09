@@ -53,6 +53,8 @@ Implemented surface includes:
 - PostgreSQL Dapper-assisted persistence proof for durable outbox, inbox,
   operation state, module transactions, and mixed-persistence sample pressure;
 - outgoing Azure Service Bus and RabbitMQ direct transport proof packages;
+- RabbitMQ receive queue topology and dispatcher proof over the neutral
+  receive pipelines;
 - modular monolith sample using EF-backed ordering/fulfillment modules,
   PostgreSQL Dapper-assisted billing, explicit integration events, a durable
   outbox worker, and explicit local queue transport over the neutral receive
@@ -202,12 +204,17 @@ Applied in this slice:
   `IDurableOutboxTransportRoute` and `RoutedDurableOutboxTransport`, so a
   claimed durable message is sent only when exactly one direct provider route
   matches.
+- add RabbitMQ receive queue bindings and
+  `IRabbitMqReceivedMessageDispatcher` as the first direct receive proof. This
+  maps received Bondstone RabbitMQ messages into the neutral command/event
+  receive pipelines but does not yet run a hosted broker consumer.
 
 Remaining slices:
 
-1. Implement RabbitMQ receive worker proof:
-   command queue receive, event queue binding receive, acknowledgement,
-   retry/dead-letter handoff, diagnostics, and provider-backed tests.
+1. Complete RabbitMQ receive worker proof:
+   broker consumer/channel lifecycle, command queue receive, event queue
+   receive, acknowledgement, retry/dead-letter handoff, and provider-backed
+   tests.
 2. Implement Service Bus receive worker proof:
    command queue processor, event topic subscription or event queue processor,
    acknowledgement, retry/dead-letter handoff, diagnostics, and

@@ -1,3 +1,4 @@
+using Bondstone.Transport.RabbitMq.Inbox;
 using Bondstone.Utility;
 
 namespace Bondstone.Transport.RabbitMq.Outbox;
@@ -7,6 +8,8 @@ public sealed class BondstoneRabbitMqTransportBuilder
     private readonly Dictionary<string, string> _routingKeysByTargetModule =
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, RabbitMqEventRouteRegistration> _eventRoutesByMessageTypeName =
+        new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RabbitMqReceiveQueueRegistration> _receiveQueues =
         new(StringComparer.Ordinal);
     private string? _commandExchangeName;
     private string? _eventExchangeName;
@@ -24,6 +27,9 @@ public sealed class BondstoneRabbitMqTransportBuilder
             _eventExchangeName,
             _eventRoutesByMessageTypeName,
             _eventDestinationConvention);
+
+    internal RabbitMqReceiveTopology ReceiveTopology =>
+        new(_receiveQueues);
 
     public BondstoneRabbitMqTransportBuilder UseCommandExchange(
         string exchangeName)
@@ -85,6 +91,20 @@ public sealed class BondstoneRabbitMqTransportBuilder
         return new BondstoneRabbitMqEventRouteBuilder(
             this,
             normalizedMessageTypeName);
+    }
+
+    public BondstoneRabbitMqReceiveQueueBuilder ReceiveQueue(
+        string queueName)
+    {
+        string normalizedQueueName = queueName.NormalizeRequired(
+            nameof(queueName),
+            "RabbitMQ queue name");
+
+        EnsureReceiveQueue(normalizedQueueName);
+
+        return new BondstoneRabbitMqReceiveQueueBuilder(
+            this,
+            normalizedQueueName);
     }
 
     public BondstoneRabbitMqTransportBuilder UseEventRoutingKeyConvention()
@@ -175,6 +195,27 @@ public sealed class BondstoneRabbitMqTransportBuilder
                 queueName));
     }
 
+    internal void AddReceiveQueueAcceptedModule(
+        string queueName,
+        string moduleName)
+    {
+        RabbitMqReceiveQueueRegistration queue = EnsureReceiveQueue(queueName);
+        queue.AddAcceptedModule(moduleName);
+    }
+
+    internal void AddReceiveQueueEventSubscription(
+        string queueName,
+        string messageTypeName,
+        string subscriberModule,
+        string subscriberIdentity)
+    {
+        RabbitMqReceiveQueueRegistration queue = EnsureReceiveQueue(queueName);
+        queue.AddEventSubscription(
+            messageTypeName,
+            subscriberModule,
+            subscriberIdentity);
+    }
+
     private void SetEventRoute(
         string messageTypeName,
         RabbitMqEventRouteRegistration route)
@@ -194,5 +235,25 @@ public sealed class BondstoneRabbitMqTransportBuilder
         }
 
         _eventRoutesByMessageTypeName.Add(messageTypeName, route);
+    }
+
+    private RabbitMqReceiveQueueRegistration EnsureReceiveQueue(
+        string queueName)
+    {
+        string normalizedQueueName = queueName.NormalizeRequired(
+            nameof(queueName),
+            "RabbitMQ queue name");
+
+        if (_receiveQueues.TryGetValue(
+            normalizedQueueName,
+            out RabbitMqReceiveQueueRegistration? queue))
+        {
+            return queue;
+        }
+
+        var createdQueue = new RabbitMqReceiveQueueRegistration(normalizedQueueName);
+        _receiveQueues.Add(normalizedQueueName, createdQueue);
+
+        return createdQueue;
     }
 }

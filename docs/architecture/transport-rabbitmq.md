@@ -6,7 +6,8 @@ behavior.
 ## Current Scope
 
 The current adapter is a Phase 6 proof-oriented outgoing durable outbox
-transport. `RabbitMqDurableOutboxTransport` implements
+transport plus a Phase 6.5 receive dispatcher proof.
+`RabbitMqDurableOutboxTransport` implements
 `IDurableOutboxTransport` for claimed outbox records and maps Bondstone
 durable envelopes to RabbitMQ publish messages through a provider-local
 envelope mapper.
@@ -41,11 +42,34 @@ messages.
 Use `.ToQueue(...)` or `UseEventQueueConvention(...)` when an event should be
 sent directly to a queue.
 
+Receive topology is declared with provider-native queue vocabulary:
+
+```csharp
+bondstone.UseRabbitMqTransport(rabbitMq =>
+{
+    rabbitMq.ReceiveQueue("fulfillment.commands")
+        .AcceptModule("fulfillment");
+
+    rabbitMq.ReceiveQueue("sales-events")
+        .SubscribeEvent(
+            "sales.order.submitted.v1",
+            "fulfillment",
+            "fulfillment.sales-order-projection.v1");
+});
+```
+
+`IRabbitMqReceivedMessageDispatcher` maps a received RabbitMQ transport
+message back to a Bondstone durable envelope. Command messages dispatch through
+`IModuleCommandReceivePipeline`; event messages dispatch through
+`IModuleEventReceivePipeline` once per subscriber binding on the receive
+queue. A RabbitMQ consumer should acknowledge the broker delivery only after
+the dispatcher returns.
+
 ## App-Owned Setup
 
-Bondstone does not declare exchanges, queues, bindings, consumers,
-acknowledgement policy, retry policy, dead-letter policy, prefetch, channels,
-or connections. Applications register and configure the RabbitMQ
+Bondstone does not declare exchanges, queues, bindings, long-running
+consumers, acknowledgement policy, retry policy, dead-letter policy, prefetch,
+channels, or connections. Applications register and configure the RabbitMQ
 `IConnection` and own native broker topology setup.
 
 The adapter publishes the Bondstone-owned durable envelope as the message body
@@ -57,6 +81,6 @@ ADR-backed decisions.
 
 ## Deferred Work
 
-Receive-side RabbitMQ consumers, command queue binding, event queue binding,
-acknowledgement behavior, retry/dead-letter policy, broker-backed integration
-tests, and topology declaration are future slices.
+Receive-side RabbitMQ hosted consumers, acknowledgement integration,
+retry/dead-letter policy handoff, broker-backed integration tests, and
+topology declaration are future slices.

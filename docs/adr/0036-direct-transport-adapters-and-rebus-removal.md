@@ -110,6 +110,30 @@ The direct provider adapters remain the production-oriented transport
 direction. Local transport keeps the sample useful while direct RabbitMQ and
 Service Bus receive workers are implemented and hardened.
 
+## Amendment 2026-06-09: RabbitMQ Receive Dispatcher Proof
+
+RabbitMQ receive work should start at the provider adapter boundary before
+adding long-running broker consumers. `Bondstone.Transport.RabbitMq` will own
+RabbitMQ receive queue bindings and a dispatcher that maps a received
+Bondstone RabbitMQ transport message back to the neutral durable envelope.
+
+RabbitMQ receive queue topology is configured in provider vocabulary with
+`ReceiveQueue(...)`. A queue can accept command target modules and bind event
+subscriber identities. Outgoing route topology remains separate: applications
+still own exchanges, queues, and broker bindings, while Bondstone records what
+a queue is allowed to execute once a provider-native consumer has received a
+message from it.
+
+The dispatcher calls `IModuleCommandReceivePipeline` for command envelopes and
+`IModuleEventReceivePipeline` once per configured event subscriber. It returns
+only after receive processing succeeds. Provider-native consumers should ack
+RabbitMQ deliveries only after the dispatcher returns and should let thrown
+exceptions flow into the app's RabbitMQ retry/dead-letter policy.
+
+This amendment does not add a hosted RabbitMQ consumer, broker topology
+declaration, retry policy, channel lifecycle management, or provider-backed
+integration tests. Those remain follow-up slices.
+
 ## Consequences
 
 The transport surface becomes easier to reason about: Bondstone owns durable
@@ -165,8 +189,11 @@ diagnostics, and provider-backed integration tests.
   `IDurableOutboxTransportRoute` and `RoutedDurableOutboxTransport`. Direct
   providers and local transport contribute route candidates based on their
   topology, and the router sends only when exactly one provider can send the
-  claimed durable message.
-- Pending or deferred: Add direct RabbitMQ receive, direct Service Bus
+  claimed durable message. RabbitMQ now has receive queue topology, receive
+  queue diagnostics, and an `IRabbitMqReceivedMessageDispatcher` proof that
+  dispatches received Bondstone envelopes through the neutral receive
+  pipelines.
+- Pending or deferred: Add hosted RabbitMQ consumers, direct Service Bus
   receive, provider-backed receive tests, persistence package naming cleanup,
   and replacement or supplementation of local sample transport with a
   preferred direct provider receive path.
@@ -202,3 +229,8 @@ After explicit local transport package work:
 - `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
 - `pnpm format:check`
 - `git diff --check`
+
+After RabbitMQ receive dispatcher proof:
+
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`

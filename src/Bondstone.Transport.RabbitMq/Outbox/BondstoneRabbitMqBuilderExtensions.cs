@@ -16,7 +16,8 @@ public static class BondstoneRabbitMqBuilderExtensions
 
         builder.Services.AddBondstoneRabbitMqOutboxTransport(
             rabbitMq.CommandRoutingTopology,
-            rabbitMq.EventRoutingTopology);
+            rabbitMq.EventRoutingTopology,
+            rabbitMq.ReceiveTopology);
         builder.Outbox.MarkTransport("RabbitMq");
 
         return builder;
@@ -34,7 +35,8 @@ public static class BondstoneRabbitMqBuilderExtensions
 
         outbox.Services.AddBondstoneRabbitMqOutboxTransport(
             rabbitMq.CommandRoutingTopology,
-            rabbitMq.EventRoutingTopology);
+            rabbitMq.EventRoutingTopology,
+            rabbitMq.ReceiveTopology);
         outbox.MarkTransport("RabbitMq");
 
         return outbox;

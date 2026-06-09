@@ -1,8 +1,11 @@
+using Bondstone.Transport.RabbitMq.Inbox;
+
 namespace Bondstone.Transport.RabbitMq.Outbox;
 
 internal sealed class RabbitMqTopologyDiagnostics(
     RabbitMqCommandRoutingTopology commandTopology,
-    RabbitMqEventRoutingTopology eventTopology)
+    RabbitMqEventRoutingTopology eventTopology,
+    RabbitMqReceiveTopology receiveTopology)
     : IRabbitMqTopologyDiagnostics
 {
     public RabbitMqCommandRoutingDiagnostic DescribeCommandRoute(
@@ -15,5 +18,11 @@ internal sealed class RabbitMqTopologyDiagnostics(
         string messageTypeName)
     {
         return eventTopology.DescribeRoute(messageTypeName);
+    }
+
+    public RabbitMqReceiveQueueDiagnostic DescribeReceiveQueue(
+        string queueName)
+    {
+        return receiveTopology.DescribeQueue(queueName);
     }
 }

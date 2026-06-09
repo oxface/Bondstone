@@ -1,3 +1,5 @@
+using Bondstone.Transport.RabbitMq.Inbox;
+
 namespace Bondstone.Transport.RabbitMq.Outbox;
 
 public interface IRabbitMqTopologyDiagnostics
@@ -7,4 +9,7 @@ public interface IRabbitMqTopologyDiagnostics
 
     RabbitMqEventRoutingDiagnostic DescribeEventRoute(
         string messageTypeName);
+
+    RabbitMqReceiveQueueDiagnostic DescribeReceiveQueue(
+        string queueName);
 }

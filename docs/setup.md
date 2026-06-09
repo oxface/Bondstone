@@ -149,9 +149,11 @@ Core now exposes provider-neutral module receive pipelines over
 Direct provider receive adapters should parse their provider-native message
 body into the neutral durable envelope, acknowledge only after the receive
 pipeline completes, and let failures flow to provider-native retry and
-dead-letter policy. Service Bus and RabbitMQ receive workers are planned
-follow-up slices; do not document app-facing broker receive setup as complete
-until those adapters exist.
+dead-letter policy. RabbitMQ now has a receive queue dispatcher proof through
+`IRabbitMqReceivedMessageDispatcher`, but hosted RabbitMQ consumers and
+Service Bus receive workers are still planned follow-up slices. Do not
+document app-facing broker receive setup as complete until those adapters
+exist.
 
 The current sample uses explicit `Bondstone.Transport.Local` queue routing to
 exercise the durable loop without presenting local transport as a production

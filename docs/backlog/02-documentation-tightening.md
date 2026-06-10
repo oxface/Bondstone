@@ -8,7 +8,7 @@ Goal: turn the MVP-era documentation into durable current-state documentation.
   moved into stable docs.
 - Archive ADR material that is obsolete, removed, or fully superseded when
   keeping it in the active ADR folder harms navigation.
-- Choose one ADR archive location, such as `docs/adr/archive/`, and keep the
+- Choose one ADR archive location, such as `docs/archive/adr/`, and keep the
   convention consistent.
 - Move future ideas, deferred possibilities, and speculative design notes into
   `docs/backlog/`.

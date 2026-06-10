@@ -13,8 +13,6 @@ duplicating durable rules.
   positioning and durable module-boundary architecture.
 - [backlog/README.md](backlog/README.md) tracks campaign-sized future work and
   ideas that are not current operating guidance.
-- [mvp-plan.md](mvp-plan.md) tracks implemented surface, MVP priority groups,
-  current slice, verification surface, and deferred work.
 - [packaging.md](packaging.md) records current package IDs, target framework,
   and package dependency direction.
 - [repository.md](repository.md) records current repository layout and tooling
@@ -22,6 +20,8 @@ duplicating durable rules.
 - [samples.md](samples.md) records current sample application direction.
 - [setup.md](setup.md) is the single user-facing library setup example.
 - [testing.md](testing.md) records current testing direction.
+- [archive/README.md](archive/README.md) preserves historical planning
+  documents that should not steer new work.
 
 ## Documentation Model
 
@@ -50,8 +50,6 @@ files with the local context each audience needs.
 - `repository.md` owns repository layout, local tooling, CI, and code
   conventions, but should reference `packaging.md` for package inventory.
 - `testing.md` owns test policy, categories, and command entrypoints.
-- `mvp-plan.md` owns the current implementation, verification surface,
-  priority groups, current slice, and deferred-work snapshot.
 - `architecture/` owns runtime contracts and durable boundary principles.
 - `backlog/` owns future work and review campaigns that are not active
   operating guidance.

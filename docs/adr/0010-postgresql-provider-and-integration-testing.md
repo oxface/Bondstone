@@ -80,7 +80,7 @@ tests expose the shape those APIs need.
   [docs/architecture/persistence.md](../architecture/persistence.md), testing
   rules in [docs/testing.md](../testing.md), PostgreSQL-specific EF behavior
   in [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md),
-  and current implementation state in [docs/mvp-plan.md](../mvp-plan.md).
+  and current implementation state in [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad provider support, migration policy, or durable behavior changes.
 - Application evidence: The PostgreSQL package shell exists. First
@@ -104,7 +104,7 @@ tests expose the shape those APIs need.
 
 Read back [docs/architecture/persistence.md](../architecture/persistence.md),
 [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md),
-[docs/testing.md](../testing.md), and [docs/mvp-plan.md](../mvp-plan.md). Ran targeted PostgreSQL
+[docs/testing.md](../testing.md), and [docs/archive/mvp-plan.md](../archive/mvp-plan.md). Ran targeted PostgreSQL
 integration tests for provider schema, primary-key constraints, transaction,
 duplicate-conflict, inbox processed-state, operation-state, and registration
 behavior. PostgreSQL tests also verify outbox claim lease columns, savepoint

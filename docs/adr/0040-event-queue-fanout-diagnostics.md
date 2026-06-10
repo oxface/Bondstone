@@ -81,7 +81,7 @@ This queue-destination check applies to single-transport hosts.
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md),
   [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md),
-  [docs/testing.md](../testing.md), [docs/mvp-plan.md](../mvp-plan.md), and
+  [docs/testing.md](../testing.md), [docs/archive/mvp-plan.md](../archive/mvp-plan.md), and
   [AGENTS.md](../../AGENTS.md).
 - Agent guidance: Root AGENTS guidance now treats queue-destination event
   fan-out diagnostics as part of startup topology validation while still

@@ -30,20 +30,12 @@ because a module moves from in-process composition to a separate service.
 
 ## Direct Provider Adapters
 
-[ADR 0036](../adr/0036-direct-transport-adapters-and-rebus-removal.md)
-removes the Rebus adapter and makes direct provider adapters the current
-transport direction. Bondstone transport packages should adapt broker/client
-SDKs directly while keeping provider-native topology vocabulary and app-owned
-broker setup.
-
-[ADR 0034](../adr/0034-adapter-diversity-proof-transports.md) accepts the
-first transport proof packages: `Bondstone.Transport.ServiceBus` and
-`Bondstone.Transport.RabbitMq`. Their current implemented scope includes
-outgoing durable outbox dispatch, provider-native receive topology, opt-in
-hosted receive workers, and provider-backed receive integration tests. Broker
-administration and topology declaration helpers remain deferred. Provider retry
-and recovery boundaries are accepted in
-[ADR 0038](../adr/0038-provider-retry-recovery-and-settlement-boundaries.md):
+Bondstone transport packages adapt broker/client SDKs directly while keeping
+provider-native topology vocabulary and app-owned broker setup. The supported
+production-oriented direct transport adapters are
+`Bondstone.Transport.ServiceBus` and `Bondstone.Transport.RabbitMq`. They
+include outgoing durable outbox dispatch, provider-native receive topology,
+opt-in hosted receive workers, and provider-backed receive integration tests.
 Bondstone owns persisted outbox retry and terminal failure state, while direct
 provider receive adapters own settlement ordering and diagnostics without
 owning broker retry/dead-letter policy. See
@@ -54,10 +46,8 @@ owning broker retry/dead-letter policy. See
 tests, and local development. It is not a fallback and does not replace broker
 durability. See [transport-local.md](transport-local.md).
 
-[ADR 0035](../adr/0035-postgresql-dapper-persistence-proof.md) accepts the
-first non-EF persistence proof package:
-`Bondstone.Persistence.Postgres`. Its scope is PostgreSQL-specific,
-Dapper-backed internally, durable module messaging persistence without EF Core.
+`Bondstone.Persistence.Postgres` is PostgreSQL-specific, Dapper-backed
+internally, and provides durable module messaging persistence without EF Core.
 See [persistence-postgres.md](persistence-postgres.md).
 
 ## Topic Docs

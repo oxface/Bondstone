@@ -24,12 +24,10 @@ The worker follows the same competitive-consumer model as provider claimers.
 Multiple workers can run when the provider claim implementation supports
 skip-locked or equivalent semantics.
 
-The current public worker registration creates one aggregate worker over the
-configured local module outbox dispatch graph. That keeps the first command
-loop simple, but it is not the final isolation story for modular monoliths.
-Module outboxes are ownership and backlog boundaries, so future worker
-registration should be able to target all local modules by default or selected
-module outboxes when a host needs to avoid noisy-neighbor dispatch behavior.
+The public worker registration creates one aggregate worker over the configured
+local module outbox dispatch graph. Module outboxes remain ownership
+boundaries, while selected-module worker registration is tracked as future
+work in [../backlog/04-future-work.md](../backlog/04-future-work.md).
 
 `AddBondstone` is the preferred host registration path. Package-specific
 extensions mark what they contribute, and the builder rejects hosted outbox
@@ -61,13 +59,7 @@ Startup validates that the dispatcher graph can be resolved and fails fast
 when low-level registration omits required persistence or transport
 dependencies.
 
-## Future Workers
-
-Future module-targeted outbox workers, inbox workers, and maintenance workers
-should live in `Bondstone.Hosting` when their underlying core abstractions are
-stable. Examples include selected-module outbox dispatch, stale-claim
-recovery, dead-letter retention, archiving, cleanup, and receive-side inbox
-workers.
+## Worker Ownership
 
 Provider SQL remains in provider packages. Transport-specific send, receive,
 and envelope behavior remains in transport adapter packages.

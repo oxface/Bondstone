@@ -128,7 +128,7 @@ slices.
   [docs/architecture/README.md](../architecture/README.md),
   [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md),
   [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md),
-  [docs/mvp-plan.md](../mvp-plan.md), and this ADR. Provider-specific
+  [docs/archive/mvp-plan.md](../archive/mvp-plan.md), and this ADR. Provider-specific
   architecture docs now describe the outgoing proof scope and deferred receive
   work.
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) directs adapter-diversity

@@ -94,7 +94,7 @@ mapping diagnostics.
   and [docs/setup.md](../setup.md). Cross-cutting persistence positioning is
   described in [docs/architecture/persistence.md](../architecture/persistence.md).
   Sequencing for optional mapping work is tracked in
-  [docs/mvp-plan.md](../mvp-plan.md).
+  [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, persistence, provider, migration, or compatibility changes.
 - Application evidence: The provider-neutral EF Core model builder extensions

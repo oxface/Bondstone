@@ -109,7 +109,7 @@ declaration helpers remain future ADR-backed work.
   [docs/architecture/modules.md](../architecture/modules.md),
   [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md),
   [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md),
-  [docs/testing.md](../testing.md), and [docs/mvp-plan.md](../mvp-plan.md).
+  [docs/testing.md](../testing.md), and [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root AGENTS guidance already requires ADRs before broad
   transport behavior changes and now references this validation boundary.
 - Application evidence: RabbitMQ and Service Bus transport validators run from

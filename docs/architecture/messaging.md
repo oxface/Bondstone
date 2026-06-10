@@ -42,10 +42,7 @@ module-owned persistence behavior supplied by provider packages.
 
 `IIntegrationEvent` is reserved for durable cross-module facts. Integration
 events are not commands: they do not target one module and they fan out to
-independently identified subscribers. The accepted guardrail is tracked in
-[ADR 0026](../adr/0026-event-shape-guardrail.md), and first-class event
-publish/subscribe direction is tracked in
-[ADR 0033](../adr/0033-first-class-event-publish-subscribe-topology.md).
+independently identified subscribers.
 
 `IDurableEventPublisher` accepts an integration event, requires current
 source-module context, serializes the event through
@@ -75,10 +72,10 @@ Event-driven orchestration composes commands and events rather than erasing
 their distinction. A subscriber, saga, process manager, or orchestrator can
 react to an integration event and send durable commands as follow-up work.
 
-Domain events remain module-local/private. Bondstone does not currently
-collect, persist, dispatch, or publish domain events automatically. Proposed
-future domain event persistence is tracked in
-[ADR 0028](../adr/0028-domain-event-persistence-capability.md).
+Domain events remain module-local/private. Bondstone does not collect,
+persist, dispatch, or publish domain events automatically. Optional domain
+event persistence is outside the current durable messaging contract and is
+tracked in [../backlog/04-future-work.md](../backlog/04-future-work.md).
 
 ## Inbox Identity
 
@@ -102,9 +99,9 @@ Event inbox identity is per subscriber:
 
 Already processed records are skipped. Already received but unprocessed
 records are operationally loud through `DurableInboxAlreadyReceivedException`
-when using the module receive pipeline, because Bondstone does not yet have an
-inbox lease or stale receive recovery model that can prove a second handler
-execution is safe.
+when using the module receive pipeline, because Bondstone has no inbox lease or
+stale receive recovery model that can prove a second handler execution is
+safe.
 
 ## Neutral Receive Pipeline
 
@@ -156,18 +153,17 @@ and returns the highest-precedence state: terminal statuses outrank
 `Running`, which outranks `Pending`; states with equal precedence use the
 newer update timestamp.
 
-The command loop does not yet write `Running`, `Failed`, or `Cancelled`.
-Those statuses remain available in the storage/read model for future or
-application-owned operation policies, but Bondstone's default command loop
-does not infer them from broker retry or handler exceptions. Polling,
-timeout, result deserialization, retry state, stale receive recovery, and
-default failure/cancellation transitions remain future decisions.
+The command loop writes `Pending` and `Completed`. `Running`, `Failed`, and
+`Cancelled` remain storage/read-model values for application-owned operation
+policies; Bondstone's default command loop does not infer them from broker
+retry or handler exceptions. Polling, timeout, result deserialization, retry
+state, stale receive recovery, and default failure/cancellation transitions are
+outside the current operation-state contract.
 
 ## Transport Adapters
 
-[ADR 0036](../adr/0036-direct-transport-adapters-and-rebus-removal.md)
-removes the Rebus adapter and makes direct provider adapters the reference
-transport architecture.
+Direct provider adapters are the supported transport architecture. Rebus is
+not a supported transport package.
 
 Current direct transport packages:
 
@@ -182,8 +178,7 @@ provider-backed receive tests. RabbitMQ uses exchange, routing-key, and queue
 vocabulary. Azure Service Bus uses queue, topic, subscription, and event
 destination vocabulary. Provider connection, credentials,
 queue/topic/exchange/binding creation, retry, dead-letter, serializer, and
-administration remain app-owned or provider-native unless a later ADR accepts a
-bounded helper.
+administration remain app-owned or provider-native.
 
 `Bondstone.Transport.Local` is explicit local queue routing for samples, tests,
 and local development. It uses the neutral receive pipelines and preserves
@@ -221,20 +216,16 @@ hosted receive lifecycle helpers over configured receive topology.
 Provider-backed integration tests cover successful receive settlement,
 dead-letter handoff after failed dispatch, and event subscriber fan-out.
 
-[ADR 0038](../adr/0038-provider-retry-recovery-and-settlement-boundaries.md)
-sets the Phase 7 retry and recovery boundary. Bondstone owns persisted outbox
-retry and terminal failure state. Direct provider receive adapters own
-settlement ordering and operational diagnostics, but broker retry schedules,
-delivery counts, dead-letter policy, and provider client retry configuration
-remain application-owned and provider-native. Broker topology declaration
-helpers remain deferred.
+Bondstone owns persisted outbox retry and terminal failure state. Direct
+provider receive adapters own settlement ordering and operational diagnostics,
+but broker retry schedules, delivery counts, dead-letter policy, and provider
+client retry configuration remain application-owned and provider-native.
 
-The MVP receive registration contract is deliberately small: applications bind
-Bondstone receive topology to provider-native queues and subscriptions where
-their retry/DLQ policy is already configured. RabbitMQ exposes the worker
-failure `requeue` decision. Service Bus exposes processor concurrency and lock
-renewal settings. Bondstone does not create a provider-neutral receive retry
-policy or receive DLQ abstraction.
+Applications bind Bondstone receive topology to provider-native queues and
+subscriptions where their retry/DLQ policy is already configured. RabbitMQ
+exposes the worker failure `requeue` decision. Service Bus exposes processor
+concurrency and lock renewal settings. Bondstone does not create a
+provider-neutral receive retry policy or receive DLQ abstraction.
 
 ## Diagnostics
 

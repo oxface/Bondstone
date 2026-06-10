@@ -1,9 +1,7 @@
 # PostgreSQL Persistence
 
-`Bondstone.Persistence.Postgres` owns the first non-EF persistence proof
-for Bondstone durable module messaging.
-
-## Current Scope
+`Bondstone.Persistence.Postgres` owns non-EF PostgreSQL persistence for
+Bondstone durable module messaging.
 
 The package is PostgreSQL-specific and Dapper-backed internally. It implements
 durable module messaging persistence without `DbContext`:
@@ -20,10 +18,9 @@ Dapper is an implementation helper, not a generic product abstraction. The
 public API is provider-specific and keeps PostgreSQL session/transaction
 ownership inside this package.
 
-The current proof supports one `NpgsqlDataSource` per service provider. Multiple
-PostgreSQL modules can use separate schemas in the same database. Modules
-that require different connection strings should run in separate service
-providers until a later ADR accepts multi-data-source selection.
+The package supports one `NpgsqlDataSource` per service provider. Multiple
+PostgreSQL modules can use separate schemas in the same database. Modules that
+require different connection strings should run in separate service providers.
 
 ## Schema
 
@@ -50,9 +47,5 @@ module.UsePostgresPersistence(connectionString, schema: "billing");
 Handlers that need application SQL can take `IPostgresModuleSession` and
 execute commands through the current connection and transaction.
 
-## Deferred Work
-
-Production migration helpers, stale outbox claim recovery, stale inbox receive
-recovery, cleanup workers, advanced operation-state transitions,
-multi-data-source selection, and a generic provider abstraction remain
-later decisions.
+Follow-up PostgreSQL non-EF persistence ideas that are outside the current
+contract are tracked in [../backlog/04-future-work.md](../backlog/04-future-work.md).

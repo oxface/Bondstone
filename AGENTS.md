@@ -15,8 +15,8 @@ Start with:
 - [docs/architecture/README.md](docs/architecture/README.md) before changing
   runtime architecture, durable messaging, persistence, hosting, or transport
   behavior.
-- [docs/mvp-plan.md](docs/mvp-plan.md) before choosing or continuing an
-  implementation slice.
+- [docs/backlog/README.md](docs/backlog/README.md) before choosing or
+  continuing a backlog campaign or future-work item.
 - [docs/testing.md](docs/testing.md) before moving or writing tests.
 - [docs/samples.md](docs/samples.md) before adding or changing sample
   applications.
@@ -47,9 +47,8 @@ Start with:
   different packaging decision.
 - Use coordinated package versioning and NuGet release automation according to
   [docs/packaging.md](docs/packaging.md).
-- Build toward the current MVP according to [docs/mvp-plan.md](docs/mvp-plan.md).
-  Do not bulk-copy Bondstone code or preserve the historical template
-  repository as a compatibility constraint.
+- Build according to the stable docs. Do not bulk-copy Bondstone code or
+  preserve the historical template repository as a compatibility constraint.
 - Source, tests, docs, repository automation, and samples should be arranged
   for library maintenance, while avoiding validation and frontend/browser
   tooling that Bondstone does not need.

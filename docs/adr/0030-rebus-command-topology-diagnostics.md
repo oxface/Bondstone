@@ -84,7 +84,7 @@ reusing command destination source names.
 - Stable docs: Current command destination diagnostics are described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md),
-  and [docs/mvp-plan.md](../mvp-plan.md).
+  and [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, package-boundary, provider, transport, or durable runtime
   changes.

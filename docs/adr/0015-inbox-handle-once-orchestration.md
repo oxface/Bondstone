@@ -93,7 +93,7 @@ decisions.
 - Stable docs: Current messaging and persistence rules are described in
   [docs/architecture/messaging.md](../architecture/messaging.md) and
   [docs/architecture/persistence.md](../architecture/persistence.md), with
-  current implementation state in [docs/mvp-plan.md](../mvp-plan.md).
+  current implementation state in [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad durable behavior, transport strategy, provider support, migration
   policy, or public API changes.
@@ -110,7 +110,7 @@ decisions.
 
 Read back [docs/architecture/messaging.md](../architecture/messaging.md),
 [docs/architecture/persistence.md](../architecture/persistence.md),
-[docs/mvp-plan.md](../mvp-plan.md), and [docs/testing.md](../testing.md).
+[docs/archive/mvp-plan.md](../archive/mvp-plan.md), and [docs/testing.md](../testing.md).
 Verified the applied slice
 with:
 

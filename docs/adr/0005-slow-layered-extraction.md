@@ -84,7 +84,7 @@ being the primary consumer after Bondstone packaging and samples mature.
   and the historical repository is source material rather than a compatibility
   constraint.
 - Stable docs: Current implementation scope is described in
-  [docs/mvp-plan.md](../mvp-plan.md), with architecture context in
+  [docs/archive/mvp-plan.md](../archive/mvp-plan.md), with architecture context in
   [docs/architecture/README.md](../architecture/README.md) and current
   persistence context in
   [docs/architecture/persistence.md](../architecture/persistence.md).

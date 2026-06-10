@@ -85,7 +85,7 @@ route dead letters, or start hosted workers.
   [docs/architecture/persistence.md](../architecture/persistence.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
   [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md),
-  and [docs/mvp-plan.md](../mvp-plan.md).
+  and [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad durable behavior, provider support, or migration policy changes.
 - Application evidence: Core dispatch state, EF mappings, EF metadata tests,

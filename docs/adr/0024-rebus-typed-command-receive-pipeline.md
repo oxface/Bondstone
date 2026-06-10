@@ -121,7 +121,7 @@ and samples remain future work.
 - Stable docs: Current receive-side transport direction is described in
   [docs/architecture/messaging.md](../architecture/messaging.md) and
   [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md),
-  with current implementation state in [docs/mvp-plan.md](../mvp-plan.md) and
+  with current implementation state in [docs/archive/mvp-plan.md](../archive/mvp-plan.md) and
   historical extraction notes in
   [docs/archive/extraction-plan.md](../archive/extraction-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before

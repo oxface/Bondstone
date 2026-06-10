@@ -144,9 +144,9 @@ ADR accepts default running, failure, cancellation, or retry semantics.
 ## Provider Boundaries
 
 Core contracts are intentionally provider-neutral.
-`Bondstone.Persistence.Postgres` is the accepted first non-EF proof
-provider. It should implement these contracts directly, own its
-PostgreSQL-specific connection/session and transaction boundary in its own
-package, and pass explicit commit delegates to core orchestration primitives
-where needed. Non-EF providers should not depend on EF entity mappings,
+`Bondstone.Persistence.Postgres` is the PostgreSQL-specific non-EF persistence
+provider. It implements these contracts directly, owns its PostgreSQL-specific
+connection/session and transaction boundary in its own package, and passes
+explicit commit delegates to core orchestration primitives where needed.
+Non-EF providers should not depend on EF entity mappings,
 `DbContext`, or `IEntityFrameworkCorePersistenceScope`.

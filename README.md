@@ -3,9 +3,9 @@
 Bondstone is a .NET library for durable module boundaries, durable command
 sending, EF Core backed inbox/outbox persistence, and transport adapters.
 
-The repository has completed its MVP scope and is moving through post-MVP
-stabilization: ADR application audit, documentation tightening, architecture
-review, and code review.
+Stable docs describe the current package, architecture, setup, repository,
+sample, and verification contracts. Backlog docs track review campaigns and
+future ideas that are not current operating guidance.
 
 ## Packages
 
@@ -19,12 +19,15 @@ publishing policy are recorded in [docs/packaging.md](docs/packaging.md).
 - [docs/architecture/README.md](docs/architecture/README.md) records runtime
   positioning.
 - [docs/setup.md](docs/setup.md) is the single user-facing setup example.
-- [docs/backlog/README.md](docs/backlog/README.md) tracks post-MVP review and
-  cleanup campaigns.
-- [docs/mvp-plan.md](docs/mvp-plan.md) tracks implemented surface, priority
-  groups, current slice, and deferred MVP work.
+- [docs/backlog/README.md](docs/backlog/README.md) tracks review campaigns and
+  future ideas.
 - [docs/packaging.md](docs/packaging.md) records package and release policy.
+- [docs/repository.md](docs/repository.md) records repository layout and
+  tooling.
+- [docs/samples.md](docs/samples.md) records sample direction.
 - [docs/testing.md](docs/testing.md) records test categories and verification.
+- [docs/archive/README.md](docs/archive/README.md) preserves historical
+  planning documents that should not steer new work.
 - [src/](src/) contains package projects.
 - [tests/](tests/) contains package and integration-boundary test projects.
 - [samples/](samples/) is reserved for sample applications.
@@ -60,5 +63,7 @@ Required repository setup:
 
 Bondstone is built gradually as a durable module-boundary library. Do not
 bulk-copy implementation code from the historical template repository or
-preserve compatibility with it as a design constraint. Each slice should review
-package boundaries, public API shape, tests, docs, and service-split pressure.
+preserve compatibility with it as a design constraint. Current implementation
+work should follow the stable docs, check ADR requirements before broad
+technical decisions, and keep package boundaries, public API shape, tests,
+docs, and service-split pressure visible.

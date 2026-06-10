@@ -5,10 +5,7 @@ framework direction.
 
 ## Target Framework
 
-Bondstone targets `net10.0` for the initial extraction.
-
-Wider target framework support is deferred until a later compatibility ADR
-evaluates demand and maintenance cost.
+Bondstone targets `net10.0`.
 
 ## Package Set
 
@@ -23,26 +20,21 @@ Ship one NuGet package per package project. Package IDs match project names:
 - `Bondstone.Transport.ServiceBus`
 - `Bondstone.Transport.RabbitMq`
 
-Direct transport adapter direction is accepted by
-[ADR 0036](adr/0036-direct-transport-adapters-and-rebus-removal.md).
 `Bondstone.Transport.ServiceBus` and `Bondstone.Transport.RabbitMq` are the
-active transport proof packages. Their current implemented scope includes
-outgoing durable outbox dispatch, provider-native receive topology, opt-in
-hosted receive workers, and provider-backed receive integration tests.
-Broker administration remains app-owned. Multi-transport outbox selection is
-implemented through provider route candidates and `RoutedDurableOutboxTransport`.
+production-oriented direct transport adapters. They include outgoing durable
+outbox dispatch, provider-native receive topology, opt-in hosted receive
+workers, and provider-backed receive integration tests. Broker administration
+remains app-owned. Multi-transport outbox selection is implemented through
+provider route candidates and `RoutedDurableOutboxTransport`.
 
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
 tests, and local development. It exercises outbox/inbox receive semantics
 through the provider-neutral receive pipelines, but it is not a production
 broker adapter or hidden fallback.
 
-The non-EF persistence proof package is accepted by
-[ADR 0035](adr/0035-postgresql-dapper-persistence-proof.md) and renamed by
-[ADR 0037](adr/0037-postgresql-persistence-package-identity.md).
-`Bondstone.Persistence.Postgres` is PostgreSQL-specific and
-Dapper-backed internally. It proves durable module messaging persistence
-without EF Core; it is not a generic Dapper provider abstraction.
+`Bondstone.Persistence.Postgres` is PostgreSQL-specific and Dapper-backed
+internally. It provides durable module messaging persistence without EF Core;
+it is not a generic Dapper provider abstraction.
 
 ## Package Dependencies
 
@@ -66,8 +58,8 @@ Use this dependency direction:
 Provider-specific packages contain provider-specific behavior only. Transport
 packages adapt broker/client SDKs directly instead of adapting another bus
 library. Reusable hosted worker composition belongs in `Bondstone.Hosting`.
-Core domain, command, messaging, and module abstractions stay in `Bondstone`
-unless a later ADR defines a narrower package split.
+Core domain, command, messaging, and module abstractions stay in `Bondstone`.
+Changing that package split requires ADR review.
 
 `Bondstone` owns the lightweight `AddBondstone` service-composition builder.
 Provider, transport, and hosting packages add extension methods to that
@@ -92,8 +84,8 @@ supports manual dispatch for recovery or first-publication use; manual dispatch
 publishes the version recorded in `Directory.Build.props` at the selected ref.
 
 The publish workflow packs `Bondstone.slnx` and publishes every `.nupkg`
-created under `artifacts/packages`. Any future packable package project that is
-included in the solution will be covered by the same publish loop.
+created under `artifacts/packages`. Packable package projects included in the
+solution are covered by the same publish loop.
 
 Shared package metadata belongs in `Directory.Build.props`. Project-specific
 descriptions, dependencies, and package assets belong in the package project
@@ -121,13 +113,7 @@ create the release without triggering downstream workflows.
 Real publish verification has succeeded. Published packages appear on
 nuget.org, not GitHub Packages.
 
-Independent package versioning is deferred until a later ADR accepts the need
-and release-management cost.
-
-## Current Status
-
-The package boundary, target framework, coordinated versioning, and release
-automation direction are accepted and scaffolded. Initial packages have been
-published to nuget.org. Current package implementation state is summarized in
-[mvp-plan.md](mvp-plan.md). Keep this document focused on package boundaries,
-dependency direction, versioning, and publishing rules.
+Initial packages have been published to nuget.org. Keep this document focused
+on package boundaries, dependency direction, versioning, and publishing rules.
+Future packaging ideas are tracked in
+[backlog/04-future-work.md](backlog/04-future-work.md).

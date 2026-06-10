@@ -22,3 +22,5 @@ stable docs, and remove stale backlog language.
 - [03-architecture-code-review.md](03-architecture-code-review.md) performs the
   post-MVP architecture and code review sweep, then produces the human review
   plan.
+- [04-future-work.md](04-future-work.md) collects non-current follow-up ideas
+  moved out of stable docs during documentation tightening.

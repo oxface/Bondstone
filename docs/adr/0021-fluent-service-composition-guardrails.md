@@ -109,7 +109,7 @@ assemblies.
   [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md)
   and [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md),
   package rules in [docs/packaging.md](../packaging.md), and current
-  implementation state in [docs/mvp-plan.md](../mvp-plan.md).
+  implementation state in [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, package-boundary, provider, transport, or durable runtime
   changes. It also reserves `InternalsVisibleTo` for test assemblies rather

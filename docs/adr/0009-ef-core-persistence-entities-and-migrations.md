@@ -108,7 +108,7 @@ orchestration remain deferred.
 - Stable docs: Current persistence rules are described in
   [docs/architecture/persistence.md](../architecture/persistence.md),
   [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md),
-  and [docs/mvp-plan.md](../mvp-plan.md).
+  and [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad changes to provider support, migration policy, package boundaries, or
   durable behavior.

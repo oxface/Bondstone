@@ -1,7 +1,8 @@
 # Extraction Plan
 
 Archived: this document is preserved for historical context only. Use
-[../mvp-plan.md](../mvp-plan.md) for current implementation planning.
+[../README.md](../README.md) for current documentation navigation and
+[../backlog/README.md](../backlog/README.md) for active review campaigns.
 
 This is the tactical extraction backlog. It should stay current and disposable:
 use [extraction.md](extraction.md) for the durable extraction strategy, and use

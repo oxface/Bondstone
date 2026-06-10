@@ -71,14 +71,14 @@ acknowledgement/completion after success, negative acknowledgement or abandon
 after failure, and broker-owned dead-letter behavior where the adapter promises
 that handoff.
 
-After ADR 0038, receive retry-policy tests should assert Bondstone's provider
-boundary rather than expecting Bondstone to own broker retry policy. Fast tests
-should cover native mapping, dispatch, and settlement ordering. Provider-backed
-integration tests should prove the native handoff that Bondstone performs:
-RabbitMQ negative acknowledgement with the configured `requeue` value and
-Service Bus abandon/complete behavior. Broker retry schedules, max delivery
-count, and dead-letter topology are app/provider configuration and should be
-tested only where the adapter explicitly promises that handoff.
+Receive retry-policy tests should assert Bondstone's provider boundary rather
+than expecting Bondstone to own broker retry policy. Fast tests should cover
+native mapping, dispatch, and settlement ordering. Provider-backed integration
+tests should prove the native handoff that Bondstone performs: RabbitMQ
+negative acknowledgement with the configured `requeue` value and Service Bus
+abandon/complete behavior. Broker retry schedules, max delivery count, and
+dead-letter topology are app/provider configuration and should be tested only
+where the adapter explicitly promises that handoff.
 
 For first-class events, keep the same split. Unit and application tests should
 cover event route/topic resolution, publish dispatch, subscriber registration,
@@ -94,7 +94,7 @@ unless the assertion depends on a real broker handoff.
 
 ## Verification Surface
 
-Repository verification will need a clear split between fast default checks and
+Repository verification is split between fast default checks and
 infrastructure-backed integration checks.
 
 The current default verification commands are:
@@ -118,15 +118,7 @@ smoke test under `tests/Bondstone.Samples.Tests`. It is covered by
 `pnpm backend:test:integration` and intentionally stays out of the default
 fast test filter because it starts Testcontainers PostgreSQL.
 
-The PostgreSQL persistence proof has explicit `Integration` tests under
-`tests/Bondstone.Persistence.Postgres.Tests` because the proof depends
+The PostgreSQL non-EF persistence package has explicit `Integration` tests under
+`tests/Bondstone.Persistence.Postgres.Tests` because the package depends
 on real PostgreSQL schema, transaction, inbox, outbox, and operation-state
 behavior.
-
-## Current Status
-
-This testing strategy is accepted and documented. Initial test projects,
-category-filtered commands, and CI wiring exist. Current test coverage is
-summarized in [mvp-plan.md](mvp-plan.md). Keep this document focused on
-testing policy and command entrypoints; keep the tactical list of currently
-covered slices in the MVP plan.

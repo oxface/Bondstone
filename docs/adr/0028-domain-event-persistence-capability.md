@@ -97,7 +97,7 @@ the first-class event model.
   [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md).
   Messaging and event terminology is described in
   [docs/architecture/messaging.md](../architecture/messaging.md). Sequencing is
-  tracked in [docs/mvp-plan.md](../mvp-plan.md).
+  tracked in [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, package-boundary, persistence, provider, durable behavior, or
   module runtime changes.

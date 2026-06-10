@@ -135,7 +135,7 @@ additional metadata.
   described in [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md),
   and [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md).
-  Sequencing is tracked in [docs/mvp-plan.md](../mvp-plan.md).
+  Sequencing is tracked in [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, compatibility, serializer behavior, durable behavior, provider,
   or transport boundary changes.

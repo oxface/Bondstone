@@ -13,42 +13,63 @@ Install the packages needed for the host:
   module transaction behavior.
 - `Bondstone.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
   classification and provider registration.
-- `Bondstone.Persistence.Postgres` for the PostgreSQL non-EF
-  persistence proof.
+- `Bondstone.Persistence.Postgres` for PostgreSQL non-EF durable module
+  persistence.
 - `Bondstone.Transport.RabbitMq` or `Bondstone.Transport.ServiceBus` when the
   host dispatches durable outbox records through a direct provider adapter.
 - `Bondstone.Transport.Local` when a sample, test, or local development host
   explicitly wants in-process queue routing through the durable receive
   pipelines.
 
-## Minimal Durable Outbox Host
+## Host Composition
 
-The current direct transport packages implement outgoing durable outbox
-dispatch. They keep provider connection, credentials, retry, dead-letter,
-topology declaration, workers, and administration app-owned or provider-native.
+Hosts compose modules, persistence, transport adapters, and hosted workers
+through `AddBondstone`. Provider connection, credentials, retry, dead-letter,
+topology declaration, and administration remain app-owned or provider-native.
 
 RabbitMQ example:
 
 ```csharp
 using Bondstone.Configuration;
-using Bondstone.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Hosting.Outbox;
 using Bondstone.Transport.RabbitMq.Outbox;
 using RabbitMQ.Client;
+
+string connectionString = builder.Configuration.GetConnectionString("App")!;
 
 builder.Services.AddBondstoneRabbitMqConnection(rabbitMqConnection);
 
 builder.Services.AddBondstone(bondstone =>
 {
-    bondstone.UsePostgreSqlPersistence<AppDbContext>(
-        builder.Configuration.GetConnectionString("App")!);
+    bondstone.AddOrderingModule(connectionString);
+    bondstone.AddFulfillmentModule(connectionString);
+    bondstone.AddBillingModule(connectionString);
 
     bondstone.UseRabbitMqTransport(rabbitMq =>
     {
         rabbitMq.UseCommandExchange("bondstone.commands");
-        rabbitMq.UseEventExchange("bondstone.events");
-        rabbitMq.UseModuleRoutingKeyConvention();
-        rabbitMq.UseEventRoutingKeyConvention();
+
+        rabbitMq.RouteModule("fulfillment")
+            .ToRoutingKey("fulfillment.commands");
+        rabbitMq.ReceiveQueue("fulfillment.commands")
+            .AcceptModule("fulfillment");
+
+        rabbitMq.RouteEvent("ordering.order-placed.v1")
+            .ToQueue("ordering.order-placed");
+        rabbitMq.ReceiveQueue("ordering.order-placed")
+            .SubscribeEvent(
+                "ordering.order-placed.v1",
+                "fulfillment",
+                "fulfillment.order-placed-projection.v1")
+            .SubscribeEvent(
+                "ordering.order-placed.v1",
+                "billing",
+                "billing.order-invoice-projection.v1");
+
+        rabbitMq.UseReceiveWorker(options =>
+        {
+            options.RequeueOnFailure = false;
+        });
     });
 
     bondstone.Outbox.UseWorker(options =>
@@ -107,6 +128,30 @@ public sealed class FulfillmentBondstoneModule(string connectionString)
 }
 ```
 
+EF-backed module `DbContext` models must map the durable tables they use with
+`ApplyBondstonePersistence()` or the granular `ApplyBondstoneOutbox()`,
+`ApplyBondstoneInbox()`, and `ApplyBondstoneOperationState()` helpers.
+
+Modules that do not use EF Core can use `Bondstone.Persistence.Postgres`:
+
+```csharp
+public sealed class BillingBondstoneModule(string connectionString)
+    : IBondstoneModule
+{
+    public string Name => BillingModule.ModuleName;
+
+    public void Configure(BondstoneModuleBuilder module)
+    {
+        module.UseDurableMessaging();
+        module.UsePostgresPersistence(
+            connectionString,
+            schema: BillingModule.ModuleName);
+        module.Events.RegisterSubscriber<OrderPlacedEvent, RecordBillingInvoiceHandler>(
+            "billing.order-invoice-projection.v1");
+    }
+}
+```
+
 ## Sending Commands
 
 Durable commands are sent from inside a module execution context. The default
@@ -140,7 +185,7 @@ await durableEventPublisher.PublishAsync(
 
 ## Receive Direction
 
-Core now exposes provider-neutral module receive pipelines over
+Core exposes provider-neutral module receive pipelines over
 `DurableMessageEnvelope`:
 
 - `IModuleCommandReceivePipeline`
@@ -149,17 +194,11 @@ Core now exposes provider-neutral module receive pipelines over
 Direct provider receive adapters should parse their provider-native message
 body into the neutral durable envelope, acknowledge only after the receive
 pipeline completes, and let failures flow to provider-native retry and
-dead-letter policy. RabbitMQ now has a receive queue dispatcher proof through
-`IRabbitMqReceivedMessageDispatcher`, and Service Bus has a receive source
-dispatcher proof through `IServiceBusReceivedMessageDispatcher`. Both
-providers also expose opt-in hosted receive helpers. RabbitMQ has
-broker-backed receive worker tests for real queue delivery, acknowledgement,
-failed dispatch handoff to application-owned dead-letter topology, and event
-subscriber fan-out from one queue delivery. Service Bus has emulator-backed
-receive worker tests for queue completion, abandon/dead-letter handoff, and
-topic subscription fan-out. Bondstone's receive responsibility is the native
-settlement handoff; broker retry schedules, delivery counts, and DLQ settings
-remain provider/app-owned.
+dead-letter policy. RabbitMQ exposes `IRabbitMqReceivedMessageDispatcher`, and
+Service Bus exposes `IServiceBusReceivedMessageDispatcher`. Both providers
+also expose opt-in hosted receive helpers. Bondstone's receive responsibility
+is the native settlement handoff; broker retry schedules, delivery counts, and
+DLQ settings remain provider/app-owned.
 
 Provider packages also expose native receive message mappers:
 

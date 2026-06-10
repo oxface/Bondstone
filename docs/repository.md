@@ -6,10 +6,10 @@ Bondstone.
 ## Layout
 
 Bondstone uses a library-maintenance repository layout with repository
-automation at the root, stable docs under `docs/`, deferred samples under
-`samples/`, package projects under `src/`, tests under `tests/`, and
-repository agent skills under `.agents/skills/`. Current package projects and
-dependency direction are recorded in [packaging.md](packaging.md).
+automation at the root, stable docs under `docs/`, samples under `samples/`,
+package projects under `src/`, tests under `tests/`, and repository agent
+skills under `.agents/skills/`. Current package projects and dependency
+direction are recorded in [packaging.md](packaging.md).
 
 Tests live under `tests/`, grouped by package or integration boundary. Tests
 extracted from the previous root framework test project should be moved or
@@ -64,8 +64,5 @@ Use `ct` as the standard parameter and local variable name for
 applies to public APIs as well as implementations because C# parameter names
 are visible to named-argument callers.
 
-## Current Status
-
-This structure is accepted. Current package implementation and verification
-state is summarized in [mvp-plan.md](mvp-plan.md). Keep this document focused
-on repository layout, local tooling, CI, and release automation.
+Keep this document focused on repository layout, local tooling, CI, and
+release automation.

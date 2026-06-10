@@ -1,9 +1,15 @@
 # MVP Plan
 
-This document is the active implementation plan for making Bondstone useful as
-a standalone library. Historical source notes are archived under
-[archive/](archive/) and should be treated as source archaeology, not current
-direction.
+Archived: this document is preserved as the completed MVP implementation
+history. It is not active operating guidance.
+
+Use [../README.md](../README.md) for current documentation navigation,
+[../architecture/README.md](../architecture/README.md) for runtime contracts,
+and [../backlog/04-future-work.md](../backlog/04-future-work.md) for
+non-current follow-up ideas.
+
+Historical source notes are archived in this folder and should be treated as
+source archaeology, not current direction.
 
 ## Purpose
 
@@ -17,9 +23,10 @@ Bondstone is a focused .NET library for durable module boundaries:
   native;
 - a low-friction path from modular monolith to split services.
 
-Use this plan for the current MVP surface, completed phase outcomes, and
-explicitly deferred post-MVP decisions. Use ADRs for durable technical
-decisions and architecture docs for the current operating contract.
+This plan recorded the completed MVP surface, phase outcomes, and deferred
+post-MVP decisions at the time. Use ADRs for durable technical decision
+history, architecture docs for the current operating contract, and backlog docs
+for non-current follow-up ideas.
 
 ## Current Position
 
@@ -82,7 +89,7 @@ Implemented surface includes:
   pipelines.
 
 Rebus has been removed by
-[ADR 0036](adr/0036-direct-transport-adapters-and-rebus-removal.md). Existing
+[ADR 0036](../adr/0036-direct-transport-adapters-and-rebus-removal.md). Existing
 Rebus ADRs are retained as historical decision trail only.
 
 ## MVP Priority Phases
@@ -91,7 +98,7 @@ Rebus ADRs are retained as historical decision trail only.
 
 Status: **Complete**.
 
-Accepted decision: [ADR 0026](adr/0026-event-shape-guardrail.md).
+Accepted decision: [ADR 0026](../adr/0026-event-shape-guardrail.md).
 
 Outcome:
 
@@ -105,7 +112,7 @@ Outcome:
 Status: **Complete**.
 
 Accepted decision:
-[ADR 0029](adr/0029-durable-payload-serialization-boundary.md).
+[ADR 0029](../adr/0029-durable-payload-serialization-boundary.md).
 
 Outcome:
 
@@ -118,7 +125,7 @@ Outcome:
 Status: **Complete for the current MVP surface**.
 
 Accepted decision:
-[ADR 0027](adr/0027-optional-ef-core-persistence-mapping.md).
+[ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md).
 
 Outcome:
 
@@ -147,7 +154,7 @@ Outcome:
 Status: **Complete**.
 
 Accepted decision:
-[ADR 0032](adr/0032-module-owned-durable-ef-persistence.md).
+[ADR 0032](../adr/0032-module-owned-durable-ef-persistence.md).
 
 Outcome:
 
@@ -161,7 +168,7 @@ Outcome:
 Status: **Complete for the current MVP surface**.
 
 Accepted decision:
-[ADR 0033](adr/0033-first-class-event-publish-subscribe-topology.md).
+[ADR 0033](../adr/0033-first-class-event-publish-subscribe-topology.md).
 
 Outcome:
 
@@ -181,8 +188,8 @@ non-EF persistence proof**.
 
 Accepted decisions:
 
-- [ADR 0034](adr/0034-adapter-diversity-proof-transports.md)
-- [ADR 0035](adr/0035-postgresql-dapper-persistence-proof.md)
+- [ADR 0034](../adr/0034-adapter-diversity-proof-transports.md)
+- [ADR 0035](../adr/0035-postgresql-dapper-persistence-proof.md)
 
 Outcome:
 
@@ -201,8 +208,8 @@ Status: **Complete**.
 
 Accepted decisions:
 
-- [ADR 0036](adr/0036-direct-transport-adapters-and-rebus-removal.md)
-- [ADR 0037](adr/0037-postgresql-persistence-package-identity.md)
+- [ADR 0036](../adr/0036-direct-transport-adapters-and-rebus-removal.md)
+- [ADR 0037](../adr/0037-postgresql-persistence-package-identity.md)
 
 Goal: remove adapter-on-adapter design pressure and make direct provider
 adapters the reference architecture before Phase 7 hardening.
@@ -275,9 +282,9 @@ Status: **Complete for the current MVP surface**.
 
 Accepted decisions:
 
-- [ADR 0038](adr/0038-provider-retry-recovery-and-settlement-boundaries.md)
-- [ADR 0039](adr/0039-startup-transport-topology-validation.md)
-- [ADR 0040](adr/0040-event-queue-fanout-diagnostics.md)
+- [ADR 0038](../adr/0038-provider-retry-recovery-and-settlement-boundaries.md)
+- [ADR 0039](../adr/0039-startup-transport-topology-validation.md)
+- [ADR 0040](../adr/0040-event-queue-fanout-diagnostics.md)
 
 Goal: harden direct provider transport and persistence APIs before broader
 public polish.

@@ -1,7 +1,8 @@
 # Extraction
 
 Archived: this document is preserved for historical context only. Use
-[../mvp-plan.md](../mvp-plan.md) for current implementation planning.
+[../README.md](../README.md) for current documentation navigation and
+[../backlog/README.md](../backlog/README.md) for active review campaigns.
 
 Bondstone is extracted slowly, project by project and often layer by layer.
 
@@ -55,11 +56,11 @@ Each step should do at least one of these:
 Avoid destructive edits in the current consumer repository unless they are part
 of an explicit migration step.
 
-## Current Status
+## Archived Status
 
-This extraction strategy was accepted for the early repository phase. Current
-implementation scope is tracked in [../mvp-plan.md](../mvp-plan.md). The
-historical tactical backlog is preserved in
+This extraction strategy was accepted for the early repository phase. The
+completed MVP implementation history is preserved in
+[mvp-plan.md](mvp-plan.md), and the historical tactical backlog is preserved in
 [extraction-plan.md](extraction-plan.md).
 
 General in-process module calls are not an extraction target unless a later ADR

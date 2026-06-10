@@ -11,17 +11,17 @@ tooling, and end-to-end workflows.
 Samples are not product applications and must not drive product behavior into
 library packages.
 
-## First Sample Shape
+## Sample Shape
 
-The first sample should stay intentionally small and operationally boring:
+Samples should stay intentionally small and operationally boring:
 
 - no authentication;
 - no product-grade UI;
 - no product-specific domain depth beyond what is needed to exercise
   Bondstone behavior;
-- no deployment story beyond local verification unless a later ADR accepts it.
+- no deployment story beyond local verification.
 
-The sample should demonstrate:
+Samples should demonstrate:
 
 - modular monolith composition;
 - module-owned persistence;
@@ -30,14 +30,10 @@ The sample should demonstrate:
 - provider and transport adapter integration;
 - eventual service extraction shape.
 
-## Local Orchestration
+Future sample ideas are tracked in
+[backlog/04-future-work.md](backlog/04-future-work.md).
 
-Use Aspire as the preferred local orchestration host for future samples when a
-sample needs multiple processes or local infrastructure. The current minimal
-API sample is still a direct ASP.NET Core entrypoint plus Testcontainers-backed
-integration tests.
-
-## Current Status
+## Modular Monolith Sample
 
 The current `samples/ModularMonolith` project is an adoption-proof minimal API
 sample. It composes `ordering`, `fulfillment`, and `billing` modules through
@@ -51,10 +47,9 @@ state, and publishes `InventoryReservedEvent`. Ordering and billing subscribe
 to integration events and record projections/invoices through their own module
 persistence boundaries.
 
-After ADR 0036, the sample no longer depends on the removed Rebus adapter. It
-currently uses `Bondstone.Transport.Local` through explicit local queue
-routing. The local adapter dispatches claimed outbox records into the
-provider-neutral `IModuleCommandReceivePipeline` and
+The sample uses `Bondstone.Transport.Local` through explicit local queue
+routing by default. The local adapter dispatches claimed outbox records into
+the provider-neutral `IModuleCommandReceivePipeline` and
 `IModuleEventReceivePipeline`. This keeps the sample proving outbox claiming,
 outbox dispatch recording, inbox handling, command/event execution, module
 transactions, mixed persistence, and operation state without presenting local

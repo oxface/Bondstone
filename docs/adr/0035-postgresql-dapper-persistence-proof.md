@@ -112,7 +112,7 @@ tuning remain later reliability or operational slices.
   [docs/architecture/persistence.md](../architecture/persistence.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
   [docs/architecture/persistence-postgres.md](../architecture/persistence-postgres.md),
-  [docs/mvp-plan.md](../mvp-plan.md), and this ADR.
+  [docs/archive/mvp-plan.md](../archive/mvp-plan.md), and this ADR.
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review for
   provider support and now points at adapter-diversity proof work.
 - Application evidence: `Bondstone.Persistence.Postgres` is scaffolded

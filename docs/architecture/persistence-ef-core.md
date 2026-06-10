@@ -17,8 +17,7 @@ to a consumer-owned `ModelBuilder`. It remains the convenience helper for hosts
 that want all current Bondstone durable persistence tables.
 
 Hosts that only need selected durable persistence pieces can use the granular
-mapping helpers accepted in
-[ADR 0027](../adr/0027-optional-ef-core-persistence-mapping.md):
+mapping helpers:
 
 ```csharp
 modelBuilder.ApplyBondstoneOutbox();
@@ -30,7 +29,7 @@ modelBuilder.ApplyBondstoneOperationState();
 messages, and `ApplyBondstoneOperationState` maps durable operation state.
 Modules that only need module-owned EF transactions do not need to map durable
 messaging tables unless their chosen durable capabilities use those stores.
-Consumers own migrations for now; Bondstone does not ship migrations or
+Consumers own migrations. Bondstone does not ship migrations or
 provider-specific migration conventions in the generic EF Core package.
 
 For modules that use the current `UseDurableMessaging` capability with EF
@@ -99,11 +98,9 @@ The store requires the operation-state entity mapping and fails with a clear
 `ApplyBondstoneOperationState()` mapping error if it is used with a DbContext
 that does not map operation state.
 
-EF Core does not currently collect or persist domain events. Proposed future
-domain event persistence should use provider abstractions and module command
-pipeline behavior instead of requiring a custom DbContext base class or
-overriding `SaveChangesAsync`. That proposal is tracked in
-[ADR 0028](../adr/0028-domain-event-persistence-capability.md).
+EF Core does not collect or persist domain events. Optional domain event
+persistence is outside the current EF Core persistence contract and is tracked
+in [../backlog/04-future-work.md](../backlog/04-future-work.md).
 
 ## Persistence Scope
 
@@ -130,9 +127,9 @@ those capabilities are used. The current applied EF module behavior wraps
 opted-in module command execution and event subscriber execution. Command
 receive can also save successful operation-state completion updates through
 the EF scope. Event receive operation-state completion, receive failure state,
-retry state, stale receive recovery, and receive acknowledgement policy remain
-future durable-boundary pieces. The EF scope remains the lower-level
-transaction companion, not a standalone public unit-of-work API.
+retry state, stale receive recovery, and receive acknowledgement policy are
+outside the current EF persistence contract. The EF scope remains the
+lower-level transaction companion, not a standalone public unit-of-work API.
 
 Sample and integration verification should assert persisted state after the EF
 transaction commits. In-handler signals are not durable completion evidence

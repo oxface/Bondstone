@@ -135,7 +135,7 @@ outer EF transaction may still be open.
   [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md),
   [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md),
   [docs/setup.md](../setup.md), [docs/samples.md](../samples.md), and
-  [docs/mvp-plan.md](../mvp-plan.md).
+  [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   durable behavior, provider support, migration policy, transport strategy, or
   public API changes.

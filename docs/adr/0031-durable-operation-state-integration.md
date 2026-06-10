@@ -102,7 +102,7 @@ or result payload semantics are accepted.
   [docs/architecture/modules.md](../architecture/modules.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
   [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md),
-  and [docs/mvp-plan.md](../mvp-plan.md).
+  and [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, durable behavior, provider, transport, or module runtime changes.
 - Application evidence: Default command sending stages `Pending` operation

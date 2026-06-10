@@ -206,7 +206,7 @@ leaving implementation details for smaller reviewed slices.
   [docs/architecture/modules.md](../architecture/modules.md),
   [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md),
   and [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md).
-  Sequencing is tracked in [docs/mvp-plan.md](../mvp-plan.md).
+  Sequencing is tracked in [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad public API, durable behavior, provider, transport, module runtime, or
   topology changes. It now points agents at the accepted command/event/domain

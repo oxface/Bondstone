@@ -7,7 +7,7 @@ behavior.
 
 The current adapter covers outgoing durable outbox transport, receive queue
 topology, receive dispatchers, native message mapping, settlement handler
-helpers, and an opt-in hosted receive worker proof.
+helpers, and an opt-in hosted receive worker.
 `RabbitMqDurableOutboxTransport` implements
 `IDurableOutboxTransport` for claimed outbox records and maps Bondstone
 durable envelopes to RabbitMQ publish messages through a provider-local
@@ -129,25 +129,23 @@ consumers, acknowledgement policy, retry policy, dead-letter policy, prefetch,
 channels, or connections. Applications register and configure the RabbitMQ
 `IConnection` and own native broker topology setup.
 
-An MVP RabbitMQ deployment that uses the hosted worker should provision, at
-minimum, the receive queue, any command/event bindings that route messages to
-that queue, and an intentional failure path. That failure path can be a DLX,
-retry queues, delayed exchange topology, quorum-queue delivery limits, or an
+RabbitMQ deployments that use the hosted worker should provision, at minimum,
+the receive queue, any command/event bindings that route messages to that
+queue, and an intentional failure path. That failure path can be a DLX, retry
+queues, delayed exchange topology, quorum-queue delivery limits, or an
 explicit decision to requeue immediately. Bondstone only performs the
 configured acknowledgement or negative acknowledgement.
 
 The adapter publishes the Bondstone-owned durable envelope as the message body
 and copies durable identity, module metadata, operation id, partition key, and
 W3C trace context into RabbitMQ properties and headers where appropriate.
-External event handoff beyond provider-native queue destinations, unwrapped
-payloads, CloudEvents, and schema-specific envelopes remain separate
-ADR-backed decisions.
-
-## Deferred Work
+External event handoff beyond provider-native queue destinations is outside
+the current RabbitMQ transport contract.
 
 RabbitMQ has initial broker-backed receive worker integration tests for real
 queue delivery, acknowledgement after successful command dispatch, and failed
 dispatch handoff to application-owned dead-letter topology through negative
 acknowledgement with `requeue: false`. It also proves event receive fan-out
 from one broker queue delivery to each configured subscriber identity before
-acknowledgement. Broker topology declaration remains a future slice.
+acknowledgement. Follow-up transport ideas are tracked in
+[../backlog/04-future-work.md](../backlog/04-future-work.md).

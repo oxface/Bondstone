@@ -79,10 +79,5 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
 - schema-aware provider registration and composition with the EF persistence
   scope.
 
-## Deferred PostgreSQL Work
-
-Deferred PostgreSQL work includes migration helpers, provider-specific payload
-storage such as `jsonb`, dispatcher loops, dead-letter routing, stale-claim
-recovery, receive retry policy, stale receive recovery, transport
-acknowledgement, and higher-level module identity or transaction helpers above
-the EF persistence scope.
+Follow-up PostgreSQL ideas that are outside the current contract are tracked
+in [../backlog/04-future-work.md](../backlog/04-future-work.md).

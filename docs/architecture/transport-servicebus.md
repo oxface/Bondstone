@@ -7,7 +7,7 @@ adapter behavior.
 
 The current adapter covers outgoing durable outbox transport, receive source
 topology, receive dispatchers, native message mapping, settlement handler
-helpers, and an opt-in hosted receive worker proof.
+helpers, and an opt-in hosted receive worker.
 `ServiceBusDurableOutboxTransport` implements
 `IDurableOutboxTransport` for claimed outbox records and maps Bondstone
 durable envelopes to Azure Service Bus messages through a provider-local
@@ -133,7 +133,7 @@ processors, retry policy, dead-letter policy, credentials, connection strings,
 or administrative clients. Applications register and configure the Azure
 `ServiceBusClient` and own native Service Bus infrastructure setup.
 
-An MVP Service Bus deployment that uses the hosted worker should provision, at
+Service Bus deployments that use the hosted worker should provision, at
 minimum, the receive queue or topic subscription, the subscription rules needed
 for event fan-out, max delivery count, and any dead-letter settings. Bondstone
 only completes after successful dispatch or abandons on failure so the
@@ -142,12 +142,11 @@ configured Service Bus entity policy can take over.
 The adapter sends the Bondstone-owned durable envelope as the message body and
 copies durable identity, module metadata, operation id, partition key, and W3C
 trace context into Service Bus message properties where appropriate. External
-event handoff, unwrapped payloads, CloudEvents, and schema-specific envelopes
-remain separate ADR-backed decisions.
-
-## Deferred Work
+event handoff beyond provider-native Service Bus destinations is outside the
+current transport contract.
 
 Service Bus has emulator-backed receive worker integration tests for real queue
 delivery, completion after successful command dispatch, abandon/dead-letter
 handoff after failed dispatch, and topic subscription fan-out to configured
-subscriber identities. Broker topology declaration remains a future slice.
+subscriber identities. Follow-up transport ideas are tracked in
+[../backlog/04-future-work.md](../backlog/04-future-work.md).

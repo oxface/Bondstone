@@ -89,7 +89,7 @@ Consumers still need an inbox or idempotent handlers.
   [docs/architecture/persistence.md](../architecture/persistence.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
   [docs/architecture/hosting.md](../architecture/hosting.md), and
-  [docs/mvp-plan.md](../mvp-plan.md).
+  [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad durable behavior, provider support, transport support, or migration
   policy changes.

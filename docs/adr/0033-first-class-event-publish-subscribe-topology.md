@@ -248,7 +248,7 @@ implementation, rather than as only future vocabulary.
   [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md),
   [docs/packaging.md](../packaging.md), [docs/setup.md](../setup.md),
   [docs/testing.md](../testing.md), [docs/samples.md](../samples.md), and
-  [docs/mvp-plan.md](../mvp-plan.md).
+  [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) already requires ADR
   review before public API, durable behavior, provider, transport, module
   runtime, topology, and sample architecture changes. No new repository skill

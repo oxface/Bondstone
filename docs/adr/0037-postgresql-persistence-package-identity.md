@@ -69,7 +69,7 @@ the MVP repository.
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
   [docs/architecture/persistence-postgres.md](../architecture/persistence-postgres.md),
   [docs/setup.md](../setup.md), [docs/testing.md](../testing.md),
-  [docs/samples.md](../samples.md), and [docs/mvp-plan.md](../mvp-plan.md).
+  [docs/samples.md](../samples.md), and [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) names
   `Bondstone.Persistence.Postgres` as the current non-EF PostgreSQL proof
   package.

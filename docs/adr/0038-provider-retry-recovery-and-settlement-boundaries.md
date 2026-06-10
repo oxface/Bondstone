@@ -150,7 +150,7 @@ ADR accepts stale receive recovery semantics.
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md),
   [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md),
-  [docs/testing.md](../testing.md), and [docs/mvp-plan.md](../mvp-plan.md).
+  [docs/testing.md](../testing.md), and [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) keeps broker
   administration, retry/dead-letter policy, credentials, and native clients
   app-owned.

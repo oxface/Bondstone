@@ -112,7 +112,7 @@ single shared queue assumption.
   in [docs/architecture/messaging.md](../architecture/messaging.md),
   persistence rules in
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
-  and current implementation state in [docs/mvp-plan.md](../mvp-plan.md).
+  and current implementation state in [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   package-boundary or durable runtime behavior changes.
 - Application evidence: `Bondstone.Hosting` package, hosted outbox worker,

@@ -42,6 +42,22 @@ outgoing outbox writes from the target module persistence context. Existing
 single-`DbContext` setups remain supported, but modular-monolith samples should
 prefer one module-owned `DbContext` per module.
 
+Module persistence metadata remains on current module registration. The
+provider name marks that the module declares persistence and lets provider
+transaction behaviors decide whether they own command or event subscriber
+execution. EF Core module persistence also records the module `DbContext` type
+so EF transaction behavior can resolve the context and validate required
+durable messaging mappings. Non-EF providers keep provider-specific metadata
+such as schema, session, connection, and SQL configuration in provider-owned
+services.
+
+Fallback non-module persistence services are intentionally supported advanced
+composition for now. When no module-owned durable persistence implementations
+are registered, core resolvers may use root-level outbox writer, inbox handler
+executor, operation-state store, and operation reader services. This is useful
+for low-level single-store composition and compatibility tests, but it is not
+the preferred module-boundary setup.
+
 Domain event persistence is not part of the current persistence contract.
 
 Provider packages own provider-specific SQL, locking, conflict detection,

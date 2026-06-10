@@ -1,7 +1,7 @@
 # Outbox Terminal Failure
 
-Status: Resolved by
-[ADR 0041](../adr/0041-outbox-terminal-failure-boundary.md).
+Status: Archived after resolution by
+[ADR 0041](../../adr/0041-outbox-terminal-failure-boundary.md).
 
 Goal: resolve Bondstone's outgoing outbox retry and terminal-failure
 terminology before the persisted/public status language hardens.
@@ -21,7 +21,7 @@ terminology before the persisted/public status language hardens.
 
 ## ADRs
 
-- [0041 Outbox Terminal Failure Boundary](../adr/0041-outbox-terminal-failure-boundary.md)
+- [0041 Outbox Terminal Failure Boundary](../../adr/0041-outbox-terminal-failure-boundary.md)
 
 ## Review Questions
 

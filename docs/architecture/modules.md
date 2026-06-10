@@ -51,6 +51,14 @@ persistence through `module.UsePersistence(...)` or a provider-specific helper
 such as `UsePostgreSqlPersistence<TDbContext>()` or
 `UsePostgresPersistence(...)`.
 
+The current module registration records persistence with a provider name and,
+for EF Core-backed modules, an optional context type. The provider name is the
+provider-neutral marker used by startup validation, provider transaction
+behaviors, and missing-service diagnostics. The context type exists for EF Core
+module transactions and model validation; non-EF providers should keep their
+schema, session, connection, and SQL details in provider-owned services rather
+than treating a CLR context type as a general module capability requirement.
+
 Startup validation checks that durable command handlers and event subscribers
 belong to registered durable-messaging modules.
 
@@ -118,6 +126,11 @@ messages in the module persistence boundary.
 operation-state, and transaction behavior without EF Core for modules that opt
 into that PostgreSQL provider. Dapper is an internal implementation helper for
 that package, not the app-facing provider identity.
+
+Module-owned persistence is the preferred durable messaging path. Root-level
+non-module persistence services remain available for advanced single-store
+composition when no module-owned implementations are registered, but normal
+module-boundary setup should use provider-specific module persistence helpers.
 
 ## Service Extraction
 

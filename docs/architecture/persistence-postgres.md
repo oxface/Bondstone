@@ -47,6 +47,11 @@ module.UsePostgresPersistence(connectionString, schema: "billing");
 Handlers that need application SQL can take `IPostgresModuleSession` and
 execute commands through the current connection and transaction.
 
+`UsePostgresPersistence(...)` records the module persistence provider name but
+does not record or require a CLR context type. Provider-specific details such
+as schema, data source, session, transaction, and SQL behavior belong to this
+provider's module services.
+
 Outbox terminal status semantics are defined in
 [persistence-core.md](persistence-core.md); this provider only records the
 provider-specific PostgreSQL outcome update.

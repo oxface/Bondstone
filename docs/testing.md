@@ -57,9 +57,9 @@ entity mapping, change-tracker behavior, and "does not call SaveChanges"
 boundaries. They are not persistence-semantics tests. Anything that depends on
 real database behavior, including PostgreSQL behavior, unique constraints,
 transactions, savepoints, locking, indexing, SQL generation, migration
-compatibility, inbox deduplication races, outbox claiming, or retry/dead-letter
-state transitions, must be an `Integration` test backed by Testcontainers or
-an equivalent real provider fixture.
+compatibility, inbox deduplication races, outbox claiming, or
+retry/terminal-failure state transitions, must be an `Integration` test backed
+by Testcontainers or an equivalent real provider fixture.
 
 Keep tests grouped by package or integration boundary so they reveal package
 ownership and extraction seams.

@@ -15,9 +15,6 @@ stable docs, and remove stale backlog language.
 
 ## Active Items
 
-- [05-module-persistence-metadata.md](05-module-persistence-metadata.md)
-  decides whether module persistence metadata moves into provider-owned
-  capability registration.
 - [06-inbox-recovery.md](06-inbox-recovery.md) decides stale
   already-received inbox recovery and commit-boundary shape.
 - [07-outbox-worker-topology.md](07-outbox-worker-topology.md) decides whether
@@ -27,12 +24,6 @@ stable docs, and remove stale backlog language.
   surface policy.
 - [09-future-work.md](09-future-work.md) collects non-current follow-up ideas
   that are not yet active decision work.
-
-## Resolved Items
-
-- [04-outbox-terminal-failure.md](04-outbox-terminal-failure.md) accepted the
-  outgoing outbox `TerminalFailed` terminology and its boundary from broker
-  DLQs.
 
 ## Archived Campaigns
 
@@ -45,3 +36,9 @@ stable docs, and remove stale backlog language.
   performed the post-MVP architecture and code review sweep.
 - [archive/03-architecture-code-review-report.md](archive/03-architecture-code-review-report.md)
   records the Phase 03 review map, decision intake, and first resolution pass.
+- [archive/04-outbox-terminal-failure.md](archive/04-outbox-terminal-failure.md)
+  accepted the outgoing outbox `TerminalFailed` terminology and its boundary
+  from broker DLQs.
+- [archive/05-module-persistence-metadata.md](archive/05-module-persistence-metadata.md)
+  accepted the current module persistence metadata shape and fallback service
+  stance.

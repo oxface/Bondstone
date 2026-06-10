@@ -43,6 +43,10 @@ exceptions as the public flow.
 consumer-owned DbContext and composes the provider-neutral EF registrations,
 including the EF persistence scope and neutral inbox handler executor.
 
+Those root-level services may be used for advanced single-store fallback
+composition when no module-owned durable persistence services are registered,
+but they are not the preferred module-boundary path.
+
 For module-owned durable persistence,
 `module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: ...)`
 is the preferred setup shape. It records EF module persistence metadata and
@@ -79,6 +83,9 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
   and dispatch outcome recording with fake transport success and failure;
 - schema-aware provider registration and composition with the EF persistence
   scope.
+- single-root EF fallback composition where root PostgreSQL EF services handle
+  outbox, inbox, and operation-state persistence when modules declare EF
+  persistence but no module-owned durable persistence services are registered.
 
 Follow-up PostgreSQL ideas that are outside the current contract are tracked
 in [../backlog/09-future-work.md](../backlog/09-future-work.md).

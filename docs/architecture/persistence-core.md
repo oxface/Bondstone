@@ -85,6 +85,14 @@ module declares persistence but the matching module-owned service is missing,
 runtime diagnostics name the module and its declared persistence provider so
 provider setup gaps are easier to identify.
 
+If no module-owned implementations are registered at all, core can fall back to
+root-level non-module persistence services such as `IDurableOutboxWriter`,
+`IDurableInboxHandlerExecutor`, `IDurableOperationStateStore`, and
+`IDurableOperationReader`. That fallback is supported advanced single-store
+composition and compatibility behavior. It does not replace the preferred
+module-owned durable messaging path, and fallback removal would be a
+compatibility/API decision.
+
 ## Inbox
 
 `DurableInboxMessageKey` identifies receive-side deduplication by stable

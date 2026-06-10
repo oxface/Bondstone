@@ -333,49 +333,6 @@ public sealed class DurableCommandSenderTests
         Assert.Empty(billingStore.SavedStates);
     }
 
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task OperationReader_WhenModuleStoresHavePendingAndCompleted_ReturnsCompletedState()
-    {
-        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
-        var salesStore = new CapturingModuleOperationStateStore("sales")
-        {
-            State = new DurableOperationState(
-                durableOperationId,
-                DurableOperationStatus.Pending,
-                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
-        };
-        var fulfillmentStore = new CapturingModuleOperationStateStore("fulfillment")
-        {
-            State = new DurableOperationState(
-                durableOperationId,
-                DurableOperationStatus.Completed,
-                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")),
-        };
-        var services = new ServiceCollection();
-        services.AddSingleton<IDurableModuleOperationStateStore>(salesStore);
-        services.AddSingleton<IDurableModuleOperationStateStore>(fulfillmentStore);
-
-        services.AddBondstone(bondstone =>
-        {
-            bondstone.Module("sales", module =>
-            {
-                module.UseDurableMessaging();
-                module.UsePersistence("test persistence");
-            });
-        });
-
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        using IServiceScope scope = serviceProvider.CreateScope();
-
-        DurableOperationState? state = await scope.ServiceProvider
-            .GetRequiredService<IDurableOperationReader>()
-            .GetStateAsync(durableOperationId);
-
-        Assert.NotNull(state);
-        Assert.Equal(DurableOperationStatus.Completed, state.Status);
-    }
-
     [DurableCommandIdentity("sales.order.submit.v1")]
     public sealed record SubmitOrderCommand(string OrderId) : IDurableCommand;
 

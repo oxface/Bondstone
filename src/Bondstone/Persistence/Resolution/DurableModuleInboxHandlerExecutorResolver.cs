@@ -7,7 +7,10 @@ internal sealed class DurableModuleInboxHandlerExecutorResolver(
     IDurableInboxHandlerExecutor? fallbackExecutor)
 {
     private readonly IDurableModuleInboxHandlerExecutor[] _moduleExecutors =
-        moduleExecutors?.ToArray() ?? throw new ArgumentNullException(nameof(moduleExecutors));
+        DurableModulePersistenceRegistrationValidator.ToValidatedArray(
+            moduleExecutors,
+            static executor => executor.ModuleName,
+            "durable module inbox handler executor");
 
     public IDurableInboxHandlerExecutor Resolve(string moduleName)
     {
@@ -17,7 +20,9 @@ internal sealed class DurableModuleInboxHandlerExecutorResolver(
 
         IDurableModuleInboxHandlerExecutor? moduleExecutor = _moduleExecutors
             .SingleOrDefault(executor => StringComparer.Ordinal.Equals(
-                executor.ModuleName,
+                executor.ModuleName.NormalizeRequired(
+                    nameof(IDurableModuleInboxHandlerExecutor.ModuleName),
+                    "Module name"),
                 normalizedModuleName));
 
         if (moduleExecutor is not null)

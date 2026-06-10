@@ -101,6 +101,30 @@ public sealed class RabbitMqTopologyConfigurationValidatorTests
         Assert.Contains("fulfillment.test-event.v1", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenRegisteredSubscriberHasNoRabbitMqReceiveBinding_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                    module.Events.RegisterSubscriber<TestEvent, TestEventHandler>(
+                        "fulfillment.test-event.v1");
+                });
+                bondstone.UseRabbitMqTransport(_ => { });
+            }));
+
+        Assert.Contains("has no receive binding", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment.test-event.v1", exception.Message, StringComparison.Ordinal);
+    }
+
     [DurableCommandIdentity("fulfillment.test.command.v1")]
     private sealed record TestCommand : IDurableCommand;
 
@@ -116,6 +140,16 @@ public sealed class RabbitMqTopologyConfigurationValidatorTests
 
     [IntegrationEventIdentity("sales.test.event.v1")]
     private sealed record TestEvent : IIntegrationEvent;
+
+    private sealed class TestEventHandler : IIntegrationEventHandler<TestEvent>
+    {
+        public ValueTask HandleAsync(
+            TestEvent integrationEvent,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
 
     private sealed class RecordingRabbitMqMessagePublisher : IRabbitMqMessagePublisher
     {

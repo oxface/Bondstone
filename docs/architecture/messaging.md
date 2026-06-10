@@ -150,9 +150,18 @@ idempotency and processed markers.
 The current command loop records operation state only for caller-supplied
 operation ids. Sending a command with an operation id stages `Pending` if the
 operation is unknown. Successful module command receive stages `Completed` in
-the target module persistence boundary. Operation states do not yet define
-polling, timeout, result deserialization, running state, failure state, retry
-state, or stale receive recovery.
+the target module persistence boundary. When a host has module-owned operation
+stores, `IDurableOperationReader` reads across the configured module stores
+and returns the highest-precedence state: terminal statuses outrank
+`Running`, which outranks `Pending`; states with equal precedence use the
+newer update timestamp.
+
+The command loop does not yet write `Running`, `Failed`, or `Cancelled`.
+Those statuses remain available in the storage/read model for future or
+application-owned operation policies, but Bondstone's default command loop
+does not infer them from broker retry or handler exceptions. Polling,
+timeout, result deserialization, retry state, stale receive recovery, and
+default failure/cancellation transitions remain future decisions.
 
 ## Transport Adapters
 

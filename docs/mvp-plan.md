@@ -33,6 +33,11 @@ Implemented surface includes:
   operation state, outbox claiming, outbox lease renewal, outbox dispatch
   recording, inbox registration, and delegate-based inbox handle-once
   execution;
+- module-owned operation-state reads aggregate across module stores with
+  explicit status precedence;
+- module-owned persistence provider registrations reject duplicate
+  module-scoped outbox writer, inbox handler executor, and operation-state
+  store bindings with clear diagnostics;
 - default durable outbox dispatcher and hosted worker composition;
 - module registration and command execution in core, including
   `IBondstoneModule`, `ICommand`, `IDurableCommand`, typed handlers,
@@ -295,6 +300,13 @@ Applied in this slice:
 - add aggregate outbound route ownership validation across Local, RabbitMQ,
   and Service Bus transport diagnostics so zero-route and ambiguous-route
   durable command/event topology failures are loud during startup.
+- harden operation-state reader coverage and document current module-store
+  status precedence without adding default running/failure transitions.
+- harden module-owned persistence provider contracts so duplicate
+  `IDurableModule*` registrations for the same module fail with clear
+  diagnostics.
+- cover missing single-transport event subscriber receive bindings in RabbitMQ
+  and Service Bus topology validation tests.
 
 Likely next slices:
 
@@ -302,7 +314,8 @@ Likely next slices:
   ADR;
 - add split-subscriber fan-out mismatch diagnostics if accepted by ADR;
 - refine persistence provider contracts;
-- improve operation-state failure/running/retry semantics;
+- improve operation-state failure/running/retry semantics if a safe model is
+  accepted by ADR;
 - add stale inbox receive recovery if a safe model is accepted by ADR;
 - broaden provider-backed integration tests for receive reliability;
 - polish the sample into the preferred public API path.

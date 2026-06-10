@@ -7,7 +7,10 @@ internal sealed class DurableModuleOperationStateStoreResolver(
     IDurableOperationStateStore? fallbackStore)
 {
     private readonly IDurableModuleOperationStateStore[] _moduleStores =
-        moduleStores?.ToArray() ?? throw new ArgumentNullException(nameof(moduleStores));
+        DurableModulePersistenceRegistrationValidator.ToValidatedArray(
+            moduleStores,
+            static store => store.ModuleName,
+            "durable module operation-state store");
 
     public IDurableOperationStateStore Resolve(
         string moduleName,
@@ -19,7 +22,9 @@ internal sealed class DurableModuleOperationStateStoreResolver(
 
         IDurableModuleOperationStateStore? moduleStore = _moduleStores
             .SingleOrDefault(store => StringComparer.Ordinal.Equals(
-                store.ModuleName,
+                store.ModuleName.NormalizeRequired(
+                    nameof(IDurableModuleOperationStateStore.ModuleName),
+                    "Module name"),
                 normalizedModuleName));
 
         if (moduleStore is not null)

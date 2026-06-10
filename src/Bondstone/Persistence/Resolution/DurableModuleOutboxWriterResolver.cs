@@ -7,7 +7,10 @@ internal sealed class DurableModuleOutboxWriterResolver(
     IDurableOutboxWriter? fallbackWriter)
 {
     private readonly IDurableModuleOutboxWriter[] _moduleWriters =
-        moduleWriters?.ToArray() ?? throw new ArgumentNullException(nameof(moduleWriters));
+        DurableModulePersistenceRegistrationValidator.ToValidatedArray(
+            moduleWriters,
+            static writer => writer.ModuleName,
+            "durable module outbox writer");
 
     public IDurableOutboxWriter Resolve(string moduleName)
     {
@@ -17,7 +20,9 @@ internal sealed class DurableModuleOutboxWriterResolver(
 
         IDurableModuleOutboxWriter? moduleWriter = _moduleWriters
             .SingleOrDefault(writer => StringComparer.Ordinal.Equals(
-                writer.ModuleName,
+                writer.ModuleName.NormalizeRequired(
+                    nameof(IDurableModuleOutboxWriter.ModuleName),
+                    "Module name"),
                 normalizedModuleName));
 
         if (moduleWriter is not null)

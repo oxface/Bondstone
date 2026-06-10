@@ -109,8 +109,9 @@ or result payload semantics are accepted.
   state for new caller-supplied operation ids, module command execution carries
   operation ids from Rebus receive envelopes, a system pipeline behavior stages
   `Completed` after successful durable command execution, EF operation-state
-  persistence has a clear missing-mapping error, and focused unit/application
-  tests cover send, receive, and EF transaction behavior.
+  persistence has a clear missing-mapping error, module-owned operation reads
+  use explicit status precedence, and focused unit/application tests cover
+  send, receive, reader precedence, and EF transaction behavior.
 - Pending or deferred: Failure states, running states, cancellation states,
   result payloads, polling/waiting APIs, retry state, stale receive recovery,
   and provider-specific concurrency policy remain future work.

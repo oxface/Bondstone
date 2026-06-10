@@ -74,6 +74,12 @@ The `IDurableModule*` persistence contracts are provider-extension contracts;
 application code should normally configure them through provider setup helpers
 such as PostgreSQL module persistence registration.
 
+Provider packages must register at most one module-owned implementation of
+each `IDurableModule*` contract for a given module name. Core validates
+duplicate module outbox writer, inbox handler executor, and operation-state
+store registrations when those services are resolved so provider composition
+errors fail with module-specific diagnostics.
+
 ## Inbox
 
 `DurableInboxMessageKey` identifies receive-side deduplication by stable
@@ -125,8 +131,12 @@ states, retry state, stale receive recovery, cancellation, and result payloads
 remain later policy.
 
 When module-owned operation stores are configured, operation reads can
-aggregate across local module stores. Completed state takes precedence over
-pending state for the same operation id in the current command loop.
+aggregate across local module stores. Terminal states (`Completed`, `Failed`,
+and `Cancelled`) take precedence over `Running`, and `Running` takes
+precedence over `Pending`. When statuses have the same precedence, the newest
+`UpdatedAtUtc` wins. The default command loop currently writes only `Pending`
+and `Completed`; other statuses are read-model/storage values until a later
+ADR accepts default running, failure, cancellation, or retry semantics.
 
 ## Provider Boundaries
 

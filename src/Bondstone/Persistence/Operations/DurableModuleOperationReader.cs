@@ -8,7 +8,10 @@ internal sealed class DurableModuleOperationReader(
     : IDurableOperationReader
 {
     private readonly IDurableModuleOperationStateStore[] _moduleStores =
-        moduleStores?.ToArray() ?? throw new ArgumentNullException(nameof(moduleStores));
+        DurableModulePersistenceRegistrationValidator.ToValidatedArray(
+            moduleStores,
+            static store => store.ModuleName,
+            "durable module operation-state store");
 
     public async ValueTask<DurableOperationState?> GetStateAsync(
         Guid durableOperationId,

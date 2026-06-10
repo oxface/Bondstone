@@ -99,6 +99,30 @@ public sealed class ServiceBusTopologyConfigurationValidatorTests
         Assert.Contains("fulfillment.test-event.v1", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenRegisteredSubscriberHasNoServiceBusReceiveBinding_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                    module.Events.RegisterSubscriber<TestEvent, TestEventHandler>(
+                        "fulfillment.test-event.v1");
+                });
+                bondstone.UseServiceBusTransport(_ => { });
+            }));
+
+        Assert.Contains("has no receive binding", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment.test-event.v1", exception.Message, StringComparison.Ordinal);
+    }
+
     [DurableCommandIdentity("fulfillment.test.command.v1")]
     private sealed record TestCommand : IDurableCommand;
 
@@ -114,6 +138,16 @@ public sealed class ServiceBusTopologyConfigurationValidatorTests
 
     [IntegrationEventIdentity("sales.test.event.v1")]
     private sealed record TestEvent : IIntegrationEvent;
+
+    private sealed class TestEventHandler : IIntegrationEventHandler<TestEvent>
+    {
+        public ValueTask HandleAsync(
+            TestEvent integrationEvent,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
 
     private sealed class RecordingServiceBusMessageSender : IServiceBusMessageSender
     {

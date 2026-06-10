@@ -83,6 +83,22 @@ internal sealed class LocalTransportTopology
         return true;
     }
 
+    public bool HasCommandRoute(
+        string targetModule)
+    {
+        string normalizedTargetModule = targetModule.NormalizeRequired(
+            nameof(targetModule),
+            "Target module");
+        string? queueName = ResolveQueueName(
+            _queueNamesByTargetModule,
+            _moduleQueueNameConvention,
+            normalizedTargetModule);
+
+        return queueName is not null
+            && _queues.TryGetValue(queueName, out LocalQueueRegistration? queue)
+            && queue.AcceptedModules.Contains(normalizedTargetModule);
+    }
+
     public IReadOnlyCollection<LocalEventSubscription> GetEventSubscriptions(
         DurableMessageEnvelope envelope)
     {
@@ -110,6 +126,23 @@ internal sealed class LocalTransportTopology
         return queue.EventSubscriptions
             .Where(subscription => subscription.MessageTypeName == messageTypeName)
             .ToArray();
+    }
+
+    public bool HasEventRoute(
+        string messageTypeName)
+    {
+        string normalizedMessageTypeName = messageTypeName.NormalizeRequired(
+            nameof(messageTypeName),
+            "Message type name");
+        string? queueName = ResolveQueueName(
+            _queueNamesByMessageTypeName,
+            _eventQueueNameConvention,
+            normalizedMessageTypeName);
+
+        return queueName is not null
+            && _queues.TryGetValue(queueName, out LocalQueueRegistration? queue)
+            && queue.EventSubscriptions.Any(subscription =>
+                subscription.MessageTypeName == normalizedMessageTypeName);
     }
 
     private static string? ResolveQueueName(

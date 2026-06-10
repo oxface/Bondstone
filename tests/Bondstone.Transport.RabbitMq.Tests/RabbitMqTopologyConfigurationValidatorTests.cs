@@ -29,7 +29,7 @@ public sealed class RabbitMqTopologyConfigurationValidatorTests
                     rabbitMq => rabbitMq.UseCommandExchange("bondstone.commands"));
             }));
 
-        Assert.Contains("RabbitMQ transport has no command route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
     }
 
@@ -53,7 +53,7 @@ public sealed class RabbitMqTopologyConfigurationValidatorTests
                     rabbitMq => rabbitMq.UseEventExchange("bondstone.events"));
             }));
 
-        Assert.Contains("RabbitMQ transport has no event route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales.test.event.v1", exception.Message, StringComparison.Ordinal);
     }
 

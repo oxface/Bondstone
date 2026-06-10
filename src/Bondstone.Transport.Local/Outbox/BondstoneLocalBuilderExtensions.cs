@@ -15,6 +15,8 @@ public static class BondstoneLocalBuilderExtensions
         configure(local);
 
         builder.Services.AddBondstoneLocalOutboxTransport(local.Topology);
+        builder.AddTransportTopologyDiagnosticSource(
+            new LocalTransportTopologyDiagnosticSource(local.Topology));
         builder.Outbox.MarkTransport("Local");
 
         return builder;

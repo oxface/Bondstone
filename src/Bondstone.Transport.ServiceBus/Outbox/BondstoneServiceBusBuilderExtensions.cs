@@ -19,11 +19,12 @@ public static class BondstoneServiceBusBuilderExtensions
             serviceBus.EventDestinationTopology,
             serviceBus.ReceiveTopology,
             serviceBus.ReceiveWorkerRegistration);
-        builder.AddConfigurationValidator(
-            new ServiceBusTopologyConfigurationValidator(
-                serviceBus.CommandDestinationTopology,
-                serviceBus.EventDestinationTopology,
-                serviceBus.ReceiveTopology));
+        var validator = new ServiceBusTopologyConfigurationValidator(
+            serviceBus.CommandDestinationTopology,
+            serviceBus.EventDestinationTopology,
+            serviceBus.ReceiveTopology);
+        builder.AddTransportTopologyDiagnosticSource(validator);
+        builder.AddConfigurationValidator(validator);
         builder.Outbox.MarkTransport("ServiceBus");
 
         return builder;

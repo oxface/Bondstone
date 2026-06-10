@@ -39,13 +39,14 @@ Diagnostic services report the same resolution results used by dispatch so
 applications and tests can explain missing queues, topics, or destinations
 without sending messages.
 
-In a single-transport host, Service Bus startup validation fails when
-registered durable command handlers lack a command destination or registered
-published events lack an event destination. Receive source bindings always
-validate that accepted modules have durable command handlers and subscribed
-event identities match registered Bondstone event subscribers. This validation
-is diagnostic only; it does not create Service Bus queues, topics,
-subscriptions, rules, retry policy, or dead-letter settings.
+Service Bus contributes command and event destination diagnostics to
+Bondstone's aggregate outbound route ownership validation. Receive source
+bindings always validate that accepted modules have durable command handlers
+and subscribed event identities match registered Bondstone event subscribers.
+In a single-transport host, Service Bus also fails startup when registered
+event subscribers have no Service Bus receive binding. This validation is
+diagnostic only; it does not create Service Bus queues, topics, subscriptions,
+rules, retry policy, or dead-letter settings.
 
 Receive topology is declared with Service Bus receive source vocabulary:
 
@@ -145,6 +146,5 @@ remain separate ADR-backed decisions.
 Service Bus has emulator-backed receive worker integration tests for real queue
 delivery, completion after successful command dispatch, abandon/dead-letter
 handoff after failed dispatch, and topic subscription fan-out to configured
-subscriber identities. Aggregate multi-transport route reports,
-split-subscriber fan-out mismatch diagnostics, and broker topology declaration
-remain future slices.
+subscriber identities. Split-subscriber fan-out mismatch diagnostics and
+broker topology declaration remain future slices.

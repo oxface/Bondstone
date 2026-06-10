@@ -185,14 +185,18 @@ Direct transport packages contribute `IDurableOutboxTransportRoute` entries.
 one provider route matches the message. Zero matches and ambiguous matches are
 loud configuration errors.
 
-RabbitMQ and Service Bus add startup topology validation over their configured
-durable routes and receive bindings. In a single-transport host, missing
-command destinations, missing published-event destinations, and missing
-subscriber receive bindings fail during `AddBondstone`. Provider receive
-bindings always validate that accepted command modules have registered
-durable command handlers and event subscription bindings have matching
-registered subscribers. Multi-transport aggregate route coverage and
-ambiguity reporting remain a future diagnostic slice.
+Local, RabbitMQ, and Service Bus contribute startup topology diagnostics for
+outbound durable route ownership. When transport diagnostic sources are
+configured, registered durable command target modules and registered published
+events must have exactly one outbound transport route. Zero matches and
+multiple matches fail during `AddBondstone`, before outbox dispatch.
+
+RabbitMQ and Service Bus also validate their provider receive bindings.
+Provider receive bindings always validate that accepted command modules have
+registered durable command handlers and event subscription bindings have
+matching registered subscribers. In a single-transport host, provider
+validators also fail when registered event subscribers have no receive binding.
+Split-service fan-out mismatch reporting remains a future diagnostic slice.
 
 RabbitMQ and Service Bus map received provider-native messages into the neutral
 receive pipelines. Provider packages also expose native received message

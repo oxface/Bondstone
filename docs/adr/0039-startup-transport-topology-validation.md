@@ -1,6 +1,6 @@
 # 0039 Startup Transport Topology Validation
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-10
 
@@ -53,6 +53,28 @@ Topology validation and reporting remain separate from broker topology
 creation. This ADR does not accept automatic exchange, queue, binding, topic,
 subscription, rule, retry, or dead-letter provisioning.
 
+## Amendment 2026-06-10: Aggregate Outbound Route Ownership
+
+Provider-local validators are not enough for hosts that configure multiple
+Bondstone transports. Multi-transport hosts need startup validation that counts
+route ownership across all configured transport diagnostic sources before a
+durable outbox record reaches `RoutedDurableOutboxTransport`.
+
+Bondstone core should therefore aggregate provider route diagnostics for:
+
+- registered durable command handler target modules;
+- registered published integration events.
+
+For each command target module or published event, exactly one configured
+transport diagnostic source should report an outbound route. Zero matching
+routes and multiple matching routes are startup configuration errors when
+diagnostic sources are available.
+
+This aggregate validation remains limited to Bondstone outbound durable
+message ownership. Provider receive binding validation stays provider-local,
+and split-service subscriber fan-out mismatch reporting remains deferred until
+a later diagnostic model can represent deployment shape.
+
 ## Consequences
 
 Applications get earlier, clearer errors for common durable topology mistakes.
@@ -64,9 +86,8 @@ queue/topic/subscription vocabulary.
 Receive-only or mixed-provider services are not forced by a provider-local
 validator to define outbound routes that another provider or service owns.
 
-Aggregate multi-transport diagnostics, fan-out mismatch reporting for split
-subscriber deployment, and broker topology declaration helpers remain future
-ADR-backed work.
+Fan-out mismatch reporting for split subscriber deployment and broker topology
+declaration helpers remain future ADR-backed work.
 
 ## Related Decisions
 
@@ -77,9 +98,11 @@ ADR-backed work.
 ## Application Notes
 
 - Current contract: RabbitMQ and Service Bus startup validation should check
-  their configured durable routes and receive bindings against registered
-  Bondstone command handlers, published events, and event subscribers, while
-  keeping broker provisioning app-owned.
+  their configured receive bindings against registered Bondstone command
+  handlers and event subscribers. Core aggregates configured transport
+  diagnostic sources to validate that registered durable command target
+  modules and published events have exactly one outbound transport route,
+  while keeping broker provisioning app-owned.
 - Stable docs: The contract is reflected in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/modules.md](../architecture/modules.md),
@@ -89,14 +112,15 @@ ADR-backed work.
 - Agent guidance: Root AGENTS guidance already requires ADRs before broad
   transport behavior changes and now references this validation boundary.
 - Application evidence: RabbitMQ and Service Bus transport validators run from
-  the full `BondstoneBuilder` transport extensions. Core records
-  module-owned published-event metadata so validators can distinguish events
-  published by the current app from events that are only subscribed, and the
-  durable event publisher requires the source module to have declared the
-  published event.
-- Pending or deferred: Aggregate cross-provider route reports, split-service
-  fan-out mismatch diagnostics, broker topology declaration helpers, and any
-  public report object beyond existing provider diagnostics.
+  the full `BondstoneBuilder` transport extensions. Local, RabbitMQ, and
+  Service Bus contribute transport diagnostic sources for aggregate outbound
+  route ownership validation. Core records module-owned published-event
+  metadata so validators can distinguish events published by the current app
+  from events that are only subscribed, and the durable event publisher
+  requires the source module to have declared the published event.
+- Pending or deferred: Split-service fan-out mismatch diagnostics, broker
+  topology declaration helpers, and any public report object beyond startup
+  validation and existing provider diagnostics.
 
 ## Verification
 

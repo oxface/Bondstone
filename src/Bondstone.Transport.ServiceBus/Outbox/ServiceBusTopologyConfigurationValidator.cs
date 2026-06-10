@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Transport.ServiceBus.Inbox;
 
@@ -8,8 +9,37 @@ internal sealed class ServiceBusTopologyConfigurationValidator(
     ServiceBusCommandDestinationTopology commandTopology,
     ServiceBusEventDestinationTopology eventTopology,
     ServiceBusReceiveTopology receiveTopology)
-    : IBondstoneConfigurationValidator
+    : IBondstoneConfigurationValidator,
+        IDurableTransportTopologyDiagnosticSource
 {
+    public string TransportName => "ServiceBus";
+
+    public DurableTransportTopologyRouteDiagnostic DescribeCommandRoute(
+        string targetModule)
+    {
+        ServiceBusCommandDestinationDiagnostic diagnostic =
+            commandTopology.DescribeDestination(targetModule);
+        return new DurableTransportTopologyRouteDiagnostic(
+            TransportName,
+            MessageKind.Command,
+            diagnostic.TargetModule,
+            diagnostic.HasDestination,
+            diagnostic.FailureReason);
+    }
+
+    public DurableTransportTopologyRouteDiagnostic DescribeEventRoute(
+        string messageTypeName)
+    {
+        ServiceBusEventDestinationDiagnostic diagnostic =
+            eventTopology.DescribeDestination(messageTypeName);
+        return new DurableTransportTopologyRouteDiagnostic(
+            TransportName,
+            MessageKind.Event,
+            diagnostic.MessageTypeName,
+            diagnostic.HasDestination,
+            diagnostic.FailureReason);
+    }
+
     public void Validate(BondstoneConfigurationValidationContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -21,39 +51,7 @@ internal sealed class ServiceBusTopologyConfigurationValidator(
             return;
         }
 
-        ValidateCommandDestinations(context);
-        ValidatePublishedEventDestinations(context);
         ValidateSubscriberReceiveBindings(context);
-    }
-
-    private void ValidateCommandDestinations(BondstoneConfigurationValidationContext context)
-    {
-        foreach (string moduleName in context.DurableCommandRoutes
-            .Select(static route => route.ModuleName)
-            .Distinct(StringComparer.Ordinal))
-        {
-            ServiceBusCommandDestinationDiagnostic diagnostic =
-                commandTopology.DescribeDestination(moduleName);
-            if (!diagnostic.HasDestination)
-            {
-                throw new InvalidOperationException(
-                    $"Service Bus transport has no command destination for module '{moduleName}'. {diagnostic.FailureReason ?? "Configure RouteModule or UseModuleQueueConvention."}");
-            }
-        }
-    }
-
-    private void ValidatePublishedEventDestinations(BondstoneConfigurationValidationContext context)
-    {
-        foreach (ModulePublishedEventRegistration publishedEvent in context.PublishedEvents)
-        {
-            ServiceBusEventDestinationDiagnostic diagnostic =
-                eventTopology.DescribeDestination(publishedEvent.MessageTypeName);
-            if (!diagnostic.HasDestination)
-            {
-                throw new InvalidOperationException(
-                    $"Service Bus transport has no event destination for published event '{publishedEvent.MessageTypeName}' from module '{publishedEvent.ModuleName}'. {diagnostic.FailureReason ?? "Configure RouteEvent or an event destination convention."}");
-            }
-        }
     }
 
     private void ValidateSubscriberReceiveBindings(BondstoneConfigurationValidationContext context)

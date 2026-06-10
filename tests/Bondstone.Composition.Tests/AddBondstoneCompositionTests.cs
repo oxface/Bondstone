@@ -109,6 +109,63 @@ public sealed class AddBondstoneCompositionTests
 
     [Fact]
     [Trait("Category", "Application")]
+    public void AddBondstone_WithTwoTransportsAndNoMatchingCommandRoute_ThrowsAtStartup()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
+        services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("composition test persistence");
+                    module.Commands.RegisterHandler<TypedCompositionCommand, TypedCompositionHandler>();
+                });
+                bondstone.UseRabbitMqTransport(
+                    rabbitMq => rabbitMq.UseCommandExchange("bondstone.commands"));
+                bondstone.UseServiceBusTransport(_ => { });
+            }));
+
+        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("module 'fulfillment'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("RabbitMq", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("ServiceBus", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public void AddBondstone_WithTwoTransportsAndAmbiguousEventRoute_ThrowsAtStartup()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
+        services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("composition test persistence");
+                    module.Events.RegisterPublishedEvent<CompositionEvent>();
+                });
+                bondstone.UseRabbitMqTransport(
+                    rabbitMq => rabbitMq.RouteEvent("composition.event.v1").ToQueue("events"));
+                bondstone.UseServiceBusTransport(
+                    serviceBus => serviceBus.RouteEvent("composition.event.v1").ToQueue("events"));
+            }));
+
+        Assert.Contains("Multiple durable outbox transport routes", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("composition.event.v1", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("RabbitMq", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("ServiceBus", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
     public async Task AddBondstone_WithModuleReceivePipeline_ComposesReceiveThroughInbox()
     {
         var inboxExecutor = new CapturingInboxHandlerExecutor();
@@ -199,6 +256,9 @@ public sealed class AddBondstoneCompositionTests
 
     [DurableCommandIdentity("fulfillment.order.reserve.v1")]
     private sealed record TypedCompositionCommand(string OrderId) : IDurableCommand;
+
+    [IntegrationEventIdentity("composition.event.v1")]
+    private sealed record CompositionEvent(string Id) : IIntegrationEvent;
 
     private sealed class TypedCompositionHandler(CommandCallLog log)
         : ICommandHandler<TypedCompositionCommand>

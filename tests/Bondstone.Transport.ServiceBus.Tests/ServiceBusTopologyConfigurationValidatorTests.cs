@@ -28,7 +28,7 @@ public sealed class ServiceBusTopologyConfigurationValidatorTests
                 bondstone.UseServiceBusTransport(_ => { });
             }));
 
-        Assert.Contains("Service Bus transport has no command destination", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
     }
 
@@ -51,7 +51,7 @@ public sealed class ServiceBusTopologyConfigurationValidatorTests
                 bondstone.UseServiceBusTransport(_ => { });
             }));
 
-        Assert.Contains("Service Bus transport has no event destination", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales.test.event.v1", exception.Message, StringComparison.Ordinal);
     }
 

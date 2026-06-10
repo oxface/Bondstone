@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Transport.RabbitMq.Inbox;
 
@@ -8,8 +9,37 @@ internal sealed class RabbitMqTopologyConfigurationValidator(
     RabbitMqCommandRoutingTopology commandTopology,
     RabbitMqEventRoutingTopology eventTopology,
     RabbitMqReceiveTopology receiveTopology)
-    : IBondstoneConfigurationValidator
+    : IBondstoneConfigurationValidator,
+        IDurableTransportTopologyDiagnosticSource
 {
+    public string TransportName => "RabbitMq";
+
+    public DurableTransportTopologyRouteDiagnostic DescribeCommandRoute(
+        string targetModule)
+    {
+        RabbitMqCommandRoutingDiagnostic diagnostic =
+            commandTopology.DescribeRoute(targetModule);
+        return new DurableTransportTopologyRouteDiagnostic(
+            TransportName,
+            MessageKind.Command,
+            diagnostic.TargetModule,
+            diagnostic.HasRoute,
+            diagnostic.FailureReason);
+    }
+
+    public DurableTransportTopologyRouteDiagnostic DescribeEventRoute(
+        string messageTypeName)
+    {
+        RabbitMqEventRoutingDiagnostic diagnostic =
+            eventTopology.DescribeRoute(messageTypeName);
+        return new DurableTransportTopologyRouteDiagnostic(
+            TransportName,
+            MessageKind.Event,
+            diagnostic.MessageTypeName,
+            diagnostic.HasRoute,
+            diagnostic.FailureReason);
+    }
+
     public void Validate(BondstoneConfigurationValidationContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -21,39 +51,7 @@ internal sealed class RabbitMqTopologyConfigurationValidator(
             return;
         }
 
-        ValidateCommandRoutes(context);
-        ValidatePublishedEventRoutes(context);
         ValidateSubscriberReceiveBindings(context);
-    }
-
-    private void ValidateCommandRoutes(BondstoneConfigurationValidationContext context)
-    {
-        foreach (string moduleName in context.DurableCommandRoutes
-            .Select(static route => route.ModuleName)
-            .Distinct(StringComparer.Ordinal))
-        {
-            RabbitMqCommandRoutingDiagnostic diagnostic =
-                commandTopology.DescribeRoute(moduleName);
-            if (!diagnostic.HasRoute)
-            {
-                throw new InvalidOperationException(
-                    $"RabbitMQ transport has no command route for module '{moduleName}'. {diagnostic.FailureReason ?? "Configure RouteModule or UseModuleRoutingKeyConvention with a command exchange."}");
-            }
-        }
-    }
-
-    private void ValidatePublishedEventRoutes(BondstoneConfigurationValidationContext context)
-    {
-        foreach (ModulePublishedEventRegistration publishedEvent in context.PublishedEvents)
-        {
-            RabbitMqEventRoutingDiagnostic diagnostic =
-                eventTopology.DescribeRoute(publishedEvent.MessageTypeName);
-            if (!diagnostic.HasRoute)
-            {
-                throw new InvalidOperationException(
-                    $"RabbitMQ transport has no event route for published event '{publishedEvent.MessageTypeName}' from module '{publishedEvent.ModuleName}'. {diagnostic.FailureReason ?? "Configure RouteEvent or an event route convention."}");
-            }
-        }
     }
 
     private void ValidateSubscriberReceiveBindings(BondstoneConfigurationValidationContext context)

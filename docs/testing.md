@@ -87,9 +87,10 @@ acknowledgement, retry, dead-letter, or subscription-storage behavior belongs
 in explicit `Integration` tests.
 
 Transport topology validation is fast startup behavior. Cover missing command
-routes, missing published-event destinations, missing subscriber bindings, and
-invalid receive bindings with `Unit` tests unless the assertion depends on a
-real broker handoff.
+routes, missing published-event destinations, ambiguous multi-transport route
+ownership, missing subscriber bindings, and invalid receive bindings with
+`Unit` or `Application` tests unless the assertion depends on a real broker
+handoff.
 
 ## Verification Surface
 

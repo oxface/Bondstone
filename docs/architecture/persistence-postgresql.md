@@ -59,7 +59,11 @@ module bindings provide source-module outbox writing, target-module inbox
 handling, target-module operation-state persistence, and per-module outbox
 dispatch. The app-facing dispatcher can aggregate dispatch results across
 configured local module outboxes while each underlying claim, lease, and
-dispatch-record update remains scoped to one module's PostgreSQL tables.
+dispatch-record update remains scoped to one module's PostgreSQL tables. The
+aggregate worker topology does not change PostgreSQL ownership: module
+dispatchers still perform provider-specific claim, lease renewal, and outcome
+recording for their module, while the aggregate dispatcher only chooses the
+sequential call order and shared batch budget.
 
 Application code should prefer this module-aware setup helper over directly
 registering the provider-facing `IDurableModule*` persistence services.

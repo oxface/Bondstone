@@ -40,9 +40,11 @@ is accepted and implemented.
 
 - Add inbox, cleanup, archiving, dead-letter retention, or maintenance workers
   after their core abstractions are stable.
-
-Module-targeted outbox worker registration is now tracked in
-[07-outbox-worker-topology.md](07-outbox-worker-topology.md).
+- Consider module-targeted outbox worker registration for selected-module
+  dispatch and stronger noisy-neighbor isolation. A future ADR must define the
+  option shape, DI registration, validation behavior, failure semantics,
+  global-versus-module batch budgeting, parallelism or sequential behavior, and
+  test scope before implementation.
 
 ## Samples
 

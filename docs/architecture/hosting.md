@@ -25,9 +25,22 @@ Multiple workers can run when the provider claim implementation supports
 skip-locked or equivalent semantics.
 
 The public worker registration creates one aggregate worker over the configured
-local module outbox dispatch graph. Module outboxes remain ownership
-boundaries, while selected-module worker registration is tracked as future
-work in [../backlog/09-future-work.md](../backlog/09-future-work.md).
+app-facing `IDurableOutboxDispatcher`. For module-owned persistence, that
+dispatcher can be `DurableModuleOutboxDispatchAggregator`, which calls local
+module outbox dispatchers sequentially in registration order. The aggregate
+batch uses one shared `BatchSize` budget; each module dispatcher receives only
+the remaining budget, and later modules are skipped after the shared budget is
+exhausted.
+
+The aggregate worker is the only built-in worker topology. It is not a
+fairness or noisy-neighbor isolation model: a slow module dispatcher can delay
+later modules, and a module dispatcher failure stops the current aggregate
+batch by bubbling to the hosted worker. The hosted worker logs the failed
+batch, waits for `FailureDelay`, and continues with a later batch. Module
+outboxes remain ownership boundaries, while selected-module worker
+registration, per-module worker options, parallel aggregate dispatch, dispatch
+timeouts, and per-module concurrency controls are future work tracked in
+[../backlog/09-future-work.md](../backlog/09-future-work.md).
 
 `AddBondstone` is the preferred host registration path. Package-specific
 extensions mark what they contribute, and the builder rejects hosted outbox

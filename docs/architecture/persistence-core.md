@@ -70,8 +70,12 @@ Hosted worker composition lives outside core in `Bondstone.Hosting`.
 For module-owned durable persistence, module-specific outbox writers and
 outbox dispatchers can be registered by provider packages. Durable sends
 resolve the source module writer, while the app-facing dispatcher can aggregate
-dispatch across configured local module outboxes. The underlying claim, lease,
-transport, and outcome-recording contracts remain per persistence boundary.
+dispatch across configured local module outboxes. The built-in aggregate
+dispatcher invokes module dispatchers sequentially in registration order,
+shares the caller's `maxCount` as one aggregate batch budget, passes each
+module dispatcher only the remaining budget, and propagates module dispatcher
+failures to its caller. The underlying claim, lease, transport, and
+outcome-recording contracts remain per persistence boundary.
 The `IDurableModule*` persistence contracts are provider-extension contracts;
 application code should normally configure them through provider setup helpers
 such as PostgreSQL module persistence registration.

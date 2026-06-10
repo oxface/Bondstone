@@ -15,8 +15,6 @@ stable docs, and remove stale backlog language.
 
 ## Active Items
 
-- [07-outbox-worker-topology.md](07-outbox-worker-topology.md) decides whether
-  aggregate outbox workers need module-targeted isolation options.
 - [08-execution-context-and-api-surface.md](08-execution-context-and-api-surface.md)
   decides execution-context alternatives, receive helper shape, and public API
   surface policy.
@@ -42,3 +40,6 @@ stable docs, and remove stale backlog language.
   stance.
 - [archive/06-inbox-recovery.md](archive/06-inbox-recovery.md) accepted the
   current loud already-received inbox behavior and commit-delegate stance.
+- [archive/07-outbox-worker-topology.md](archive/07-outbox-worker-topology.md)
+  accepted the current aggregate-only worker topology and deferred
+  module-targeted worker APIs.

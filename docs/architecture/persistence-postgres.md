@@ -66,5 +66,11 @@ Outbox terminal status semantics are defined in
 [persistence-core.md](persistence-core.md); this provider only records the
 provider-specific PostgreSQL outcome update.
 
+Module outbox dispatch remains provider-owned per module. When the app-facing
+dispatcher aggregates module dispatchers, this provider still owns each
+module's PostgreSQL claim, lease renewal, and outcome-recording SQL; the
+aggregate dispatcher only supplies the sequential call order and remaining
+batch budget.
+
 Follow-up PostgreSQL non-EF persistence ideas that are outside the current
 contract are tracked in [../backlog/09-future-work.md](../backlog/09-future-work.md).

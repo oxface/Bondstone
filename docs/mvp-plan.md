@@ -63,6 +63,10 @@ Implemented surface includes:
   native messages only after Bondstone dispatch succeeds;
 - opt-in hosted receive lifecycle helpers for RabbitMQ consumers and Service
   Bus processors over configured receive topology;
+- Phase 7 provider retry/recovery boundary: Bondstone owns persisted outbox
+  retry and terminal failure state, while direct provider receive adapters own
+  settlement ordering and diagnostics without owning broker retry/dead-letter
+  policy;
 - modular monolith sample using EF-backed ordering/fulfillment modules,
   `Bondstone.Persistence.Postgres` billing, explicit integration events, a durable
   outbox worker, and explicit local queue transport over the neutral receive
@@ -255,20 +259,36 @@ Applied in this slice:
 
 Deferred to Phase 7:
 
-- provider retry-policy hardening and diagnostics;
+- broker recovery diagnostics, now started by ADR 0038;
 - broker topology declaration helpers, if accepted by ADR;
 - any broader EF persistence package-family rename.
 
-### Phase 7: Hardening And Public API Tightening
+### Phase 7: Direct Provider And Persistence API Hardening
 
-Status: **Not started**.
+Status: **In Progress**.
 
-Start Phase 7 only after Phase 6.5 no longer leaves the repository in a
-transition state.
+Accepted decisions:
 
-Likely goals:
+- [ADR 0038](adr/0038-provider-retry-recovery-and-settlement-boundaries.md)
 
-- harden direct provider transport receive semantics;
+Goal: harden direct provider transport and persistence APIs before broader
+public polish.
+
+Applied in this slice:
+
+- define the provider retry/recovery boundary: core owns persisted outbox
+  retry and terminal failure state; direct provider receive adapters own
+  settlement ordering and diagnostics; broker retry/dead-letter policy remains
+  app-owned and provider-native.
+- clarify the MVP receive registration contract: Bondstone binds to
+  provider-native receive entities and exposes bounded worker options, while
+  RabbitMQ DLX/retry topology and Service Bus max-delivery/dead-letter policy
+  stay app-owned.
+- improve RabbitMQ and Service Bus receive failure diagnostics around native
+  settlement handoff.
+
+Likely next slices:
+
 - refine multi-transport routing and diagnostics;
 - refine persistence provider contracts;
 - improve operation-state failure/running/retry semantics;

@@ -59,6 +59,22 @@ bondstone.UseRabbitMqTransport(rabbitMq =>
 });
 ```
 
+For the opt-in worker, configure the native failure handoff explicitly:
+
+```csharp
+bondstone.UseRabbitMqTransport(rabbitMq =>
+{
+    rabbitMq.ReceiveQueue("fulfillment.commands")
+        .AcceptModule("fulfillment");
+
+    rabbitMq.UseReceiveWorker(options => options.RequeueOnFailure = false);
+});
+```
+
+`RequeueOnFailure = false` is the usual choice when the application has
+declared DLX or retry-queue topology for the receive queue. Set it to `true`
+only when immediate broker redelivery is intentional and safe for that queue.
+
 `IRabbitMqReceivedMessageDispatcher` maps a received RabbitMQ transport
 message back to a Bondstone durable envelope. Command messages dispatch through
 `IModuleCommandReceivePipeline`; event messages dispatch through
@@ -81,12 +97,32 @@ failure using the configured requeue behavior. RabbitMQ connection,
 queue/exchange/binding declaration, dead-letter topology, and retry policy
 remain application-owned.
 
+## Retry And Recovery Boundary
+
+Bondstone owns persisted outbox retry and terminal failure state for outgoing
+messages it has claimed. RabbitMQ receive retry and dead-letter policy remains
+broker-native and application-owned.
+
+On receive dispatch failure, the opt-in worker logs the queue, delivery tag,
+message identity and type when available, exchange, routing key, redelivery
+flag, and configured `requeue` decision. It then negatively acknowledges the
+delivery with that configured `requeue` value. RabbitMQ redelivery, delayed
+retry, and dead-letter exchange behavior are governed by the application's
+RabbitMQ topology and client configuration, not by Bondstone.
+
 ## App-Owned Setup
 
 Bondstone does not declare exchanges, queues, bindings, long-running
 consumers, acknowledgement policy, retry policy, dead-letter policy, prefetch,
 channels, or connections. Applications register and configure the RabbitMQ
 `IConnection` and own native broker topology setup.
+
+An MVP RabbitMQ deployment that uses the hosted worker should provision, at
+minimum, the receive queue, any command/event bindings that route messages to
+that queue, and an intentional failure path. That failure path can be a DLX,
+retry queues, delayed exchange topology, quorum-queue delivery limits, or an
+explicit decision to requeue immediately. Bondstone only performs the
+configured acknowledgement or negative acknowledgement.
 
 The adapter publishes the Bondstone-owned durable envelope as the message body
 and copies durable identity, module metadata, operation id, partition key, and
@@ -102,5 +138,4 @@ queue delivery, acknowledgement after successful command dispatch, and failed
 dispatch handoff to application-owned dead-letter topology through negative
 acknowledgement with `requeue: false`. It also proves event receive fan-out
 from one broker queue delivery to each configured subscriber identity before
-acknowledgement. Retry behavior and broker topology declaration remain future
-slices.
+acknowledgement. Broker topology declaration remains a future slice.

@@ -186,8 +186,22 @@ dispatch, plus handler helpers that invoke caller-supplied native settlement
 only after dispatch succeeds. RabbitMQ and Service Bus also expose opt-in
 hosted receive lifecycle helpers over configured receive topology.
 Provider-backed integration tests cover successful receive settlement,
-dead-letter handoff after failed dispatch, and event subscriber fan-out. Retry
-policy hardening and broker topology declaration remain Phase 7 concerns.
+dead-letter handoff after failed dispatch, and event subscriber fan-out.
+
+[ADR 0038](../adr/0038-provider-retry-recovery-and-settlement-boundaries.md)
+sets the Phase 7 retry and recovery boundary. Bondstone owns persisted outbox
+retry and terminal failure state. Direct provider receive adapters own
+settlement ordering and operational diagnostics, but broker retry schedules,
+delivery counts, dead-letter policy, and provider client retry configuration
+remain application-owned and provider-native. Broker topology declaration
+helpers remain deferred.
+
+The MVP receive registration contract is deliberately small: applications bind
+Bondstone receive topology to provider-native queues and subscriptions where
+their retry/DLQ policy is already configured. RabbitMQ exposes the worker
+failure `requeue` decision. Service Bus exposes processor concurrency and lock
+renewal settings. Bondstone does not create a provider-neutral receive retry
+policy or receive DLQ abstraction.
 
 ## Diagnostics
 
@@ -196,3 +210,11 @@ Command diagnostics should describe target-module routing. Event diagnostics
 should describe publish subjects, subscriber bindings, and missing-subscriber
 outcomes. Core keeps shared durable-message vocabulary, while provider
 packages expose provider-native diagnostic details.
+
+Receive recovery diagnostics should explain the native settlement handoff after
+failed Bondstone dispatch. RabbitMQ diagnostics should include the queue,
+delivery identity, routing facts, and configured negative-acknowledgement
+requeue decision. Service Bus diagnostics should include the receive source,
+message identity, delivery count when available, and abandon handoff. These
+logs document what Bondstone did; they do not imply Bondstone owns broker
+retry or dead-letter policy.

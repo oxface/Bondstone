@@ -108,9 +108,11 @@ internal sealed class ServiceBusReceiveWorker(
         {
             _logger.LogError(
                 exception,
-                "Service Bus receive worker failed while handling message {MessageId} from {ReceiveSource}.",
+                "Service Bus receive worker failed while handling message {MessageId} from {ReceiveSource}. Subject: {Subject}. DeliveryCount: {DeliveryCount}. Bondstone will abandon the message; Service Bus retry and dead-letter policy remain provider-owned.",
                 args.Message.MessageId,
-                source.DisplayName);
+                source.DisplayName,
+                args.Message.Subject,
+                args.Message.DeliveryCount);
 
             await args.AbandonMessageAsync(
                 args.Message,

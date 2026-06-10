@@ -41,8 +41,13 @@ first transport proof packages: `Bondstone.Transport.ServiceBus` and
 `Bondstone.Transport.RabbitMq`. Their current implemented scope includes
 outgoing durable outbox dispatch, provider-native receive topology, opt-in
 hosted receive workers, and provider-backed receive integration tests. Broker
-administration, topology declaration helpers, and retry-policy hardening remain
-deferred. See [transport-servicebus.md](transport-servicebus.md) and
+administration and topology declaration helpers remain deferred. Provider retry
+and recovery boundaries are accepted in
+[ADR 0038](../adr/0038-provider-retry-recovery-and-settlement-boundaries.md):
+Bondstone owns persisted outbox retry and terminal failure state, while direct
+provider receive adapters own settlement ordering and diagnostics without
+owning broker retry/dead-letter policy. See
+[transport-servicebus.md](transport-servicebus.md) and
 [transport-rabbitmq.md](transport-rabbitmq.md).
 
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,

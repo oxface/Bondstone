@@ -55,6 +55,29 @@ bondstone.UseServiceBusTransport(serviceBus =>
 });
 ```
 
+For the opt-in worker, configure only processor behavior in Bondstone:
+
+```csharp
+bondstone.UseServiceBusTransport(serviceBus =>
+{
+    serviceBus.ReceiveSubscription("sales-events", "fulfillment")
+        .SubscribeEvent(
+            "sales.order.submitted.v1",
+            "fulfillment",
+            "fulfillment.sales-order-projection.v1");
+
+    serviceBus.UseReceiveWorker(options =>
+    {
+        options.MaxConcurrentCalls = 4;
+        options.MaxAutoLockRenewalDuration = TimeSpan.FromMinutes(5);
+    });
+});
+```
+
+Retry and dead-letter policy remains on the Service Bus queue or subscription,
+such as max delivery count and dead-letter settings configured through Azure
+infrastructure or native administration.
+
 `IServiceBusReceivedMessageDispatcher` maps a received Service Bus transport
 message back to a Bondstone durable envelope. Command messages dispatch
 through `IModuleCommandReceivePipeline`; event messages dispatch through
@@ -77,12 +100,31 @@ completes on success, and abandons on failure. Service Bus queues, topics,
 subscriptions, rules, dead-letter policy, credentials, and administration
 remain application-owned.
 
+## Retry And Recovery Boundary
+
+Bondstone owns persisted outbox retry and terminal failure state for outgoing
+messages it has claimed. Service Bus receive retry and dead-letter policy
+remains provider-native and application-owned.
+
+On receive dispatch failure, the opt-in worker logs the receive source, message
+identity and subject when available, delivery count when available, and the
+abandon handoff. It then abandons the message. Service Bus redelivery timing,
+max delivery count, lock settings, dead-letter subqueue behavior, and client
+retry settings are governed by the application's Service Bus configuration,
+not by Bondstone.
+
 ## App-Owned Setup
 
 Bondstone does not create queues, topics, subscriptions, rules, long-running
 processors, retry policy, dead-letter policy, credentials, connection strings,
 or administrative clients. Applications register and configure the Azure
 `ServiceBusClient` and own native Service Bus infrastructure setup.
+
+An MVP Service Bus deployment that uses the hosted worker should provision, at
+minimum, the receive queue or topic subscription, the subscription rules needed
+for event fan-out, max delivery count, and any dead-letter settings. Bondstone
+only completes after successful dispatch or abandons on failure so the
+configured Service Bus entity policy can take over.
 
 The adapter sends the Bondstone-owned durable envelope as the message body and
 copies durable identity, module metadata, operation id, partition key, and W3C
@@ -95,5 +137,4 @@ remain separate ADR-backed decisions.
 Service Bus has emulator-backed receive worker integration tests for real queue
 delivery, completion after successful command dispatch, abandon/dead-letter
 handoff after failed dispatch, and topic subscription fan-out to configured
-subscriber identities. Retry-policy hardening and broker topology declaration
-remain future slices.
+subscriber identities. Broker topology declaration remains a future slice.

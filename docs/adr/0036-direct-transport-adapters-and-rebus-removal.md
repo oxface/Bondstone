@@ -345,8 +345,11 @@ diagnostics, and provider-backed integration tests.
   real queue delivery, completion after successful command dispatch,
   dead-letter handoff after failed command dispatch, and topic subscription
   fan-out.
-- Pending or deferred: Retry-policy hardening, broker topology declaration
-  helpers, and broader operational diagnostics remain Phase 7 concerns.
+- Pending or deferred: Provider retry/recovery boundaries and initial receive
+  failure diagnostics are covered by
+  [ADR 0038](0038-provider-retry-recovery-and-settlement-boundaries.md).
+  Broker topology declaration helpers and broader operational diagnostics
+  remain Phase 7 concerns.
 
 ## Verification
 

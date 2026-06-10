@@ -66,8 +66,19 @@ ownership and extraction seams.
 
 For transport adapters, prefer a layered shape: use fast in-process transport
 tests for the broad behavior matrix, and keep a small number of
-Testcontainers-backed transport tests for the real persistence, retry,
-acknowledgement, and dead-letter contract.
+Testcontainers-backed transport tests for the real provider handoff contract:
+acknowledgement/completion after success, negative acknowledgement or abandon
+after failure, and broker-owned dead-letter behavior where the adapter promises
+that handoff.
+
+After ADR 0038, receive retry-policy tests should assert Bondstone's provider
+boundary rather than expecting Bondstone to own broker retry policy. Fast tests
+should cover native mapping, dispatch, and settlement ordering. Provider-backed
+integration tests should prove the native handoff that Bondstone performs:
+RabbitMQ negative acknowledgement with the configured `requeue` value and
+Service Bus abandon/complete behavior. Broker retry schedules, max delivery
+count, and dead-letter topology are app/provider configuration and should be
+tested only where the adapter explicitly promises that handoff.
 
 For first-class events, keep the same split. Unit and application tests should
 cover event route/topic resolution, publish dispatch, subscriber registration,

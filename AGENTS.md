@@ -82,6 +82,11 @@ Start with:
   command queues, event destinations, and event subscriptions, while broker
   connection, worker, retry, dead-letter, serializer, and subscription-storage
   setup stays provider-native.
+- Provider retry and recovery boundaries follow
+  [ADR 0038](docs/adr/0038-provider-retry-recovery-and-settlement-boundaries.md):
+  Bondstone owns persisted outbox retry and terminal failure state, while
+  direct provider receive adapters own settlement ordering and diagnostics
+  without owning broker retry/dead-letter policy.
 - Direct provider transport adapters are the current direction according to
   [ADR 0036](docs/adr/0036-direct-transport-adapters-and-rebus-removal.md).
   Do not adapt another bus abstraction as a supported transport package.

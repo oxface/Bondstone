@@ -41,6 +41,11 @@ attempt. It records dispatch success, schedules retry after a failure, or marks
 a claimed row as dead-lettered. These updates are claim-owner and lease-time
 aware.
 
+The persisted `DeadLettered` outbox status is a terminal Bondstone outbox
+failure state. It does not mean Bondstone creates or owns a provider-native
+broker dead-letter queue. Broker receive retry and dead-letter policy remains
+transport/provider-owned.
+
 `IDurableOutboxFailurePolicy` decides whether a failed claimed delivery attempt
 should be retried or dead-lettered. The default
 `DurableOutboxFailurePolicy` uses a maximum-attempt threshold and retry delay

@@ -157,8 +157,9 @@ broker-backed receive worker tests for real queue delivery, acknowledgement,
 failed dispatch handoff to application-owned dead-letter topology, and event
 subscriber fan-out from one queue delivery. Service Bus has emulator-backed
 receive worker tests for queue completion, abandon/dead-letter handoff, and
-topic subscription fan-out. Deeper retry-policy reliability verification
-remains a follow-up slice.
+topic subscription fan-out. Bondstone's receive responsibility is the native
+settlement handoff; broker retry schedules, delivery counts, and DLQ settings
+remain provider/app-owned.
 
 Provider packages also expose native receive message mappers:
 

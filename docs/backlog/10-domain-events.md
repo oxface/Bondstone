@@ -1,0 +1,234 @@
+# Domain Events
+
+Priority: High
+
+Goal: add explicit module-local domain event behavior before validating
+Bondstone on a real project.
+
+Dependency: implement or intentionally narrow
+[09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
+before DE-02/DE-03 add runtime pipeline behavior.
+
+## Why Now
+
+Domain events are already a repeated pressure point in the architecture docs
+and ADR history. Bondstone currently says they are module-local/private and
+does not collect, persist, dispatch, or publish them automatically. That is a
+safe boundary, but real modules often need a transactional way to record local
+domain facts and optionally map selected facts to durable integration events.
+
+This should be addressed before real-project adoption so aggregate and handler
+patterns do not drift around an unstated domain-event convention.
+
+## Scope
+
+- Define the module-local domain event model without turning domain events into
+  public integration events by default.
+- Decide whether Bondstone needs:
+  - a marker interface or neutral domain event record shape;
+  - aggregate/domain object collection conventions;
+  - EF Core collection through `ChangeTracker`;
+  - non-EF/PostgreSQL explicit staging APIs;
+  - optional persistence of domain event records;
+  - explicit mapping from selected domain events to integration event
+    publications.
+- Keep integration event publishing explicit unless a later ADR accepts a
+  mapping helper.
+- Keep domain event behavior out of transport packages.
+
+## Related ADRs
+
+- [0026 Event Shape Guardrail](../adr/0026-event-shape-guardrail.md)
+- [0028 Domain Event Persistence Capability](../adr/0028-domain-event-persistence-capability.md)
+- [0033 First-Class Event Publish Subscribe Topology](../adr/0033-first-class-event-publish-subscribe-topology.md)
+
+## Accepted Direction
+
+DE-01 resolved on 2026-06-10 by accepting ADR 0028 in place. Bondstone will own
+a small module-local domain event contract in core. Domain events are
+transient module-local facts, and provider packages may optionally persist
+module-local domain event records. Domain events are not integration events,
+outbox messages, transport events, or public topology subjects.
+
+The next implementation slices are blocked by the module pipeline and
+capability runtime cleanup:
+
+- DE-02 adds core `IDomainEvent`, `DomainEventIdentityAttribute`, explicit
+  source/accessor, and local handler contracts.
+- DE-03 adds EF Core `ChangeTracker` collection and optional module-local
+  persistence records through the module transaction pipeline.
+
+Non-EF PostgreSQL staging stays application-owned for now. Mapping selected
+domain events to integration events remains an explicit later slice and must
+not become automatic publication.
+
+## Deliverables
+
+- ADR 0028 accepted in place with the module-local domain event contract.
+- Stable docs updated for accepted domain-event behavior and implementation
+  boundary.
+- Core domain-event contracts.
+- EF Core collection and optional persistence behavior.
+- Tests proving domain events remain module-local unless explicitly mapped to
+  integration events.
+
+## Slices
+
+1. Decision slice: resolved by ADR 0028 on 2026-06-10.
+2. Core slice: add the smallest domain-event abstractions needed by handlers
+   and aggregates without introducing transport publishing.
+3. EF Core slice: collect and clear domain events transactionally when module
+   persistence is EF-backed.
+4. PostgreSQL slice: deferred; non-EF persistence stays application-owned until
+   a concrete use case justifies provider APIs.
+5. Mapping slice: add explicit domain-event-to-integration-event mapping only
+   after the module-local boundary is tested.
+
+## Implementation Backlog
+
+### DE-01: Supersede Or Amend ADR 0028
+
+Priority: P0
+Status: Resolved 2026-06-10
+
+Resolved by accepting ADR 0028 in place. ADR 0028 now defines the minimum
+module-local contract before code work: Bondstone owns core domain event
+contracts and local identities, domain events are transient facts with
+optional provider-backed module-local persistence records, EF Core collection
+uses `ChangeTracker` entries that implement an explicit source/accessor
+contract, non-EF PostgreSQL staging remains application-owned, and
+integration-event mapping is explicit future work.
+
+Important files:
+
+- `docs/adr/0028-domain-event-persistence-capability.md`
+- `docs/architecture/messaging.md`
+- `docs/architecture/persistence.md`
+- `docs/architecture/persistence-ef-core.md`
+
+Verification:
+
+- `pnpm format:check`
+
+### DE-02: Add Core Module-Local Domain Event Contracts
+
+Priority: P0 if DE-01 accepts a Bondstone-owned contract.
+Dependency: [09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
+for runtime pipeline placement and capability contribution.
+
+Add the smallest core abstractions needed by aggregates and local handlers.
+Keep the contracts module-local and do not publish them as integration events.
+
+Accepted guidance:
+
+- add an `IDomainEvent` marker in core;
+- add `DomainEventIdentityAttribute` for stable module-local persisted record
+  identity;
+- add an explicit domain event source/accessor contract for aggregate roots or
+  entities to expose pending events and clear them after successful
+  collection;
+- add an `IDomainEventHandler<TDomainEvent>`-style local handler contract
+  constrained to `IDomainEvent`;
+- keep the contracts independent from EF Core, transport packages, and durable
+  message topology;
+- do not register domain events in `MessageTypeRegistry`, add a `MessageKind`,
+  wrap domain events in `DurableMessageEnvelope`, or treat local identities as
+  transport topology names;
+- do not add a Bondstone aggregate base class, generic mediator, generic bus,
+  automatic discovery, outbox publication, or cross-module subscription.
+
+Candidate files:
+
+- `src/Bondstone/Messaging/Contracts`
+- `src/Bondstone/Modules/Contracts`
+- `tests/Bondstone.Tests/Messaging`
+- `tests/Bondstone.Tests/Modules`
+
+Verification:
+
+- `pnpm backend:build`
+- `pnpm backend:test:fast`
+
+### DE-03: Add EF Core Collection And Clearing
+
+Priority: P0 if DE-01 accepts EF-backed collection.
+Dependency: [09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
+for the system behavior slot and provider/capability composition model.
+
+Collect domain events through EF Core module persistence in the same handler
+transaction, then clear them after successful staging, save, and transaction
+commit according to ADR 0028. Keep transaction ownership aligned with existing
+module transaction behaviors.
+
+Accepted guidance:
+
+- collect through `DbContext.ChangeTracker` entries whose entities implement
+  the explicit domain event source/accessor contract;
+- stage immutable module-local domain event records in the same module
+  `DbContext` transaction as handler state, inbox markers, operation-state
+  updates where applicable, and outgoing outbox rows;
+- include stable record id, owning module, `DomainEventIdentityAttribute`
+  name, timestamps, serialized payload, payload metadata, and trace or
+  causation metadata when available;
+- clear source pending events only after successful collection, staging, save,
+  and transaction commit;
+- do not intercept `SaveChangesAsync`, require a custom DbContext base class,
+  scan arbitrary method names, or publish domain events automatically;
+- document and test failure behavior so collection, staging, save, or commit
+  failures do not mark domain events as durably handled.
+
+Candidate files:
+
+- `src/Bondstone.EntityFrameworkCore/Persistence`
+- `src/Bondstone.EntityFrameworkCore/Mapping`
+- `tests/Bondstone.EntityFrameworkCore.Tests/Persistence`
+- `tests/Bondstone.EntityFrameworkCore.Tests/Mapping`
+
+Verification:
+
+- `pnpm backend:test:fast`
+- `pnpm backend:test:integration` if provider-backed SQL behavior changes.
+
+### DE-04: Decide Non-EF PostgreSQL Staging
+
+Priority: P2.
+
+ADR 0028 keeps `Bondstone.Persistence.Postgres` domain event staging
+application-owned for now. Reopen this only when a concrete non-EF use case
+needs library-owned collection or staging APIs.
+
+Candidate files:
+
+- `src/Bondstone.Persistence.Postgres`
+- `tests/Bondstone.Persistence.Postgres.Tests`
+- `docs/architecture/persistence-postgres.md`
+
+Verification:
+
+- `pnpm backend:test:fast`
+- `pnpm backend:test:integration` if SQL behavior changes.
+
+### DE-05: Explicit Mapping To Integration Events
+
+Priority: P1 after DE-02 and DE-03.
+
+Add optional mapping only if real modules need selected domain events to stage
+durable integration events after DE-02 and DE-03 prove the module-local
+boundary. Mapping must stay explicit and must not turn every domain event into
+a public event automatically.
+
+Candidate files:
+
+- `src/Bondstone/Messaging/Publishing`
+- `src/Bondstone.EntityFrameworkCore/Persistence`
+- `tests/Bondstone.Tests/Messaging`
+
+Verification:
+
+- `pnpm backend:build`
+- `pnpm backend:test:fast`
+
+## Verification
+
+- `pnpm backend:test:fast`
+- `pnpm backend:test:integration` if provider persistence behavior changes.

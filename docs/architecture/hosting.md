@@ -40,7 +40,7 @@ batch, waits for `FailureDelay`, and continues with a later batch. Module
 outboxes remain ownership boundaries, while selected-module worker
 registration, per-module worker options, parallel aggregate dispatch, dispatch
 timeouts, and per-module concurrency controls are future work tracked in
-[../backlog/14-future-work.md](../backlog/14-future-work.md).
+[../backlog/15-future-work.md](../backlog/15-future-work.md).
 
 `AddBondstone` is the preferred host registration path. Package-specific
 extensions mark what they contribute, and the builder rejects hosted outbox

@@ -76,7 +76,7 @@ an inventory and compatibility plan.
 - Pending or deferred: public API inventory/baseline work, explicit
   classification of concrete public types, compatibility test/process design,
   and any public surface reduction remain in
-  [docs/backlog/10-public-api-and-composition-cleanup.md](../backlog/10-public-api-and-composition-cleanup.md).
+  [docs/backlog/11-public-api-and-composition-cleanup.md](../backlog/11-public-api-and-composition-cleanup.md).
 
 ## Verification
 

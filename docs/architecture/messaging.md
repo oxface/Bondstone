@@ -73,10 +73,42 @@ Event-driven orchestration composes commands and events rather than erasing
 their distinction. A subscriber, saga, process manager, or orchestrator can
 react to an integration event and send durable commands as follow-up work.
 
-Domain events remain module-local/private. Bondstone does not collect,
-persist, dispatch, or publish domain events automatically. Domain event
-follow-up work is tracked in
-[../backlog/09-domain-events.md](../backlog/09-domain-events.md).
+## Domain Events
+
+Domain events are module-local facts. They are distinct from integration
+events and must not be treated as durable cross-module contracts by default.
+
+ADR 0028 accepts a small Bondstone-owned domain event contract for the next
+implementation slice:
+
+- `IDomainEvent` marks a module-local fact;
+- `DomainEventIdentityAttribute` provides a stable module-local identity for
+  persisted domain event records;
+- an explicit domain event source/accessor contract lets aggregate roots or
+  entities expose pending domain events and clear them after successful
+  collection;
+- a local `IDomainEventHandler<TDomainEvent>`-style contract may be used for
+  module-local handlers.
+
+Domain events are not transport messages or durable message kinds. They do not
+implement `IIntegrationEvent`, do not use `MessageKind`, `MessageTypeRegistry`,
+`DurableMessageEnvelope`, durable message topology, command targets, or event
+subscribers, and are not automatically staged in the outgoing outbox.
+Publishing a public integration event from a domain event must remain an
+explicit module-code mapping step that calls `IDurableEventPublisher` for a
+registered `IIntegrationEvent`.
+
+The accepted persistence direction is optional module-local records. A
+persisted domain event record may support auditing, local projections, later
+in-module dispatch, or explicit mapping to integration events, but it remains
+private to the owning module unless module code publishes a separate
+integration event.
+
+The core and EF implementation work for this accepted direction is still
+pending. Runtime pipeline and capability planning is tracked in
+[../backlog/09-module-pipeline-and-capability-runtime.md](../backlog/09-module-pipeline-and-capability-runtime.md);
+domain event implementation work is tracked in
+[../backlog/10-domain-events.md](../backlog/10-domain-events.md).
 
 ## Module Execution Context
 

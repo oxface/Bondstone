@@ -15,17 +15,43 @@ stable docs, and remove stale backlog language.
 
 ## Active Items
 
-- [09-domain-events.md](09-domain-events.md) defines explicit module-local
+Use the active items as an implementation backlog, not as another acceptance
+campaign. The current recommended order is:
+
+1. [09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md),
+   because Domain Events and future capabilities need explicit runtime
+   pipeline planning before implementation.
+2. [10-domain-events.md](10-domain-events.md), because real-project aggregate
+   and handler patterns should not form around an unstated domain-event
+   convention.
+3. The inventory and documentation slices of
+   [11-public-api-and-composition-cleanup.md](11-public-api-and-composition-cleanup.md),
+   because public API cleanup needs a baseline before compatibility hardens.
+4. The operator docs and maintenance API slices of
+   [12-persistence-recovery-and-maintenance.md](12-persistence-recovery-and-maintenance.md),
+   because production validation needs a recovery story even if operators own
+   recovery at first.
+5. The receive-helper and worker-isolation slices of
+   [13-transport-and-hosting-ergonomics.md](13-transport-and-hosting-ergonomics.md),
+   when custom receive loops or deployment isolation become active needs.
+6. [14-real-project-readiness.md](14-real-project-readiness.md), after domain
+   events and the first API cleanup pass are stable enough to avoid immediate
+   sample churn.
+
+- [09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
+  defines explicit module pipeline planning and capability contribution before
+  Domain Events add runtime behavior.
+- [10-domain-events.md](10-domain-events.md) defines explicit module-local
   domain event behavior before real-project validation.
-- [10-public-api-and-composition-cleanup.md](10-public-api-and-composition-cleanup.md)
+- [11-public-api-and-composition-cleanup.md](11-public-api-and-composition-cleanup.md)
   turns the decision work into focused API and composition cleanup.
-- [11-persistence-recovery-and-maintenance.md](11-persistence-recovery-and-maintenance.md)
+- [12-persistence-recovery-and-maintenance.md](12-persistence-recovery-and-maintenance.md)
   tracks operational persistence recovery, retention, and operation-state work.
-- [12-transport-and-hosting-ergonomics.md](12-transport-and-hosting-ergonomics.md)
+- [13-transport-and-hosting-ergonomics.md](13-transport-and-hosting-ergonomics.md)
   tracks worker, receive-helper, topology, and provider ergonomics.
-- [13-real-project-readiness.md](13-real-project-readiness.md) tracks sample,
+- [14-real-project-readiness.md](14-real-project-readiness.md) tracks sample,
   setup, and adoption work needed before broader real-project validation.
-- [14-future-work.md](14-future-work.md) collects lower-priority ideas that
+- [15-future-work.md](15-future-work.md) collects lower-priority ideas that
   are not yet active decision or implementation work.
 
 ## Archived Campaigns

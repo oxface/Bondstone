@@ -81,7 +81,7 @@ verification commands by architecture slice.
 - `docs/setup.md`: user-facing host composition examples.
 - `docs/testing.md`: category policy and verification entrypoints.
 - `docs/samples.md`: current sample ownership and constraints.
-- `docs/backlog/14-future-work.md`: non-current follow-up ideas.
+- `docs/backlog/15-future-work.md`: non-current follow-up ideas.
 
 ## High-Level Sweep
 

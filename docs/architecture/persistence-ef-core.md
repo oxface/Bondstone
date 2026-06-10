@@ -112,9 +112,32 @@ The store requires the operation-state entity mapping and fails with a clear
 `ApplyBondstoneOperationState()` mapping error if it is used with a DbContext
 that does not map operation state.
 
-EF Core does not collect or persist domain events. Optional domain event
-persistence is outside the current EF Core persistence contract and is tracked
-in [../backlog/09-domain-events.md](../backlog/09-domain-events.md).
+ADR 0028 accepts EF Core as the first provider for optional module-local domain
+event collection and persistence. The implementation is pending and tracked in
+[../backlog/10-domain-events.md](../backlog/10-domain-events.md), after the
+runtime pipeline and capability planning tracked in
+[../backlog/09-module-pipeline-and-capability-runtime.md](../backlog/09-module-pipeline-and-capability-runtime.md).
+
+The accepted EF collection mechanism is narrow: the module transaction
+behavior collects domain events through `DbContext.ChangeTracker` entries
+whose entities implement Bondstone's explicit domain event source/accessor
+contract. EF Core must not require a Bondstone aggregate base class, a custom
+DbContext base class, `SaveChangesAsync` interception, arbitrary method-name
+reflection, or automatic publication from EF interceptors.
+
+EF-backed domain event collection belongs inside module command execution and
+module integration event subscriber execution. After application handlers and
+application pipeline behaviors complete, the EF behavior collects pending
+domain events, stages configured module-local domain event records in the same
+`DbContext` transaction, saves them with handler state, inbox markers,
+operation-state updates where applicable, and outgoing outbox rows, then
+clears the source pending events only after successful staging, save, and
+transaction commit.
+
+Persisted domain event records remain module-local. They are not outgoing
+outbox records and are not transport events. Mapping selected domain events to
+public integration events must remain explicit module code that publishes a
+separate registered `IIntegrationEvent`.
 
 ## Persistence Scope
 
@@ -127,8 +150,9 @@ for lower-level durable primitives. It:
 - exposes `SaveChangesAsync` for callers that own an explicit EF save point;
 - commits or rolls back only transactions it started.
 
-It does not discover handlers, publish messages, acknowledge transports,
-capture domain events, or introduce a generic mediator.
+The lower-level scope does not discover handlers, publish messages,
+acknowledge transports, capture domain events by itself, or introduce a
+generic mediator.
 
 The EF persistence scope is not a core abstraction and is not a required shape
 for non-EF providers.

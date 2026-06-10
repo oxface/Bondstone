@@ -59,6 +59,112 @@ show that the dispatcher/handler split is actively awkward.
 4. Diagnostics slice: add structured startup diagnostics only if exception
    messages are not enough for multi-transport failures.
 
+## Implementation Backlog
+
+### THE-01: Receive Helper Classification And Docs
+
+Priority: P0 after API-01.
+
+Classify RabbitMQ and Service Bus mappers, dispatchers, settlement helpers,
+and workers as normal API or advanced composition API. Update transport docs
+so app-owned consumer examples point to the intended low-level types.
+
+Important files:
+
+- `docs/architecture/transport-rabbitmq.md`
+- `docs/architecture/transport-servicebus.md`
+- `src/Bondstone.Transport.RabbitMq/Inbox`
+- `src/Bondstone.Transport.ServiceBus/Inbox`
+- `tests/Bondstone.Transport.RabbitMq.Tests`
+- `tests/Bondstone.Transport.ServiceBus.Tests`
+
+Verification:
+
+- `pnpm format:check`
+- `pnpm backend:test:fast`
+
+### THE-02: Receive Helper Naming Cleanup
+
+Priority: P1.
+
+If THE-01 shows current names are actively confusing, introduce additive names
+or docs aliases before any breaking rename. Keep source compatibility unless
+ADR 0046 is amended with a compatibility plan.
+
+Candidate types:
+
+- `IRabbitMqReceivedMessageHandler`
+- `RabbitMqReceivedMessageDispatcher`
+- `IServiceBusReceivedMessageHandler`
+- `ServiceBusReceivedMessageDispatcher`
+- `IModuleCommandReceivePipeline`
+- `IModuleEventReceivePipeline`
+
+Verification:
+
+- `pnpm backend:build`
+- `pnpm backend:test:fast`
+- `pnpm backend:pack`
+
+### THE-03: Selected-Module Outbox Worker
+
+Priority: P1 when deployment isolation is needed.
+
+Design and implement opt-in module filtering for hosted outbox dispatch. Keep
+the aggregate worker as the default, but allow selected modules to be run by
+separate workers when noisy-neighbor isolation matters.
+
+Important files:
+
+- `src/Bondstone.Hosting`
+- `src/Bondstone/Persistence/Resolution/DurableModuleOutboxDispatchAggregator.cs`
+- `tests/Bondstone.Hosting.Tests`
+- `tests/Bondstone.Tests/Persistence/DurableModuleOutboxDispatchAggregatorTests.cs`
+
+Verification:
+
+- `pnpm backend:build`
+- `pnpm backend:test:fast`
+
+### THE-04: Explicit Topology Provisioning Helpers
+
+Priority: P2.
+
+Prototype opt-in broker topology declaration helpers for development or
+deployment tooling. Do not run these helpers from normal transport
+registration or hosted worker startup.
+
+Important files:
+
+- `docs/adr/0047-explicit-deploy-provisioning-helpers.md`
+- `src/Bondstone.Transport.RabbitMq`
+- `src/Bondstone.Transport.ServiceBus`
+- provider transport tests
+
+Verification:
+
+- `pnpm backend:test:fast`
+- `pnpm backend:test:integration`
+
+### THE-05: Worker Diagnostics And Timeouts
+
+Priority: P2.
+
+Add structured diagnostics, timeout options, or clearer logs only for concrete
+failure modes found in provider-backed testing or real-project validation.
+
+Candidate files:
+
+- `src/Bondstone.Hosting`
+- `src/Bondstone.Transport.RabbitMq/Inbox`
+- `src/Bondstone.Transport.ServiceBus/Inbox`
+- transport worker tests
+
+Verification:
+
+- `pnpm backend:test:fast`
+- `pnpm backend:test:integration`
+
 ## Verification
 
 - `pnpm backend:test:fast`

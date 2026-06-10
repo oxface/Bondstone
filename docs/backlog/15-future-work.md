@@ -14,8 +14,8 @@ is accepted and implemented.
   dependency direction.
 
 Active public API cleanup and real-project readiness work are tracked in
-[10-public-api-and-composition-cleanup.md](10-public-api-and-composition-cleanup.md)
-and [13-real-project-readiness.md](13-real-project-readiness.md).
+[11-public-api-and-composition-cleanup.md](11-public-api-and-composition-cleanup.md)
+and [14-real-project-readiness.md](14-real-project-readiness.md).
 
 ## Persistence
 
@@ -23,9 +23,9 @@ and [13-real-project-readiness.md](13-real-project-readiness.md).
 
 Active persistence recovery, maintenance, operation-state, payload-storage, and
 multi-data-source work is tracked in
-[11-persistence-recovery-and-maintenance.md](11-persistence-recovery-and-maintenance.md).
+[12-persistence-recovery-and-maintenance.md](12-persistence-recovery-and-maintenance.md).
 Domain event work is tracked separately in
-[09-domain-events.md](09-domain-events.md).
+[10-domain-events.md](10-domain-events.md).
 
 ## Transport
 
@@ -33,14 +33,14 @@ Domain event work is tracked separately in
   schema-specific envelopes, or non-JSON payload negotiation.
 
 Active transport and hosting ergonomics are tracked in
-[12-transport-and-hosting-ergonomics.md](12-transport-and-hosting-ergonomics.md).
+[13-transport-and-hosting-ergonomics.md](13-transport-and-hosting-ergonomics.md).
 
 ## Hosting
 
 Active hosting ergonomics are tracked in
-[12-transport-and-hosting-ergonomics.md](12-transport-and-hosting-ergonomics.md).
+[13-transport-and-hosting-ergonomics.md](13-transport-and-hosting-ergonomics.md).
 
 ## Samples
 
 Active sample and adoption readiness work is tracked in
-[13-real-project-readiness.md](13-real-project-readiness.md).
+[14-real-project-readiness.md](14-real-project-readiness.md).

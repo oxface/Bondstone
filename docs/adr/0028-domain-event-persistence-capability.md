@@ -1,8 +1,8 @@
 # 0028 Domain Event Persistence Capability
 
-Status: Proposed
-Application: Not Applicable
-Date: 2026-06-07
+Status: Accepted
+Application: Partially Applied
+Date: 2026-06-10
 
 ## Context
 
@@ -22,62 +22,127 @@ not have to inherit a Bondstone aggregate base class, implement an
 `IAggregateRoot` concept, or accept automatic conversion of domain events into
 integration events just to use durable module boundaries.
 
-The better capability is narrower: collect and persist domain events inside
-the module command transaction when the consumer opts in, using provider
-abstractions that can adapt to the consumer's domain model.
+The better capability is narrower: give modules a small Bondstone-owned
+contract for module-local domain facts, then let provider packages collect and
+optionally persist those facts inside the module transaction when the consumer
+opts in.
 
 ## Decision
 
-Bondstone should model domain event persistence as an optional module boundary
-capability, not as a required DDD framework.
+Bondstone will own a small module-local domain event abstraction in core. This
+is a module-boundary contract, not a DDD framework and not another durable
+message kind.
 
-The capability should use narrow provider-neutral abstractions for collecting,
-staging, and clearing or marking collected domain events. The exact names are
-open. Avoid names that overfit a specific DDD model. Candidate concepts
-include event source, event buffer, event accessor, collector, and store.
+The first core contract should include:
 
-The core abstractions should let provider packages implement collection and
-persistence without requiring core to depend on EF Core. For EF Core, the
-provider implementation should collect domain events through `ChangeTracker`
-or configured adapters and stage domain event records in the current module
-transaction.
+- `IDomainEvent`, a marker for module-local facts that may extend the neutral
+  `IMessage` marker for payload serialization but is not a durable message
+  kind;
+- `DomainEventIdentityAttribute`, a stable module-local identity for persisted
+  domain event records;
+- a source/accessor interface for domain objects that expose pending domain
+  events and can clear them after successful collection;
+- `IDomainEventHandler<TDomainEvent>` or an equivalent local handler contract
+  for module-local handlers, constrained to `IDomainEvent`.
 
-The behavior should compose through the module command pipeline instead of
-hijacking `DbContext.SaveChangesAsync` or requiring consumers to inherit a
-custom DbContext base class.
+Domain events must not be registered in `MessageTypeRegistry`, represented by
+`MessageKind`, wrapped in `DurableMessageEnvelope`, written to the outgoing
+outbox, registered as module published events, or registered as integration
+event subscribers.
 
-Domain events remain module-local. Bondstone must not automatically publish
-all domain events as integration events. A later explicit mapping helper may
-map selected domain event types to integration event publications, but it must
-keep the publication decision visible in module code.
+Domain event source contracts must not require inheritance from a Bondstone
+aggregate base class, an `IAggregateRoot` abstraction, or EF Core entity base
+type. Consumer aggregate roots and entities may implement the source/accessor
+interface directly.
 
-The first implementation should define transaction ordering carefully:
+Domain events are both transient and optionally persistable:
 
-- how domain events are collected after handler execution;
-- how persisted domain event records are staged before the transaction saves;
-- when events are cleared or marked collected;
-- how failures before or during save affect in-memory event buffers;
-- how this behavior composes with validation, inbox handling, outbox staging,
-  operation state, and EF transaction behavior.
+- the `IDomainEvent` instance is the transient in-memory fact raised by module
+  domain code;
+- provider packages may stage immutable domain event records for auditing,
+  local projections, later in-module dispatch, or explicit mapping to
+  integration events;
+- persisted domain event records are module-local records, not outbox
+  messages, not inbox messages, and not transport publications.
+
+The persisted record shape should be narrow and provider-neutral enough for EF
+Core first: stable record id, owning module, `DomainEventIdentityAttribute`
+name, occurred/captured timestamps, serialized payload, payload metadata, and
+trace or causation metadata when available. Domain event identities are local
+to the owning module and must not be used as transport topology names.
+
+EF Core is the first provider implementation. EF-backed module persistence
+will collect domain events through the `DbContext.ChangeTracker` by looking
+for tracked entities that implement the explicit domain event source/accessor
+interface. The EF collector will stage configured domain event records in the
+same module `DbContext` transaction after the command or integration event
+subscriber handler completes and before the transaction-owned
+`SaveChangesAsync`.
+
+The EF behavior must compose through the module command and event subscriber
+pipeline. It must not hijack `DbContext.SaveChangesAsync`, require consumers to
+inherit a custom DbContext base class, scan arbitrary method names, or publish
+events from EF interceptors.
+
+Collection and clearing semantics are part of the provider behavior:
+
+- collect pending domain events after application handlers and application
+  pipeline behaviors have run;
+- stage all accepted domain event records before the module transaction saves;
+- clear the source's pending domain events only after staging, save, and
+  transaction commit succeed;
+- if collection, staging, save, or transaction commit fails, do not mark the
+  domain events as durably handled beyond what the consumer's in-memory object
+  has already done;
+- preserve existing ordering around validation, receive-side inbox handling,
+  operation state, outgoing outbox staging, and EF transaction behavior.
+
+`Bondstone.Persistence.Postgres` does not get a domain event staging API in
+this decision. Non-EF PostgreSQL modules keep domain event collection and
+staging application-owned until a concrete non-EF use case justifies a small
+provider-specific contract.
+
+Domain events remain private to the owning module unless module code
+explicitly maps selected domain events to integration events. Bondstone must
+not automatically publish all domain events as integration events. A later
+mapping helper may reduce ceremony, but it must preserve the visible step
+where module-local state becomes a durable public `IIntegrationEvent`
+published through `IDurableEventPublisher`.
+
+This decision explicitly does not introduce:
+
+- a mediator, generic in-process bus, or public event bus;
+- automatic cross-module publishing;
+- transport package behavior;
+- event sourcing, replay, global ordering, or a global event log;
+- non-EF provider staging;
+- broad migration helpers;
+- automatic discovery from CLR names or handler names;
+- public external wire formats for domain events.
 
 ## Consequences
 
 Bondstone can support a common modular-monolith need without making every
 consumer adopt a Bondstone aggregate model.
 
-Provider-neutral collection and storage abstractions keep non-EF providers
-possible. EF Core can provide a practical first collector/store over the
-change tracker without moving EF dependencies into core.
+The core contract is small public API and must be treated as
+compatibility-sensitive. Future code work that changes the names, visibility,
+or package placement of `IDomainEvent`, `DomainEventIdentityAttribute`, the
+source/accessor contract, the handler contract, or persisted record contracts
+must go through ADR language before implementation.
+
+EF Core can provide a practical first collector/store over the change tracker
+without moving EF dependencies into core.
 
 Pipeline composition keeps domain event persistence explicit, testable, and
 module-scoped. It avoids hidden behavior inside `SaveChangesAsync`.
 
-The capability adds another module opt-in and validation surface. It should not
-be implemented casually because transaction ordering and clear-on-success
-semantics are subtle.
+The capability adds another module opt-in, persisted table shape, mapping
+helper, and validation surface. It should not be implemented casually because
+transaction ordering and clear-on-success semantics are subtle.
 
 Integration-event mapping remains separate future work and should depend on
-the first-class event model.
+the first-class event model and the EF collection proof.
 
 ## Related Decisions
 
@@ -87,27 +152,35 @@ the first-class event model.
 - [0025 Module Command Execution Boundary](0025-module-command-execution-boundary.md)
 - [0026 Event Shape Guardrail](0026-event-shape-guardrail.md)
 - [0027 Optional EF Core Persistence Mapping](0027-optional-ef-core-persistence-mapping.md)
+- [0033 First-Class Event Publish/Subscribe Topology](0033-first-class-event-publish-subscribe-topology.md)
 
 ## Application Notes
 
-- Current contract: Proposed only. Bondstone currently does not provide
-  domain event collection, persistence, dispatch, or integration-event mapping.
-- Stable docs: Current persistence boundaries are described in
-  [docs/architecture/persistence.md](../architecture/persistence.md) and
+- Current contract: Accepted next behavior. Bondstone will own a small
+  module-local `IDomainEvent` contract, `DomainEventIdentityAttribute`, an
+  explicit domain event source/accessor contract, and a local handler contract
+  in core. EF Core will be the first provider-backed collection and optional
+  persistence implementation, using `ChangeTracker` plus the explicit
+  source/accessor interface. Domain events stay module-local unless module
+  code explicitly maps selected facts to integration events.
+- Stable docs: Current domain event direction is described in
+  [docs/architecture/messaging.md](../architecture/messaging.md),
+  [docs/architecture/persistence.md](../architecture/persistence.md), and
   [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md).
-  Messaging and event terminology is described in
-  [docs/architecture/messaging.md](../architecture/messaging.md). Sequencing is
-  tracked in [docs/archive/mvp-plan.md](../archive/mvp-plan.md).
+  Runtime pipeline and capability planning is tracked in
+  [docs/backlog/09-module-pipeline-and-capability-runtime.md](../backlog/09-module-pipeline-and-capability-runtime.md).
+  Domain event implementation sequencing is tracked in
+  [docs/backlog/10-domain-events.md](../backlog/10-domain-events.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, package-boundary, persistence, provider, durable behavior, or
   module runtime changes.
-- Application evidence: None yet.
-- Pending or deferred: Accept or revise this ADR, then apply core
-  abstractions, provider implementation, module opt-in, stable docs, and
-  tests. Integration-event mapping remains deferred until the event model is
-  accepted.
+- Application evidence: Stable docs and backlog guidance are updated. Code
+  implementation is pending.
+- Pending or deferred: Apply the core contracts, EF collection/persistence
+  implementation, module opt-in, stable docs for the final API names, and
+  tests. Non-EF PostgreSQL staging and integration-event mapping remain
+  deferred.
 
 ## Verification
 
-Read back the proposed ADR and related stable docs. No executable verification
-is relevant for this proposal-only decision.
+Read back the accepted ADR and related stable docs. Ran `pnpm format:check`.

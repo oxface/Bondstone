@@ -21,10 +21,10 @@ transport adapters, SQL locking, schema migration, and background dispatch
 mechanics.
 
 EF Core components stage data and expose transaction/save boundaries, but they
-do not own transport acknowledgement, retry policy, domain events, or a
-generic mediator. Module command execution and module event subscriber
-execution own handler registration; modules that opt into EF persistence get
-EF transaction pipeline behaviors for command handlers and event subscribers.
+do not own transport acknowledgement, retry policy, or a generic mediator.
+Module command execution and module event subscriber execution own handler
+registration; modules that opt into EF persistence get EF transaction
+pipeline behaviors for command handlers and event subscribers.
 Transport-backed receive orchestration belongs in direct provider adapters
 that call the provider-neutral module receive pipelines.
 
@@ -65,7 +65,25 @@ executor, operation-state store, and operation reader services. This is useful
 for low-level single-store composition and compatibility tests, but it is not
 the preferred module-boundary setup.
 
-Domain event persistence is not part of the current persistence contract.
+## Domain Event Persistence
+
+ADR 0028 accepts optional module-local domain event persistence as the next
+implementation boundary. Domain event persistence records private module facts
+inside the owning module persistence boundary; it does not write outgoing
+outbox messages, create inbox records, publish transport events, or expose
+domain events as integration contracts.
+
+The accepted core shape is intentionally small: module domain objects expose
+pending `IDomainEvent` instances through an explicit source/accessor contract,
+and provider packages may collect, stage, and clear those events when the
+module opts into the capability. Persisted records should carry a stable
+record id, owning module, `DomainEventIdentityAttribute` name, timestamps,
+serialized payload, payload metadata, and trace or causation metadata when
+available.
+
+EF Core is the first accepted provider implementation. Non-EF PostgreSQL
+domain event staging remains application-owned until a later decision accepts
+a concrete provider contract.
 
 Provider packages own provider-specific SQL, locking, conflict detection,
 schema targeting, and integration tests. Provider-owned SQL should reuse table,
@@ -79,7 +97,10 @@ directly and owns its connection/session and transaction boundary without
 depending on EF entity mappings, `DbContext`, or
 `IEntityFrameworkCorePersistenceScope`.
 
-Domain event follow-up work is tracked in
-[../backlog/09-domain-events.md](../backlog/09-domain-events.md).
+Runtime pipeline and capability planning for domain event placement is tracked
+in
+[../backlog/09-module-pipeline-and-capability-runtime.md](../backlog/09-module-pipeline-and-capability-runtime.md).
+Domain event implementation follow-up work is tracked in
+[../backlog/10-domain-events.md](../backlog/10-domain-events.md).
 Other persistence ideas outside the current contract are tracked in
-[../backlog/14-future-work.md](../backlog/14-future-work.md).
+[../backlog/15-future-work.md](../backlog/15-future-work.md).

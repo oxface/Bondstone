@@ -116,4 +116,4 @@ nuget.org, not GitHub Packages.
 Initial packages have been published to nuget.org. Keep this document focused
 on package boundaries, dependency direction, versioning, and publishing rules.
 Future packaging ideas are tracked in
-[backlog/04-future-work.md](backlog/04-future-work.md).
+[backlog/09-future-work.md](backlog/09-future-work.md).

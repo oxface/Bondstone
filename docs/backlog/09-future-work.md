@@ -38,10 +38,11 @@ is accepted and implemented.
 
 ## Hosting
 
-- Add module-targeted outbox worker registration for hosts that need selected
-  module dispatch or stronger noisy-neighbor isolation.
 - Add inbox, cleanup, archiving, dead-letter retention, or maintenance workers
   after their core abstractions are stable.
+
+Module-targeted outbox worker registration is now tracked in
+[07-outbox-worker-topology.md](07-outbox-worker-topology.md).
 
 ## Samples
 

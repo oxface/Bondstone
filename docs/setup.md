@@ -36,6 +36,10 @@ using Bondstone.Transport.RabbitMq.Outbox;
 using RabbitMQ.Client;
 
 string connectionString = builder.Configuration.GetConnectionString("App")!;
+IConnection rabbitMqConnection = await new ConnectionFactory
+{
+    Uri = new Uri(builder.Configuration.GetConnectionString("RabbitMq")!),
+}.CreateConnectionAsync();
 
 builder.Services.AddBondstoneRabbitMqConnection(rabbitMqConnection);
 

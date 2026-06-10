@@ -57,4 +57,4 @@ depending on EF entity mappings, `DbContext`, or
 `IEntityFrameworkCorePersistenceScope`.
 
 Persistence ideas outside the current contract are tracked in
-[../backlog/04-future-work.md](../backlog/04-future-work.md).
+[../backlog/09-future-work.md](../backlog/09-future-work.md).

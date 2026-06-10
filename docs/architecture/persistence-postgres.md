@@ -48,4 +48,4 @@ Handlers that need application SQL can take `IPostgresModuleSession` and
 execute commands through the current connection and transaction.
 
 Follow-up PostgreSQL non-EF persistence ideas that are outside the current
-contract are tracked in [../backlog/04-future-work.md](../backlog/04-future-work.md).
+contract are tracked in [../backlog/09-future-work.md](../backlog/09-future-work.md).

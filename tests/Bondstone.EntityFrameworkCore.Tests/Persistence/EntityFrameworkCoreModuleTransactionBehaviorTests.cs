@@ -627,10 +627,10 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
         public DbSet<HandledCommandEntity> HandledCommands => Set<HandledCommandEntity>();
 
         public override async Task<int> SaveChangesAsync(
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             log.Calls.Add("save");
-            return await base.SaveChangesAsync(cancellationToken);
+            return await base.SaveChangesAsync(ct);
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

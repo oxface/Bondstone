@@ -46,6 +46,12 @@ fixes before larger post-MVP expansion.
 - Any broad public API, package-boundary, provider-support, compatibility, or
   release-policy change discovered during review is routed through ADR work.
 
+## Report
+
+- [03-architecture-code-review-report.md](03-architecture-code-review-report.md)
+  records the first Phase 03 sweep, safe fixes, human review plan, ADR routing
+  notes, verification, and remaining review work.
+
 ## Handover Prompt
 
 ```text

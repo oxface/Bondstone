@@ -80,4 +80,4 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
   scope.
 
 Follow-up PostgreSQL ideas that are outside the current contract are tracked
-in [../backlog/04-future-work.md](../backlog/04-future-work.md).
+in [../backlog/09-future-work.md](../backlog/09-future-work.md).

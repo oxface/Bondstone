@@ -12,5 +12,5 @@ Current operating guidance lives in stable docs:
 - [../setup.md](../setup.md)
 - [../testing.md](../testing.md)
 
-Use [../backlog/04-future-work.md](../backlog/04-future-work.md) for
+Use [../backlog/09-future-work.md](../backlog/09-future-work.md) for
 non-current follow-up ideas.

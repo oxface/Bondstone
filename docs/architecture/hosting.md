@@ -27,7 +27,7 @@ skip-locked or equivalent semantics.
 The public worker registration creates one aggregate worker over the configured
 local module outbox dispatch graph. Module outboxes remain ownership
 boundaries, while selected-module worker registration is tracked as future
-work in [../backlog/04-future-work.md](../backlog/04-future-work.md).
+work in [../backlog/09-future-work.md](../backlog/09-future-work.md).
 
 `AddBondstone` is the preferred host registration path. Package-specific
 extensions mark what they contribute, and the builder rejects hosted outbox

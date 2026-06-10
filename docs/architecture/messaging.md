@@ -75,7 +75,7 @@ react to an integration event and send durable commands as follow-up work.
 Domain events remain module-local/private. Bondstone does not collect,
 persist, dispatch, or publish domain events automatically. Optional domain
 event persistence is outside the current durable messaging contract and is
-tracked in [../backlog/04-future-work.md](../backlog/04-future-work.md).
+tracked in [../backlog/09-future-work.md](../backlog/09-future-work.md).
 
 ## Inbox Identity
 

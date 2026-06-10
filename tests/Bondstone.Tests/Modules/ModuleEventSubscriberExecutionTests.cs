@@ -90,6 +90,56 @@ public sealed class ModuleEventSubscriberExecutionTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenSystemAndApplicationBehaviorsAreRegistered_RunsSystemByOrderFirst()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+        services.AddScoped<
+            IModuleEventSubscriberSystemPipelineBehavior<OrderSubmittedEvent>,
+            LateEventSubscriberSystemBehavior>();
+        services.AddScoped<
+            IModuleEventSubscriberSystemPipelineBehavior<OrderSubmittedEvent>,
+            EarlyEventSubscriberSystemBehavior>();
+        services.AddScoped<
+            IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>,
+            OrderingEventSubscriberApplicationBehavior>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleEventSubscriberExecutor>()
+            .ExecuteAsync(
+                "fulfillment",
+                "sales.order.ready-for-projection.v1",
+                "fulfillment.order-projection.v1",
+                new OrderSubmittedEvent("order-123"));
+
+        Assert.Equal(
+            [
+                "system-early:before",
+                "system-late:before",
+                "application:before",
+                "handle-ordering:order-123",
+                "application:after",
+                "system-late:after",
+                "system-early:after",
+            ],
+            serviceProvider.GetRequiredService<EventCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task ExecuteAsync_WhenReceiveContextExists_UsesPerSubscriberInboxRecord()
     {
         var inboxExecutor = new CapturingInboxHandlerExecutor();
@@ -294,6 +344,67 @@ public sealed class ModuleEventSubscriberExecutionTests
             await next(ct);
             log.Calls.Add(
                 $"behavior-after:{context.ModuleName}:{context.SubscriberIdentity}:{executionContextAccessor.Current?.ModuleName}");
+        }
+    }
+
+    public sealed class EarlyEventSubscriberSystemBehavior(EventCallLog log)
+        : IModuleEventSubscriberSystemPipelineBehavior<OrderSubmittedEvent>
+    {
+        public int Order => 125;
+
+        public async ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            ModuleEventSubscriberExecutionContext context,
+            ModuleEventSubscriberPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add("system-early:before");
+            await next(ct);
+            log.Calls.Add("system-early:after");
+        }
+    }
+
+    public sealed class LateEventSubscriberSystemBehavior(EventCallLog log)
+        : IModuleEventSubscriberSystemPipelineBehavior<OrderSubmittedEvent>
+    {
+        public int Order => 150;
+
+        public async ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            ModuleEventSubscriberExecutionContext context,
+            ModuleEventSubscriberPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add("system-late:before");
+            await next(ct);
+            log.Calls.Add("system-late:after");
+        }
+    }
+
+    public sealed class OrderingEventSubscriberApplicationBehavior(EventCallLog log)
+        : IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>
+    {
+        public async ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            ModuleEventSubscriberExecutionContext context,
+            ModuleEventSubscriberPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add("application:before");
+            await next(ct);
+            log.Calls.Add("application:after");
+        }
+    }
+
+    public sealed class OrderingEventSubscriberHandler(EventCallLog log)
+        : IIntegrationEventHandler<OrderSubmittedEvent>
+    {
+        public ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"handle-ordering:{integrationEvent.OrderId}");
+            return ValueTask.CompletedTask;
         }
     }
 

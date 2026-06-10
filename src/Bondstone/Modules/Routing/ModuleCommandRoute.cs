@@ -126,23 +126,17 @@ public sealed class ModuleCommandRoute
             await commandHandler.HandleAsync(typedCommand, handlerCt);
         };
 
-        IReadOnlyList<IModuleCommandPipelineBehavior<TCommand>> systemBehaviors = serviceProvider
-            .GetServices<IModuleCommandSystemPipelineBehavior<TCommand>>()
-            .OrderBy(static behavior => behavior.Order)
-            .Cast<IModuleCommandPipelineBehavior<TCommand>>()
-            .ToArray();
-        IReadOnlyList<IModuleCommandPipelineBehavior<TCommand>> applicationBehaviors = serviceProvider
-            .GetServices<IModuleCommandPipelineBehavior<TCommand>>()
-            .ToArray();
-        IReadOnlyList<IModuleCommandPipelineBehavior<TCommand>> behaviors = systemBehaviors
-            .Concat(applicationBehaviors)
-            .ToArray();
+        ModuleCommandPipelinePlan<TCommand> plan = serviceProvider
+            .GetRequiredService<ModuleCommandPipelinePlanner>()
+            .BuildPlan<TCommand>(
+                serviceProvider,
+                route);
 
         ModuleCommandPipeline pipeline = BuildPipeline(
             typedCommand,
             route,
             receiveContext,
-            behaviors,
+            plan,
             handler);
 
         await pipeline.InvokeAsync(ct);
@@ -153,7 +147,7 @@ public sealed class ModuleCommandRoute
         TCommand command,
         ModuleCommandRoute route,
         ModuleCommandReceiveContext? receiveContext,
-        IReadOnlyList<IModuleCommandPipelineBehavior<TCommand>> behaviors,
+        ModuleCommandPipelinePlan<TCommand> plan,
         ModuleCommandPipelineNext handler)
         where TCommand : ICommand
     {
@@ -162,9 +156,9 @@ public sealed class ModuleCommandRoute
             receiveContext);
         ModuleCommandPipelineNext next = handler;
 
-        for (int index = behaviors.Count - 1; index >= 0; index--)
+        for (int index = plan.Steps.Count - 1; index >= 0; index--)
         {
-            IModuleCommandPipelineBehavior<TCommand> behavior = behaviors[index];
+            IModuleCommandPipelineBehavior<TCommand> behavior = plan.Steps[index].Behavior;
             ModuleCommandPipelineNext current = next;
             next = behaviorCt => behavior.HandleAsync(
                 command,

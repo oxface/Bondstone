@@ -34,10 +34,11 @@ does not expose a public source-module override.
 
 Module command execution is registered through module command routes and
 executed through `IModuleCommandExecutor`. The executor runs typed
-`ICommandHandler<TCommand>` handlers through ordered system and application
-pipeline behaviors. System behaviors currently cover source-module execution
-context, receive-side inbox handling, durable operation completion, and
-module-owned persistence behavior supplied by provider packages.
+`ICommandHandler<TCommand>` handlers through an internal runtime plan:
+ordered system behavior steps, application behavior steps in DI registration
+order, then the handler. System behaviors currently cover source-module
+execution context, receive-side inbox handling, durable operation completion,
+and module-owned persistence behavior supplied by provider packages.
 
 ## Integration Events
 
@@ -65,9 +66,10 @@ not be derived from handler CLR names.
 
 Core subscriber execution uses `IModuleEventSubscriberExecutor`. It resolves a
 subscriber by module, stable event identity, and stable subscriber identity,
-then executes the typed handler through event subscriber pipeline behaviors.
-System behaviors provide per-subscriber inbox handling and set the module
-execution context for the subscriber module.
+then executes the typed handler through an internal runtime plan: ordered
+system behavior steps, application behavior steps in DI registration order,
+then the handler. System behaviors provide per-subscriber inbox handling and
+set the module execution context for the subscriber module.
 
 Event-driven orchestration composes commands and events rather than erasing
 their distinction. A subscriber, saga, process manager, or orchestrator can

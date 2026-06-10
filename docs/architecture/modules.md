@@ -78,6 +78,13 @@ command receive inbox key and must remain stable.
 application pipeline behaviors. It is not a generic mediator for arbitrary
 in-process calls.
 
+Command execution is assembled by an internal runtime planner. The current
+plan runs ordered system behavior steps first, then application behavior steps
+in DI registration order, then the registered handler. Normal user extension
+should use `IModuleCommandPipelineBehavior<TCommand>` for application concerns
+such as validation, logging, authorization, and auditing. System command
+behavior is advanced provider/runtime composition.
+
 During command execution, Bondstone's system pipeline sets the current module
 execution context to the route's module before the application handler runs
 and restores the previous context afterward. This is the source-module context
@@ -105,6 +112,13 @@ Bondstone message id, subscriber module, and subscriber identity.
 `IModuleEventSubscriberExecutor` resolves registered subscribers and executes
 typed `IIntegrationEventHandler<TEvent>` handlers through event subscriber
 pipeline behaviors.
+
+Subscriber execution uses the same internal runtime planning shape as command
+execution: ordered system behavior steps, application behavior steps in DI
+registration order, then the subscriber handler. Normal subscriber extension
+should use `IModuleEventSubscriberPipelineBehavior<TEvent>` for
+application-owned concerns. System subscriber behavior is advanced
+provider/runtime composition.
 
 During subscriber execution, Bondstone's system pipeline sets the current
 module execution context to the subscriber module before the application
@@ -150,6 +164,11 @@ messages in the module persistence boundary.
 operation-state, and transaction behavior without EF Core for modules that opt
 into that PostgreSQL provider. Dapper is an internal implementation helper for
 that package, not the app-facing provider identity.
+
+Provider transaction behaviors are registered through provider setup and
+activate only for modules that declare that provider's persistence capability.
+Current provider packages use this self-filtering system behavior model rather
+than a separate public provider-step registry.
 
 Module-owned persistence is the preferred durable messaging path. Root-level
 non-module persistence services remain available for advanced single-store

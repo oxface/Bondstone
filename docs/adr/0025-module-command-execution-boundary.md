@@ -154,6 +154,38 @@ routing key or subject. A generic module-to-module route table should remain
 deferred until multiple transports or explicit policy requirements prove it
 useful.
 
+## Amendment 2026-06-10: Explicit Internal Pipeline Planning
+
+Module command and integration event subscriber execution should be assembled
+through an internal runtime planner instead of route/subscriber code directly
+enumerating every behavior.
+
+The compatible current plan shape is deliberately small:
+
+- ordered system behavior steps;
+- application behavior steps in DI registration order;
+- the registered handler.
+
+System behavior interfaces remain public advanced composition contracts for
+now because they have already shipped and ADR 0046 requires compatibility
+planning before hiding, renaming, or replacing them. Normal application
+extension should continue to use `IModuleCommandPipelineBehavior<TCommand>`
+and `IModuleEventSubscriberPipelineBehavior<TEvent>` for validation, logging,
+authorization, auditing, and similar handler concerns.
+
+Provider packages continue to contribute transaction and persistence-related
+system behavior through their provider setup. Current EF Core and direct
+PostgreSQL transaction behaviors remain globally registered generic system
+behaviors that activate only when the executing module declares that
+provider's persistence capability. That keeps provider ownership module-scoped
+without adding a new public provider-step registry in this slice.
+
+Optional capabilities such as Domain Events should add runtime behavior
+through system/provider composition only after a concrete capability opt-in
+and ordering requirement is accepted. This amendment does not introduce a new
+public capability pipeline API, named step-slot enum, module-scoped
+application behavior registration API, or package-boundary split.
+
 ## Consequences
 
 The durable command pipeline becomes reusable across local module execution,
@@ -203,15 +235,19 @@ additional ADR review or amendments.
   scoped module command executor, module durable-messaging capability metadata,
   module durable sending execution context, module persistence capability
   metadata, source-module scoped durable command sending, ordered system
-  pipeline behavior for Bondstone-owned runtime concerns, explicit receive
-  inbox records on module command execution, execution results carrying inbox
-  outcomes, receive-side inbox system behavior, and a validation pipeline
-  behavior. `Bondstone.EntityFrameworkCore` now adds module-owned EF
-  persistence opt-in and an EF transaction system pipeline behavior for
-  modules that declare EF persistence. Rebus-specific transport application
-  has been superseded by ADR 0036; current command receive dispatch is exposed
-  through provider-neutral receive pipelines and the direct Local, RabbitMQ,
-  and Azure Service Bus adapters.
+  pipeline behavior for Bondstone-owned runtime concerns, internal runtime
+  pipeline planners that assemble command and event subscriber system steps
+  before application steps, explicit receive inbox records on module command
+  execution, execution results carrying inbox outcomes, receive-side inbox
+  system behavior, and a validation pipeline behavior.
+  `Bondstone.EntityFrameworkCore` now adds module-owned EF persistence opt-in
+  and an EF transaction system pipeline behavior for modules that declare EF
+  persistence. `Bondstone.Persistence.Postgres` contributes equivalent
+  transaction system behavior for modules that declare direct PostgreSQL
+  persistence. Rebus-specific transport application has been superseded by
+  ADR 0036; current command receive dispatch is exposed through
+  provider-neutral receive pipelines and the direct Local, RabbitMQ, and Azure
+  Service Bus adapters.
 - Stable docs: Current module command direction is described in
   [docs/architecture/modules.md](../architecture/modules.md), with supporting
   messaging, persistence, and direct transport notes in
@@ -238,8 +274,12 @@ additional ADR review or amendments.
   in command send and successful module command receive. Core module
   registration now records module metadata,
   `UseDurableMessaging` capability state, and module persistence capability
-  state through `IBondstoneModuleRegistry`.
-- Pending or deferred: None for the module command execution boundary. Richer
+  state through `IBondstoneModuleRegistry`. Internal command and event
+  subscriber pipeline planners preserve existing behavior ordering with fast
+  unit coverage.
+- Pending or deferred: A new public provider-step or capability-step
+  contribution API, named system step slots, module-scoped application
+  behavior registration, Domain Events runtime behavior, richer
   operation-state transition policy, receive retry state, stale receive
   recovery, and additional service-extraction examples remain separate future
   decisions.

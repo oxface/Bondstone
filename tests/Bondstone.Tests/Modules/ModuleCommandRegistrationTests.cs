@@ -173,6 +173,52 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task ModuleCommands_WhenSystemAndApplicationBehaviorsAreRegistered_RunsSystemByOrderFirst()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+        services.AddScoped<
+            IModuleCommandSystemPipelineBehavior<PipelineOrderCommand>,
+            LateCommandSystemBehavior>();
+        services.AddScoped<
+            IModuleCommandSystemPipelineBehavior<PipelineOrderCommand>,
+            EarlyCommandSystemBehavior>();
+        services.AddScoped<
+            IModuleCommandPipelineBehavior<PipelineOrderCommand>,
+            CommandApplicationBehavior>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new PipelineOrderCommand("order-123"));
+
+        Assert.Equal(
+            [
+                "system-early:before",
+                "system-late:before",
+                "application:before",
+                "handle:order-123",
+                "application:after",
+                "system-late:after",
+                "system-early:after",
+            ],
+            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task RegisterFromAssemblyContaining_WhenHandlersAndValidatorsExist_RegistersRoutesAndValidators()
     {
         var services = new ServiceCollection();
@@ -337,6 +383,69 @@ public sealed class ModuleCommandRegistrationTests
             CancellationToken ct = default)
         {
             log.Calls.Add($"context:{executionContextAccessor.Current?.ModuleName}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed record PipelineOrderCommand(string OrderId) : ICommand;
+
+    public sealed class EarlyCommandSystemBehavior(CommandCallLog log)
+        : IModuleCommandSystemPipelineBehavior<PipelineOrderCommand>
+    {
+        public int Order => 125;
+
+        public async ValueTask HandleAsync(
+            PipelineOrderCommand command,
+            ModuleCommandExecutionContext context,
+            ModuleCommandPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add("system-early:before");
+            await next(ct);
+            log.Calls.Add("system-early:after");
+        }
+    }
+
+    public sealed class LateCommandSystemBehavior(CommandCallLog log)
+        : IModuleCommandSystemPipelineBehavior<PipelineOrderCommand>
+    {
+        public int Order => 150;
+
+        public async ValueTask HandleAsync(
+            PipelineOrderCommand command,
+            ModuleCommandExecutionContext context,
+            ModuleCommandPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add("system-late:before");
+            await next(ct);
+            log.Calls.Add("system-late:after");
+        }
+    }
+
+    public sealed class CommandApplicationBehavior(CommandCallLog log)
+        : IModuleCommandPipelineBehavior<PipelineOrderCommand>
+    {
+        public async ValueTask HandleAsync(
+            PipelineOrderCommand command,
+            ModuleCommandExecutionContext context,
+            ModuleCommandPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add("application:before");
+            await next(ct);
+            log.Calls.Add("application:after");
+        }
+    }
+
+    public sealed class PipelineOrderHandler(CommandCallLog log)
+        : ICommandHandler<PipelineOrderCommand>
+    {
+        public ValueTask HandleAsync(
+            PipelineOrderCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"handle:{command.OrderId}");
             return ValueTask.CompletedTask;
         }
     }

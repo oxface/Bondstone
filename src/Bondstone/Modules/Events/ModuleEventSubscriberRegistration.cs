@@ -116,13 +116,16 @@ public sealed class ModuleEventSubscriberRegistration
         ModuleEventSubscriberPipelineNext handler = CreateHandler<TEvent, THandler>(
             serviceProvider,
             typedEvent);
-        IReadOnlyList<IModuleEventSubscriberPipelineBehavior<TEvent>> behaviors =
-            GetPipelineBehaviors<TEvent>(serviceProvider);
+        ModuleEventSubscriberPipelinePlan<TEvent> plan = serviceProvider
+            .GetRequiredService<ModuleEventSubscriberPipelinePlanner>()
+            .BuildPlan<TEvent>(
+                serviceProvider,
+                subscriber);
         ModuleEventSubscriberPipeline pipeline = BuildPipeline(
             typedEvent,
             subscriber,
             receiveContext,
-            behaviors,
+            plan,
             handler);
 
         await pipeline.InvokeAsync(ct);
@@ -142,29 +145,11 @@ public sealed class ModuleEventSubscriberRegistration
         };
     }
 
-    private static IReadOnlyList<IModuleEventSubscriberPipelineBehavior<TEvent>> GetPipelineBehaviors<TEvent>(
-        IServiceProvider serviceProvider)
-        where TEvent : IIntegrationEvent
-    {
-        IReadOnlyList<IModuleEventSubscriberPipelineBehavior<TEvent>> systemBehaviors = serviceProvider
-            .GetServices<IModuleEventSubscriberSystemPipelineBehavior<TEvent>>()
-            .OrderBy(static behavior => behavior.Order)
-            .Cast<IModuleEventSubscriberPipelineBehavior<TEvent>>()
-            .ToArray();
-        IReadOnlyList<IModuleEventSubscriberPipelineBehavior<TEvent>> applicationBehaviors = serviceProvider
-            .GetServices<IModuleEventSubscriberPipelineBehavior<TEvent>>()
-            .ToArray();
-
-        return systemBehaviors
-            .Concat(applicationBehaviors)
-            .ToArray();
-    }
-
     private static ModuleEventSubscriberPipeline BuildPipeline<TEvent>(
         TEvent integrationEvent,
         ModuleEventSubscriberRegistration subscriber,
         ModuleEventSubscriberReceiveContext? receiveContext,
-        IReadOnlyList<IModuleEventSubscriberPipelineBehavior<TEvent>> behaviors,
+        ModuleEventSubscriberPipelinePlan<TEvent> plan,
         ModuleEventSubscriberPipelineNext handler)
         where TEvent : IIntegrationEvent
     {
@@ -173,9 +158,9 @@ public sealed class ModuleEventSubscriberRegistration
             receiveContext);
         ModuleEventSubscriberPipelineNext next = handler;
 
-        for (int index = behaviors.Count - 1; index >= 0; index--)
+        for (int index = plan.Steps.Count - 1; index >= 0; index--)
         {
-            IModuleEventSubscriberPipelineBehavior<TEvent> behavior = behaviors[index];
+            IModuleEventSubscriberPipelineBehavior<TEvent> behavior = plan.Steps[index].Behavior;
             ModuleEventSubscriberPipelineNext current = next;
             next = behaviorCt => behavior.HandleAsync(
                 integrationEvent,

@@ -74,32 +74,36 @@ not a convention hidden in scattered order values.
 
 ## Candidate Direction
 
-The likely direction is an internal module pipeline planner that builds an
-execution plan from:
+Accepted first slice: ADR 0025 now clarifies that Bondstone uses internal
+runtime planners for command and event subscriber execution. The current plan
+preserves existing behavior:
 
-- core system steps;
-- provider-owned steps enabled by the target module's persistence provider;
-- optional capability steps enabled by module or package registration;
-- user application behaviors;
+- ordered system behavior steps;
+- application behavior steps in DI registration order;
 - the final handler.
 
-The planner should preserve the current behavior while making order and
-activation explicit. It should cache plans or descriptors, not scoped behavior
-instances.
+Provider transaction behaviors still come from provider setup and self-activate
+only for modules that declare the matching persistence provider. This keeps EF
+Core and direct PostgreSQL behavior module-scoped without adding a new public
+provider-step registry in the first implementation slice.
 
 Normal users should continue to use application pipeline behaviors for
 validation, logging, authorization, auditing, and similar concerns. System
 pipeline behaviors should be treated as advanced provider/runtime/capability
 composition until the cleanup track decides whether they remain public.
 
-Domain Events should wait for this runtime model before implementing DE-02 and
-DE-03 in [10-domain-events.md](10-domain-events.md).
+Deferred: named system slots, a public provider-step or capability-step
+registration API, module-scoped application behavior registration, plan
+descriptor caching, and Domain Events runtime behavior. Domain Events can now
+continue with core contracts, but EF collection/persistence still needs the
+deferred capability-step decision before adding transaction-scoped behavior.
 
 ## Implementation Backlog
 
 ### MPC-01: Runtime Design And ADR
 
 Priority: P0
+Status: Resolved 2026-06-10
 
 Explore the current command and event subscriber pipeline code, provider
 transaction behavior registration, Domain Events ADR 0028, and public API
@@ -114,9 +118,16 @@ Verification:
 
 - `pnpm format:check`
 
+Resolved by the 2026-06-10 amendment to
+[ADR 0025](../adr/0025-module-command-execution-boundary.md). The amendment
+keeps the rewrite internal, preserves public system/application behavior
+contracts, keeps provider transaction behavior self-activated by module
+persistence metadata, and defers new provider/capability contribution APIs.
+
 ### MPC-02: Command Pipeline Planner
 
 Priority: P0 after MPC-01.
+Status: Resolved 2026-06-10
 
 Move command route execution from ad hoc DI enumeration into an internal plan
 or planner while preserving current runtime behavior.
@@ -134,9 +145,14 @@ Verification:
 - `pnpm backend:build`
 - `pnpm backend:test:fast`
 
+Resolved by adding an internal command pipeline planner that assembles ordered
+system steps, application steps, and the handler while preserving current
+behavior ordering.
+
 ### MPC-03: Event Subscriber Pipeline Planner
 
 Priority: P0 after MPC-01.
+Status: Resolved 2026-06-10
 
 Move event subscriber execution from ad hoc DI enumeration into the same
 planning model while preserving current receive, transaction, execution
@@ -152,6 +168,9 @@ Verification:
 
 - `pnpm backend:build`
 - `pnpm backend:test:fast`
+
+Resolved by adding an internal event subscriber pipeline planner with the same
+system/application/handler ordering shape as command execution.
 
 ### MPC-04: User Behavior Extension Guidance
 

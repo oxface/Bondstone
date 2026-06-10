@@ -7,7 +7,7 @@ Bondstone on a real project.
 
 Dependency: implement or intentionally narrow
 [09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
-before DE-02/DE-03 add runtime pipeline behavior.
+before DE-03 adds runtime pipeline behavior.
 
 ## Why Now
 
@@ -50,8 +50,12 @@ transient module-local facts, and provider packages may optionally persist
 module-local domain event records. Domain events are not integration events,
 outbox messages, transport events, or public topology subjects.
 
-The next implementation slices are blocked by the module pipeline and
-capability runtime cleanup:
+The first module pipeline cleanup slice is resolved. DE-02 can add core
+contracts without runtime behavior. DE-03 still needs the deferred
+capability-step decision from
+[09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
+before EF Core collection/persistence behavior is added to the transaction
+pipeline:
 
 - DE-02 adds core `IDomainEvent`, `DomainEventIdentityAttribute`, explicit
   source/accessor, and local handler contracts.
@@ -113,8 +117,8 @@ Verification:
 ### DE-02: Add Core Module-Local Domain Event Contracts
 
 Priority: P0 if DE-01 accepts a Bondstone-owned contract.
-Dependency: [09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
-for runtime pipeline placement and capability contribution.
+Dependency: none after the 2026-06-10 first pipeline cleanup slice. DE-02 must
+not add runtime pipeline behavior.
 
 Add the smallest core abstractions needed by aggregates and local handlers.
 Keep the contracts module-local and do not publish them as integration events.
@@ -153,7 +157,8 @@ Verification:
 
 Priority: P0 if DE-01 accepts EF-backed collection.
 Dependency: [09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
-for the system behavior slot and provider/capability composition model.
+MPC-05 for the capability contribution model and transaction-scoped runtime
+placement.
 
 Collect domain events through EF Core module persistence in the same handler
 transaction, then clear them after successful staging, save, and transaction

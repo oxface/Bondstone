@@ -37,6 +37,8 @@ public static class BondstoneServiceCollectionExtensions
 
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
         services.TryAddScoped<IModuleEventSubscriberExecutor, ModuleEventSubscriberExecutor>();
+        services.TryAddScoped<ModuleCommandPipelinePlanner>();
+        services.TryAddScoped<ModuleEventSubscriberPipelinePlanner>();
         services.TryAddScoped<IModuleCommandReceivePipeline, ModuleCommandReceivePipeline>();
         services.TryAddScoped<IModuleEventReceivePipeline, ModuleEventReceivePipeline>();
         services.TryAddScoped(serviceProvider =>

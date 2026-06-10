@@ -19,6 +19,11 @@ public static class BondstoneRabbitMqBuilderExtensions
             rabbitMq.EventRoutingTopology,
             rabbitMq.ReceiveTopology,
             rabbitMq.ReceiveWorkerRegistration);
+        builder.AddConfigurationValidator(
+            new RabbitMqTopologyConfigurationValidator(
+                rabbitMq.CommandRoutingTopology,
+                rabbitMq.EventRoutingTopology,
+                rabbitMq.ReceiveTopology));
         builder.Outbox.MarkTransport("RabbitMq");
 
         return builder;

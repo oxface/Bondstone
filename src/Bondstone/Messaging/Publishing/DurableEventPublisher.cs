@@ -6,6 +6,7 @@ namespace Bondstone.Messaging;
 internal sealed class DurableEventPublisher(
     DurableModuleOutboxWriterResolver outboxWriterResolver,
     IMessageTypeRegistry messageTypeRegistry,
+    IModulePublishedEventRegistry publishedEventRegistry,
     IModuleExecutionContextAccessor executionContextAccessor,
     IDurablePayloadSerializer? payloadSerializer = null,
     TimeProvider? timeProvider = null)
@@ -15,6 +16,8 @@ internal sealed class DurableEventPublisher(
         outboxWriterResolver ?? throw new ArgumentNullException(nameof(outboxWriterResolver));
     private readonly IMessageTypeRegistry _messageTypeRegistry =
         messageTypeRegistry ?? throw new ArgumentNullException(nameof(messageTypeRegistry));
+    private readonly IModulePublishedEventRegistry _publishedEventRegistry =
+        publishedEventRegistry ?? throw new ArgumentNullException(nameof(publishedEventRegistry));
     private readonly IModuleExecutionContextAccessor _executionContextAccessor =
         executionContextAccessor ?? throw new ArgumentNullException(nameof(executionContextAccessor));
     private readonly IDurablePayloadSerializer _payloadSerializer =
@@ -53,6 +56,14 @@ internal sealed class DurableEventPublisher(
 
         Guid messageId = Guid.NewGuid();
         string messageTypeName = _messageTypeRegistry.GetMessageTypeName<TEvent>();
+        if (!_publishedEventRegistry.PublishedEvents.Any(publishedEvent =>
+                publishedEvent.ModuleName == executionContext.ModuleName
+                && publishedEvent.MessageTypeName == messageTypeName))
+        {
+            throw new InvalidOperationException(
+                $"Module '{executionContext.ModuleName}' has not registered published event '{messageTypeName}'. Call RegisterPublishedEvent for the publishing module before using {nameof(IDurableEventPublisher)}.");
+        }
+
         string payload = _payloadSerializer.Serialize(integrationEvent);
         MessageTraceContext? capturedTraceContext =
             traceContext ?? MessageTraceContext.CaptureCurrent();

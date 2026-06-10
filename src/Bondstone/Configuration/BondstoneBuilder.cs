@@ -10,6 +10,7 @@ public sealed class BondstoneBuilder
         IServiceCollection services,
         IMessageTypeRegistry messageTypeRegistry,
         ModuleCommandRouteRegistry commandRouteRegistry,
+        ModulePublishedEventRegistry publishedEventRegistry,
         ModuleEventSubscriberRegistry eventSubscriberRegistry,
         BondstoneModuleRegistry moduleRegistry)
     {
@@ -17,6 +18,7 @@ public sealed class BondstoneBuilder
         Outbox = new BondstoneOutboxBuilder(services);
         _messageTypeRegistry = messageTypeRegistry;
         _commandRouteRegistry = commandRouteRegistry;
+        _publishedEventRegistry = publishedEventRegistry;
         _eventSubscriberRegistry = eventSubscriberRegistry;
         _moduleRegistry = moduleRegistry;
         _configurationValidators =
@@ -28,6 +30,7 @@ public sealed class BondstoneBuilder
 
     private readonly IMessageTypeRegistry _messageTypeRegistry;
     private readonly ModuleCommandRouteRegistry _commandRouteRegistry;
+    private readonly ModulePublishedEventRegistry _publishedEventRegistry;
     private readonly ModuleEventSubscriberRegistry _eventSubscriberRegistry;
     private readonly BondstoneModuleRegistry _moduleRegistry;
     private readonly List<IBondstoneConfigurationValidator> _configurationValidators;
@@ -44,6 +47,7 @@ public sealed class BondstoneBuilder
             moduleName,
             _messageTypeRegistry,
             _commandRouteRegistry,
+            _publishedEventRegistry,
             _eventSubscriberRegistry,
             _moduleRegistry);
     }
@@ -53,7 +57,9 @@ public sealed class BondstoneBuilder
         var context = new BondstoneConfigurationValidationContext(
             _moduleRegistry.Modules,
             _commandRouteRegistry.Routes,
-            _eventSubscriberRegistry.Subscribers);
+            _publishedEventRegistry.PublishedEvents,
+            _eventSubscriberRegistry.Subscribers,
+            Outbox.TransportCount);
         foreach (IBondstoneConfigurationValidator validator in _configurationValidators)
         {
             validator.Validate(context);

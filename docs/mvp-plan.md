@@ -44,6 +44,8 @@ Implemented surface includes:
 - module event registration metadata for published integration events,
   subscriber handler identity, per-subscriber inbox-key naming, and
   command/event topology diagnostic vocabulary;
+- startup topology validation for RabbitMQ and Service Bus durable command
+  routes, published-event routes, and receive bindings;
 - provider-neutral module receive pipelines:
   `IModuleCommandReceivePipeline` and `IModuleEventReceivePipeline`;
 - EF Core entity mappings, outbox writer, inbox store, operation state store,
@@ -286,10 +288,15 @@ Applied in this slice:
   stay app-owned.
 - improve RabbitMQ and Service Bus receive failure diagnostics around native
   settlement handoff.
+- add RabbitMQ and Service Bus startup topology validation against registered
+  durable command handlers, published events, and event subscribers while
+  keeping broker provisioning deferred.
 
 Likely next slices:
 
 - refine multi-transport routing and diagnostics;
+- add aggregate multi-transport topology reports and split-subscriber fan-out
+  mismatch diagnostics if accepted by ADR;
 - refine persistence provider contracts;
 - improve operation-state failure/running/retry semantics;
 - add stale inbox receive recovery if a safe model is accepted by ADR;

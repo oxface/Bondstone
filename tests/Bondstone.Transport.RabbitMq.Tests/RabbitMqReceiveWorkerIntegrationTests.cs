@@ -328,7 +328,7 @@ public sealed class RabbitMqReceiveWorkerIntegrationTests(RabbitMqFixture fixtur
         services.AddSingleton<IModuleCommandReceivePipeline>(commandPipeline);
         services.AddSingleton(eventPipeline);
         services.AddBondstoneRabbitMqConnection(connection);
-        services.AddBondstone(bondstone => bondstone.UseRabbitMqTransport(configure));
+        services.AddBondstone(bondstone => bondstone.Outbox.UseRabbitMqTransport(configure));
 
         return services.BuildServiceProvider();
     }

@@ -116,6 +116,46 @@ public sealed class DurableEventPublisherTests
         Assert.Empty(outboxWriter.Envelopes);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task PublishAsync_WhenSourceModuleDidNotRegisterPublishedEvent_Throws()
+    {
+        var outboxWriter = new CapturingOutboxWriter();
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableOutboxWriter>(outboxWriter);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<SubmitOrderCommand, SubmitOrderHandler>();
+            });
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderSubmittedHandler>(
+                    "fulfillment.order-submitted.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "sales",
+                    new SubmitOrderCommand("order-123")));
+
+        Assert.Contains("has not registered published event", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales.order.submitted.v1", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(outboxWriter.Envelopes);
+    }
+
     [DurableCommandIdentity("sales.order.publish-test.submit.v1")]
     public sealed record SubmitOrderCommand(string OrderId) : IDurableCommand;
 
@@ -135,6 +175,16 @@ public sealed class DurableEventPublisherTests
 
     [IntegrationEventIdentity("sales.order.submitted.v1")]
     public sealed record OrderSubmittedEvent(string OrderId) : IIntegrationEvent;
+
+    public sealed class OrderSubmittedHandler : IIntegrationEventHandler<OrderSubmittedEvent>
+    {
+        public ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
 
     [DurableCommandIdentity("sales.order.publish-test.submit-converted.v1")]
     public sealed record SubmitConvertedOrderCommand(string OrderId) : IDurableCommand;

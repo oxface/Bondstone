@@ -50,8 +50,14 @@ publish/subscribe direction is tracked in
 `IDurableEventPublisher` accepts an integration event, requires current
 source-module context, serializes the event through
 `IDurablePayloadSerializer`, stages a `MessageKind.Event` envelope without
-`TargetModule`, and returns a publish result. It does not wait for subscriber
-results.
+`TargetModule`, and returns a publish result. The current source module must
+have registered that event through `RegisterPublishedEvent`. It does not wait
+for subscriber results.
+
+Published events are registered as module-owned publish metadata through
+`module.Events.RegisterPublishedEvent`. Transport topology validation uses
+that metadata to check configured event destinations without treating
+subscriber-only event types as outbound publications.
 
 Event subscribers are typed `IIntegrationEventHandler<TEvent>` handlers
 registered as module-owned subscriber metadata through
@@ -179,6 +185,15 @@ Direct transport packages contribute `IDurableOutboxTransportRoute` entries.
 one provider route matches the message. Zero matches and ambiguous matches are
 loud configuration errors.
 
+RabbitMQ and Service Bus add startup topology validation over their configured
+durable routes and receive bindings. In a single-transport host, missing
+command destinations, missing published-event destinations, and missing
+subscriber receive bindings fail during `AddBondstone`. Provider receive
+bindings always validate that accepted command modules have registered
+durable command handlers and event subscription bindings have matching
+registered subscribers. Multi-transport aggregate route coverage and
+ambiguity reporting remain a future diagnostic slice.
+
 RabbitMQ and Service Bus map received provider-native messages into the neutral
 receive pipelines. Provider packages also expose native received message
 mappers so app-owned consumers/processors can convert broker messages before
@@ -210,6 +225,11 @@ Command diagnostics should describe target-module routing. Event diagnostics
 should describe publish subjects, subscriber bindings, and missing-subscriber
 outcomes. Core keeps shared durable-message vocabulary, while provider
 packages expose provider-native diagnostic details.
+
+Startup topology validation should use those diagnostics for fail-fast
+configuration errors while remaining separate from broker provisioning.
+Validation does not create RabbitMQ exchanges, queues, or bindings, and does
+not create Service Bus queues, topics, subscriptions, or rules.
 
 Receive recovery diagnostics should explain the native settlement handoff after
 failed Bondstone dispatch. RabbitMQ diagnostics should include the queue,

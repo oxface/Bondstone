@@ -25,11 +25,19 @@ public sealed class ModuleEventRegistrationTests
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         IMessageTypeRegistry messageTypeRegistry =
             serviceProvider.GetRequiredService<IMessageTypeRegistry>();
+        IModulePublishedEventRegistry publishedEventRegistry =
+            serviceProvider.GetRequiredService<IModulePublishedEventRegistry>();
 
         MessageTypeRegistration registration = Assert.Single(messageTypeRegistry.Registrations);
         Assert.Equal(typeof(CustomerRegisteredEvent), registration.ClrType);
         Assert.Equal("sales.customer.registered.v1", registration.MessageTypeName);
         Assert.Equal(MessageKind.Event, registration.Kind);
+
+        ModulePublishedEventRegistration publishedEvent =
+            Assert.Single(publishedEventRegistry.PublishedEvents);
+        Assert.Equal("sales", publishedEvent.ModuleName);
+        Assert.Equal(typeof(CustomerRegisteredEvent), publishedEvent.EventType);
+        Assert.Same(registration, publishedEvent.MessageTypeRegistration);
     }
 
     [Fact]

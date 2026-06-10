@@ -40,6 +40,14 @@ services report the same resolution results used by dispatch so applications
 and tests can explain missing exchanges or routing keys without publishing
 messages.
 
+In a single-transport host, RabbitMQ startup validation fails when registered
+durable command handlers lack a command route or registered published events
+lack an event route. Receive queue bindings always validate that accepted
+modules have durable command handlers and subscribed event identities match
+registered Bondstone event subscribers. This validation is diagnostic only; it
+does not declare RabbitMQ exchanges, queues, bindings, DLX, retry queues, or
+policies.
+
 Use `.ToQueue(...)` or `UseEventQueueConvention(...)` when an event should be
 sent directly to a queue.
 
@@ -138,4 +146,6 @@ queue delivery, acknowledgement after successful command dispatch, and failed
 dispatch handoff to application-owned dead-letter topology through negative
 acknowledgement with `requeue: false`. It also proves event receive fan-out
 from one broker queue delivery to each configured subscriber identity before
-acknowledgement. Broker topology declaration remains a future slice.
+acknowledgement. Aggregate multi-transport route reports, split-subscriber
+fan-out mismatch diagnostics, and broker topology declaration remain future
+slices.

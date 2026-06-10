@@ -82,6 +82,10 @@ Start with:
   command queues, event destinations, and event subscriptions, while broker
   connection, worker, retry, dead-letter, serializer, and subscription-storage
   setup stays provider-native.
+- Startup transport topology validation follows
+  [ADR 0039](docs/adr/0039-startup-transport-topology-validation.md): validate
+  configured durable routes and receive bindings against registered Bondstone
+  handlers/subscribers without turning validation into broker provisioning.
 - Provider retry and recovery boundaries follow
   [ADR 0038](docs/adr/0038-provider-retry-recovery-and-settlement-boundaries.md):
   Bondstone owns persisted outbox retry and terminal failure state, while

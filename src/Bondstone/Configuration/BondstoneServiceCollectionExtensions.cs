@@ -20,6 +20,10 @@ public static class BondstoneServiceCollectionExtensions
             GetOrAddOwnedSingleton<IModuleCommandRouteRegistry, ModuleCommandRouteRegistry>(
                 services,
                 "Module command registration");
+        ModulePublishedEventRegistry publishedEventRegistry =
+            GetOrAddOwnedSingleton<IModulePublishedEventRegistry, ModulePublishedEventRegistry>(
+                services,
+                "Module published event registration");
         ModuleEventSubscriberRegistry eventSubscriberRegistry =
             GetOrAddOwnedSingleton<IModuleEventSubscriberRegistry, ModuleEventSubscriberRegistry>(
                 services,
@@ -63,6 +67,7 @@ public static class BondstoneServiceCollectionExtensions
             new DurableEventPublisher(
                 serviceProvider.GetRequiredService<DurableModuleOutboxWriterResolver>(),
                 serviceProvider.GetRequiredService<IMessageTypeRegistry>(),
+                serviceProvider.GetRequiredService<IModulePublishedEventRegistry>(),
                 serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
                 serviceProvider.GetRequiredService<IDurablePayloadSerializer>(),
                 serviceProvider.GetService<TimeProvider>()));
@@ -89,6 +94,7 @@ public static class BondstoneServiceCollectionExtensions
             services,
             messageTypeRegistry,
             commandRouteRegistry,
+            publishedEventRegistry,
             eventSubscriberRegistry,
             moduleRegistry);
         configure(builder);

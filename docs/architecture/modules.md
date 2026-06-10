@@ -79,6 +79,11 @@ module.Events.RegisterSubscriber<OrderPlacedEvent, RecordOrderPlacedHandler>(
     "fulfillment.order-placed-projection.v1");
 ```
 
+Published event registration records module-owned publish metadata used by
+the durable event publisher and transport topology validation. Subscriber
+registration records module, message type, handler type, and stable subscriber
+identity used by receive binding validation and per-subscriber inbox keys.
+
 Subscriber identity is consumer-owned durable identity. It should describe the
 logical subscriber, not the handler CLR type. Event inbox identity uses
 Bondstone message id, subscriber module, and subscriber identity.

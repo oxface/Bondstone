@@ -87,7 +87,7 @@ public sealed class RabbitMqReceiveDispatcherTests
         var services = new ServiceCollection();
         services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
         services.AddBondstone(
-            bondstone => bondstone.UseRabbitMqTransport(
+            bondstone => bondstone.Outbox.UseRabbitMqTransport(
                 rabbitMq =>
                     rabbitMq.ReceiveQueue("sales-events")
                         .SubscribeEvent(
@@ -248,7 +248,7 @@ public sealed class RabbitMqReceiveDispatcherTests
         services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
 
         services.AddBondstone(
-            bondstone => bondstone.UseRabbitMqTransport(
+            bondstone => bondstone.Outbox.UseRabbitMqTransport(
                 rabbitMq =>
                 {
                     rabbitMq.ReceiveQueue("fulfillment.commands")
@@ -289,7 +289,7 @@ public sealed class RabbitMqReceiveDispatcherTests
         services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
         services.AddSingleton<IModuleCommandReceivePipeline>(commandPipeline);
         services.AddSingleton<IModuleEventReceivePipeline>(eventPipeline);
-        services.AddBondstone(bondstone => bondstone.UseRabbitMqTransport(configure));
+        services.AddBondstone(bondstone => bondstone.Outbox.UseRabbitMqTransport(configure));
 
         return services.BuildServiceProvider();
     }

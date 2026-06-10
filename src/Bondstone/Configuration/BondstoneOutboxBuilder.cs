@@ -7,7 +7,7 @@ namespace Bondstone.Configuration;
 public sealed class BondstoneOutboxBuilder
 {
     private string? _persistenceProviderName;
-    private string? _transportName;
+    private readonly HashSet<string> _transportNames = new(StringComparer.Ordinal);
     private string? _dispatcherName;
     private string? _workerName;
 
@@ -20,7 +20,9 @@ public sealed class BondstoneOutboxBuilder
 
     public bool HasPersistenceProvider => _persistenceProviderName is not null;
 
-    public bool HasTransport => _transportName is not null;
+    public bool HasTransport => _transportNames.Count > 0;
+
+    internal int TransportCount => _transportNames.Count;
 
     public bool HasDispatcher => _dispatcherName is not null;
 
@@ -36,7 +38,7 @@ public sealed class BondstoneOutboxBuilder
     [EditorBrowsable(EditorBrowsableState.Never)]
     public BondstoneOutboxBuilder MarkTransport(string transportName)
     {
-        _transportName = transportName.NormalizeRequired(nameof(transportName), "Capability name");
+        _transportNames.Add(transportName.NormalizeRequired(nameof(transportName), "Capability name"));
         return this;
     }
 

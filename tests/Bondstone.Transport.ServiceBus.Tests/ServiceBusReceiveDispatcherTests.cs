@@ -91,7 +91,7 @@ public sealed class ServiceBusReceiveDispatcherTests
         var services = new ServiceCollection();
         services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
         services.AddBondstone(
-            bondstone => bondstone.UseServiceBusTransport(
+            bondstone => bondstone.Outbox.UseServiceBusTransport(
                 serviceBus =>
                     serviceBus.ReceiveSubscription("sales-events", "fulfillment")
                         .SubscribeEvent(
@@ -247,7 +247,7 @@ public sealed class ServiceBusReceiveDispatcherTests
         services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
 
         services.AddBondstone(
-            bondstone => bondstone.UseServiceBusTransport(
+            bondstone => bondstone.Outbox.UseServiceBusTransport(
                 serviceBus =>
                 {
                     serviceBus.ReceiveQueue("fulfillment-commands")
@@ -288,7 +288,7 @@ public sealed class ServiceBusReceiveDispatcherTests
         services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
         services.AddSingleton<IModuleCommandReceivePipeline>(commandPipeline);
         services.AddSingleton<IModuleEventReceivePipeline>(eventPipeline);
-        services.AddBondstone(bondstone => bondstone.UseServiceBusTransport(configure));
+        services.AddBondstone(bondstone => bondstone.Outbox.UseServiceBusTransport(configure));
 
         return services.BuildServiceProvider();
     }

@@ -10,19 +10,23 @@ public sealed class BondstoneModuleEventBuilder
         IServiceCollection services,
         string moduleName,
         IMessageTypeRegistry messageTypeRegistry,
+        ModulePublishedEventRegistry publishedEventRegistry,
         ModuleEventSubscriberRegistry eventSubscriberRegistry)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(messageTypeRegistry);
+        ArgumentNullException.ThrowIfNull(publishedEventRegistry);
         ArgumentNullException.ThrowIfNull(eventSubscriberRegistry);
 
         Services = services;
         ModuleName = moduleName;
         _messageTypeRegistry = messageTypeRegistry;
+        _publishedEventRegistry = publishedEventRegistry;
         _eventSubscriberRegistry = eventSubscriberRegistry;
     }
 
     private readonly IMessageTypeRegistry _messageTypeRegistry;
+    private readonly ModulePublishedEventRegistry _publishedEventRegistry;
     private readonly ModuleEventSubscriberRegistry _eventSubscriberRegistry;
 
     public IServiceCollection Services { get; }
@@ -32,14 +36,24 @@ public sealed class BondstoneModuleEventBuilder
     public MessageTypeRegistration RegisterPublishedEvent<TEvent>()
         where TEvent : IIntegrationEvent
     {
-        return _messageTypeRegistry.Register<TEvent>();
+        MessageTypeRegistration registration = _messageTypeRegistry.Register<TEvent>();
+        _publishedEventRegistry.Register(
+            ModulePublishedEventRegistration.Create<TEvent>(
+                ModuleName,
+                registration));
+        return registration;
     }
 
     public MessageTypeRegistration RegisterPublishedEvent<TEvent>(
         string messageTypeName)
         where TEvent : IIntegrationEvent
     {
-        return _messageTypeRegistry.Register<TEvent>(messageTypeName);
+        MessageTypeRegistration registration = _messageTypeRegistry.Register<TEvent>(messageTypeName);
+        _publishedEventRegistry.Register(
+            ModulePublishedEventRegistration.Create<TEvent>(
+                ModuleName,
+                registration));
+        return registration;
     }
 
     public ModuleEventSubscriberRegistration RegisterSubscriber<TEvent, THandler>(

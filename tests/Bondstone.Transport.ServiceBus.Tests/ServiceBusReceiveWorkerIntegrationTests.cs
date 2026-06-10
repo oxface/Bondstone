@@ -277,7 +277,7 @@ public sealed class ServiceBusReceiveWorkerIntegrationTests(ServiceBusFixture fi
         services.AddSingleton<IModuleCommandReceivePipeline>(commandPipeline);
         services.AddSingleton(eventPipeline);
         services.AddBondstoneServiceBusClient(client);
-        services.AddBondstone(bondstone => bondstone.UseServiceBusTransport(configure));
+        services.AddBondstone(bondstone => bondstone.Outbox.UseServiceBusTransport(configure));
 
         return services.BuildServiceProvider();
     }

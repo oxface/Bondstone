@@ -175,6 +175,7 @@ system/application/handler ordering shape as command execution.
 ### MPC-04: User Behavior Extension Guidance
 
 Priority: P1.
+Status: Resolved 2026-06-10
 
 Document and test the supported way for users to add command and event
 subscriber application behaviors. Decide whether module-scoped behavior
@@ -190,6 +191,17 @@ Verification:
 
 - `pnpm format:check`
 - `pnpm backend:test:fast`
+
+Resolved by documenting ordinary DI registration of
+`IModuleCommandPipelineBehavior<TCommand>` and
+`IModuleEventSubscriberPipelineBehavior<TEvent>` as the normal application
+extension path. Tests now prove command and event subscriber application
+behaviors run after ordered system behavior and inside the module execution
+context established by Bondstone's system pipeline. Public system behavior
+interfaces remain documented as advanced provider/runtime/capability
+composition contracts. Module-scoped application behavior registration remains
+deferred because the current DI model is sufficient for the documented
+extension model.
 
 ### MPC-05: Capability Contribution Model
 

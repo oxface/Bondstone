@@ -208,9 +208,9 @@ public sealed class ModuleCommandRegistrationTests
             [
                 "system-early:before",
                 "system-late:before",
-                "application:before",
+                "application:before:sales",
                 "handle:order-123",
-                "application:after",
+                "application:after:sales",
                 "system-late:after",
                 "system-early:after",
             ],
@@ -423,7 +423,9 @@ public sealed class ModuleCommandRegistrationTests
         }
     }
 
-    public sealed class CommandApplicationBehavior(CommandCallLog log)
+    public sealed class CommandApplicationBehavior(
+        CommandCallLog log,
+        IModuleExecutionContextAccessor executionContextAccessor)
         : IModuleCommandPipelineBehavior<PipelineOrderCommand>
     {
         public async ValueTask HandleAsync(
@@ -432,9 +434,9 @@ public sealed class ModuleCommandRegistrationTests
             ModuleCommandPipelineNext next,
             CancellationToken ct = default)
         {
-            log.Calls.Add("application:before");
+            log.Calls.Add($"application:before:{executionContextAccessor.Current?.ModuleName}");
             await next(ct);
-            log.Calls.Add("application:after");
+            log.Calls.Add($"application:after:{executionContextAccessor.Current?.ModuleName}");
         }
     }
 

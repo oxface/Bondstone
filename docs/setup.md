@@ -165,6 +165,30 @@ public sealed class BillingBondstoneModule(string connectionString)
 }
 ```
 
+## Application Pipeline Behaviors
+
+Application-owned command and event subscriber behavior is registered with
+ordinary DI. Use `IModuleCommandPipelineBehavior<TCommand>` for command
+handler concerns and `IModuleEventSubscriberPipelineBehavior<TEvent>` for
+subscriber concerns.
+
+```csharp
+builder.Services.AddScoped<
+    IModuleCommandPipelineBehavior<ReserveInventoryCommand>,
+    ReserveInventoryAuthorizationBehavior>();
+
+builder.Services.AddScoped<
+    IModuleEventSubscriberPipelineBehavior<OrderPlacedEvent>,
+    OrderPlacedAuditBehavior>();
+```
+
+These behaviors run after Bondstone/provider system behavior and inside the
+module execution context when command or subscriber execution establishes one.
+The public system behavior interfaces are advanced provider/runtime
+composition contracts, not the normal application extension path. Module-scoped
+behavior registration is not currently required; prefer DI registration unless
+a later accepted design adds a more specific API.
+
 ## Sending Commands
 
 Durable commands are sent from inside a module execution context. The default

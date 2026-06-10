@@ -129,9 +129,9 @@ public sealed class ModuleEventSubscriberExecutionTests
             [
                 "system-early:before",
                 "system-late:before",
-                "application:before",
+                "application:before:fulfillment",
                 "handle-ordering:order-123",
-                "application:after",
+                "application:after:fulfillment",
                 "system-late:after",
                 "system-early:after",
             ],
@@ -381,7 +381,9 @@ public sealed class ModuleEventSubscriberExecutionTests
         }
     }
 
-    public sealed class OrderingEventSubscriberApplicationBehavior(EventCallLog log)
+    public sealed class OrderingEventSubscriberApplicationBehavior(
+        EventCallLog log,
+        IModuleExecutionContextAccessor executionContextAccessor)
         : IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>
     {
         public async ValueTask HandleAsync(
@@ -390,9 +392,9 @@ public sealed class ModuleEventSubscriberExecutionTests
             ModuleEventSubscriberPipelineNext next,
             CancellationToken ct = default)
         {
-            log.Calls.Add("application:before");
+            log.Calls.Add($"application:before:{executionContextAccessor.Current?.ModuleName}");
             await next(ct);
-            log.Calls.Add("application:after");
+            log.Calls.Add($"application:after:{executionContextAccessor.Current?.ModuleName}");
         }
     }
 

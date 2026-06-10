@@ -126,6 +126,40 @@ handler runs and restores the previous context afterward. Follow-up durable
 commands published from a subscriber therefore use the subscriber module as
 their source module.
 
+## Application Pipeline Behaviors
+
+Normal applications extend command execution by registering
+`IModuleCommandPipelineBehavior<TCommand>` in DI. They extend integration event
+subscriber execution by registering
+`IModuleEventSubscriberPipelineBehavior<TEvent>` in DI. These behaviors are
+the supported extension points for validation, logging, authorization,
+auditing, metrics enrichment, and other application-owned concerns around a
+registered handler.
+
+```csharp
+services.AddScoped<
+    IModuleCommandPipelineBehavior<ReserveInventoryCommand>,
+    ReserveInventoryAuthorizationBehavior>();
+
+services.AddScoped<
+    IModuleEventSubscriberPipelineBehavior<OrderPlacedEvent>,
+    OrderPlacedAuditBehavior>();
+```
+
+Application behaviors run after Bondstone/provider system behaviors and before
+the handler. When the normal module execution-context system behavior applies,
+application behaviors and handlers run inside the current module context, so
+durable sends and publishes use the executing module as their source module.
+
+The public system behavior interfaces,
+`IModuleCommandSystemPipelineBehavior<TCommand>` and
+`IModuleEventSubscriberSystemPipelineBehavior<TEvent>`, remain available for
+advanced provider, runtime, and capability composition because they are already
+part of the public surface. They are not the normal application extension
+path. Bondstone does not currently provide module-scoped application behavior
+registration; ordinary DI registration is the supported model until a concrete
+module-scoping requirement proves otherwise.
+
 ## Execution Context Limits
 
 The module execution context is ambient and handler-flow scoped. It flows

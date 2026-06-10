@@ -91,26 +91,25 @@ or dead-letter routing.
   rows. `IDurableOutboxFailurePolicy` and `DurableOutboxFailurePolicy` decide
   retry versus dead-letter after a failed claimed delivery attempt.
 - Stable docs: Current persistence rules are described in
-  [docs/architecture/persistence.md](../architecture/persistence.md), with
-  extraction state in [docs/extraction.md](../extraction.md) and
-  [docs/extraction-plan.md](../extraction-plan.md).
+  [docs/architecture/persistence.md](../architecture/persistence.md),
+  [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
+  [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md),
+  and [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad durable behavior, provider support, or migration policy changes.
 - Application evidence: Core dispatch lifecycle contract, PostgreSQL
   implementation, PostgreSQL service registration, and Testcontainers-backed
   lifecycle tests are applied. Core failure decision policy and neutral unit
   tests are applied.
-- Pending or deferred: Hosted worker loops, transport adapter implementations,
-  stale claim recovery orchestration, dead-letter routing, configuration
-  binding, provider implementations beyond PostgreSQL, and migration helpers
-  remain future work. Lease renewal is covered by ADR 0011, and plain
-  dispatcher composition is covered by ADR 0017.
+- Pending or deferred: None for the dispatch lifecycle decision. Stale claim
+  recovery orchestration, advanced configuration, provider implementations
+  beyond PostgreSQL, and migration helpers remain separate future decisions.
 
 ## Verification
 
 Read back [docs/architecture/persistence.md](../architecture/persistence.md),
-[docs/extraction.md](../extraction.md), and
-[docs/extraction-plan.md](../extraction-plan.md). Ran targeted PostgreSQL
+[docs/archive/extraction.md](../archive/extraction.md), and
+[docs/archive/extraction-plan.md](../archive/extraction-plan.md). Ran targeted PostgreSQL
 tests for dispatch success, retry scheduling, dead-lettering, stale owner
 rejection, expired lease rejection, validation, and schema-aware registration.
 Ran neutral failure-policy unit tests, formatting, no-restore build, fast

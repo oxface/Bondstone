@@ -83,20 +83,20 @@ justify it.
 
 ## Application Notes
 
-- Current contract: Superseded by
+- Current relevance: Superseded by
   [0020 Neutral Hosted Worker Package](0020-neutral-hosted-worker-package.md).
   Rebus no longer owns hosted worker registration.
 - Stable docs: Current hosting rules are described in
   [docs/architecture/hosting.md](../architecture/hosting.md),
   transport rules in
-  [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md),
+  [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md),
   package-boundary rules in [docs/packaging.md](../packaging.md), and
-  extraction state in [docs/extraction-plan.md](../extraction-plan.md).
+  extraction state in [docs/archive/extraction-plan.md](../archive/extraction-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   package-boundary or durable runtime behavior changes.
 - Application evidence: This ADR is retained for traceability only. The
   applied worker package is now `Bondstone.Hosting`.
-- Pending or deferred: See
+- Pending or deferred: Not applicable after superseding. See
   [0020 Neutral Hosted Worker Package](0020-neutral-hosted-worker-package.md)
   and
   [0021 Fluent Service Composition Guardrails](0021-fluent-service-composition-guardrails.md)

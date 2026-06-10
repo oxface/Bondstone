@@ -86,27 +86,28 @@ Consumers still need an inbox or idempotent handlers.
   recording. `IDurableOutboxTransport` is the minimal transport send boundary
   for claimed records.
 - Stable docs: Current persistence rules are described in
-  [docs/architecture/persistence.md](../architecture/persistence.md), with
-  extraction state in [docs/extraction.md](../extraction.md) and
-  [docs/extraction-plan.md](../extraction-plan.md).
+  [docs/architecture/persistence.md](../architecture/persistence.md),
+  [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
+  [docs/architecture/hosting.md](../architecture/hosting.md), and
+  [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad durable behavior, provider support, transport support, or migration
   policy changes.
 - Application evidence: Core dispatcher contract and implementation, transport
   contract, dispatch result, neutral unit tests, PostgreSQL integration tests
   using real claim, lease renewal, and dispatch recording with a fake
-  transport, Rebus outgoing command transport, and neutral hosted outbox
-  worker registration are applied.
-- Pending or deferred: Minimum message age, route or destination circuit
-  breaking, dead-letter routing, archiving, stale-claim sweeps, cleanup
-  workers, and additional transport adapters remain future work.
+  transport, direct transport adapters, routed transport selection, and neutral
+  hosted outbox worker registration are applied.
+- Pending or deferred: None for the dispatcher composition decision. Minimum
+  message age, route or destination circuit breaking, archiving, stale-claim
+  sweeps, and cleanup workers remain separate future decisions.
 
 ## Verification
 
 Read back [docs/architecture/persistence.md](../architecture/persistence.md),
 [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
-[docs/extraction.md](../extraction.md), and
-[docs/extraction-plan.md](../extraction-plan.md). Ran no-restore build,
+[docs/archive/extraction.md](../archive/extraction.md), and
+[docs/archive/extraction-plan.md](../archive/extraction-plan.md). Ran no-restore build,
 targeted unit tests, targeted PostgreSQL integration tests, fast tests, pack,
 format check, diff check, and `pnpm backend:test:integration`. Later
 checkpoint verification restored the default `pnpm check` gate.

@@ -12,6 +12,9 @@ Start with:
   architecture documentation.
 - [docs/adr/README.md](docs/adr/README.md) when it exists before creating,
   updating, superseding, or archiving ADRs.
+- [docs/architecture/README.md](docs/architecture/README.md) before changing
+  runtime architecture, durable messaging, persistence, hosting, or transport
+  behavior.
 - [docs/mvp-plan.md](docs/mvp-plan.md) before choosing or continuing an
   implementation slice.
 - [docs/testing.md](docs/testing.md) before moving or writing tests.
@@ -72,41 +75,49 @@ Start with:
   reads, local composition, or operations that tolerate failure. Domain events
   are module-local/private unless module code explicitly publishes an
   integration event.
-- First-class integration events follow
-  [ADR 0033](docs/adr/0033-first-class-event-publish-subscribe-topology.md):
-  publish dispatch, subscriber execution, per-subscriber inbox behavior,
-  diagnostics, and tests are part of the current durable event loop. Keep
-  native broker setup app-owned, and do not fold domain event persistence or
-  broad choreography samples into this event loop without a later ADR.
+- First-class integration event behavior is described in
+  [docs/architecture/messaging.md](docs/architecture/messaging.md): publish
+  dispatch, subscriber execution, per-subscriber inbox behavior, diagnostics,
+  and tests are part of the current durable event loop. Keep native broker
+  setup app-owned, and do not fold domain event persistence or broad
+  choreography samples into this event loop without a later ADR.
 - Transport adapter topology should describe durable message topology, such as
   command queues, event destinations, and event subscriptions, while broker
   connection, worker, retry, dead-letter, serializer, and subscription-storage
   setup stays provider-native.
-- Startup transport topology validation follows
-  [ADR 0039](docs/adr/0039-startup-transport-topology-validation.md): validate
-  configured durable routes and receive bindings against registered Bondstone
-  handlers/subscribers without turning validation into broker provisioning.
-  Queue-style event destination fan-out diagnostics follow
-  [ADR 0040](docs/adr/0040-event-queue-fanout-diagnostics.md): same-queue
-  in-process fan-out remains valid, while split subscribers should use
-  provider-native broker fan-out such as RabbitMQ exchange bindings or Service
-  Bus topic subscriptions.
-- Provider retry and recovery boundaries follow
-  [ADR 0038](docs/adr/0038-provider-retry-recovery-and-settlement-boundaries.md):
+- Startup transport topology validation is described in
+  [docs/architecture/messaging.md](docs/architecture/messaging.md),
+  [docs/architecture/transport-rabbitmq.md](docs/architecture/transport-rabbitmq.md),
+  and
+  [docs/architecture/transport-servicebus.md](docs/architecture/transport-servicebus.md):
+  validate configured durable routes and receive bindings against registered
+  Bondstone handlers/subscribers without turning validation into broker
+  provisioning. Same-queue in-process event fan-out remains valid, while split
+  subscribers should use provider-native broker fan-out such as RabbitMQ
+  exchange bindings or Service Bus topic subscriptions.
+- Provider retry and recovery boundaries are described in
+  [docs/architecture/messaging.md](docs/architecture/messaging.md),
+  [docs/architecture/transport-rabbitmq.md](docs/architecture/transport-rabbitmq.md),
+  and
+  [docs/architecture/transport-servicebus.md](docs/architecture/transport-servicebus.md):
   Bondstone owns persisted outbox retry and terminal failure state, while
   direct provider receive adapters own settlement ordering and diagnostics
   without owning broker retry/dead-letter policy.
 - Direct provider transport adapters are the current direction according to
-  [ADR 0036](docs/adr/0036-direct-transport-adapters-and-rebus-removal.md).
-  Do not adapt another bus abstraction as a supported transport package.
+  [docs/architecture/README.md](docs/architecture/README.md) and
+  [docs/packaging.md](docs/packaging.md). Do not adapt another bus abstraction
+  as a supported transport package.
 - `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
   tests, and local development. It must not become a hidden fallback or be
   presented as production broker durability.
-- Adapter-diversity proof packages for Azure Service Bus and RabbitMQ are
-  accepted by ADR 0034. Keep these slices provider-native, app-owned,
-  proof-oriented, and explicit about receive/broker reliability follow-ups.
-- `Bondstone.Persistence.Postgres` is accepted by ADRs 0035 and 0037 as the
-  first non-EF persistence proof. Keep it PostgreSQL-specific and
+- Azure Service Bus and RabbitMQ transport rules are described in
+  [docs/architecture/transport-servicebus.md](docs/architecture/transport-servicebus.md)
+  and [docs/architecture/transport-rabbitmq.md](docs/architecture/transport-rabbitmq.md).
+  Keep these slices provider-native, app-owned, proof-oriented, and explicit
+  about receive/broker reliability follow-ups.
+- `Bondstone.Persistence.Postgres` behavior is described in
+  [docs/architecture/persistence-postgres.md](docs/architecture/persistence-postgres.md)
+  and [docs/packaging.md](docs/packaging.md). Keep it PostgreSQL-specific and
   Dapper-backed internally, not a generic Dapper abstraction; it should prove
   durable module messaging persistence and mixed-persistence samples without
   depending on EF Core.

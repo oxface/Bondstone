@@ -131,33 +131,22 @@ single-endpoint path.
 
 ## Application Notes
 
-- Current contract: Rebus receive-side inbox integration is implemented as a
-  command-only transport-package feature over `RebusDurableMessageEnvelope`,
-  `IRebusDurableInboxHandlerExecutor`, explicit handler identity, and explicit
-  commit delegates. Registration is available through low-level
-  `AddBondstoneRebusInbox` and the fluent `AddBondstone` path with
-  `UseRebusInbox`. The preferred module command receive path binds
-  host-owned Rebus receive topology to `IModuleCommandExecutor`; the current
-  single-endpoint app-facing path registers the matching Rebus envelope
-  handler from the receive topology configuration.
+- Current relevance: Superseded by
+  [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md). This ADR is
+  retained only as historical decision trail for the removed Rebus receive
+  adapter.
 - Stable docs: Current receive-side transport direction is described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
-  and [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md),
+  and [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md),
   with current implementation state in [docs/mvp-plan.md](../mvp-plan.md) and
   historical extraction notes in
   [docs/archive/extraction-plan.md](../archive/extraction-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, durable behavior, provider, or transport strategy changes.
-- Application evidence: Rebus receive adapter implementation, low-level and
-  fluent DI registration, .NET `ActivityContext` traceparent validation,
-  already-received exception, Rebus module receive topology, module endpoint
-  dispatcher and handler binding, unit tests, cross-package application smoke
-  coverage, sample coverage, and stable docs are applied.
-- Pending or deferred: Transport-level integration tests, typed handler
-  discovery, event publish/subscribe, receive retry state, stale receive
-  recovery, EF-specific receive helpers, and broader inbox validation remain
-  future work.
+- Application evidence: The former Rebus receive adapter was removed by ADR 0036. Provider-neutral receive pipelines and direct transport adapters now
+  carry current receive behavior.
+- Pending or deferred: Not applicable after superseding.
 
 ## Verification
 

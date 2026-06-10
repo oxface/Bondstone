@@ -149,17 +149,16 @@ outer EF transaction may still be open.
   `OrderingDbContext` and `FulfillmentDbContext` types with separate
   PostgreSQL schemas. Module-bound PostgreSQL provider registration is applied
   through `module.UsePostgreSqlPersistence<TDbContext>(...)`. The sample is now
-  a minimal ASP.NET Core API project using Rebus service-provider registration
-  and the durable outbox worker instead of manual Rebus bus startup, routing
-  API bridging, or direct dispatcher calls. Ordering, fulfillment contracts,
-  and fulfillment
-  implementation now live in module-owned sample assemblies, and module
-  command handlers are registered with
+  a minimal ASP.NET Core API project using explicit local transport routing by
+  default and a preferred direct RabbitMQ path instead of Rebus. Ordering,
+  fulfillment contracts, and fulfillment implementation now live in
+  module-owned sample assemblies, and module command handlers are registered with
   `RegisterFromAssemblyContaining<TMarker>()`.
-- Pending or deferred: Cross-database distributed transactions, event
-  choreography, provider-specific migration helpers, operation-state
-  concurrency policy, failure states, stale receive recovery, and richer
-  service-extraction operation lookup remain future work.
+- Pending or deferred: None for the module-owned durable EF persistence
+  decision. Cross-database distributed transactions, provider-specific
+  migration helpers, operation-state concurrency policy, failure states, stale
+  receive recovery, and richer service-extraction operation lookup remain
+  separate future decisions.
 
 ## Verification
 

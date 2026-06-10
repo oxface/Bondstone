@@ -126,31 +126,32 @@ additional metadata.
 
 ## Application Notes
 
-- Current contract: Accepted. Current command send, event publish, Rebus typed
-  command receive, and Rebus module command receive use the core
-  `IDurablePayloadSerializer` boundary. The default implementation uses
-  System.Text.Json with durable-payload-specific
+- Current contract: Accepted. Current command send, event publish, module
+  command receive, module event receive, and direct transport receive paths use
+  the core `IDurablePayloadSerializer` boundary. The default implementation
+  uses System.Text.Json with durable-payload-specific
   `DurablePayloadJsonOptions`.
 - Stable docs: The need for a shared durable payload serialization boundary is
-  described in [docs/architecture/messaging.md](../architecture/messaging.md)
-  and [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md).
+  described in [docs/architecture/messaging.md](../architecture/messaging.md),
+  [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md),
+  and [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md).
   Sequencing is tracked in [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, compatibility, serializer behavior, durable behavior, provider,
   or transport boundary changes.
 - Application evidence: Core serializer contracts, default System.Text.Json
   serializer, durable JSON configuration extension, command sender, event
-  publisher, Rebus typed command receive, Rebus module command receive, and
-  focused custom-converter tests are applied.
-- Pending or deferred: Future event receive must use the same serializer
-  boundary when event subscriber execution is implemented. Content type,
-  non-JSON payloads, schema registries, payload encryption, compression, and
-  stored-payload migration remain deferred.
+  publisher, provider-neutral command/event receive pipelines, direct
+  transport receive dispatchers, and focused custom-converter tests are
+  applied.
+- Pending or deferred: None for the durable payload serializer boundary.
+  Content type, non-JSON payloads, schema registries, payload encryption,
+  compression, and stored-payload migration remain separate future decisions.
 
 ## Verification
 
 Read back the accepted ADR and related stable docs. Ran focused command sender,
-event publisher, Rebus typed command receive, and Rebus module command receive
+event publisher, command receive, and module receive
 tests. Ran `pnpm check`, `git diff --check`, and stale-reference scans for ADR
 0029, durable payload serialization, phase terminology, and transport CLR type
 header language.

@@ -107,16 +107,18 @@ or result payload semantics are accepted.
   public API, durable behavior, provider, transport, or module runtime changes.
 - Application evidence: Default command sending stages `Pending` operation
   state for new caller-supplied operation ids, module command execution carries
-  operation ids from Rebus receive envelopes, a system pipeline behavior stages
-  `Completed` after successful durable command execution, EF operation-state
-  persistence has a clear missing-mapping error, module-owned operation reads
-  use explicit status precedence, and focused unit/application tests cover
-  send, receive, reader precedence, and EF transaction behavior.
-- Pending or deferred: Failure states, running states, cancellation states,
-  result payloads, polling/waiting APIs, retry state, stale receive recovery,
-  and provider-specific concurrency policy remain future work.
+  operation ids from neutral receive envelopes, a system pipeline behavior
+  stages `Completed` after successful durable command execution, EF and
+  PostgreSQL operation-state persistence have clear mapping/registration
+  behavior, module-owned operation reads use explicit status precedence, and
+  focused unit/application tests cover send, receive, reader precedence, and
+  transaction behavior.
+- Pending or deferred: None for the current operation-state integration.
+  Failure states, running states, cancellation states, result payloads,
+  polling/waiting APIs, retry state, stale receive recovery, and
+  provider-specific concurrency policy remain separate future decisions.
 
 ## Verification
 
-Read back affected architecture docs and ran focused core, Rebus, and EF Core
-tests, followed by `pnpm check`.
+Read back affected architecture docs and ran focused core, direct transport,
+PostgreSQL, and EF Core tests, followed by `pnpm check`.

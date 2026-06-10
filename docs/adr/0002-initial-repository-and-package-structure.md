@@ -1,7 +1,7 @@
 # 0002 Initial Repository And Package Structure
 
 Status: Accepted
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-03
 
 ## Context
@@ -108,15 +108,18 @@ package scripts.
   [docs/README.md](../README.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) points agents to the
   repository and extraction docs before code or automation changes.
-- Application evidence: The repository shell, solution, initial package
-  projects, test projects, devcontainer, and GitHub automation are scaffolded.
-- Pending or deferred: Sample projects, real package implementation, and richer
-  integration-test infrastructure remain future work.
+- Application evidence: The repository shell, solution, package projects, test
+  projects, sample projects, devcontainer, package scripts, and GitHub
+  automation are scaffolded and reflected in stable docs.
+- Pending or deferred: None for this repository-structure decision. Current
+  post-MVP review campaigns are tracked under
+  [docs/backlog](../backlog/README.md).
 
 ## Verification
 
 Read back [docs/repository.md](../repository.md),
 [docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Ran
 `pnpm verify`, which covered formatting, restore, build, test, and pack for the
-scaffold. Real source extraction, sample projects, and infrastructure-backed
-integration checks remain pending.
+scaffold. Phase 01 audit verification rechecked repository layout, package
+projects, sample projects, docs, and agent instructions against the current
+tree.

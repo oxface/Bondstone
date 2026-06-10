@@ -1,7 +1,7 @@
 # 0006 Testing Strategy
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-04
 
 ## Context
@@ -98,18 +98,14 @@ infrastructure-backed integration checks.
   integration-test guidance are described in [docs/testing.md](../testing.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) lists the repository
   package-script verification entrypoints.
-- Application evidence: Initial test projects, category-filtered commands, CI
-  wiring, and neutral `Unit` tests for message identity, trace context, and
-  durable command send results, operation state/status semantics, envelopes,
-  persistence records, outbox dispatch state, and EF Core entity mappings
-  exist. Fast `Application` tests cover EF change-tracker staging boundaries.
-  PostgreSQL Testcontainers `Integration` tests cover initial EF Core schema,
-  transaction, unique-constraint, and registration-helper behavior against a
-  real database. EF Core metadata tests cover mapped primary-key names. Fast
-  PostgreSQL `Unit` tests cover unique-violation classification and
-  registration guard behavior.
-- Pending or deferred: Broader neutral fixtures and additional
-  infrastructure-backed integration checks remain future work.
+- Application evidence: Test projects, category-filtered package scripts, CI
+  wiring, neutral unit/application coverage, Testcontainers-backed PostgreSQL,
+  RabbitMQ, Service Bus, persistence, and sample integration tests are present.
+  Stable docs describe the split between default fast gates and explicit
+  infrastructure-backed checks.
+- Pending or deferred: None for the testing policy. Additional coverage for
+  future behavior belongs with the ADR or implementation slice that introduces
+  that behavior.
 
 ## Verification
 

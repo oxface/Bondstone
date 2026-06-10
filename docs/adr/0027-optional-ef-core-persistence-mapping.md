@@ -1,7 +1,7 @@
 # 0027 Optional EF Core Persistence Mapping
 
 Status: Accepted
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-07
 
 ## Context
@@ -105,8 +105,8 @@ mapping diagnostics.
   mappings in the module DbContext model. EF operation-state persistence now
   fails with a clear `ApplyBondstoneOperationState()` mapping error when
   operation tracking uses a DbContext that does not map operation state.
-- Pending or deferred: Provider-specific missing-mapping diagnostics and
-  broader schema validation remain future provider-validation work.
+- Pending or deferred: None for the granular EF mapping decision. Broader
+  provider-specific schema validation remains future provider-validation work.
 
 ## Verification
 

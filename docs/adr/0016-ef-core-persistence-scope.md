@@ -1,7 +1,7 @@
 # 0016 EF Core Persistence Scope
 
 Status: Accepted
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-05
 
 ## Context
@@ -84,9 +84,9 @@ policy, and transport acknowledgement remain future work.
   scope is EF-specific and not a core provider abstraction for future non-EF
   integrations.
 - Stable docs: Current persistence rules are described in
-  [docs/architecture/persistence.md](../architecture/persistence.md), with
-  extraction state in [docs/extraction.md](../extraction.md) and
-  [docs/extraction-plan.md](../extraction-plan.md).
+  [docs/architecture/persistence.md](../architecture/persistence.md),
+  [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md),
+  and [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad durable behavior, provider support, migration policy, transport
   strategy, or public API changes.
@@ -95,16 +95,15 @@ policy, and transport acknowledgement remain future work.
   opt-in, module command transaction/save behavior, receive-side inbox
   behavior inside the module command pipeline, and PostgreSQL transaction tests
   are applied.
-- Pending or deferred: Module identity scopes, domain-event capture,
-  source-state-plus-outbox mapping helpers, inbox markers, operation-state
-  integration, transport acknowledgement, receive retry policy, and public
-  unit-of-work abstractions remain future work.
+- Pending or deferred: None for the EF persistence-scope decision. Domain-event
+  capture, stale receive recovery, receive retry policy, and any public
+  unit-of-work abstraction remain separate future decisions.
 
 ## Verification
 
 Read back [docs/architecture/persistence.md](../architecture/persistence.md),
-[docs/extraction.md](../extraction.md), and
-[docs/extraction-plan.md](../extraction-plan.md). Verified the applied slice
+[docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md),
+and [docs/mvp-plan.md](../mvp-plan.md). Verified the applied slice
 with:
 
 - `dotnet build Bondstone.slnx --configuration Release --no-restore`

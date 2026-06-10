@@ -76,20 +76,16 @@ this adapter verifies outgoing transport behavior and header mapping only.
 
 ## Application Notes
 
-- Current contract: `Bondstone.Transport.Rebus` bridges claimed command
-  outbox records into Rebus explicit routing sends through
-  `IDurableOutboxTransport`.
+- Current relevance: Superseded by
+  [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md). This ADR is
+  retained only as historical decision trail for the removed Rebus adapter.
 - Stable docs: Current transport rules are described in
   [docs/architecture/messaging.md](../architecture/messaging.md) and
-  [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
-  with extraction state in [docs/extraction-plan.md](../extraction-plan.md).
+  [docs/architecture/persistence-core.md](../architecture/persistence-core.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad transport support changes.
-- Application evidence: Outgoing Rebus command transport, destination
-  resolution, wire envelope, header mapping, transport-only registration, and
-  unit tests are applied.
-- Pending or deferred: Rebus event publish/subscribe, typed handler discovery,
-  and transport-level integration tests remain future work.
+- Application evidence: The former Rebus implementation was removed by ADR 0036. Direct transport adapters now carry current transport behavior.
+- Pending or deferred: Not applicable after superseding.
 
 ## Verification
 

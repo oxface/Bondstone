@@ -192,33 +192,34 @@ leaving implementation details for smaller reviewed slices.
 ## Application Notes
 
 - Current contract: Accepted guardrail. Current runtime implementation remains
-  command-first for transport receive and dispatch, with core support for
+  explicit about command/event differences, with core support for
   `IIntegrationEvent`, `IntegrationEventIdentityAttribute`,
   `IDurableEventPublisher`, outbox-backed event envelope staging,
   `MessageKind.Event`, kind-aware message registrations, event subscriber
   registration metadata, event subscriber inbox-key factory naming, and event
-  envelopes without target modules. Rebus event fan-out and subscriber
-  execution remain deferred.
+  envelopes without target modules. First-class subscriber execution and
+  direct transport event routing are now applied by later ADRs.
 - Stable docs: Current command/event/domain-event split, durable event
   publisher/subscriber shape, per-subscriber inbox identity, serialization
-  boundary, diagnostics vocabulary, and Rebus topic/subscription vocabulary
-  are described in [docs/architecture/messaging.md](../architecture/messaging.md),
-  [docs/architecture/modules.md](../architecture/modules.md), and
-  [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md).
+  boundary, diagnostics vocabulary, and direct transport event vocabulary are
+  described in [docs/architecture/messaging.md](../architecture/messaging.md),
+  [docs/architecture/modules.md](../architecture/modules.md),
+  [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md),
+  and [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md).
   Sequencing is tracked in [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad public API, durable behavior, provider, transport, module runtime, or
   topology changes. It now points agents at the accepted command/event/domain
   event split.
-- Application evidence: Existing core messaging tests cover event message
-  identity registration and envelope validation. Phase 0 tests cover
-  outbox-backed durable event publish staging, event subscriber registration
-  metadata, per-subscriber inbox-key naming, and command/event topology
-  diagnostic vocabulary. Stable docs now carry the accepted guardrail.
-- Pending or deferred: Rebus event publish/subscribe topology, event outbox
-  transport dispatch, event receive workers, subscriber execution,
-  choreography samples, and automatic domain-event-to-integration-event
-  helpers remain later MVP work.
+- Application evidence: Core messaging tests cover event message identity
+  registration and envelope validation. Later event-loop tests cover
+  outbox-backed durable event publish staging, event subscriber registration,
+  per-subscriber inbox-key naming, command/event topology diagnostics,
+  subscriber execution, direct transport event routing, and sample event
+  publication/subscription.
+- Pending or deferred: None for the event-shape guardrail. Choreography
+  samples, automatic domain-event-to-integration-event helpers, and external
+  event wire formats remain separate future decisions.
 
 ## Verification
 

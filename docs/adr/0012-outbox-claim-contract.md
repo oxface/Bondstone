@@ -60,9 +60,10 @@ choose equivalent SQL or locking strategies later.
   returns records with `Processing` dispatch state and populated claim lease
   fields.
 - Stable docs: Current persistence rules are described in
-  [docs/architecture/persistence.md](../architecture/persistence.md), with
-  extraction state in [docs/extraction.md](../extraction.md) and
-  [docs/extraction-plan.md](../extraction-plan.md).
+  [docs/architecture/persistence.md](../architecture/persistence.md),
+  [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
+  [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md),
+  and [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad durable behavior, provider support, or migration policy changes.
 - Application evidence: Core claim contract, PostgreSQL implementation,
@@ -70,18 +71,15 @@ choose equivalent SQL or locking strategies later.
   tests are applied. Tests cover validation, pending due rows, scheduled
   pending rows, locked-row skipping, expired lease reclaim, active lease
   exclusion, and schema-aware registration.
-- Pending or deferred: Hosted worker loops, transport adapter implementations,
-  stale claim recovery, dead-letter routing, dispatcher configuration,
-  provider implementations beyond PostgreSQL, and migration helpers remain
-  future work. Lease renewal is now covered by ADR 0011, basic retry versus
-  dead-letter failure decisions are now covered by ADR 0013, and plain
-  dispatcher composition is covered by ADR 0017.
+- Pending or deferred: None for the claim contract decision. Stale claim
+  recovery, migration helpers, and additional provider implementations remain
+  separate future decisions.
 
 ## Verification
 
 Read back [docs/architecture/persistence.md](../architecture/persistence.md),
-[docs/extraction.md](../extraction.md), and
-[docs/extraction-plan.md](../extraction-plan.md). Ran targeted PostgreSQL
+[docs/archive/extraction.md](../archive/extraction.md), and
+[docs/archive/extraction-plan.md](../archive/extraction-plan.md). Ran targeted PostgreSQL
 tests for service registration and outbox claim behavior. Ran formatting,
 no-restore build, fast tests, pack, and `pnpm backend:test:integration`.
 Fresh restore timed out while checking the PostgreSQL test project and should

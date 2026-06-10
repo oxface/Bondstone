@@ -1,7 +1,7 @@
 # 0015 Inbox Handle-Once Orchestration
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-05
 
 ## Context
@@ -93,24 +93,25 @@ decisions.
 - Stable docs: Current messaging and persistence rules are described in
   [docs/architecture/messaging.md](../architecture/messaging.md) and
   [docs/architecture/persistence.md](../architecture/persistence.md), with
-  extraction state in [docs/extraction.md](../extraction.md) and
-  [docs/extraction-plan.md](../extraction-plan.md).
+  current implementation state in [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad durable behavior, transport strategy, provider support, migration
   policy, or public API changes.
 - Application evidence: Core handle-once result and executor contracts are
-  applied with neutral unit tests.
-- Pending or deferred: Transport adapters, handler discovery, module identity
-  scopes, domain-event capture, receive-side retry policy, inbox lease or stale
-  receive recovery, dead-letter behavior, and transport acknowledgement remain
-  future work.
+  applied with neutral unit tests. Module command and event receive pipelines,
+  EF and PostgreSQL composition, direct transport receive dispatchers, local
+  transport, RabbitMQ and Service Bus settlement helpers, and sample smoke
+  tests compose this boundary.
+- Pending or deferred: None for the handle-once executor decision. Inbox lease
+  or stale receive recovery, receive retry policy, and broker dead-letter
+  behavior remain separate future decisions.
 
 ## Verification
 
 Read back [docs/architecture/messaging.md](../architecture/messaging.md),
 [docs/architecture/persistence.md](../architecture/persistence.md),
-[docs/extraction.md](../extraction.md), and
-[docs/extraction-plan.md](../extraction-plan.md). Verified the applied slice
+[docs/mvp-plan.md](../mvp-plan.md), and [docs/testing.md](../testing.md).
+Verified the applied slice
 with:
 
 - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --no-restore`

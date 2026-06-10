@@ -77,24 +77,21 @@ reusing command destination source names.
 
 ## Application Notes
 
-- Current contract: `Bondstone.Transport.Rebus` exposes command destination
-  diagnostics through a Rebus-specific diagnostic service. The result reports
-  the command target module, `CommandDestination` kind, route source, resolved
-  destination address, receive endpoint name when applicable, and missing
-  destination reason.
+- Current relevance: Superseded by
+  [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md). This ADR is
+  retained only as historical decision trail for the removed Rebus diagnostic
+  surface.
 - Stable docs: Current command destination diagnostics are described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
-  [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md),
+  [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md),
   and [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, package-boundary, provider, transport, or durable runtime
   changes.
-- Application evidence: Rebus command destination diagnostics, shared
-  destination topology resolution, destination resolver integration, DI
-  registration, and focused route-source tests are applied.
-- Pending or deferred: Endpoint dispatcher diagnostics, listener binding,
-  event topic/subscription diagnostics, route health checks, circuit breaking,
-  and operation-state integration remain future work.
+- Application evidence: The former Rebus diagnostics were removed by ADR 0036.
+  Current topology validation is handled by direct transport diagnostics and
+  ADRs 0039 and 0040.
+- Pending or deferred: Not applicable after superseding.
 
 ## Verification
 

@@ -114,25 +114,22 @@ and samples remain future work.
 
 ## Application Notes
 
-- Current contract: A typed Rebus command receive pipeline is implemented.
-  It uses message-registry type resolution, shared durable payload
-  deserialization through the ADR 0029 serializer boundary, explicit stable
-  handler identity, Activity creation from accepted W3C context, and the
-  existing low-level Rebus inbox adapter.
+- Current relevance: Superseded by
+  [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md). This ADR is
+  retained only as historical decision trail for the removed typed Rebus
+  receive pipeline.
 - Stable docs: Current receive-side transport direction is described in
   [docs/architecture/messaging.md](../architecture/messaging.md) and
-  [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md),
+  [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md),
   with current implementation state in [docs/mvp-plan.md](../mvp-plan.md) and
   historical extraction notes in
   [docs/archive/extraction-plan.md](../archive/extraction-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, durable behavior, provider, or transport strategy changes.
-- Application evidence: Typed receive pipeline contracts, implementation,
-  telemetry ActivitySource, low-level and fluent DI registration, unit tests,
-  cross-package composition smoke tests, and stable docs are applied.
-- Pending or deferred: Transport-level integration tests, event
-  publish/subscribe, receive retry state, stale receive recovery, module
-  identity scopes, and EF-specific receive helpers remain future work.
+- Application evidence: The former typed Rebus receive pipeline was removed by
+  ADR 0036. Provider-neutral receive pipelines and direct transport adapters
+  now carry current receive behavior.
+- Pending or deferred: Not applicable after superseding.
 
 ## Verification
 

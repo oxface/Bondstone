@@ -3,10 +3,9 @@
 Bondstone is a .NET library for durable module boundaries, durable command
 sending, EF Core backed inbox/outbox persistence, and transport adapters.
 
-The repository is in active MVP productization: documentation, ADRs, repo
-tooling, package projects, test projects, CI, NuGet release plumbing, and
-several runtime slices exist; remaining runtime implementation is tracked in
-the MVP plan.
+The repository has completed its MVP scope and is moving through post-MVP
+stabilization: ADR application audit, documentation tightening, architecture
+review, and code review.
 
 ## Packages
 
@@ -20,6 +19,8 @@ publishing policy are recorded in [docs/packaging.md](docs/packaging.md).
 - [docs/architecture/README.md](docs/architecture/README.md) records runtime
   positioning.
 - [docs/setup.md](docs/setup.md) is the single user-facing setup example.
+- [docs/backlog/README.md](docs/backlog/README.md) tracks post-MVP review and
+  cleanup campaigns.
 - [docs/mvp-plan.md](docs/mvp-plan.md) tracks implemented surface, priority
   groups, current slice, and deferred MVP work.
 - [docs/packaging.md](docs/packaging.md) records package and release policy.
@@ -57,7 +58,7 @@ Required repository setup:
 
 ## Current Direction
 
-Bondstone is built gradually toward a useful library MVP. Do not bulk-copy
-implementation code from the historical template repository or preserve
-compatibility with it as a design constraint. Each slice should review package
-boundaries, public API shape, tests, docs, and service-split pressure.
+Bondstone is built gradually as a durable module-boundary library. Do not
+bulk-copy implementation code from the historical template repository or
+preserve compatibility with it as a design constraint. Each slice should review
+package boundaries, public API shape, tests, docs, and service-split pressure.

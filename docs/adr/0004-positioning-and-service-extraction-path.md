@@ -1,7 +1,7 @@
 # 0004 Positioning And Service Extraction Path
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-04
 
 ## Context
@@ -107,22 +107,24 @@ local sample orchestration host.
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad changes to public API, provider support, transport support, or durable
   behavior.
-- Application evidence: The first extracted core slices include stable message
-  identity contracts, durable command markers, registry behavior, message trace
-  context, durable command send contracts, durable operation read contracts,
-  durable message envelopes, persistence-neutral outbox/inbox and operation
-  state store contracts, provider-neutral outbox dispatch state, and send
-  result semantics. EF Core provider-neutral entity mappings, outbox writer,
-  inbox store, and operation state store have started.
-- Pending or deferred: Samples and integration tests that exercise
-  modular-monolith and service-split usage remain pending.
+- Application evidence: Core durable command, integration event, receive
+  pipeline, outbox, inbox, operation-state, module registration, module
+  execution, module-owned persistence, transport adapter, sample, and
+  integration-test surfaces now reflect the durable module-boundary
+  positioning. The modular monolith sample exercises command delivery,
+  integration event publication/subscription, inbox/outbox processing,
+  module-owned EF persistence, non-EF PostgreSQL persistence, local transport,
+  and an explicit RabbitMQ path.
+- Pending or deferred: None for this positioning decision. Broader
+  service-split examples and deeper production reliability work are post-MVP
+  follow-up topics, not incomplete application of this ADR.
 
 ## Verification
 
 Read back [docs/architecture/README.md](../architecture/README.md),
 [docs/architecture/messaging.md](../architecture/messaging.md),
 [docs/architecture/persistence.md](../architecture/persistence.md),
-[docs/extraction.md](../extraction.md), [docs/README.md](../README.md), and
-[AGENTS.md](../../AGENTS.md). Ran `pnpm check` for the current extracted core
-slices. Executable sample or integration tests that exercise modular-monolith
-and service-split usage remain pending.
+[docs/samples.md](../samples.md), [docs/testing.md](../testing.md),
+[docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Ran
+`pnpm check` for the current extracted core slices. Phase 01 audit
+verification also checked the current sample and integration-test surface.

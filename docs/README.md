@@ -11,6 +11,8 @@ duplicating durable rules.
   ADR decisions are applied into stable docs and agent instructions.
 - [architecture/README.md](architecture/README.md) records current runtime
   positioning and durable module-boundary architecture.
+- [backlog/README.md](backlog/README.md) tracks campaign-sized future work and
+  ideas that are not current operating guidance.
 - [mvp-plan.md](mvp-plan.md) tracks implemented surface, MVP priority groups,
   current slice, verification surface, and deferred work.
 - [packaging.md](packaging.md) records current package IDs, target framework,
@@ -26,6 +28,8 @@ duplicating durable rules.
 - Stable docs describe the current operating contract.
 - ADRs preserve the decision trail and explain why a durable technical decision
   exists.
+- Backlog docs track future work, review campaigns, and speculative ideas that
+  should not be presented as current behavior.
 - README files orient human maintainers to a folder or workflow.
 - AGENTS files orient agents to the relevant docs, local constraints, and
   verification expectations for a folder or workflow.
@@ -49,6 +53,8 @@ files with the local context each audience needs.
 - `mvp-plan.md` owns the current implementation, verification surface,
   priority groups, current slice, and deferred-work snapshot.
 - `architecture/` owns runtime contracts and durable boundary principles.
+- `backlog/` owns future work and review campaigns that are not active
+  operating guidance.
 - `archive/` preserves historical planning documents that should not steer new
   implementation work.
 

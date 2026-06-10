@@ -1,7 +1,7 @@
 # 0003 Package Boundaries And Target Framework
 
 Status: Accepted
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-03
 
 ## Context
@@ -63,27 +63,26 @@ automation.
 
 ## Application Notes
 
-- Current contract: Initial packages target `net10.0`, package IDs match
-  project names, and package dependencies flow from core to provider and
-  transport adapters.
+- Current contract: Packages target `net10.0`, package IDs match project
+  names, and package dependencies flow from core to provider, hosting,
+  persistence, and transport adapters.
 - Stable docs: Current package IDs, target framework, dependency direction, and
   versioning rules are described in [docs/packaging.md](../packaging.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) points agents to packaging
   docs before package-boundary or framework changes.
-- Application evidence: Initial package projects are included in the solution,
-  package metadata is centrally managed, `Bondstone` contains initial core
-  messaging and persistence contracts, and `Bondstone.EntityFrameworkCore`
-  contains initial provider-neutral persistence entity mappings, outbox writer,
-  inbox store, and operation state store. `Bondstone.EntityFrameworkCore.Postgres`
-  has started with PostgreSQL dependencies, provider registration,
-  constraint/unique-violation classification, and integration tests.
-- Pending or deferred: Broader PostgreSQL provider behavior, Rebus transport
-  behavior, additional integration tests, samples, and wider target framework
-  support remain deferred.
+- Application evidence: Current package projects are included in the solution,
+  package metadata is centrally managed, package IDs match project names, and
+  dependency direction matches [docs/packaging.md](../packaging.md). The
+  supported transport package set is now direct Local, RabbitMQ, and Azure
+  Service Bus according to ADR 0036.
+- Pending or deferred: None for this package-boundary application. Wider target
+  framework support and independent package versioning remain separate future
+  compatibility/release decisions.
 
 ## Verification
 
 Read back [docs/packaging.md](../packaging.md),
 [docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Ran
 `pnpm check`, which covered formatting, restore, build, fast tests, and pack
-for the current package implementation.
+for the current package implementation. Phase 01 audit verification rechecked
+current package projects and project-reference direction.

@@ -104,20 +104,22 @@ assemblies.
   [docs/architecture/hosting.md](../architecture/hosting.md), module and
   durable messaging validation in
   [docs/architecture/modules.md](../architecture/modules.md) and
-  [docs/architecture/messaging.md](../architecture/messaging.md), Rebus
-  receive topology validation in
-  [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md),
-  package rules in [docs/packaging.md](../packaging.md), and extraction state
-  in [docs/extraction-plan.md](../extraction-plan.md).
+  [docs/architecture/messaging.md](../architecture/messaging.md), direct
+  transport validation in
+  [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md)
+  and [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md),
+  package rules in [docs/packaging.md](../packaging.md), and current
+  implementation state in [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, package-boundary, provider, transport, or durable runtime
   changes. It also reserves `InternalsVisibleTo` for test assemblies rather
   than production package collaboration.
-- Application evidence: Core builder types, PostgreSQL/Rebus/Hosting builder
-  extensions, configuration validator contracts, outbox/module/Rebus receive
-  topology validators, and focused tests are added.
-- Pending or deferred: Broader inbox and maintenance-worker validation remains
-  deferred.
+- Application evidence: Core builder types, PostgreSQL, hosting, local
+  transport, RabbitMQ, and Service Bus builder extensions, configuration
+  validator contracts, outbox/module/direct transport topology validators, and
+  focused tests are added.
+- Pending or deferred: None for the fluent service-composition guardrail.
+  Broader maintenance-worker validation remains separate future work.
 
 ## Verification
 

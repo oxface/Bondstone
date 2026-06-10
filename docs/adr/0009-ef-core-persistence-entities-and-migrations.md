@@ -1,7 +1,7 @@
 # 0009 EF Core Persistence Entities And Migrations
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-04
 
 ## Context
@@ -106,9 +106,9 @@ orchestration remain deferred.
   outbox, inbox, and operation-state persistence. Consumers own migrations for
   now.
 - Stable docs: Current persistence rules are described in
-  [docs/architecture/persistence.md](../architecture/persistence.md), with
-  extraction state in [docs/extraction.md](../extraction.md) and
-  [docs/extraction-plan.md](../extraction-plan.md).
+  [docs/architecture/persistence.md](../architecture/persistence.md),
+  [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md),
+  and [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad changes to provider support, migration policy, package boundaries, or
   durable behavior.
@@ -121,18 +121,14 @@ orchestration remain deferred.
   processed-state, operation-state, outbox claim lease columns, savepoint
   rollback, `FOR UPDATE SKIP LOCKED` behavior, and EF persistence-scope
   transaction behavior, exist.
-- Pending or deferred: Inbox handler discovery, receive-side retry, stale
-  receive recovery, transport acknowledgement, module identity scopes,
-  higher-level transaction helper APIs, dead-letter routing, dispatcher
-  configuration, migration helpers, additional provider-specific lifecycle
-  implementations, additional integration tests, and samples remain future
-  work. Basic retry versus dead-letter failure decisions are now covered by
-  ADR 0013.
+- Pending or deferred: None for this EF Core mapping and migration-ownership
+  decision. Provider lifecycle, stale recovery, migration helpers, and
+  advanced operation policies remain separate future decisions.
 
 ## Verification
 
 Read back [docs/architecture/persistence.md](../architecture/persistence.md),
-[docs/extraction.md](../extraction.md), [docs/extraction-plan.md](../extraction-plan.md),
+[docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md),
 [docs/packaging.md](../packaging.md), and [AGENTS.md](../../AGENTS.md). Ran
 `pnpm check`; formatting, restore, build, fast tests, and pack pass for the
 current EF Core entity/mapping slice.

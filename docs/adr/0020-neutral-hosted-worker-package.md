@@ -109,19 +109,19 @@ single shared queue assumption.
 - Stable docs: Current package boundaries are described in
   [docs/packaging.md](../packaging.md), hosting rules in
   [docs/architecture/hosting.md](../architecture/hosting.md), transport rules
-  in [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md),
+  in [docs/architecture/messaging.md](../architecture/messaging.md),
   persistence rules in
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
-  and extraction state in [docs/extraction-plan.md](../extraction-plan.md).
+  and current implementation state in [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   package-boundary or durable runtime behavior changes.
 - Application evidence: `Bondstone.Hosting` package, hosted outbox worker,
-  options, validator, DI registration, neutral hosting tests, package docs,
-  and Rebus transport-only registration are applied.
-- Pending or deferred: Module-targeted outbox workers, inbox hosted workers,
-  cleanup/maintenance workers, stale-claim recovery, dead-letter routing,
-  worker metrics, circuit breaking, minimum message age, and broader
-  multi-worker registration remain future work.
+  options, validator, DI registration, neutral hosting tests, package docs, and
+  direct transport composition are applied.
+- Pending or deferred: None for the neutral hosted worker package decision.
+  Module-targeted outbox workers, inbox hosted workers, cleanup/maintenance
+  workers, stale-claim recovery, worker metrics, circuit breaking, and minimum
+  message age remain separate future decisions.
 
 ## Verification
 

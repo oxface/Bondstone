@@ -1,7 +1,7 @@
 # 0005 Slow Layered Extraction
 
 Status: Accepted
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-03
 
 ## Context
@@ -83,34 +83,26 @@ being the primary consumer after Bondstone packaging and samples mature.
 - Current contract: Bondstone source is extracted slowly by coherent slices,
   and the historical repository is source material rather than a compatibility
   constraint.
-- Stable docs: Current extraction rules are described in
-  [docs/extraction.md](../extraction.md), with architecture context in
+- Stable docs: Current implementation scope is described in
+  [docs/mvp-plan.md](../mvp-plan.md), with architecture context in
   [docs/architecture/README.md](../architecture/README.md) and current
   persistence context in
   [docs/architecture/persistence.md](../architecture/persistence.md).
+  Historical extraction notes are archived under
+  [docs/archive](../archive/README.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) directs agents to follow
   the slow extraction strategy before moving or rewriting source.
-- Application evidence: The first `Bondstone` core slices include stable
-  message identity contracts, registry behavior, message trace context, durable
-  command send contracts, durable operation read contracts, durable message
-  envelopes, persistence-neutral outbox/inbox and operation state store
-  contracts, provider-neutral outbox dispatch state, send result semantics, and
-  neutral unit tests. EF Core provider-neutral entity mappings, registration
-  helper, outbox writer, inbox store, and operation state store have started.
-  PostgreSQL integration tests have started with Testcontainers-backed
-  verification of those EF mappings and stores against PostgreSQL. PostgreSQL
-  provider registration and constraint/unique-violation classification helpers
-  exist. PostgreSQL savepoint rollback and `FOR UPDATE SKIP LOCKED` primitives
-  have been verified for future inbox and outbox APIs. Outbox dispatch state
-  includes claim lease fields.
-- Pending or deferred: `Send and wait` behavior, trace context and causation
-  propagation, envelope content type/header expansion, retry policy,
-  broader PostgreSQL provider behavior, Rebus transport behavior, additional
-  integration tests, and samples remain future extraction work.
+- Application evidence: Bondstone was extracted through coherent slices rather
+  than a bulk compatibility copy. Current packages, tests, docs, samples,
+  direct transport adapters, EF and non-EF persistence providers, and backlog
+  follow-up plans reflect that staged extraction.
+- Pending or deferred: None for the extraction discipline itself. Future
+  behavior such as richer operation policies, stale recovery, broker topology
+  helpers, and service-split examples requires separate ADR-backed work.
 
 ## Verification
 
-Read back [docs/extraction.md](../extraction.md),
+Read back [docs/archive/extraction.md](../archive/extraction.md),
 [docs/architecture/README.md](../architecture/README.md),
 [docs/architecture/messaging.md](../architecture/messaging.md),
 [docs/architecture/persistence.md](../architecture/persistence.md),

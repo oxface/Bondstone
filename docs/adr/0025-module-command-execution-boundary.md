@@ -1,7 +1,7 @@
 # 0025 Module Command Execution Boundary
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-06
 
 ## Context
@@ -208,20 +208,18 @@ additional ADR review or amendments.
   outcomes, receive-side inbox system behavior, and a validation pipeline
   behavior. `Bondstone.EntityFrameworkCore` now adds module-owned EF
   persistence opt-in and an EF transaction system pipeline behavior for
-  modules that declare EF persistence. `Bondstone.Transport.Rebus` now has
-  module command receive pipeline groundwork that dispatches Rebus wire
-  envelopes into `IModuleCommandExecutor`, plus host-owned receive endpoint
-  topology metadata that binds Rebus endpoint names to accepted local modules
-  and can derive outgoing command destinations from those bindings or module
-  queue conventions, an endpoint dispatcher that validates receive endpoint
-  membership, and a Rebus handler that binds one configured endpoint name to
-  module command receive.
+  modules that declare EF persistence. Rebus-specific transport application
+  has been superseded by ADR 0036; current command receive dispatch is exposed
+  through provider-neutral receive pipelines and the direct Local, RabbitMQ,
+  and Azure Service Bus adapters.
 - Stable docs: Current module command direction is described in
   [docs/architecture/modules.md](../architecture/modules.md), with supporting
-  messaging, persistence, and Rebus transport notes in
+  messaging, persistence, and direct transport notes in
   [docs/architecture/messaging.md](../architecture/messaging.md),
-  [docs/architecture/persistence.md](../architecture/persistence.md), and
-  [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md).
+  [docs/architecture/persistence.md](../architecture/persistence.md),
+  [docs/architecture/transport-local.md](../architecture/transport-local.md),
+  [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md),
+  and [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, durable behavior, provider, transport, or module runtime changes.
 - Application evidence: Core module command registration and executor
@@ -232,23 +230,19 @@ additional ADR review or amendments.
   durable command sending, ordered system pipeline behavior, module
   execution results, explicit receive inbox records, receive-side inbox system
   behavior, module persistence metadata, EF module persistence opt-in, EF
-  command transaction/save behavior, and Rebus module command receive dispatch.
-  Rebus outgoing host topology now has an adapter-specific `UseRebusTransport`
-  builder for conventional module queue naming, explicit target-module
-  destination overrides, convention fallback routing, and Rebus receive
-  endpoint bindings to accepted local modules. Rebus receive topology now has
-  an endpoint dispatcher and module command endpoint handler that bind a
-  configured endpoint name to `IModuleCommandExecutor` while leaving Rebus
-  infrastructure configuration application-owned. Durable operation state is
-  now integrated for caller-supplied operation ids in command send and
-  successful module command receive. Core module registration now records
-  module metadata,
+  command transaction/save behavior, and provider-neutral module command
+  receive dispatch. Local, RabbitMQ, and Service Bus transports bind
+  provider-native receive topology to the neutral command receive pipeline
+  while leaving provider infrastructure configuration application-owned.
+  Durable operation state is now integrated for caller-supplied operation ids
+  in command send and successful module command receive. Core module
+  registration now records module metadata,
   `UseDurableMessaging` capability state, and module persistence capability
   state through `IBondstoneModuleRegistry`.
-- Pending or deferred: Durable-messaging capability validation in
-  transport/persistence adapters, provider-specific module persistence
-  validation, richer operation-state transition policy, receive retry state,
-  stale receive recovery, event handling, and samples remain future work.
+- Pending or deferred: None for the module command execution boundary. Richer
+  operation-state transition policy, receive retry state, stale receive
+  recovery, and additional service-extraction examples remain separate future
+  decisions.
 
 ## Verification
 
@@ -256,6 +250,5 @@ Read back affected architecture docs and ran:
 
 - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --filter "Category=Unit"`
 - `dotnet test tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application"`
-- `dotnet test tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application"`
-- `dotnet test tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj --configuration Release --filter "Category=Unit|Category=Integration"`
+- focused direct transport receive tests in later ADR slices
 - `pnpm check`

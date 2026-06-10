@@ -78,24 +78,24 @@ acknowledgement is coordinated.
   record and returns whether it was newly registered, already received, or
   already processed.
 - Stable docs: Current persistence rules are described in
-  [docs/architecture/persistence.md](../architecture/persistence.md), with
-  extraction state in [docs/extraction.md](../extraction.md) and
-  [docs/extraction-plan.md](../extraction-plan.md).
+  [docs/architecture/persistence.md](../architecture/persistence.md),
+  [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
+  [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md),
+  and [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad durable behavior, provider support, or migration policy changes.
 - Application evidence: Core inbox registration contract, PostgreSQL
   implementation, PostgreSQL service registration, and Testcontainers-backed
   registration tests are applied.
-- Pending or deferred: Inbox handler discovery, receive-side retry policy,
-  stale receive recovery, transport acknowledgement, module identity scopes,
-  higher-level transaction helper APIs, provider implementations beyond
-  PostgreSQL, and migration helpers remain future work.
+- Pending or deferred: None for the inbox registration decision. Stale receive
+  recovery, receive retry policy, migration helpers, and additional provider
+  implementations remain separate future decisions.
 
 ## Verification
 
 Read back [docs/architecture/persistence.md](../architecture/persistence.md),
-[docs/extraction.md](../extraction.md), and
-[docs/extraction-plan.md](../extraction-plan.md). Verified with targeted
+[docs/archive/extraction.md](../archive/extraction.md), and
+[docs/archive/extraction-plan.md](../archive/extraction-plan.md). Verified with targeted
 PostgreSQL tests for newly registered, already received, already processed,
 transaction-safe duplicate registration, and schema-aware registration.
 

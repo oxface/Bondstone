@@ -1,7 +1,7 @@
 # 0010 PostgreSQL Provider And Integration Testing
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-04
 
 ## Context
@@ -78,9 +78,9 @@ tests expose the shape those APIs need.
   remains in `Bondstone.EntityFrameworkCore`.
 - Stable docs: Current persistence rules are described in
   [docs/architecture/persistence.md](../architecture/persistence.md), testing
-  rules in [docs/testing.md](../testing.md), and extraction state in
-  [docs/extraction.md](../extraction.md) and
-  [docs/extraction-plan.md](../extraction-plan.md).
+  rules in [docs/testing.md](../testing.md), PostgreSQL-specific EF behavior
+  in [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md),
+  and current implementation state in [docs/mvp-plan.md](../mvp-plan.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   broad provider support, migration policy, or durable behavior changes.
 - Application evidence: The PostgreSQL package shell exists. First
@@ -96,18 +96,15 @@ tests expose the shape those APIs need.
   unique-violation exception classification helpers exist. Constraint names
   live with the provider-neutral EF mappings; constants are exposed only where
   another package needs reuse.
-- Pending or deferred: Migration helpers, inbox handler discovery, receive-side
-  retry, stale receive recovery, transport acknowledgement, module identity
-  scopes, higher-level transaction helper APIs, stale-claim recovery,
-  dead-letter routing, dispatcher configuration, operation-state concurrency,
-  and samples remain future work. Lease renewal is now covered by ADR 0011, and
-  basic retry versus dead-letter failure decisions are now covered by ADR 0013.
+- Pending or deferred: None for this PostgreSQL provider/integration-test
+  decision. Migration helpers, stale recovery, and advanced operation-state
+  policy remain separate future decisions.
 
 ## Verification
 
 Read back [docs/architecture/persistence.md](../architecture/persistence.md),
-[docs/testing.md](../testing.md), [docs/extraction.md](../extraction.md), and
-[docs/extraction-plan.md](../extraction-plan.md). Ran targeted PostgreSQL
+[docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md),
+[docs/testing.md](../testing.md), and [docs/mvp-plan.md](../mvp-plan.md). Ran targeted PostgreSQL
 integration tests for provider schema, primary-key constraints, transaction,
 duplicate-conflict, inbox processed-state, operation-state, and registration
 behavior. PostgreSQL tests also verify outbox claim lease columns, savepoint

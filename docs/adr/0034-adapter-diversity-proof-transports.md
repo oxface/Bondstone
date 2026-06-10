@@ -1,7 +1,7 @@
 # 0034 Adapter Diversity Proof Transports
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-09
 
 ## Context
@@ -116,9 +116,11 @@ slices.
   have been superseded by
   [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md). Direct
   Service Bus and RabbitMQ adapters are now the active transport direction.
-- Current contract: Phase 6 adapter-diversity proof starts with outgoing
-  Service Bus and RabbitMQ durable outbox transports. Each adapter keeps
-  provider-native topology vocabulary and app-owned broker setup. Event
+- Current contract: Phase 6 adapter-diversity proof includes outgoing durable
+  outbox transports, provider-native receive topology, direct receive
+  dispatchers, settlement helpers, opt-in hosted receive workers, and
+  provider-backed receive tests for Service Bus and RabbitMQ. Each adapter
+  keeps provider-native topology vocabulary and app-owned broker setup. Event
   publication routes to provider-native destinations: Service Bus topic or
   queue, and RabbitMQ exchange/routing-key or queue.
 - Stable docs: Package names and proof scope are reflected in
@@ -132,21 +134,17 @@ slices.
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) directs adapter-diversity
   proof work to stay provider-native, app-owned, and slice-based.
 - Application evidence: Package scaffolds, outgoing dispatch implementations,
-  diagnostics, service registration, and focused fast tests are applied for
+  diagnostics, service registration, receive topology, receive dispatchers,
+  settlement helpers, opt-in hosted receive workers, focused fast tests, and
+  provider-backed receive tests are applied for
   `Bondstone.Transport.ServiceBus` and `Bondstone.Transport.RabbitMq`. The
-  Service Bus adapter now supports event topic and event queue destinations.
-  The RabbitMQ adapter now supports event exchange/routing-key destinations
-  and event queue destinations through the default exchange. The modular
-  monolith sample includes a second explicit integration event,
-  `InventoryReservedEvent`, so the sample proves command delivery plus event
-  publication in both module directions without becoming a broker matrix.
-- Pending or deferred: Direct receive adapters, provider-backed receive worker
-  tests, provider retry/recovery boundaries, startup topology validation, and
-  event queue fan-out diagnostics are now covered by ADRs 0036, 0038, 0039,
-  and 0040. Broker topology declaration, external event wire formats, any
-  public cross-provider diagnostic report object, and deeper provider
-  reliability matrices remain separate future decisions. The non-EF
-  persistence proof is handled by [ADR 0035](0035-postgresql-dapper-persistence-proof.md).
+  modular monolith sample includes explicit integration events and a preferred
+  RabbitMQ path without becoming a broker matrix.
+- Pending or deferred: None for the adapter-diversity proof decision. Broker
+  topology declaration, external event wire formats, any public cross-provider
+  diagnostic report object, and deeper provider reliability matrices remain
+  separate future decisions. The non-EF persistence proof is handled by
+  [ADR 0035](0035-postgresql-dapper-persistence-proof.md).
 
 ## Verification
 

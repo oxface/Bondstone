@@ -221,42 +221,31 @@ implementation, rather than as only future vocabulary.
 
 ## Application Notes
 
-- 2026-06-09 reset: Rebus-specific transport application described below has
+- 2026-06-09 reset: Rebus-specific transport application has
   been superseded by
   [ADR 0036](0036-direct-transport-adapters-and-rebus-removal.md). The current
   durable event contract that remains applied is core event publish staging,
   module subscriber registration/execution, per-subscriber inbox identity,
   EF/PostgreSQL persistence behavior, and the sample proof over the
   provider-neutral receive pipelines. Direct RabbitMQ and Service Bus receive
-  adapters are follow-up slices.
+  adapters are now applied by later ADRs.
 - Current contract: Accepted Phase 5 event topology and execution direction.
-  Core event publish staging and module event registration metadata already
-  exist. Rebus event publish dispatch and topic diagnostics are applied using
-  native Rebus `IBus.Advanced.Routing` for commands and
-  `IBus.Advanced.Topics` for events. Core subscriber execution and
-  per-subscriber inbox orchestration are applied through
-  `IModuleEventSubscriberExecutor` and event subscriber pipeline behaviors.
-  EF Core event subscriber transaction behavior is applied for modules that
-  opt into EF persistence. Rebus receive endpoint event subscription bindings
-  and event envelope receive execution are applied. Rebus in-memory
-  transport-backed event publish/subscribe receive is verified through native
-  Rebus topic subscription and publish APIs. Rebus event subscription
-  diagnostics are applied. The modular monolith sample proves explicit
-  integration event publication and subscriber execution with app-owned
-  native Rebus topic subscription startup. Optional native Rebus subscription
-  startup helpers, external event wire formats, provider-specific event
-  queue/address handoff, and provider-backed event transport tests remain
-  future slices.
-  Adapter-diversity proof work should follow after the first-class event loop
-  has enough shape and should validate Azure Service Bus, RabbitMQ, and one
-  non-EF persistence path with thin proof-oriented slices.
+  Core event publish staging, module event registration metadata, subscriber
+  execution, per-subscriber inbox orchestration, EF event subscriber
+  transactions, direct transport event routing, direct receive dispatch, and
+  sample event proof are applied. RabbitMQ uses exchange/routing-key or queue
+  event destinations. Service Bus uses topic or queue event destinations.
+  Queue-style event destinations validate receive binding fan-out according
+  to ADR 0040.
 - Stable docs: Current Phase 5 event direction is described in
   [docs/architecture/README.md](../architecture/README.md),
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/modules.md](../architecture/modules.md),
   [docs/architecture/persistence.md](../architecture/persistence.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
-  [docs/architecture/transport-rebus.md](../architecture/transport-rebus.md),
+  [docs/architecture/transport-local.md](../architecture/transport-local.md),
+  [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md),
+  [docs/architecture/transport-servicebus.md](../architecture/transport-servicebus.md),
   [docs/packaging.md](../packaging.md), [docs/setup.md](../setup.md),
   [docs/testing.md](../testing.md), [docs/samples.md](../samples.md), and
   [docs/mvp-plan.md](../mvp-plan.md).
@@ -264,46 +253,17 @@ implementation, rather than as only future vocabulary.
   review before public API, durable behavior, provider, transport, module
   runtime, topology, and sample architecture changes. No new repository skill
   is required for this one-off implementation slice.
-- Application evidence: Phase 0 core event shape and stable docs are applied.
-  Phase 5 begins with this ADR, stable-doc updates, and the first small Rebus
-  event publish topology/dispatch slice. The Rebus transport builder now
-  supports explicit event topic routes and an event topic convention; claimed
-  event outbox records publish through Rebus topics with Bondstone wire
-  envelopes and headers; Rebus command and event outbox dispatch are separated
-  behind the `IDurableOutboxTransport` adapter; focused unit tests cover topic
-  resolution, diagnostics, missing-topic failure, and fluent builder dispatch.
-  The core module event subscriber executor now resolves subscribers by module,
-  stable event identity, and subscriber identity; executes typed event
-  handlers through event subscriber pipeline behaviors; sets the subscriber
-  module execution context through a system behavior; composes per-subscriber
-  inbox records for explicit receive contexts through a system behavior; skips
-  already processed inbox records; supports application subscriber pipeline
-  behaviors; and validates that durable event subscribers belong to
-  durable-messaging modules. The EF Core package now registers event
-  subscriber transaction behavior for module-owned EF persistence so event
-  handler state, receive inbox markers, and outgoing outbox messages can be
-  saved in the subscriber module transaction boundary. The Rebus adapter now
-  supports receive endpoint event subscription bindings, dispatches event
-  envelopes by stable event identity to all bound subscribers on the endpoint,
-  deserializes event payloads through the shared durable payload serializer,
-  derives per-subscriber inbox records, and calls
-  `IModuleEventSubscriberExecutor`. Rebus in-memory transport-backed
-  integration coverage now verifies native topic subscription and publish
-  handoff into the Bondstone module event subscriber receive path. Event
-  subscription diagnostics now report topic resolution, endpoint/subscriber
-  bindings, subscriber module, stable subscriber identity, and zero-subscriber
-  outcomes. The modular monolith sample now uses an ordering contracts
-  integration event, outbox-backed event publication, Rebus in-memory topic
-  delivery, fulfillment event subscriber execution, per-subscriber inbox
-  handling, and EF subscriber transaction behavior.
-- Pending or deferred: The Rebus-specific portions are historical after ADR 0036. Azure Service Bus and RabbitMQ direct transport proofs,
-  provider-backed receive tests, non-EF persistence proof, startup topology
-  validation, and event queue fan-out diagnostics are now covered by later
-  ADRs. External event wire formats, event choreography samples, domain event
-  persistence, automatic integration-event publication, retry state, failure
-  state, stale receive recovery, broker-specific topology creation, and any
-  public cross-provider diagnostic report object remain separate future
-  decisions.
+- Application evidence: Core event shape, event publish staging, event
+  subscriber registration/execution, per-subscriber inbox identity, EF event
+  subscriber transactions, direct transport event dispatch, direct receive
+  topology validation, queue fan-out diagnostics, local transport sample
+  execution, RabbitMQ sample path, and provider-backed receive integration
+  tests are applied.
+- Pending or deferred: None for the first-class event loop decision. External
+  event wire formats, event choreography samples, domain event persistence,
+  automatic integration-event publication, retry state, failure state, stale
+  receive recovery, broker-specific topology creation, and any public
+  cross-provider diagnostic report object remain separate future decisions.
 
 ## Verification
 

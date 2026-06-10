@@ -23,6 +23,10 @@ Start with:
 - [.agents/skills/AGENTS.md](.agents/skills/AGENTS.md) before adding or
   changing repository agent skills.
 
+For scoped work, prefer the nearest folder `AGENTS.md` as the local index and
+follow its references. The repository context-index convention is documented in
+[docs/repository.md](docs/repository.md).
+
 ## Operating Rules
 
 - Do not vibe-code. Read the relevant docs and implementation first, state the
@@ -98,10 +102,7 @@ Start with:
   [docs/architecture/messaging.md](docs/architecture/messaging.md),
   [docs/architecture/transport-rabbitmq.md](docs/architecture/transport-rabbitmq.md),
   and
-  [docs/architecture/transport-servicebus.md](docs/architecture/transport-servicebus.md):
-  Bondstone owns persisted outbox retry and terminal failure state, while
-  direct provider receive adapters own settlement ordering and diagnostics
-  without owning broker retry/dead-letter policy.
+  [docs/architecture/transport-servicebus.md](docs/architecture/transport-servicebus.md).
 - Direct provider transport adapters are the current direction according to
   [docs/architecture/README.md](docs/architecture/README.md) and
   [docs/packaging.md](docs/packaging.md). Do not adapt another bus abstraction

@@ -44,7 +44,7 @@ public sealed class DurableModuleOutboxDispatchAggregator(
         var claimedCount = 0;
         var dispatchedCount = 0;
         var retryScheduledCount = 0;
-        var deadLetteredCount = 0;
+        var terminalFailedCount = 0;
         var staleCount = 0;
 
         foreach (IDurableModuleOutboxDispatcher dispatcher in _moduleDispatchers)
@@ -64,7 +64,7 @@ public sealed class DurableModuleOutboxDispatchAggregator(
             claimedCount += result.ClaimedCount;
             dispatchedCount += result.DispatchedCount;
             retryScheduledCount += result.RetryScheduledCount;
-            deadLetteredCount += result.DeadLetteredCount;
+            terminalFailedCount += result.TerminalFailedCount;
             staleCount += result.StaleCount;
         }
 
@@ -72,7 +72,7 @@ public sealed class DurableModuleOutboxDispatchAggregator(
             claimedCount,
             dispatchedCount,
             retryScheduledCount,
-            deadLetteredCount,
+            terminalFailedCount,
             staleCount);
     }
 }

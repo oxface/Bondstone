@@ -1,19 +1,23 @@
 # Outbox Terminal Failure
 
+Status: Resolved by
+[ADR 0041](../adr/0041-outbox-terminal-failure-boundary.md).
+
 Goal: resolve Bondstone's outgoing outbox retry and terminal-failure
 terminology before the persisted/public status language hardens.
 
 ## Scope
 
-- Review `DurableOutboxStatus.DeadLettered`,
+- Review the legacy `DurableOutboxStatus.DeadLettered`,
   `DurableOutboxFailureDecisionKind.DeadLetter`, recorder methods, tests, and
   docs for confusion with provider-native broker DLQs.
 - Keep the boundary clear: Bondstone owns outgoing persisted outbox retry and
   terminal failure; RabbitMQ and Service Bus own receive retry and native
   dead-letter policy after nack/abandon.
-- Decide whether to keep `DeadLettered` with sharper docs or rename it to a
-  term such as terminal failure.
-- If renaming, define compatibility and persistence migration expectations.
+- Decision: rename the current write-side vocabulary to terminal-failure
+  language. New terminal rows use `DurableOutboxStatus.TerminalFailed`;
+  no old persisted outbox status text or obsolete public dead-letter API names
+  are kept.
 
 ## ADRs
 
@@ -21,18 +25,25 @@ terminology before the persisted/public status language hardens.
 
 ## Review Questions
 
-- Is `DeadLettered` acceptable as a Bondstone outbox term if docs repeatedly
-  distinguish it from broker DLQs?
-- Is a rename worth the migration and compatibility cost after initial package
-  publication?
-- Should failure reason text be constrained or redacted before production
-  guidance hardens?
+- Resolved: `DeadLettered` is no longer the current Bondstone outbox
+  vocabulary because it is too easy to confuse with provider-native broker
+  dead-letter queues.
+- Resolved: the rename is worth doing before compatibility expectations
+  harden, without compatibility aliases or legacy persisted-text reads.
+- Deferred: failure reason redaction or production operator guidance is not
+  part of ADR 0041.
 
 ## Candidate Deliverables
 
-- Accepted or rejected ADR 0041.
+- Accepted ADR 0041.
 - Stable docs updated with the accepted outbox terminal-failure language.
-- Follow-up implementation issue for rename/migration if the ADR accepts one.
+- Focused implementation completed for core API names, provider persisted
+  status writes, and tests.
+
+## Follow-Up
+
+- Consider future failure-reason redaction or retention guidance before
+  production operations guidance hardens.
 
 ## Verification
 

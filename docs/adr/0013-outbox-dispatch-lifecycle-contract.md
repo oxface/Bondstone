@@ -84,12 +84,21 @@ behavior can construct the policy with explicit `maxAttempts` and
 configuration binding, hosted dispatchers, transport-specific retry behavior,
 or dead-letter routing.
 
+## Amendment 2026-06-10: Terminal Failure Terminology
+
+[ADR 0041](0041-outbox-terminal-failure-boundary.md) renames the current
+outgoing outbox terminal status and public vocabulary from dead-letter wording
+to terminal-failure wording. `IDurableOutboxDispatchRecorder` now exposes
+`MarkTerminalFailedAsync(...)` for the current API vocabulary. The old
+`MarkDeadLetteredAsync(...)` compatibility method is not kept because there is
+no old public or persisted compatibility surface to support.
+
 ## Application Notes
 
 - Current contract: `IDurableOutboxDispatchRecorder` records dispatch success,
-  retry scheduling, and dead-letter outcomes for currently claimed outbox
+  retry scheduling, and terminal-failure outcomes for currently claimed outbox
   rows. `IDurableOutboxFailurePolicy` and `DurableOutboxFailurePolicy` decide
-  retry versus dead-letter after a failed claimed delivery attempt.
+  retry versus terminal failure after a failed claimed delivery attempt.
 - Stable docs: Current persistence rules are described in
   [docs/architecture/persistence.md](../architecture/persistence.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
@@ -103,7 +112,8 @@ or dead-letter routing.
   tests are applied.
 - Pending or deferred: None for the dispatch lifecycle decision. Stale claim
   recovery orchestration, advanced configuration, provider implementations
-  beyond PostgreSQL, and migration helpers remain separate future decisions.
+  beyond PostgreSQL, and retention or archival tooling remain separate future
+  decisions.
 
 ## Verification
 

@@ -95,7 +95,7 @@ public sealed class PostgresDurableOutboxDispatchRecorder(
             ct);
     }
 
-    public ValueTask<bool> MarkDeadLetteredAsync(
+    public ValueTask<bool> MarkTerminalFailedAsync(
         Guid messageId,
         string claimedBy,
         string failureReason,
@@ -109,7 +109,7 @@ public sealed class PostgresDurableOutboxDispatchRecorder(
 
         return UpdateClaimedAsync(
             """
-            "Status" = @DeadLettered,
+            "Status" = @TerminalFailed,
             "NextAttemptAtUtc" = NULL,
             "DispatchedAtUtc" = NULL,
             "FailedAtUtc" = @FailedAtUtc,
@@ -122,7 +122,7 @@ public sealed class PostgresDurableOutboxDispatchRecorder(
             failedAtUtc,
             new
             {
-                DeadLettered = DurableOutboxStatus.DeadLettered.ToString(),
+                TerminalFailed = DurableOutboxStatus.TerminalFailed.ToString(),
                 FailedAtUtc = failedAtUtc,
                 FailureReason = NormalizeFailureReason(failureReason),
             },

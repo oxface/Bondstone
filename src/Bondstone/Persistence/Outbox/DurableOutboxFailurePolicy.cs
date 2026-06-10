@@ -72,7 +72,7 @@ public sealed class DurableOutboxFailurePolicy : IDurableOutboxFailurePolicy
 
         if (dispatchState.AttemptCount >= _maxAttempts)
         {
-            return DurableOutboxFailureDecision.DeadLetter(
+            return DurableOutboxFailureDecision.TerminalFailure(
                 normalizedFailureReason,
                 failedAtUtc);
         }

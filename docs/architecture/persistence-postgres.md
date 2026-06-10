@@ -47,5 +47,9 @@ module.UsePostgresPersistence(connectionString, schema: "billing");
 Handlers that need application SQL can take `IPostgresModuleSession` and
 execute commands through the current connection and transaction.
 
+Outbox terminal status semantics are defined in
+[persistence-core.md](persistence-core.md); this provider only records the
+provider-specific PostgreSQL outcome update.
+
 Follow-up PostgreSQL non-EF persistence ideas that are outside the current
 contract are tracked in [../backlog/09-future-work.md](../backlog/09-future-work.md).

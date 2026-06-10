@@ -124,7 +124,7 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
         return rowCount == 1;
     }
 
-    public async ValueTask<bool> MarkDeadLetteredAsync(
+    public async ValueTask<bool> MarkTerminalFailedAsync(
         Guid messageId,
         string claimedBy,
         string failureReason,
@@ -139,7 +139,7 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
             $$"""
             UPDATE {{_tableName}}
             SET
-                {{StatusColumn}} = @deadLettered,
+                {{StatusColumn}} = @terminalFailed,
                 {{NextAttemptAtUtcColumn}} = NULL,
                 {{DispatchedAtUtcColumn}} = NULL,
                 {{FailedAtUtcColumn}} = @failedAtUtc,
@@ -155,7 +155,7 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
         int rowCount = await context.Database.ExecuteSqlRawAsync(
             sql,
             [
-                new NpgsqlParameter("deadLettered", DurableOutboxStatus.DeadLettered.ToString()),
+                new NpgsqlParameter("terminalFailed", DurableOutboxStatus.TerminalFailed.ToString()),
                 new NpgsqlParameter("failedAtUtc", failedAtUtc),
                 new NpgsqlParameter("failureReason", normalizedFailureReason),
                 new NpgsqlParameter("messageId", messageId),

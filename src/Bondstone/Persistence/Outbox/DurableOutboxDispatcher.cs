@@ -45,7 +45,7 @@ public sealed class DurableOutboxDispatcher(
 
         var dispatchedCount = 0;
         var retryScheduledCount = 0;
-        var deadLetteredCount = 0;
+        var terminalFailedCount = 0;
         var staleCount = 0;
 
         foreach (DurableOutboxRecord record in records)
@@ -95,7 +95,7 @@ public sealed class DurableOutboxDispatcher(
                     continue;
                 }
 
-                deadLetteredCount++;
+                terminalFailedCount++;
                 continue;
             }
 
@@ -119,7 +119,7 @@ public sealed class DurableOutboxDispatcher(
             records.Count,
             dispatchedCount,
             retryScheduledCount,
-            deadLetteredCount,
+            terminalFailedCount,
             staleCount);
     }
 
@@ -140,7 +140,7 @@ public sealed class DurableOutboxDispatcher(
                 ct);
         }
 
-        return await dispatchRecorder.MarkDeadLetteredAsync(
+        return await dispatchRecorder.MarkTerminalFailedAsync(
             record.Envelope.MessageId,
             claimedBy,
             decision.FailureReason,

@@ -108,6 +108,15 @@ Stable docs and agent instructions should prefer "terminal outbox failure" or
 Use "dead-letter" for provider-native broker behavior or when referring to
 the existing `DeadLettered` storage status explicitly.
 
+## Amendment 2026-06-10: Outbox Terminal Status Rename
+
+[ADR 0041](0041-outbox-terminal-failure-boundary.md) resolves the terminology
+follow-up by renaming the current outgoing outbox terminal status to
+`TerminalFailed`. The older `DeadLettered` status text and public API aliases
+are not kept because there is no old data or public compatibility surface to
+support. This does not change the provider boundary: RabbitMQ and Service Bus
+still own receive-side retry and broker dead-letter policy.
+
 ## Consequences
 
 Phase 7 can improve RabbitMQ and Service Bus recovery diagnostics without
@@ -136,15 +145,17 @@ ADR accepts stale receive recovery semantics.
 - [0033 First-Class Event Publish/Subscribe Topology](0033-first-class-event-publish-subscribe-topology.md)
 - [0034 Adapter Diversity Proof Transports](0034-adapter-diversity-proof-transports.md)
 - [0036 Direct Transport Adapters And Rebus Removal](0036-direct-transport-adapters-and-rebus-removal.md)
+- [0041 Outbox Terminal Failure Boundary](0041-outbox-terminal-failure-boundary.md)
 
 ## Application Notes
 
-- Current contract: Bondstone owns persisted outbox retry and terminal failure
-  state for outbox dispatch. Direct provider receive adapters own settlement
-  ordering and diagnostics, while broker retry/dead-letter policy stays
-  provider-native and application-owned. MVP receive registration names the
-  native receive entities and exposes only bounded worker options, such as
-  RabbitMQ failure requeue and Service Bus processor concurrency/lock renewal.
+- Current contract: Bondstone owns persisted outbox retry and the
+  `TerminalFailed` terminal state for outbox dispatch. Direct provider receive
+  adapters own settlement ordering and diagnostics, while broker
+  retry/dead-letter policy stays provider-native and application-owned. MVP
+  receive registration names the native receive entities and exposes only
+  bounded worker options, such as RabbitMQ failure requeue and Service Bus
+  processor concurrency/lock renewal.
 - Stable docs: The rule is reflected in
   [docs/architecture/README.md](../architecture/README.md),
   [docs/architecture/messaging.md](../architecture/messaging.md),

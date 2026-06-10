@@ -216,10 +216,12 @@ hosted receive lifecycle helpers over configured receive topology.
 Provider-backed integration tests cover successful receive settlement,
 dead-letter handoff after failed dispatch, and event subscriber fan-out.
 
-Bondstone owns persisted outbox retry and terminal failure state. Direct
-provider receive adapters own settlement ordering and operational diagnostics,
-but broker retry schedules, delivery counts, dead-letter policy, and provider
-client retry configuration remain application-owned and provider-native.
+Bondstone owns persisted outbox retry and terminal failure state. The outgoing
+outbox terminal status is documented in
+[persistence-core.md](persistence-core.md). Direct provider receive adapters
+own settlement ordering and operational diagnostics, but broker retry
+schedules, delivery counts, dead-letter policy, and provider client retry
+configuration remain application-owned and provider-native.
 
 Applications bind Bondstone receive topology to provider-native queues and
 subscriptions where their retry/DLQ policy is already configured. RabbitMQ

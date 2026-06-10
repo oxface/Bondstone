@@ -94,6 +94,11 @@ claimed outbox record through the provider whose topology matches that
 message. If no provider or more than one provider matches, dispatch fails
 instead of guessing.
 
+Bondstone owns retry and terminal failure for outgoing persisted outbox
+records. Current outbox status semantics are described in
+[architecture/persistence-core.md](architecture/persistence-core.md); they are
+separate from provider-native receive DLQs.
+
 ## Module Registration
 
 Register modules through module-owned `IBondstoneModule` objects or thin host

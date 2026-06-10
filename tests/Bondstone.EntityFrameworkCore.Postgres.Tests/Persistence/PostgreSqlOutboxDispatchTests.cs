@@ -85,7 +85,7 @@ public sealed partial class PostgreSqlPersistenceTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task OutboxDispatchRecorder_WhenClaimedMessageIsDeadLettered_MarksDeadLetteredAndClearsClaim()
+    public async Task OutboxDispatchRecorder_WhenClaimedMessageIsTerminalFailed_MarksTerminalFailedAndClearsClaim()
     {
         await ResetDatabaseAsync();
         Guid messageId = Guid.Parse("0343d8d4-43b0-45e4-8d8c-b5cabf7e93d4");
@@ -96,7 +96,7 @@ public sealed partial class PostgreSqlPersistenceTests
         await using PostgreSqlTestDbContext context = CreateContext();
         var recorder = new PostgreSqlDurableOutboxDispatchRecorder<PostgreSqlTestDbContext>(context);
 
-        bool updated = await recorder.MarkDeadLetteredAsync(
+        bool updated = await recorder.MarkTerminalFailedAsync(
             messageId,
             "dispatcher-1",
             "poison message",
@@ -109,7 +109,7 @@ public sealed partial class PostgreSqlPersistenceTests
             .Set<OutboxMessageEntity>()
             .SingleAsync(entity => entity.MessageId == messageId);
 
-        Assert.Equal(DurableOutboxStatus.DeadLettered, entity.Status);
+        Assert.Equal(DurableOutboxStatus.TerminalFailed, entity.Status);
         Assert.Equal(failedAtUtc, entity.FailedAtUtc);
         Assert.Equal("poison message", entity.FailureReason);
         Assert.Null(entity.NextAttemptAtUtc);

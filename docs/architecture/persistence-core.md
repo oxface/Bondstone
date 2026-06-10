@@ -28,7 +28,8 @@ claim owner, and optional claim lease expiry.
 dispatch. Claim implementations mark rows as `Processing`, populate claim
 ownership and lease expiry, and increment attempt count at claim time. The
 claim boundary does not dispatch messages, acknowledge transport delivery,
-renew leases, schedule retries, dead-letter messages, or clean up stale work.
+renew leases, schedule retries, terminally fail messages, or clean up stale
+work.
 
 `IDurableOutboxLeaseRenewer` extends the active lease for one claimed outbox
 message. Implementations update the lease only when the row is still
@@ -38,20 +39,21 @@ messages, recover stale claims, or schedule retries.
 
 `IDurableOutboxDispatchRecorder` records the result of a claimed delivery
 attempt. It records dispatch success, schedules retry after a failure, or marks
-a claimed row as dead-lettered. These updates are claim-owner and lease-time
-aware.
+a claimed row as terminally failed. These updates are claim-owner and
+lease-time aware.
 
-The persisted `DeadLettered` outbox status is a terminal Bondstone outbox
-failure state. It does not mean Bondstone creates or owns a provider-native
-broker dead-letter queue. Broker receive retry and dead-letter policy remains
-transport/provider-owned.
+The persisted `TerminalFailed` outbox status is a terminal Bondstone outbox
+failure state for an outgoing local outbox record. It does not mean Bondstone
+creates or owns a provider-native broker dead-letter queue. Broker receive
+retry and dead-letter policy remains transport/provider-owned.
 
 `IDurableOutboxFailurePolicy` decides whether a failed claimed delivery attempt
-should be retried or dead-lettered. The default
+should be retried or terminally failed. The default
 `DurableOutboxFailurePolicy` uses a maximum-attempt threshold and retry delay
 sequence to produce a deterministic `DurableOutboxFailureDecision`. It is a
 pure policy and does not claim rows, send transport messages, update
-persistence, renew leases, route dead letters, or register background workers.
+persistence, renew leases, route failed messages, or register background
+workers.
 
 `IDurableOutboxTransport` is the minimal transport boundary for sending a
 claimed `DurableOutboxRecord`. Transport adapters own routing, serialization,
@@ -62,7 +64,7 @@ broker-specific acknowledgement, and transport-native behavior.
 dispatching one batch when called. It composes claiming, per-record lease
 renewal, transport send, failure decision, and outcome recording. It is not a
 hosted service and does not own polling, leader election, singleton sweeper
-coordination, route circuit breaking, archiving, or dead-letter routing.
+coordination, route circuit breaking, archiving, or terminal-failure routing.
 Hosted worker composition lives outside core in `Bondstone.Hosting`.
 
 For module-owned durable persistence, module-specific outbox writers and

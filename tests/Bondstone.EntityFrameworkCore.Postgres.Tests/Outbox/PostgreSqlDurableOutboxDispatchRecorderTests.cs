@@ -54,13 +54,13 @@ public sealed class PostgreSqlDurableOutboxDispatchRecorderTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task MarkDeadLetteredAsync_WhenFailedAtHasNonUtcOffset_Throws()
+    public async Task MarkTerminalFailedAsync_WhenFailedAtHasNonUtcOffset_Throws()
     {
         await using PostgreSqlTestDbContext context = CreateContext();
         var recorder = new PostgreSqlDurableOutboxDispatchRecorder<PostgreSqlTestDbContext>(context);
 
         await Assert.ThrowsAsync<ArgumentException>(
-            async () => await recorder.MarkDeadLetteredAsync(
+            async () => await recorder.MarkTerminalFailedAsync(
                 Guid.NewGuid(),
                 "dispatcher-1",
                 "poison message",

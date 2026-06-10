@@ -15,9 +15,6 @@ stable docs, and remove stale backlog language.
 
 ## Active Items
 
-- [04-outbox-terminal-failure.md](04-outbox-terminal-failure.md) decides
-  outgoing outbox terminal-failure terminology and its boundary from broker
-  DLQs.
 - [05-module-persistence-metadata.md](05-module-persistence-metadata.md)
   decides whether module persistence metadata moves into provider-owned
   capability registration.
@@ -30,6 +27,12 @@ stable docs, and remove stale backlog language.
   surface policy.
 - [09-future-work.md](09-future-work.md) collects non-current follow-up ideas
   that are not yet active decision work.
+
+## Resolved Items
+
+- [04-outbox-terminal-failure.md](04-outbox-terminal-failure.md) accepted the
+  outgoing outbox `TerminalFailed` terminology and its boundary from broker
+  DLQs.
 
 ## Archived Campaigns
 

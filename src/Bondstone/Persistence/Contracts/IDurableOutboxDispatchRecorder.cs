@@ -16,7 +16,7 @@ public interface IDurableOutboxDispatchRecorder
         DateTimeOffset nextAttemptAtUtc,
         CancellationToken ct = default);
 
-    ValueTask<bool> MarkDeadLetteredAsync(
+    ValueTask<bool> MarkTerminalFailedAsync(
         Guid messageId,
         string claimedBy,
         string failureReason,

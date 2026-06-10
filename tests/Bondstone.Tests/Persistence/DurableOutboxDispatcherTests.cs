@@ -79,7 +79,7 @@ public sealed class DurableOutboxDispatcherTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task DispatchAsync_WhenTransportFailsAndMaxAttemptsReached_MarksDeadLettered()
+    public async Task DispatchAsync_WhenTransportFailsAndMaxAttemptsReached_MarksTerminalFailed()
     {
         DurableOutboxRecord record = CreateRecord(
             Guid.Parse("4b6fdcfb-c8ad-4f50-b243-82cc3055fef7"),
@@ -97,8 +97,8 @@ public sealed class DurableOutboxDispatcherTests
             "dispatcher-1",
             TimeSpan.FromMinutes(5));
 
-        Assert.Equal(1, result.DeadLetteredCount);
-        Assert.Equal(record.Envelope.MessageId, Assert.Single(recorder.DeadLetteredMessageIds));
+        Assert.Equal(1, result.TerminalFailedCount);
+        Assert.Equal(record.Envelope.MessageId, Assert.Single(recorder.TerminalFailedMessageIds));
     }
 
     [Fact]
@@ -254,7 +254,7 @@ public sealed class DurableOutboxDispatcherTests
 
         public List<Guid> RetryMessageIds { get; } = [];
 
-        public List<Guid> DeadLetteredMessageIds { get; } = [];
+        public List<Guid> TerminalFailedMessageIds { get; } = [];
 
         public List<string> FailureReasons { get; } = [];
 
@@ -281,17 +281,18 @@ public sealed class DurableOutboxDispatcherTests
             return ValueTask.FromResult(RecordResult);
         }
 
-        public ValueTask<bool> MarkDeadLetteredAsync(
+        public ValueTask<bool> MarkTerminalFailedAsync(
             Guid messageId,
             string claimedBy,
             string failureReason,
             DateTimeOffset failedAtUtc,
             CancellationToken ct = default)
         {
-            DeadLetteredMessageIds.Add(messageId);
+            TerminalFailedMessageIds.Add(messageId);
             FailureReasons.Add(failureReason);
             return ValueTask.FromResult(RecordResult);
         }
+
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider

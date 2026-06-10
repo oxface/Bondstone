@@ -30,9 +30,10 @@ rows, and returns claimed records.
 one active processing row when the claimant still owns an unexpired lease.
 
 `PostgreSqlDurableOutboxDispatchRecorder<TDbContext>` records dispatch success,
-retry scheduling, and dead-letter outcomes only when the row is still
+retry scheduling, and terminal-failure outcomes only when the row is still
 processing, still owned by the supplied claimant, and still inside the active
-claim lease.
+claim lease. The provider follows the core outbox terminal status contract in
+[persistence-core.md](persistence-core.md).
 
 `PostgreSqlDurableInboxRegistrar<TDbContext>` returns explicit registered,
 already-received, or already-processed results without using duplicate
@@ -72,8 +73,8 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
   lease reclaim, and active lease exclusion;
 - outbox lease renewal for active claims, wrong owners, expired leases, and
   non-processing rows;
-- outbox dispatch success, retry, dead-letter, stale claimant, and expired
-  lease outcomes;
+- outbox dispatch success, retry, terminal failure, stale claimant, and
+  expired lease outcomes;
 - outbox dispatcher composition using real PostgreSQL claim, lease renewal,
   and dispatch outcome recording with fake transport success and failure;
 - schema-aware provider registration and composition with the EF persistence

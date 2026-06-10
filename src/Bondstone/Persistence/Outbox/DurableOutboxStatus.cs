@@ -6,5 +6,5 @@ public enum DurableOutboxStatus
     Processing = 2,
     Dispatched = 3,
     Failed = 4,
-    DeadLettered = 5,
+    TerminalFailed = 5,
 }

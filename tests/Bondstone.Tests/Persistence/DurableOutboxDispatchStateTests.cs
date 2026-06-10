@@ -52,7 +52,7 @@ public sealed class DurableOutboxDispatchStateTests
     public void Constructor_WhenFailureReasonIsWhitespace_StoresNull()
     {
         var state = new DurableOutboxDispatchState(
-            DurableOutboxStatus.DeadLettered,
+            DurableOutboxStatus.TerminalFailed,
             attemptCount: 5,
             failureReason: " ");
 

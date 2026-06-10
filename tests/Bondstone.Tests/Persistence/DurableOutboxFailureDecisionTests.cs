@@ -19,7 +19,7 @@ public sealed class DurableOutboxFailureDecisionTests
 
         Assert.Equal(DurableOutboxFailureDecisionKind.Retry, decision.Kind);
         Assert.True(decision.ShouldRetry);
-        Assert.False(decision.ShouldDeadLetter);
+        Assert.False(decision.ShouldTerminalFail);
         Assert.Equal("transport failed", decision.FailureReason);
         Assert.Equal(failedAtUtc, decision.FailedAtUtc);
         Assert.Equal(nextAttemptAtUtc, decision.NextAttemptAtUtc);
@@ -27,17 +27,17 @@ public sealed class DurableOutboxFailureDecisionTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void DeadLetter_WhenValuesAreValid_CreatesDeadLetterDecision()
+    public void TerminalFailure_WhenValuesAreValid_CreatesTerminalFailureDecision()
     {
         DateTimeOffset failedAtUtc = DateTimeOffset.Parse("2026-06-05T00:00:00+00:00");
 
-        DurableOutboxFailureDecision decision = DurableOutboxFailureDecision.DeadLetter(
+        DurableOutboxFailureDecision decision = DurableOutboxFailureDecision.TerminalFailure(
             "poison message",
             failedAtUtc);
 
-        Assert.Equal(DurableOutboxFailureDecisionKind.DeadLetter, decision.Kind);
+        Assert.Equal(DurableOutboxFailureDecisionKind.TerminalFailure, decision.Kind);
         Assert.False(decision.ShouldRetry);
-        Assert.True(decision.ShouldDeadLetter);
+        Assert.True(decision.ShouldTerminalFail);
         Assert.Equal("poison message", decision.FailureReason);
         Assert.Equal(failedAtUtc, decision.FailedAtUtc);
         Assert.Null(decision.NextAttemptAtUtc);
@@ -58,10 +58,10 @@ public sealed class DurableOutboxFailureDecisionTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void DeadLetter_WhenFailureReasonIsBlank_Throws()
+    public void TerminalFailure_WhenFailureReasonIsBlank_Throws()
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(
-            () => DurableOutboxFailureDecision.DeadLetter(
+            () => DurableOutboxFailureDecision.TerminalFailure(
                 " ",
                 DateTimeOffset.Parse("2026-06-05T00:00:00+00:00")));
 
@@ -70,10 +70,10 @@ public sealed class DurableOutboxFailureDecisionTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void DeadLetter_WhenTimestampHasNonUtcOffset_Throws()
+    public void TerminalFailure_WhenTimestampHasNonUtcOffset_Throws()
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(
-            () => DurableOutboxFailureDecision.DeadLetter(
+            () => DurableOutboxFailureDecision.TerminalFailure(
                 "failed",
                 DateTimeOffset.Parse("2026-06-05T00:00:00+02:00")));
 

@@ -36,7 +36,7 @@ public sealed partial class PostgreSqlPersistenceTests
         Assert.Equal(2, result.ClaimedCount);
         Assert.Equal(2, result.DispatchedCount);
         Assert.Equal(0, result.RetryScheduledCount);
-        Assert.Equal(0, result.DeadLetteredCount);
+        Assert.Equal(0, result.TerminalFailedCount);
         Assert.Equal(0, result.StaleCount);
         Assert.Equal(2, result.CompletedCount);
         Assert.Equal([firstMessageId, secondMessageId], transport.MessageIds);
@@ -80,7 +80,7 @@ public sealed partial class PostgreSqlPersistenceTests
         Assert.Equal(1, result.ClaimedCount);
         Assert.Equal(0, result.DispatchedCount);
         Assert.Equal(1, result.RetryScheduledCount);
-        Assert.Equal(0, result.DeadLetteredCount);
+        Assert.Equal(0, result.TerminalFailedCount);
         Assert.Equal(0, result.StaleCount);
 
         await using PostgreSqlTestDbContext verificationContext = CreateContext();
@@ -100,7 +100,7 @@ public sealed partial class PostgreSqlPersistenceTests
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task OutboxDispatcher_WhenTransportFailsAtMaxAttempts_DeadLettersMessage()
+    public async Task OutboxDispatcher_WhenTransportFailsAtMaxAttempts_TerminalFailsMessage()
     {
         await ResetDatabaseAsync();
         Guid messageId = Guid.Parse("adf6d869-11a7-4c9d-a9e4-515ce4a76743");
@@ -123,7 +123,7 @@ public sealed partial class PostgreSqlPersistenceTests
         Assert.Equal(1, result.ClaimedCount);
         Assert.Equal(0, result.DispatchedCount);
         Assert.Equal(0, result.RetryScheduledCount);
-        Assert.Equal(1, result.DeadLetteredCount);
+        Assert.Equal(1, result.TerminalFailedCount);
         Assert.Equal(0, result.StaleCount);
 
         await using PostgreSqlTestDbContext verificationContext = CreateContext();
@@ -131,7 +131,7 @@ public sealed partial class PostgreSqlPersistenceTests
             .Set<OutboxMessageEntity>()
             .SingleAsync(entity => entity.MessageId == messageId);
 
-        Assert.Equal(DurableOutboxStatus.DeadLettered, entity.Status);
+        Assert.Equal(DurableOutboxStatus.TerminalFailed, entity.Status);
         Assert.Equal(1, entity.AttemptCount);
         Assert.Equal(dispatcherTimeUtc, entity.FailedAtUtc);
         Assert.Contains("poison message", entity.FailureReason);

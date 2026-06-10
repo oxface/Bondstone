@@ -6,19 +6,19 @@ public sealed record DurableOutboxDispatchResult
         int claimedCount,
         int dispatchedCount,
         int retryScheduledCount,
-        int deadLetteredCount,
+        int terminalFailedCount,
         int staleCount)
     {
         ValidateCount(claimedCount, nameof(claimedCount));
         ValidateCount(dispatchedCount, nameof(dispatchedCount));
         ValidateCount(retryScheduledCount, nameof(retryScheduledCount));
-        ValidateCount(deadLetteredCount, nameof(deadLetteredCount));
+        ValidateCount(terminalFailedCount, nameof(terminalFailedCount));
         ValidateCount(staleCount, nameof(staleCount));
 
         ClaimedCount = claimedCount;
         DispatchedCount = dispatchedCount;
         RetryScheduledCount = retryScheduledCount;
-        DeadLetteredCount = deadLetteredCount;
+        TerminalFailedCount = terminalFailedCount;
         StaleCount = staleCount;
     }
 
@@ -28,11 +28,11 @@ public sealed record DurableOutboxDispatchResult
 
     public int RetryScheduledCount { get; }
 
-    public int DeadLetteredCount { get; }
+    public int TerminalFailedCount { get; }
 
     public int StaleCount { get; }
 
-    public int CompletedCount => DispatchedCount + RetryScheduledCount + DeadLetteredCount;
+    public int CompletedCount => DispatchedCount + RetryScheduledCount + TerminalFailedCount;
 
     private static void ValidateCount(int value, string parameterName)
     {

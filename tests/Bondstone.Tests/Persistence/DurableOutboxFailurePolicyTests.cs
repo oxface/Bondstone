@@ -82,7 +82,7 @@ public sealed class DurableOutboxFailurePolicyTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void DecideFailure_WhenMaxAttemptsReached_ReturnsDeadLetterDecision()
+    public void DecideFailure_WhenMaxAttemptsReached_ReturnsTerminalFailureDecision()
     {
         var policy = new DurableOutboxFailurePolicy(maxAttempts: 3);
         DateTimeOffset failedAtUtc = DateTimeOffset.Parse("2026-06-05T00:00:00+00:00");
@@ -92,7 +92,7 @@ public sealed class DurableOutboxFailurePolicyTests
             "poison message",
             failedAtUtc);
 
-        Assert.Equal(DurableOutboxFailureDecisionKind.DeadLetter, decision.Kind);
+        Assert.Equal(DurableOutboxFailureDecisionKind.TerminalFailure, decision.Kind);
         Assert.Equal("poison message", decision.FailureReason);
         Assert.Null(decision.NextAttemptAtUtc);
     }

@@ -35,10 +35,10 @@ public sealed record DurableOutboxFailureDecision
                 nameof(nextAttemptAtUtc));
         }
 
-        if (kind == DurableOutboxFailureDecisionKind.DeadLetter && nextAttemptAtUtc is not null)
+        if (kind == DurableOutboxFailureDecisionKind.TerminalFailure && nextAttemptAtUtc is not null)
         {
             throw new ArgumentException(
-                "Dead-letter decisions must not set a next-attempt timestamp.",
+                "Terminal-failure decisions must not set a next-attempt timestamp.",
                 nameof(nextAttemptAtUtc));
         }
 
@@ -58,7 +58,7 @@ public sealed record DurableOutboxFailureDecision
 
     public bool ShouldRetry => Kind == DurableOutboxFailureDecisionKind.Retry;
 
-    public bool ShouldDeadLetter => Kind == DurableOutboxFailureDecisionKind.DeadLetter;
+    public bool ShouldTerminalFail => Kind == DurableOutboxFailureDecisionKind.TerminalFailure;
 
     public static DurableOutboxFailureDecision Retry(
         string failureReason,
@@ -72,12 +72,12 @@ public sealed record DurableOutboxFailureDecision
             nextAttemptAtUtc);
     }
 
-    public static DurableOutboxFailureDecision DeadLetter(
+    public static DurableOutboxFailureDecision TerminalFailure(
         string failureReason,
         DateTimeOffset failedAtUtc)
     {
         return new DurableOutboxFailureDecision(
-            DurableOutboxFailureDecisionKind.DeadLetter,
+            DurableOutboxFailureDecisionKind.TerminalFailure,
             failureReason,
             failedAtUtc);
     }

@@ -46,87 +46,22 @@ follow its references. The repository context-index convention is documented in
 
 ## Repository Direction
 
-- Target .NET 10 unless an accepted ADR changes the target framework policy.
-- NuGet package IDs should match project names unless an accepted ADR records a
-  different packaging decision.
-- Use coordinated package versioning and NuGet release automation according to
-  [docs/packaging.md](docs/packaging.md).
-- Build according to the stable docs. Do not bulk-copy Bondstone code or
-  preserve the historical template repository as a compatibility constraint.
-- Source, tests, docs, repository automation, and samples should be arranged
-  for library maintenance, while avoiding validation and frontend/browser
-  tooling that Bondstone does not need.
-- Product behavior, domain examples, sample services, and runtime integration
-  scenarios belong in samples or tests, not in core library packages.
-- Use `ct` for `CancellationToken` parameters in C# source and tests according
-  to [docs/repository.md](docs/repository.md).
+Repository layout, local tooling, context-index structure, and C# conventions
+are documented in [docs/repository.md](docs/repository.md). Package IDs,
+target framework, dependency direction, versioning, and publishing are
+documented in [docs/packaging.md](docs/packaging.md).
 
 ## Architecture Direction
 
-- Bondstone should support modular monoliths first, including a low-friction
-  path for splitting modules into services when a module needs independent
-  deployment or scalability.
-- Bondstone should also be usable in microservice setups that need internal
-  durability, inbox/outbox processing, stable message identities, and
-  provider-owned transport adapters.
-- Do not introduce a generic mediator or message-bus layer as a default
-  Bondstone feature. Durable command sending is for asynchronous outbox
-  delivery; ordinary in-process module calls can use typed `.Contracts`
-  references.
-- Durable commands and integration events are the durable boundary for
-  cross-persistence state changes. Direct `.Contracts` calls are mainly for
-  reads, local composition, or operations that tolerate failure. Domain events
-  are module-local/private unless module code explicitly publishes an
-  integration event.
-- First-class integration event behavior is described in
-  [docs/architecture/messaging.md](docs/architecture/messaging.md): publish
-  dispatch, subscriber execution, per-subscriber inbox behavior, diagnostics,
-  and tests are part of the current durable event loop. Keep native broker
-  setup app-owned, and do not fold domain event persistence or broad
-  choreography samples into this event loop without a later ADR.
-- Transport adapter topology should describe durable message topology, such as
-  command queues, event destinations, and event subscriptions, while broker
-  connection, worker, retry, dead-letter, serializer, and subscription-storage
-  setup stays provider-native.
-- Startup transport topology validation is described in
-  [docs/architecture/messaging.md](docs/architecture/messaging.md),
-  [docs/architecture/transport-rabbitmq.md](docs/architecture/transport-rabbitmq.md),
-  and
-  [docs/architecture/transport-servicebus.md](docs/architecture/transport-servicebus.md):
-  validate configured durable routes and receive bindings against registered
-  Bondstone handlers/subscribers without turning validation into broker
-  provisioning. Same-queue in-process event fan-out remains valid, while split
-  subscribers should use provider-native broker fan-out such as RabbitMQ
-  exchange bindings or Service Bus topic subscriptions.
-- Provider retry and recovery boundaries are described in
-  [docs/architecture/messaging.md](docs/architecture/messaging.md),
-  [docs/architecture/transport-rabbitmq.md](docs/architecture/transport-rabbitmq.md),
-  and
-  [docs/architecture/transport-servicebus.md](docs/architecture/transport-servicebus.md).
-- Direct provider transport adapters are the current direction according to
-  [docs/architecture/README.md](docs/architecture/README.md) and
-  [docs/packaging.md](docs/packaging.md). Do not adapt another bus abstraction
-  as a supported transport package.
-- `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
-  tests, and local development. It must not become a hidden fallback or be
-  presented as production broker durability.
-- Azure Service Bus and RabbitMQ transport rules are described in
-  [docs/architecture/transport-servicebus.md](docs/architecture/transport-servicebus.md)
-  and [docs/architecture/transport-rabbitmq.md](docs/architecture/transport-rabbitmq.md).
-  Keep these slices provider-native, app-owned, proof-oriented, and explicit
-  about receive/broker reliability follow-ups.
-- `Bondstone.Persistence.Postgres` behavior is described in
-  [docs/architecture/persistence-postgres.md](docs/architecture/persistence-postgres.md)
-  and [docs/packaging.md](docs/packaging.md). Keep it PostgreSQL-specific and
-  Dapper-backed internally, not a generic Dapper abstraction; it should prove
-  durable module messaging persistence and mixed-persistence samples without
-  depending on EF Core.
-- Durable behavior, public API shape, package boundaries, provider support,
-  transport support, migration strategy, and compatibility policy require ADRs
-  before broad implementation.
-- Durable decisions recorded in ADRs must be applied into stable developer docs
-  and agent instructions. ADRs are the decision trail; stable docs are the
-  current operating contract.
+Runtime architecture is indexed from
+[docs/architecture/README.md](docs/architecture/README.md). Use that index and
+the nearest scoped `AGENTS.md` before changing messaging, modules,
+persistence, hosting, or transport behavior.
+
+Durable behavior, public API shape, package boundaries, provider or transport
+support, migration strategy, compatibility policy, release/publishing, sample
+architecture, repository workflow, and agent harness behavior require ADR
+review before broad implementation.
 
 ## ADR And Planning Rules
 

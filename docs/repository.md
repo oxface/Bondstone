@@ -20,6 +20,27 @@ Samples live under `samples/` and validate realistic library usage. Samples
 are not core package code and must not introduce domain behavior into library
 packages.
 
+## Reference-Based Context Structure
+
+Bondstone uses local context indexes so humans and agents can start from the
+smallest useful folder context and follow references only when needed.
+
+Significant folders should have:
+
+- `AGENTS.md` for agents working in that folder;
+- `README.md` for humans navigating that folder.
+
+These files are indexes, not alternate architecture docs. Keep them short,
+name the folder's scope, and reference the stable docs, ADR workflows, sibling
+packages, tests, and verification entrypoints that matter for that area. Avoid
+copying durable rules from architecture, packaging, testing, sample, or backlog
+docs unless the local rule is unusually important and repeated agent misses
+justify duplication.
+
+When adding a package, test boundary, sample, docs area, or agent workflow
+folder, add the local indexes in the same change or explain why an existing
+parent index is enough.
+
 ## Tooling
 
 Use root `package.json`, pnpm, Husky, commitlint, Prettier, and lightweight

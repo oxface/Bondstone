@@ -1,7 +1,7 @@
 # 0036 Direct Transport Adapters And Rebus Removal
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-09
 
 ## Context
@@ -204,6 +204,68 @@ The helpers still do not own RabbitMQ channel lifecycle, Service Bus processor
 lifecycle, retry policy, dead-letter behavior, broker topology declaration, or
 provider-backed integration tests.
 
+## Amendment 2026-06-09: Opt-In Hosted Receive Lifecycle Helpers
+
+Direct provider adapters may provide bounded hosted receive lifecycle helpers
+after the receive topology, native message mapping, dispatcher, and settlement
+handler contracts exist. These helpers are opt-in through the provider
+transport builder and are not hidden runtime behavior.
+
+RabbitMQ `UseReceiveWorker(...)` starts consumers for configured receive
+queues using the application-registered `IConnection`, `autoAck: false`, and a
+configurable prefetch count. Successful Bondstone dispatch acknowledges the
+delivery. Failed dispatch logs the error and negatively acknowledges the
+delivery with configurable requeue behavior so the application's RabbitMQ
+dead-letter or retry topology remains in control.
+
+Service Bus `UseReceiveWorker(...)` starts processors for configured receive
+queues and topic subscriptions using the application-registered
+`ServiceBusClient`, `AutoCompleteMessages = false`, and configurable
+concurrency/lock-renewal options. Successful Bondstone dispatch completes the
+message. Failed dispatch logs the error and abandons the message so the
+application's Service Bus retry/dead-letter policy remains in control.
+
+These helpers still do not declare queues, exchanges, topics, subscriptions,
+rules, bindings, credentials, connection strings, dead-letter topology, retry
+policy, or provider administration. Provider-backed receive integration tests
+remain a follow-up slice.
+
+## Amendment 2026-06-09: RabbitMQ Broker-Backed Receive Worker Proof
+
+The RabbitMQ adapter now has first provider-backed receive worker integration
+tests. The tests use Testcontainers RabbitMQ, declare application-owned queues
+and dead-letter topology, start the opt-in `UseReceiveWorker()` hosted service,
+publish Bondstone durable command messages to queues, verify successful command
+dispatch through the neutral receive pipeline, verify the broker queue drains
+after successful acknowledgement, and verify failed dispatch is negatively
+acknowledged with `requeue: false` so RabbitMQ hands the message to
+application-owned dead-letter topology. They also publish a durable integration
+event message to one RabbitMQ queue and verify the receive worker dispatches
+that single broker delivery once per configured subscriber identity before
+acknowledgement.
+
+This proves the direct RabbitMQ receive lifecycle against a real broker for
+successful command receive, acknowledgement ordering, failed command receive,
+dead-letter handoff, and event subscriber fan-out. It does not yet prove retry
+policy behavior or broker topology declaration.
+
+## Amendment 2026-06-09: Service Bus Emulator Receive Worker Proof
+
+The Service Bus adapter now has provider-backed receive worker integration
+tests using the Azure Service Bus emulator through Testcontainers. The tests
+use the emulator's configured queue, topic, and subscription entities, start
+the opt-in `UseReceiveWorker()` hosted service, send Bondstone durable command
+and integration event messages through `ServiceBusClient`, verify successful
+command dispatch completes the broker message, verify failed command dispatch
+is abandoned until Service Bus moves the message to the dead-letter subqueue,
+and verify one topic subscription delivery is dispatched once per configured
+subscriber identity.
+
+This proves the direct Service Bus receive lifecycle against the emulator for
+successful command receive, completion ordering, failed command receive,
+dead-letter handoff, and event subscriber fan-out. Retry policy hardening and
+broker topology declaration remain future slices.
+
 ## Consequences
 
 The transport surface becomes easier to reason about: Bondstone owns durable
@@ -235,7 +297,7 @@ diagnostics, and provider-backed integration tests.
 
 ## Application Notes
 
-- Current contract: Rebus is being removed from the supported package set.
+- Current contract: Rebus has been removed from the supported package set.
   Direct Azure Service Bus and RabbitMQ adapters are the active transport
   direction. Core provider-neutral receive pipelines now carry reusable
   command and event subscriber receive behavior. Direct adapters use
@@ -250,8 +312,9 @@ diagnostics, and provider-backed integration tests.
   Reusable receive behavior moved to `IModuleCommandReceivePipeline` and
   `IModuleEventReceivePipeline` in core. Composition tests now use the direct
   RabbitMQ adapter and core receive pipeline. The modular monolith sample uses
-  explicit `Bondstone.Transport.Local` queue routing over the neutral receive
-  pipelines until direct provider receive adapters exist. Service Bus event
+  explicit `Bondstone.Transport.Local` queue routing by default and exposes an
+  explicit RabbitMQ sample path over the direct provider receive worker.
+  Service Bus event
   publish topology supports explicit topic destinations, explicit queue
   destinations, topic conventions, and queue conventions. RabbitMQ event
   publish topology supports exchange routing-key destinations and queue
@@ -272,10 +335,18 @@ diagnostics, and provider-backed integration tests.
 - Provider receive handler helpers now prove the common settlement ordering:
   native acknowledgement/completion happens only after Bondstone dispatch
   succeeds, and failures propagate without settling the broker message.
-- Pending or deferred: Add hosted RabbitMQ consumers, hosted Service Bus
-  processors, provider-backed receive tests, persistence package naming
-  cleanup, and replacement or supplementation of local sample transport with a
-  preferred direct provider receive path.
+- Opt-in hosted receive helpers now exist for RabbitMQ consumers and Service
+  Bus processors over configured receive topology.
+- RabbitMQ now has an initial provider-backed receive worker integration test
+  for real queue delivery, acknowledgement after successful command dispatch,
+  dead-letter handoff after failed command dispatch, and event subscriber
+  fan-out from one broker queue delivery.
+- Service Bus now has emulator-backed receive worker integration tests for
+  real queue delivery, completion after successful command dispatch,
+  dead-letter handoff after failed command dispatch, and topic subscription
+  fan-out.
+- Pending or deferred: Retry-policy hardening, broker topology declaration
+  helpers, and broader operational diagnostics remain Phase 7 concerns.
 
 ## Verification
 
@@ -330,3 +401,24 @@ After receive settlement handler helpers:
 - `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
 - `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
 - `dotnet test tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
+
+After opt-in hosted receive lifecycle helpers:
+
+- `dotnet restore Bondstone.slnx --disable-build-servers -p:NuGetAudit=false`
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
+
+After RabbitMQ broker-backed receive worker proof:
+
+- `dotnet restore tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --disable-build-servers -p:NuGetAudit=false`
+- `dotnet build tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Integration&FullyQualifiedName~RabbitMqReceiveWorkerIntegrationTests" --disable-build-servers`
+
+After Service Bus emulator-backed receive worker proof and RabbitMQ sample path:
+
+- `dotnet restore Bondstone.slnx --disable-build-servers -p:NuGetAudit=false`
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj --configuration Release --no-build --filter "Category=Integration&FullyQualifiedName~ServiceBusReceiveWorkerIntegrationTests" --disable-build-servers`
+- `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`

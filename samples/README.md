@@ -7,14 +7,14 @@ sample. It proves the current durable command and integration event loop with:
 
 - module registration for `ordering`, `fulfillment`, and `billing`;
 - mixed persistence with EF-backed ordering/fulfillment modules and a
-  Dapper/PostgreSQL-backed billing module;
+  `Bondstone.Persistence.Postgres` billing module;
 - module-owned assemblies with `IBondstoneModule` registration objects,
   assembly-scanned command handler registration, and explicit event
   registration;
 - ordering and fulfillment contract assemblies that publish
   `OrderPlacedEvent` and `InventoryReservedEvent`;
 - separate module-owned EF Core `DbContext` types and PostgreSQL schemas;
-- a billing schema using `Bondstone.Persistence.Dapper.Postgres`;
+- a billing schema using `Bondstone.Persistence.Postgres`;
 - outbox-backed durable command sending from ordering to fulfillment;
 - outbox-backed durable event publishing from ordering and fulfillment;
 - durable outbox worker dispatch through explicit
@@ -23,9 +23,9 @@ sample. It proves the current durable command and integration event loop with:
 - module command and event subscriber execution with receive inbox handling
   and handler state saved in the subscriber module transaction boundary.
 
-The local transport is not a production broker adapter or hidden fallback. It
-exists to keep the sample proving the durable core while direct RabbitMQ and
-Service Bus receive adapters are still follow-up slices.
+The local transport is not a production broker adapter or hidden fallback. The
+sample also exposes an explicit RabbitMQ registration path that keeps broker
+connection and topology setup app-owned.
 
 Run the app with a PostgreSQL connection string:
 

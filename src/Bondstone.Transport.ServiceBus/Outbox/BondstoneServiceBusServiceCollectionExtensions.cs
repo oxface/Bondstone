@@ -3,6 +3,7 @@ using Bondstone.Persistence;
 using Bondstone.Transport.ServiceBus.Inbox;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace Bondstone.Transport.ServiceBus.Outbox;
 
@@ -25,7 +26,8 @@ public static class BondstoneServiceBusServiceCollectionExtensions
         this IServiceCollection services,
         ServiceBusCommandDestinationTopology commandTopology,
         ServiceBusEventDestinationTopology eventDestinationTopology,
-        ServiceBusReceiveTopology receiveTopology)
+        ServiceBusReceiveTopology receiveTopology,
+        ServiceBusReceiveWorkerRegistration? receiveWorkerRegistration)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(commandTopology);
@@ -48,6 +50,17 @@ public static class BondstoneServiceBusServiceCollectionExtensions
                 receiveTopology));
         services.TryAddScoped<IServiceBusReceivedMessageDispatcher, ServiceBusReceivedMessageDispatcher>();
         services.TryAddScoped<IServiceBusReceivedMessageHandler, ServiceBusReceivedMessageHandler>();
+        if (receiveWorkerRegistration is not null)
+        {
+            services.AddOptions<ServiceBusReceiveWorkerOptions>();
+            if (receiveWorkerRegistration.ConfigureOptions is not null)
+            {
+                services.Configure(receiveWorkerRegistration.ConfigureOptions);
+            }
+
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IHostedService, ServiceBusReceiveWorker>());
+        }
         services.AddTransient<IDurableOutboxTransportRoute, ServiceBusDurableOutboxTransportRoute>();
         services.TryAddTransient<IDurableOutboxTransport, RoutedDurableOutboxTransport>();
 

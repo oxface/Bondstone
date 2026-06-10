@@ -1,5 +1,5 @@
 using Bondstone.Modules;
-using Bondstone.Persistence.Dapper.Postgres.Persistence;
+using Bondstone.Persistence.Postgres.Persistence;
 using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
 
 namespace Bondstone.Samples.ModularMonolith.Billing;
@@ -22,7 +22,7 @@ public sealed class BillingBondstoneModule : IBondstoneModule
         ArgumentNullException.ThrowIfNull(module);
 
         module.UseDurableMessaging();
-        module.UsePostgresDapperPersistence(
+        module.UsePostgresPersistence(
             _connectionString,
             schema: BillingModule.ModuleName);
         module.Events.RegisterSubscriber<OrderPlacedEvent, RecordBillingInvoiceHandler>(

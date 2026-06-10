@@ -44,21 +44,21 @@ sample. It composes `ordering`, `fulfillment`, and `billing` modules through
 module-owned `IBondstoneModule` registration objects.
 
 Ordering and fulfillment use separate module-owned EF Core `DbContext` types
-and PostgreSQL schemas. Billing uses the PostgreSQL/Dapper non-EF persistence
-proof with its own schema. Ordering publishes `OrderPlacedEvent` and sends a
+and PostgreSQL schemas. Billing uses `Bondstone.Persistence.Postgres` with its
+own schema. Ordering publishes `OrderPlacedEvent` and sends a
 durable command to fulfillment. Fulfillment handles the command, records
 state, and publishes `InventoryReservedEvent`. Ordering and billing subscribe
 to integration events and record projections/invoices through their own module
 persistence boundaries.
 
-After ADR 0036, the sample no longer depends on the removed Rebus adapter.
-Until direct RabbitMQ and Service Bus receive workers exist, the sample uses
-`Bondstone.Transport.Local` through explicit local queue routing. The local
-adapter dispatches claimed outbox records into the provider-neutral
-`IModuleCommandReceivePipeline` and `IModuleEventReceivePipeline`. This keeps
-the sample proving outbox claiming, outbox dispatch recording, inbox handling,
-command/event execution, module transactions, mixed persistence, and operation
-state without presenting local transport as production broker guidance.
+After ADR 0036, the sample no longer depends on the removed Rebus adapter. It
+currently uses `Bondstone.Transport.Local` through explicit local queue
+routing. The local adapter dispatches claimed outbox records into the
+provider-neutral `IModuleCommandReceivePipeline` and
+`IModuleEventReceivePipeline`. This keeps the sample proving outbox claiming,
+outbox dispatch recording, inbox handling, command/event execution, module
+transactions, mixed persistence, and operation state without presenting local
+transport as production broker guidance.
 
 The focused smoke test lives in
 [`tests/Bondstone.Samples.Tests`](../tests/Bondstone.Samples.Tests) and is an
@@ -66,6 +66,7 @@ The focused smoke test lives in
 verification remains `Unit` and `Application` only; run sample smoke coverage
 with the repository integration test entrypoint.
 
-Once the direct provider receive adapters settle, replace or supplement the
-local transport sample path with one preferred provider-backed sample path. Do
-not turn the first sample into a broker matrix.
+The sample is supplemented with one preferred direct provider path:
+`AddModularMonolithSampleWithRabbitMq(...)`. The RabbitMQ path is covered by
+an explicit Testcontainers RabbitMQ sample smoke test. Do not turn the first
+sample into a broker matrix.

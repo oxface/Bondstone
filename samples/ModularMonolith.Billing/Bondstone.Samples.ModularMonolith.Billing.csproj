@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Bondstone.Persistence.Dapper.Postgres\Bondstone.Persistence.Dapper.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Persistence.Postgres\Bondstone.Persistence.Postgres.csproj" />
     <ProjectReference Include="..\..\src\Bondstone\Bondstone.csproj" />
     <ProjectReference Include="..\ModularMonolith.Ordering.Contracts\Bondstone.Samples.ModularMonolith.Ordering.Contracts.csproj" />
   </ItemGroup>

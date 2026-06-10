@@ -18,7 +18,7 @@ Ship one NuGet package per package project. Package IDs match project names:
 - `Bondstone.Hosting`
 - `Bondstone.EntityFrameworkCore`
 - `Bondstone.EntityFrameworkCore.Postgres`
-- `Bondstone.Persistence.Dapper.Postgres`
+- `Bondstone.Persistence.Postgres`
 - `Bondstone.Transport.Local`
 - `Bondstone.Transport.ServiceBus`
 - `Bondstone.Transport.RabbitMq`
@@ -26,12 +26,11 @@ Ship one NuGet package per package project. Package IDs match project names:
 Direct transport adapter direction is accepted by
 [ADR 0036](adr/0036-direct-transport-adapters-and-rebus-removal.md).
 `Bondstone.Transport.ServiceBus` and `Bondstone.Transport.RabbitMq` are the
-active transport proof packages. Their current implemented scope is outgoing
-durable outbox dispatch with provider-native topology vocabulary. Receive
-workers, provider-backed broker integration tests, broker administration, and
-provider-backed receive reliability remain follow-up slices. Multi-transport
-outbox selection is implemented through provider route candidates and
-`RoutedDurableOutboxTransport`.
+active transport proof packages. Their current implemented scope includes
+outgoing durable outbox dispatch, provider-native receive topology, opt-in
+hosted receive workers, and provider-backed receive integration tests.
+Broker administration remains app-owned. Multi-transport outbox selection is
+implemented through provider route candidates and `RoutedDurableOutboxTransport`.
 
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
 tests, and local development. It exercises outbox/inbox receive semantics
@@ -39,11 +38,11 @@ through the provider-neutral receive pipelines, but it is not a production
 broker adapter or hidden fallback.
 
 The non-EF persistence proof package is accepted by
-[ADR 0035](adr/0035-postgresql-dapper-persistence-proof.md).
-`Bondstone.Persistence.Dapper.Postgres` is PostgreSQL-specific and
-Dapper-assisted. It proves durable module messaging persistence without EF
-Core; it is not a generic Dapper provider abstraction. A later packaging slice
-may rename this package to hide Dapper as an implementation detail.
+[ADR 0035](adr/0035-postgresql-dapper-persistence-proof.md) and renamed by
+[ADR 0037](adr/0037-postgresql-persistence-package-identity.md).
+`Bondstone.Persistence.Postgres` is PostgreSQL-specific and
+Dapper-backed internally. It proves durable module messaging persistence
+without EF Core; it is not a generic Dapper provider abstraction.
 
 ## Package Dependencies
 
@@ -56,7 +55,7 @@ Use this dependency direction:
 - `Bondstone.EntityFrameworkCore.Postgres` depends on
   `Bondstone.EntityFrameworkCore` and may reference `Bondstone` directly for
   shared builder extension methods.
-- `Bondstone.Persistence.Dapper.Postgres` depends on `Bondstone`, `Dapper`,
+- `Bondstone.Persistence.Postgres` depends on `Bondstone`, `Dapper`,
   and `Npgsql`.
 - `Bondstone.Transport.Local` depends on `Bondstone`.
 - `Bondstone.Transport.ServiceBus` depends on `Bondstone` and

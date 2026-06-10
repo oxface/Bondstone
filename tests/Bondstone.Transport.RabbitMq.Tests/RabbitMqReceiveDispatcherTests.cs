@@ -7,6 +7,8 @@ using Bondstone.Persistence;
 using Bondstone.Transport.RabbitMq.Inbox;
 using Bondstone.Transport.RabbitMq.Outbox;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Xunit;
@@ -236,6 +238,46 @@ public sealed class RabbitMqReceiveDispatcherTests
                 }));
 
         Assert.False(acknowledged);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UseReceiveWorker_WhenConfigured_RegistersHostedService()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
+
+        services.AddBondstone(
+            bondstone => bondstone.UseRabbitMqTransport(
+                rabbitMq =>
+                {
+                    rabbitMq.ReceiveQueue("fulfillment.commands")
+                        .AcceptModule("fulfillment");
+                    rabbitMq.UseReceiveWorker();
+                }));
+
+        ServiceDescriptor descriptor = Assert.Single(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IHostedService)
+                && descriptor.ImplementationType?.Name == "RabbitMqReceiveWorker");
+        Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        RabbitMqReceiveWorkerOptions options =
+            serviceProvider.GetRequiredService<IOptions<RabbitMqReceiveWorkerOptions>>().Value;
+        Assert.Equal(10, options.PrefetchCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Validate_WhenPrefetchCountIsZero_Throws()
+    {
+        var options = new RabbitMqReceiveWorkerOptions
+        {
+            PrefetchCount = 0,
+        };
+
+        Assert.Throws<ArgumentOutOfRangeException>(options.Validate);
     }
 
     private static ServiceProvider CreateServiceProvider(

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Bondstone.Utility;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,28 +26,31 @@ public sealed class BondstoneOutboxBuilder
 
     public bool HasWorker => _workerName is not null;
 
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public BondstoneOutboxBuilder MarkPersistenceProvider(string providerName)
     {
         _persistenceProviderName = providerName.NormalizeRequired(nameof(providerName), "Capability name");
         return this;
     }
 
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public BondstoneOutboxBuilder MarkTransport(string transportName)
     {
         _transportName = transportName.NormalizeRequired(nameof(transportName), "Capability name");
         return this;
     }
 
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public BondstoneOutboxBuilder MarkDispatcher(string dispatcherName)
     {
         _dispatcherName = dispatcherName.NormalizeRequired(nameof(dispatcherName), "Capability name");
         return this;
     }
 
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public BondstoneOutboxBuilder MarkWorker(string workerName)
     {
         _workerName = workerName.NormalizeRequired(nameof(workerName), "Capability name");
         return this;
     }
-
 }

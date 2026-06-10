@@ -6,13 +6,14 @@ using Bondstone.Hosting.Outbox;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
-using Bondstone.Persistence.Dapper.Postgres.Persistence;
+using Bondstone.Persistence.Postgres.Persistence;
 using Bondstone.Samples.ModularMonolith.Billing;
 using Bondstone.Samples.ModularMonolith.Fulfillment;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Bondstone.Samples.ModularMonolith.Ordering;
 using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
 using Bondstone.Transport.Local.Outbox;
+using Bondstone.Transport.RabbitMq.Outbox;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -20,6 +21,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using RabbitMQ.Client;
 
 namespace Bondstone.Samples.ModularMonolith;
 
@@ -33,13 +35,10 @@ public static class ModularMonolithApplication
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
         services.AddLogging();
-        services.AddBondstone(bondstone =>
-        {
-            bondstone
-                .AddOrderingModule(connectionString)
-                .AddFulfillmentModule(connectionString)
-                .AddBillingModule(connectionString);
-            bondstone.UseLocalTransport(local =>
+        AddModularMonolithSampleCore(
+            services,
+            connectionString,
+            bondstone => bondstone.UseLocalTransport(local =>
             {
                 local.RouteModule(FulfillmentModule.ModuleName)
                     .ToQueue("fulfillment.commands");
@@ -65,7 +64,71 @@ public static class ModularMonolithApplication
                         FulfillmentIntegrationEvents.InventoryReserved,
                         OrderingModule.ModuleName,
                         "ordering.inventory-reserved-projection.v1");
-            });
+            }));
+
+        return services;
+    }
+
+    public static IServiceCollection AddModularMonolithSampleWithRabbitMq(
+        this IServiceCollection services,
+        string connectionString,
+        IConnection connection)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        ArgumentNullException.ThrowIfNull(connection);
+
+        services.AddLogging();
+        services.AddBondstoneRabbitMqConnection(connection);
+        AddModularMonolithSampleCore(
+            services,
+            connectionString,
+            bondstone => bondstone.UseRabbitMqTransport(rabbitMq =>
+            {
+                rabbitMq.UseCommandExchange("bondstone.commands");
+                rabbitMq.RouteModule(FulfillmentModule.ModuleName)
+                    .ToRoutingKey("fulfillment.commands");
+                rabbitMq.ReceiveQueue("fulfillment.commands")
+                    .AcceptModule(FulfillmentModule.ModuleName);
+
+                rabbitMq.RouteEvent(OrderingIntegrationEvents.OrderPlaced)
+                    .ToQueue("ordering.order-placed");
+                rabbitMq.ReceiveQueue("ordering.order-placed")
+                    .SubscribeEvent(
+                        OrderingIntegrationEvents.OrderPlaced,
+                        FulfillmentModule.ModuleName,
+                        "fulfillment.order-placed-projection.v1")
+                    .SubscribeEvent(
+                        OrderingIntegrationEvents.OrderPlaced,
+                        BillingModule.ModuleName,
+                        "billing.order-invoice-projection.v1");
+
+                rabbitMq.RouteEvent(FulfillmentIntegrationEvents.InventoryReserved)
+                    .ToQueue("fulfillment.inventory-reserved");
+                rabbitMq.ReceiveQueue("fulfillment.inventory-reserved")
+                    .SubscribeEvent(
+                        FulfillmentIntegrationEvents.InventoryReserved,
+                        OrderingModule.ModuleName,
+                        "ordering.inventory-reserved-projection.v1");
+
+                rabbitMq.UseReceiveWorker();
+            }));
+
+        return services;
+    }
+
+    private static void AddModularMonolithSampleCore(
+        IServiceCollection services,
+        string connectionString,
+        Action<BondstoneBuilder> configureTransport)
+    {
+        services.AddBondstone(bondstone =>
+        {
+            bondstone
+                .AddOrderingModule(connectionString)
+                .AddFulfillmentModule(connectionString)
+                .AddBillingModule(connectionString);
+            configureTransport(bondstone);
             bondstone.Outbox.UseWorker(options =>
             {
                 options.WorkerId = "modular-monolith-sample";
@@ -73,8 +136,6 @@ public static class ModularMonolithApplication
                 options.PollingInterval = TimeSpan.FromMilliseconds(25);
             });
         });
-
-        return services;
     }
 
     public static IEndpointRouteBuilder MapModularMonolithSample(
@@ -209,7 +270,7 @@ public static class ModularMonolithApplication
         NpgsqlDataSource dataSource =
             scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
 
-        await PostgresDapperSchema.EnsureDurableMessagingTablesAsync(
+        await PostgresSchema.EnsureDurableMessagingTablesAsync(
             dataSource,
             BillingModule.ModuleName,
             ct);

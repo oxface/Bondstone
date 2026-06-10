@@ -21,6 +21,8 @@ internal sealed class RabbitMqReceiveTopology
             StringComparer.Ordinal);
     }
 
+    public IReadOnlyCollection<string> QueueNames => _queues.Keys.ToArray();
+
     public RabbitMqReceiveQueueDiagnostic DescribeQueue(
         string queueName)
     {

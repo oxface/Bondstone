@@ -11,6 +11,7 @@ public sealed class BondstoneServiceBusTransportBuilder
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, ServiceBusReceiveSourceRegistration> _receiveSources =
         new(StringComparer.Ordinal);
+    private ServiceBusReceiveWorkerRegistration? _receiveWorkerRegistration;
     private Func<string, string>? _queueNameConvention;
     private ServiceBusEventDestinationConvention? _eventDestinationConvention;
 
@@ -22,6 +23,9 @@ public sealed class BondstoneServiceBusTransportBuilder
 
     internal ServiceBusReceiveTopology ReceiveTopology =>
         new(_receiveSources);
+
+    internal ServiceBusReceiveWorkerRegistration? ReceiveWorkerRegistration =>
+        _receiveWorkerRegistration;
 
     public BondstoneServiceBusModuleRouteBuilder RouteModule(
         string targetModule)
@@ -84,6 +88,14 @@ public sealed class BondstoneServiceBusTransportBuilder
         EnsureReceiveSource(source);
 
         return new BondstoneServiceBusReceiveSourceBuilder(this, source);
+    }
+
+    public BondstoneServiceBusTransportBuilder UseReceiveWorker(
+        Action<ServiceBusReceiveWorkerOptions>? configureOptions = null)
+    {
+        _receiveWorkerRegistration = new ServiceBusReceiveWorkerRegistration(configureOptions);
+
+        return this;
     }
 
     public BondstoneServiceBusTransportBuilder UseEventTopicConvention()

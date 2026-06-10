@@ -161,12 +161,14 @@ Current direct transport packages:
 - `Bondstone.Transport.Local`
 
 RabbitMQ and Azure Service Bus are the production-oriented direct provider
-adapters. Their implemented scope is outgoing durable outbox dispatch. RabbitMQ
-uses exchange, routing-key, and queue vocabulary. Azure Service Bus uses queue,
-topic, and event destination vocabulary. Provider connection, credentials,
-queue/topic/exchange/binding creation, workers, retry, dead-letter,
-serializer, and administration remain app-owned or provider-native unless a
-later ADR accepts a bounded helper.
+adapters. Their implemented scope includes outgoing durable outbox dispatch,
+provider-native receive topology, opt-in hosted receive workers, and
+provider-backed receive tests. RabbitMQ uses exchange, routing-key, and queue
+vocabulary. Azure Service Bus uses queue, topic, subscription, and event
+destination vocabulary. Provider connection, credentials,
+queue/topic/exchange/binding creation, retry, dead-letter, serializer, and
+administration remain app-owned or provider-native unless a later ADR accepts a
+bounded helper.
 
 `Bondstone.Transport.Local` is explicit local queue routing for samples, tests,
 and local development. It uses the neutral receive pipelines and preserves
@@ -177,16 +179,15 @@ Direct transport packages contribute `IDurableOutboxTransportRoute` entries.
 one provider route matches the message. Zero matches and ambiguous matches are
 loud configuration errors.
 
-RabbitMQ has a receive queue dispatcher proof and Service Bus has a receive
-source dispatcher proof. Both map received Bondstone transport messages into
-the neutral receive pipelines. Provider packages also expose native received
-message mappers so app-owned consumers/processors can convert broker messages
-before dispatch, plus handler helpers that invoke caller-supplied native
-settlement only after dispatch succeeds. Provider-backed receive workers for
-RabbitMQ and Service Bus are still planned follow-up slices. Those slices
-should cover command receive, event subscriber receive, hosted lifecycle,
-retry/dead-letter behavior, diagnostics, and provider-backed integration
-tests.
+RabbitMQ and Service Bus map received provider-native messages into the neutral
+receive pipelines. Provider packages also expose native received message
+mappers so app-owned consumers/processors can convert broker messages before
+dispatch, plus handler helpers that invoke caller-supplied native settlement
+only after dispatch succeeds. RabbitMQ and Service Bus also expose opt-in
+hosted receive lifecycle helpers over configured receive topology.
+Provider-backed integration tests cover successful receive settlement,
+dead-letter handoff after failed dispatch, and event subscriber fan-out. Retry
+policy hardening and broker topology declaration remain Phase 7 concerns.
 
 ## Diagnostics
 

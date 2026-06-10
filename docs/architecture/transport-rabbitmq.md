@@ -5,8 +5,9 @@ behavior.
 
 ## Current Scope
 
-The current adapter is a Phase 6 proof-oriented outgoing durable outbox
-transport plus a Phase 6.5 receive dispatcher proof.
+The current adapter covers outgoing durable outbox transport, receive queue
+topology, receive dispatchers, native message mapping, settlement handler
+helpers, and an opt-in hosted receive worker proof.
 `RabbitMqDurableOutboxTransport` implements
 `IDurableOutboxTransport` for claimed outbox records and maps Bondstone
 durable envelopes to RabbitMQ publish messages through a provider-local
@@ -73,6 +74,13 @@ the adapter boundary for app-owned consumers before they call the dispatcher.
 execution, and a caller-supplied acknowledgement delegate. It acknowledges only
 after dispatch succeeds and leaves failures visible to the caller.
 
+`UseReceiveWorker(...)` is an opt-in hosted consumer helper. It consumes the
+configured receive queues with `autoAck: false`, dispatches each delivery
+through Bondstone, acknowledges on success, and negatively acknowledges on
+failure using the configured requeue behavior. RabbitMQ connection,
+queue/exchange/binding declaration, dead-letter topology, and retry policy
+remain application-owned.
+
 ## App-Owned Setup
 
 Bondstone does not declare exchanges, queues, bindings, long-running
@@ -89,6 +97,10 @@ ADR-backed decisions.
 
 ## Deferred Work
 
-Receive-side RabbitMQ hosted consumers, acknowledgement integration,
-retry/dead-letter policy handoff, broker-backed integration tests, and
-topology declaration are future slices.
+RabbitMQ has initial broker-backed receive worker integration tests for real
+queue delivery, acknowledgement after successful command dispatch, and failed
+dispatch handoff to application-owned dead-letter topology through negative
+acknowledgement with `requeue: false`. It also proves event receive fan-out
+from one broker queue delivery to each configured subscriber identity before
+acknowledgement. Retry behavior and broker topology declaration remain future
+slices.

@@ -13,7 +13,7 @@ Install the packages needed for the host:
   module transaction behavior.
 - `Bondstone.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
   classification and provider registration.
-- `Bondstone.Persistence.Dapper.Postgres` for the PostgreSQL non-EF
+- `Bondstone.Persistence.Postgres` for the PostgreSQL non-EF
   persistence proof.
 - `Bondstone.Transport.RabbitMq` or `Bondstone.Transport.ServiceBus` when the
   host dispatches durable outbox records through a direct provider adapter.
@@ -151,10 +151,14 @@ body into the neutral durable envelope, acknowledge only after the receive
 pipeline completes, and let failures flow to provider-native retry and
 dead-letter policy. RabbitMQ now has a receive queue dispatcher proof through
 `IRabbitMqReceivedMessageDispatcher`, and Service Bus has a receive source
-dispatcher proof through `IServiceBusReceivedMessageDispatcher`. Hosted
-RabbitMQ consumers and hosted Service Bus processors are still planned
-follow-up slices. Do not document app-facing broker receive setup as complete
-until those adapters exist.
+dispatcher proof through `IServiceBusReceivedMessageDispatcher`. Both
+providers also expose opt-in hosted receive helpers. RabbitMQ has
+broker-backed receive worker tests for real queue delivery, acknowledgement,
+failed dispatch handoff to application-owned dead-letter topology, and event
+subscriber fan-out from one queue delivery. Service Bus has emulator-backed
+receive worker tests for queue completion, abandon/dead-letter handoff, and
+topic subscription fan-out. Deeper retry-policy reliability verification
+remains a follow-up slice.
 
 Provider packages also expose native receive message mappers:
 
@@ -171,8 +175,15 @@ Provider packages also expose small handler helpers:
 
 These helpers call the mapper and dispatcher, then invoke a caller-supplied
 acknowledge/complete delegate only after dispatch succeeds. They still do not
-own hosted consumer or processor lifecycle.
+start hosted consumers or processors.
 
-The current sample uses explicit `Bondstone.Transport.Local` queue routing to
-exercise the durable loop without presenting local transport as a production
-broker adapter.
+For hosts that want Bondstone to run the native receive loop, RabbitMQ and
+Service Bus expose opt-in `UseReceiveWorker(...)` helpers on their transport
+builders. These helpers run consumers/processors for configured receive
+topology, but broker entities, credentials, bindings, retry policy, and
+dead-letter setup remain application-owned.
+
+The current sample uses explicit `Bondstone.Transport.Local` queue routing by
+default and also exposes `AddModularMonolithSampleWithRabbitMq(...)` for one
+preferred direct-provider sample path. The RabbitMQ sample path keeps
+connection and topology setup app-owned.

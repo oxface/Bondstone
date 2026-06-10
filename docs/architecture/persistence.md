@@ -8,8 +8,8 @@ Persistence docs are split by ownership boundary:
   EF Core mappings, stores, and the EF persistence scope.
 - [persistence-postgresql.md](persistence-postgresql.md) describes
   PostgreSQL-specific registration, SQL behavior, and integration coverage.
-- [persistence-dapper-postgres.md](persistence-dapper-postgres.md) describes
-  the PostgreSQL Dapper-assisted non-EF persistence proof.
+- [persistence-postgres.md](persistence-postgres.md) describes
+  the PostgreSQL-specific non-EF persistence proof.
 
 Current implementation and verification state is summarized in
 [../mvp-plan.md](../mvp-plan.md). Historical extraction details remain in
@@ -57,13 +57,14 @@ schema targeting, and integration tests. Provider-owned SQL should reuse table,
 column, and constraint names from provider-neutral mappings when those mappings
 define the persisted shape.
 
-`Bondstone.Persistence.Dapper.Postgres` is accepted by
+`Bondstone.Persistence.Postgres` is accepted by
 [ADR 0035](../adr/0035-postgresql-dapper-persistence-proof.md) as the first
-non-EF persistence proof. It is PostgreSQL-specific and Dapper-assisted, but
-Dapper is an implementation helper rather than the public abstraction. The
-package should implement the core `Bondstone` persistence contracts directly
-and own its connection/session and transaction boundary without depending on
-EF entity mappings, `DbContext`, or `IEntityFrameworkCorePersistenceScope`.
+non-EF persistence proof. It is PostgreSQL-specific and Dapper-backed, but
+Dapper is an internal implementation helper rather than the public
+abstraction. The package should implement the core `Bondstone` persistence
+contracts directly and own its connection/session and transaction boundary
+without depending on EF entity mappings, `DbContext`, or
+`IEntityFrameworkCorePersistenceScope`.
 The proof should include a mixed-persistence sample module before reliability
 work hardens too deeply around EF Core.
 

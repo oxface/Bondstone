@@ -1,12 +1,12 @@
 using Bondstone.Messaging;
 using Bondstone.Modules;
-using Bondstone.Persistence.Dapper.Postgres.Persistence;
+using Bondstone.Persistence.Postgres.Persistence;
 using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
 using Dapper;
 
 namespace Bondstone.Samples.ModularMonolith.Billing;
 
-public sealed class RecordBillingInvoiceHandler(IPostgresDapperModuleSession session)
+public sealed class RecordBillingInvoiceHandler(IPostgresModuleSession session)
     : IIntegrationEventHandler<OrderPlacedEvent>
 {
     public async ValueTask HandleAsync(

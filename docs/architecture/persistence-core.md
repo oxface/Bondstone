@@ -126,7 +126,7 @@ pending state for the same operation id in the current command loop.
 ## Provider Boundaries
 
 Core contracts are intentionally provider-neutral.
-`Bondstone.Persistence.Dapper.Postgres` is the accepted first non-EF proof
+`Bondstone.Persistence.Postgres` is the accepted first non-EF proof
 provider. It should implement these contracts directly, own its
 PostgreSQL-specific connection/session and transaction boundary in its own
 package, and pass explicit commit delegates to core orchestration primitives

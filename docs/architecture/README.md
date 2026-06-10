@@ -38,22 +38,22 @@ broker setup.
 
 [ADR 0034](../adr/0034-adapter-diversity-proof-transports.md) accepts the
 first transport proof packages: `Bondstone.Transport.ServiceBus` and
-`Bondstone.Transport.RabbitMq`. Their first applied scope is outgoing durable
-outbox dispatch. Receive workers, provider-backed broker tests, broker
-administration, and provider-backed receive reliability remain later slices.
-See [transport-servicebus.md](transport-servicebus.md) and
+`Bondstone.Transport.RabbitMq`. Their current implemented scope includes
+outgoing durable outbox dispatch, provider-native receive topology, opt-in
+hosted receive workers, and provider-backed receive integration tests. Broker
+administration, topology declaration helpers, and retry-policy hardening remain
+deferred. See [transport-servicebus.md](transport-servicebus.md) and
 [transport-rabbitmq.md](transport-rabbitmq.md).
 
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
-tests, and local development while direct provider receive workers are still
-being hardened. It is not a fallback and does not replace broker durability.
-See [transport-local.md](transport-local.md).
+tests, and local development. It is not a fallback and does not replace broker
+durability. See [transport-local.md](transport-local.md).
 
 [ADR 0035](../adr/0035-postgresql-dapper-persistence-proof.md) accepts the
 first non-EF persistence proof package:
-`Bondstone.Persistence.Dapper.Postgres`. Its scope is PostgreSQL-specific,
-Dapper-assisted durable module messaging persistence without EF Core.
-See [persistence-dapper-postgres.md](persistence-dapper-postgres.md).
+`Bondstone.Persistence.Postgres`. Its scope is PostgreSQL-specific,
+Dapper-backed internally, durable module messaging persistence without EF Core.
+See [persistence-postgres.md](persistence-postgres.md).
 
 ## Topic Docs
 
@@ -69,12 +69,12 @@ See [persistence-dapper-postgres.md](persistence-dapper-postgres.md).
   store, and persistence-scope rules.
 - [persistence-postgresql.md](persistence-postgresql.md) records PostgreSQL
   provider behavior.
-- [persistence-dapper-postgres.md](persistence-dapper-postgres.md) records
-  PostgreSQL Dapper-assisted non-EF persistence proof behavior.
+- [persistence-postgres.md](persistence-postgres.md) records
+  PostgreSQL-specific non-EF persistence proof behavior.
 - [transport-servicebus.md](transport-servicebus.md) records Azure Service Bus
-  outgoing transport proof behavior.
-- [transport-rabbitmq.md](transport-rabbitmq.md) records RabbitMQ outgoing
-  transport proof behavior.
+  direct transport behavior.
+- [transport-rabbitmq.md](transport-rabbitmq.md) records RabbitMQ direct
+  transport behavior.
 - [transport-local.md](transport-local.md) records explicit local queue
   transport behavior for samples, tests, and local development.
 

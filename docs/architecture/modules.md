@@ -48,7 +48,7 @@ app-owned unless a later ADR accepts a bounded helper.
 commands or integration events. Durable messaging modules must also declare
 persistence through `module.UsePersistence(...)` or a provider-specific helper
 such as `UsePostgreSqlPersistence<TDbContext>()` or
-`UsePostgresDapperPersistence(...)`.
+`UsePostgresPersistence(...)`.
 
 Startup validation checks that durable command handlers and event subscribers
 belong to registered durable-messaging modules.
@@ -97,8 +97,9 @@ Core module receive is provider-neutral:
 
 Transport adapters should parse provider-native messages into
 `DurableMessageEnvelope` and call the appropriate receive pipeline inside the
-provider acknowledgement boundary. Direct RabbitMQ and Service Bus receive
-adapters are planned follow-up slices.
+provider acknowledgement boundary. Direct RabbitMQ and Service Bus adapters
+provide native message mappers, receive dispatchers, settlement handler
+helpers, and opt-in hosted receive workers over configured receive topology.
 
 ## Persistence Boundaries
 
@@ -107,9 +108,10 @@ Core modules, command and event subscriber transaction behavior saves handler
 state, inbox markers, operation state when applicable, and outgoing outbox
 messages in the module persistence boundary.
 
-The PostgreSQL Dapper-assisted persistence proof supplies equivalent durable
-outbox, inbox, operation-state, and transaction behavior without EF Core for
-modules that opt into that provider.
+`Bondstone.Persistence.Postgres` supplies equivalent durable outbox, inbox,
+operation-state, and transaction behavior without EF Core for modules that opt
+into that PostgreSQL provider. Dapper is an internal implementation helper for
+that package, not the app-facing provider identity.
 
 ## Service Extraction
 

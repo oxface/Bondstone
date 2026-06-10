@@ -5,8 +5,9 @@ adapter behavior.
 
 ## Current Scope
 
-The current adapter is a Phase 6 proof-oriented outgoing durable outbox
-transport plus a Phase 6.5 receive dispatcher proof.
+The current adapter covers outgoing durable outbox transport, receive source
+topology, receive dispatchers, native message mapping, settlement handler
+helpers, and an opt-in hosted receive worker proof.
 `ServiceBusDurableOutboxTransport` implements
 `IDurableOutboxTransport` for claimed outbox records and maps Bondstone
 durable envelopes to Azure Service Bus messages through a provider-local
@@ -69,6 +70,13 @@ app-owned processors before they call the dispatcher.
 dispatcher execution, and a caller-supplied completion delegate. It completes
 only after dispatch succeeds and leaves failures visible to the caller.
 
+`UseReceiveWorker(...)` is an opt-in hosted processor helper. It starts
+processors for the configured receive queues and topic subscriptions with
+`AutoCompleteMessages = false`, dispatches each message through Bondstone,
+completes on success, and abandons on failure. Service Bus queues, topics,
+subscriptions, rules, dead-letter policy, credentials, and administration
+remain application-owned.
+
 ## App-Owned Setup
 
 Bondstone does not create queues, topics, subscriptions, rules, long-running
@@ -84,6 +92,8 @@ remain separate ADR-backed decisions.
 
 ## Deferred Work
 
-Receive-side Service Bus hosted processors, acknowledgement integration,
-retry/dead-letter policy handoff, broker-backed integration tests, and
-topology declaration are future slices.
+Service Bus has emulator-backed receive worker integration tests for real queue
+delivery, completion after successful command dispatch, abandon/dead-letter
+handoff after failed dispatch, and topic subscription fan-out to configured
+subscriber identities. Retry-policy hardening and broker topology declaration
+remain future slices.

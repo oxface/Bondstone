@@ -21,6 +21,11 @@ internal sealed class ServiceBusReceiveTopology
             StringComparer.Ordinal);
     }
 
+    public IReadOnlyCollection<ServiceBusReceiveSource> Sources =>
+        _sources.Values
+            .Select(static registration => registration.Source)
+            .ToArray();
+
     public ServiceBusReceiveSourceDiagnostic DescribeSource(
         ServiceBusReceiveSource source)
     {

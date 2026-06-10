@@ -17,7 +17,8 @@ public static class BondstoneServiceBusBuilderExtensions
         builder.Services.AddBondstoneServiceBusOutboxTransport(
             serviceBus.CommandDestinationTopology,
             serviceBus.EventDestinationTopology,
-            serviceBus.ReceiveTopology);
+            serviceBus.ReceiveTopology,
+            serviceBus.ReceiveWorkerRegistration);
         builder.Outbox.MarkTransport("ServiceBus");
 
         return builder;
@@ -36,7 +37,8 @@ public static class BondstoneServiceBusBuilderExtensions
         outbox.Services.AddBondstoneServiceBusOutboxTransport(
             serviceBus.CommandDestinationTopology,
             serviceBus.EventDestinationTopology,
-            serviceBus.ReceiveTopology);
+            serviceBus.ReceiveTopology,
+            serviceBus.ReceiveWorkerRegistration);
         outbox.MarkTransport("ServiceBus");
 
         return outbox;

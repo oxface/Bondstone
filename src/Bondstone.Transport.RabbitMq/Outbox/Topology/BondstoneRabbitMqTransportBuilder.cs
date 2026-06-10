@@ -11,6 +11,7 @@ public sealed class BondstoneRabbitMqTransportBuilder
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, RabbitMqReceiveQueueRegistration> _receiveQueues =
         new(StringComparer.Ordinal);
+    private RabbitMqReceiveWorkerRegistration? _receiveWorkerRegistration;
     private string? _commandExchangeName;
     private string? _eventExchangeName;
     private Func<string, string>? _commandRoutingKeyConvention;
@@ -30,6 +31,9 @@ public sealed class BondstoneRabbitMqTransportBuilder
 
     internal RabbitMqReceiveTopology ReceiveTopology =>
         new(_receiveQueues);
+
+    internal RabbitMqReceiveWorkerRegistration? ReceiveWorkerRegistration =>
+        _receiveWorkerRegistration;
 
     public BondstoneRabbitMqTransportBuilder UseCommandExchange(
         string exchangeName)
@@ -105,6 +109,14 @@ public sealed class BondstoneRabbitMqTransportBuilder
         return new BondstoneRabbitMqReceiveQueueBuilder(
             this,
             normalizedQueueName);
+    }
+
+    public BondstoneRabbitMqTransportBuilder UseReceiveWorker(
+        Action<RabbitMqReceiveWorkerOptions>? configureOptions = null)
+    {
+        _receiveWorkerRegistration = new RabbitMqReceiveWorkerRegistration(configureOptions);
+
+        return this;
     }
 
     public BondstoneRabbitMqTransportBuilder UseEventRoutingKeyConvention()

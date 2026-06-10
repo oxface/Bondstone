@@ -91,10 +91,11 @@ Start with:
 - Adapter-diversity proof packages for Azure Service Bus and RabbitMQ are
   accepted by ADR 0034. Keep these slices provider-native, app-owned,
   proof-oriented, and explicit about receive/broker reliability follow-ups.
-- `Bondstone.Persistence.Dapper.Postgres` is accepted by ADR 0035 as the first
-  non-EF persistence proof. Keep it PostgreSQL-specific and Dapper-assisted,
-  not a generic Dapper abstraction; it should prove durable module messaging
-  persistence and mixed-persistence samples without depending on EF Core.
+- `Bondstone.Persistence.Postgres` is accepted by ADRs 0035 and 0037 as the
+  first non-EF persistence proof. Keep it PostgreSQL-specific and
+  Dapper-backed internally, not a generic Dapper abstraction; it should prove
+  durable module messaging persistence and mixed-persistence samples without
+  depending on EF Core.
 - Durable behavior, public API shape, package boundaries, provider support,
   transport support, migration strategy, and compatibility policy require ADRs
   before broad implementation.

@@ -2,6 +2,7 @@ using Bondstone.Persistence;
 using Bondstone.Transport.RabbitMq.Inbox;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
 
 namespace Bondstone.Transport.RabbitMq.Outbox;
@@ -25,7 +26,8 @@ public static class BondstoneRabbitMqServiceCollectionExtensions
         this IServiceCollection services,
         RabbitMqCommandRoutingTopology commandTopology,
         RabbitMqEventRoutingTopology eventTopology,
-        RabbitMqReceiveTopology receiveTopology)
+        RabbitMqReceiveTopology receiveTopology,
+        RabbitMqReceiveWorkerRegistration? receiveWorkerRegistration)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(commandTopology);
@@ -45,6 +47,17 @@ public static class BondstoneRabbitMqServiceCollectionExtensions
             new RabbitMqTopologyDiagnostics(commandTopology, eventTopology, receiveTopology));
         services.TryAddScoped<IRabbitMqReceivedMessageDispatcher, RabbitMqReceivedMessageDispatcher>();
         services.TryAddScoped<IRabbitMqReceivedMessageHandler, RabbitMqReceivedMessageHandler>();
+        if (receiveWorkerRegistration is not null)
+        {
+            services.AddOptions<RabbitMqReceiveWorkerOptions>();
+            if (receiveWorkerRegistration.ConfigureOptions is not null)
+            {
+                services.Configure(receiveWorkerRegistration.ConfigureOptions);
+            }
+
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IHostedService, RabbitMqReceiveWorker>());
+        }
         services.AddTransient<IDurableOutboxTransportRoute, RabbitMqDurableOutboxTransportRoute>();
         services.TryAddTransient<IDurableOutboxTransport, RoutedDurableOutboxTransport>();
 

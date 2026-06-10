@@ -50,7 +50,7 @@ Implemented surface includes:
   EF persistence scope, and module-owned EF transaction behaviors;
 - PostgreSQL EF Core registration, duplicate classification, inbox
   registration, outbox claiming, outbox lease renewal, and dispatch recording;
-- PostgreSQL Dapper-assisted persistence proof for durable outbox, inbox,
+- PostgreSQL-specific non-EF persistence proof for durable outbox, inbox,
   operation state, module transactions, and mixed-persistence sample pressure;
 - outgoing Azure Service Bus and RabbitMQ direct transport proof packages;
 - RabbitMQ receive queue topology and dispatcher proof over the neutral
@@ -61,8 +61,10 @@ Implemented surface includes:
   Bondstone transport message shapes;
 - receive settlement handler helpers for RabbitMQ and Service Bus that settle
   native messages only after Bondstone dispatch succeeds;
+- opt-in hosted receive lifecycle helpers for RabbitMQ consumers and Service
+  Bus processors over configured receive topology;
 - modular monolith sample using EF-backed ordering/fulfillment modules,
-  PostgreSQL Dapper-assisted billing, explicit integration events, a durable
+  `Bondstone.Persistence.Postgres` billing, explicit integration events, a durable
   outbox worker, and explicit local queue transport over the neutral receive
   pipelines.
 
@@ -114,7 +116,7 @@ Outcome:
 ### Phase 3: Usable Durable Command Loop
 
 Status: **Complete for the core and EF/PostgreSQL path; direct provider
-receive adapters remain Phase 6.5/7 work**.
+receive hardening remains Phase 7 work**.
 
 Outcome:
 
@@ -145,7 +147,7 @@ Outcome:
 ### Phase 5: First-Class Events
 
 Status: **Complete for core event publishing, subscriber execution, inbox
-identity, and sample proof; direct provider receive workers remain later
+identity, and sample proof; direct provider receive hardening remains later
 transport work**.
 
 Accepted decision:
@@ -165,7 +167,7 @@ Outcome:
 ### Phase 6: Adapter Diversity Proof
 
 Status: **Complete for outgoing direct transport proofs and PostgreSQL
-Dapper-assisted persistence proof**.
+non-EF persistence proof**.
 
 Accepted decisions:
 
@@ -180,15 +182,17 @@ Outcome:
 - `Bondstone.Transport.RabbitMq` publishes claimed command and event records
   through exchange/routing-key or queue topology using provider-native
   vocabulary;
-- `Bondstone.Persistence.Dapper.Postgres` proves durable module persistence
+- `Bondstone.Persistence.Postgres` proves durable module persistence
   without EF Core and participates in the mixed-persistence sample.
 
 ### Phase 6.5: Direct Adapter Reset
 
-Status: **In progress**.
+Status: **Complete**.
 
-Accepted decision:
-[ADR 0036](adr/0036-direct-transport-adapters-and-rebus-removal.md).
+Accepted decisions:
+
+- [ADR 0036](adr/0036-direct-transport-adapters-and-rebus-removal.md)
+- [ADR 0037](adr/0037-postgresql-persistence-package-identity.md)
 
 Goal: remove adapter-on-adapter design pressure and make direct provider
 adapters the reference architecture before Phase 7 hardening.
@@ -213,12 +217,12 @@ Applied in this slice:
 - add RabbitMQ receive queue bindings and
   `IRabbitMqReceivedMessageDispatcher` as the first direct receive proof. This
   maps received Bondstone RabbitMQ messages into the neutral command/event
-  receive pipelines but does not yet run a hosted broker consumer.
+  receive pipelines.
 - add Service Bus receive source bindings and
   `IServiceBusReceivedMessageDispatcher` as the first Service Bus receive
   proof. This maps received Bondstone Service Bus messages from queues or
   topic subscriptions into the neutral command/event receive pipelines but
-  does not yet run hosted Service Bus processors.
+  does not own broker administration.
 - add native receive message mappers so RabbitMQ `BasicDeliverEventArgs` and
   Service Bus `ServiceBusReceivedMessage` can be converted into Bondstone
   transport messages before dispatch while leaving native acknowledgement
@@ -226,23 +230,34 @@ Applied in this slice:
 - add receive settlement handler helpers so app-owned RabbitMQ consumers and
   Service Bus processors can compose native mapping, Bondstone dispatch, and
   caller-supplied acknowledgement/completion in the correct order.
+- add opt-in hosted receive lifecycle helpers so applications can start
+  RabbitMQ consumers and Service Bus processors over configured receive
+  topology without Bondstone owning broker administration or retry policy.
+- add the first RabbitMQ broker-backed receive worker integration test,
+  proving real queue delivery through the opt-in worker and broker
+  acknowledgement after successful command receive dispatch.
+- deepen RabbitMQ broker-backed receive worker coverage to prove failed
+  dispatch is negatively acknowledged with `requeue: false` and handed to
+  application-owned RabbitMQ dead-letter topology.
+- deepen RabbitMQ broker-backed receive worker coverage to prove one event
+  queue delivery is dispatched once per configured subscriber identity before
+  broker acknowledgement.
+- add Service Bus emulator-backed receive worker integration tests, proving
+  queue command completion, failed dispatch handoff to the Service Bus
+  dead-letter subqueue, and topic subscription fan-out to configured
+  subscriber identities.
+- rename the non-EF PostgreSQL package from the Dapper implementation identity
+  to `Bondstone.Persistence.Postgres`, while keeping Dapper internal and
+  leaving EF package identities unchanged.
+- supplement the modular monolith sample with an explicit
+  `AddModularMonolithSampleWithRabbitMq(...)` provider-backed path and a
+  RabbitMQ sample smoke test.
 
-Remaining slices:
+Deferred to Phase 7:
 
-1. Complete RabbitMQ receive worker proof:
-   broker consumer/channel lifecycle, command queue receive, event queue
-   receive, acknowledgement, retry/dead-letter handoff, and provider-backed
-   tests.
-2. Complete Service Bus receive worker proof:
-   processor lifecycle, command queue processor, event topic subscription or
-   event queue processor, acknowledgement, retry/dead-letter handoff, and
-   provider-backed tests.
-3. Decide persistence package naming:
-   whether `Bondstone.Persistence.Dapper.Postgres` becomes
-   `Bondstone.Persistence.Postgres`, and whether EF packages gain
-   `Persistence` in their public package identity.
-4. Replace or supplement local transport in the sample with one preferred
-   direct provider receive path once a direct receive adapter is ready.
+- provider retry-policy hardening and diagnostics;
+- broker topology declaration helpers, if accepted by ADR;
+- any broader EF persistence package-family rename.
 
 ### Phase 7: Hardening And Public API Tightening
 
@@ -255,10 +270,10 @@ Likely goals:
 
 - harden direct provider transport receive semantics;
 - refine multi-transport routing and diagnostics;
-- tighten persistence package naming and provider contracts;
+- refine persistence provider contracts;
 - improve operation-state failure/running/retry semantics;
 - add stale inbox receive recovery if a safe model is accepted by ADR;
-- add provider-backed integration tests for receive reliability;
+- broaden provider-backed integration tests for receive reliability;
 - polish the sample into the preferred public API path.
 
 ## Verification Policy
@@ -274,5 +289,5 @@ Default verification should stay fast:
 Infrastructure-backed tests remain explicit:
 
 - PostgreSQL and sample tests use `Category=Integration`;
-- future RabbitMQ and Service Bus provider-backed receive tests must also use
+- RabbitMQ and Service Bus provider-backed receive tests must also use
   `Category=Integration`.

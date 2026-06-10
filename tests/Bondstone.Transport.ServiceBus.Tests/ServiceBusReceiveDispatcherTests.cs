@@ -7,6 +7,8 @@ using Bondstone.Persistence;
 using Bondstone.Transport.ServiceBus.Inbox;
 using Bondstone.Transport.ServiceBus.Outbox;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Bondstone.Transport.ServiceBus.Tests;
@@ -235,6 +237,46 @@ public sealed class ServiceBusReceiveDispatcherTests
                 }));
 
         Assert.False(completed);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UseReceiveWorker_WhenConfigured_RegistersHostedService()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
+
+        services.AddBondstone(
+            bondstone => bondstone.UseServiceBusTransport(
+                serviceBus =>
+                {
+                    serviceBus.ReceiveQueue("fulfillment-commands")
+                        .AcceptModule("fulfillment");
+                    serviceBus.UseReceiveWorker();
+                }));
+
+        ServiceDescriptor descriptor = Assert.Single(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IHostedService)
+                && descriptor.ImplementationType?.Name == "ServiceBusReceiveWorker");
+        Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        ServiceBusReceiveWorkerOptions options =
+            serviceProvider.GetRequiredService<IOptions<ServiceBusReceiveWorkerOptions>>().Value;
+        Assert.Equal(1, options.MaxConcurrentCalls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Validate_WhenMaxConcurrentCallsIsZero_Throws()
+    {
+        var options = new ServiceBusReceiveWorkerOptions
+        {
+            MaxConcurrentCalls = 0,
+        };
+
+        Assert.Throws<ArgumentOutOfRangeException>(options.Validate);
     }
 
     private static ServiceProvider CreateServiceProvider(

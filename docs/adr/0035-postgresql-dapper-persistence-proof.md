@@ -1,6 +1,6 @@
 # 0035 PostgreSQL Dapper Persistence Proof
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-09
 
@@ -28,7 +28,7 @@ Bondstone will add a proof-oriented non-EF persistence package:
 
 - `Bondstone.Persistence.Dapper.Postgres`
 
-The package is PostgreSQL-specific and Dapper-assisted. It depends on
+The package is PostgreSQL-specific and Dapper-backed. It depends on
 `Bondstone`, `Npgsql`, and `Dapper`. It does not depend on EF Core,
 `Bondstone.EntityFrameworkCore`, Rebus, transport packages, hosting, samples,
 or consumer domain assemblies.
@@ -67,6 +67,13 @@ as billing, that uses the PostgreSQL/Dapper provider while ordering and
 fulfillment remain EF-backed. The sample should prove mixed-persistence
 durable event handling, not replace the EF sample path.
 
+## Amendment 2026-06-09: Package Identity Renamed
+
+ADR 0037 renames the public package identity to
+`Bondstone.Persistence.Postgres` so Dapper is treated as an internal
+implementation helper rather than the provider identity. The proof remains
+PostgreSQL-specific and Dapper-backed internally.
+
 ## Consequences
 
 Bondstone gets direct pressure on the provider-neutral persistence contracts
@@ -91,23 +98,24 @@ tuning remain later reliability or operational slices.
 - [0031 Durable Operation State Integration](0031-durable-operation-state-integration.md)
 - [0032 Module-Owned Durable EF Persistence](0032-module-owned-durable-ef-persistence.md)
 - [0034 Adapter Diversity Proof Transports](0034-adapter-diversity-proof-transports.md)
+- [0037 PostgreSQL Persistence Package Identity](0037-postgresql-persistence-package-identity.md)
 
 ## Application Notes
 
-- Current contract: Phase 6 adds `Bondstone.Persistence.Dapper.Postgres` as a
-  PostgreSQL-specific, Dapper-assisted proof provider for durable module
-  messaging persistence without EF Core. The current proof supports one
-  `NpgsqlDataSource` per service provider; multiple modules can use separate
-  schemas in the same database.
+- Current contract: Phase 6 adds `Bondstone.Persistence.Postgres` as the
+  current public package identity for the PostgreSQL-specific, Dapper-backed
+  proof provider for durable module messaging persistence without EF Core.
+  The current proof supports one `NpgsqlDataSource` per service provider;
+  multiple modules can use separate schemas in the same database.
 - Stable docs: Package and persistence direction are reflected in
   [docs/packaging.md](../packaging.md),
   [docs/architecture/persistence.md](../architecture/persistence.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
-  [docs/architecture/persistence-dapper-postgres.md](../architecture/persistence-dapper-postgres.md),
+  [docs/architecture/persistence-postgres.md](../architecture/persistence-postgres.md),
   [docs/mvp-plan.md](../mvp-plan.md), and this ADR.
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review for
   provider support and now points at adapter-diversity proof work.
-- Application evidence: `Bondstone.Persistence.Dapper.Postgres` is scaffolded
+- Application evidence: `Bondstone.Persistence.Postgres` is scaffolded
   and implements durable outbox, inbox, operation-state, module transaction,
   and module outbox dispatch proof behavior. Integration tests verify schema
   creation, transaction commit/rollback, inbox handle-once, and operation
@@ -125,7 +133,7 @@ Read back this ADR and affected stable docs before implementation.
 Executable verification:
 
 - `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
-- `dotnet test tests/Bondstone.Persistence.Dapper.Postgres.Tests/Bondstone.Persistence.Dapper.Postgres.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
+- `dotnet test tests/Bondstone.Persistence.Postgres.Tests/Bondstone.Persistence.Postgres.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
 - `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
 - `dotnet test Bondstone.slnx --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
 - `pnpm format:check`

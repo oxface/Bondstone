@@ -296,13 +296,14 @@ implementation, rather than as only future vocabulary.
   integration event, outbox-backed event publication, Rebus in-memory topic
   delivery, fulfillment event subscriber execution, per-subscriber inbox
   handling, and EF subscriber transaction behavior.
-- Pending or deferred: Optional native Rebus subscription startup helpers,
-  provider-backed event transport tests, external event wire formats,
-  provider-specific event queue/address handoff, event choreography samples,
-  domain event persistence, automatic integration-event publication, retry
-  state, failure state, stale receive recovery, broker-specific topology
-  creation, Azure Service Bus and RabbitMQ transport proofs, and non-EF
-  persistence proof remain future slices.
+- Pending or deferred: The Rebus-specific portions are historical after ADR 0036. Azure Service Bus and RabbitMQ direct transport proofs,
+  provider-backed receive tests, non-EF persistence proof, startup topology
+  validation, and event queue fan-out diagnostics are now covered by later
+  ADRs. External event wire formats, event choreography samples, domain event
+  persistence, automatic integration-event publication, retry state, failure
+  state, stale receive recovery, broker-specific topology creation, and any
+  public cross-provider diagnostic report object remain separate future
+  decisions.
 
 ## Verification
 

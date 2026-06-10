@@ -140,10 +140,12 @@ slices.
   monolith sample includes a second explicit integration event,
   `InventoryReservedEvent`, so the sample proves command delivery plus event
   publication in both module directions without becoming a broker matrix.
-- Pending or deferred: Receive-side Service Bus and RabbitMQ adapters,
-  provider-backed broker integration tests, broker topology declaration,
-  acknowledgement/retry/dead-letter semantics, external event wire formats,
-  and provider-hardening reliability work remain future slices. The non-EF
+- Pending or deferred: Direct receive adapters, provider-backed receive worker
+  tests, provider retry/recovery boundaries, startup topology validation, and
+  event queue fan-out diagnostics are now covered by ADRs 0036, 0038, 0039,
+  and 0040. Broker topology declaration, external event wire formats, any
+  public cross-provider diagnostic report object, and deeper provider
+  reliability matrices remain separate future decisions. The non-EF
   persistence proof is handled by [ADR 0035](0035-postgresql-dapper-persistence-proof.md).
 
 ## Verification

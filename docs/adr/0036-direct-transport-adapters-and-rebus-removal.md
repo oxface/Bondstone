@@ -348,8 +348,12 @@ diagnostics, and provider-backed integration tests.
 - Pending or deferred: Provider retry/recovery boundaries and initial receive
   failure diagnostics are covered by
   [ADR 0038](0038-provider-retry-recovery-and-settlement-boundaries.md).
-  Broker topology declaration helpers and broader operational diagnostics
-  remain Phase 7 concerns.
+  Startup topology validation is covered by
+  [ADR 0039](0039-startup-transport-topology-validation.md), and event queue
+  fan-out diagnostics are covered by
+  [ADR 0040](0040-event-queue-fanout-diagnostics.md). Broker topology
+  declaration helpers and any public cross-provider diagnostic report object
+  remain separate future decisions.
 
 ## Verification
 

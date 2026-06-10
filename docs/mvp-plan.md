@@ -17,9 +17,9 @@ Bondstone is a focused .NET library for durable module boundaries:
   native;
 - a low-friction path from modular monolith to split services.
 
-Use this plan for current scope, priority, and slice sequencing. Use ADRs for
-durable technical decisions and architecture docs for the current operating
-contract.
+Use this plan for the current MVP surface, completed phase outcomes, and
+explicitly deferred post-MVP decisions. Use ADRs for durable technical
+decisions and architecture docs for the current operating contract.
 
 ## Current Position
 
@@ -36,8 +36,9 @@ Implemented surface includes:
 - module-owned operation-state reads aggregate across module stores with
   explicit status precedence;
 - module-owned persistence provider registrations reject duplicate
-  module-scoped outbox writer, inbox handler executor, and operation-state
-  store bindings with clear diagnostics;
+  module-scoped outbox writer, outbox dispatcher, inbox handler executor, and
+  operation-state store bindings with clear diagnostics, and missing
+  module-owned services name the declared provider;
 - default durable outbox dispatcher and hosted worker composition;
 - module registration and command execution in core, including
   `IBondstoneModule`, `ICommand`, `IDurableCommand`, typed handlers,
@@ -51,7 +52,7 @@ Implemented surface includes:
   command/event topology diagnostic vocabulary;
 - startup topology validation for aggregate outbound durable route ownership
   across Local, RabbitMQ, and Service Bus, plus RabbitMQ and Service Bus
-  receive bindings;
+  receive bindings and queue-destination event fan-out mismatches;
 - provider-neutral module receive pipelines:
   `IModuleCommandReceivePipeline` and `IModuleEventReceivePipeline`;
 - EF Core entity mappings, outbox writer, inbox store, operation state store,
@@ -127,8 +128,7 @@ Outcome:
 
 ### Phase 3: Usable Durable Command Loop
 
-Status: **Complete for the core and EF/PostgreSQL path; direct provider
-receive hardening remains Phase 7 work**.
+Status: **Complete for the current MVP surface**.
 
 Outcome:
 
@@ -158,9 +158,7 @@ Outcome:
 
 ### Phase 5: First-Class Events
 
-Status: **Complete for core event publishing, subscriber execution, inbox
-identity, and sample proof; direct provider receive hardening remains later
-transport work**.
+Status: **Complete for the current MVP surface**.
 
 Accepted decision:
 [ADR 0033](adr/0033-first-class-event-publish-subscribe-topology.md).
@@ -209,7 +207,7 @@ Accepted decisions:
 Goal: remove adapter-on-adapter design pressure and make direct provider
 adapters the reference architecture before Phase 7 hardening.
 
-Applied in this slice:
+Outcome:
 
 - remove the Rebus package and tests from the solution;
 - remove Rebus package versions and sample references;
@@ -265,25 +263,26 @@ Applied in this slice:
   `AddModularMonolithSampleWithRabbitMq(...)` provider-backed path and a
   RabbitMQ sample smoke test.
 
-Deferred to Phase 7:
+Deferred beyond Phase 6.5:
 
-- broker recovery diagnostics, now started by ADR 0038;
+- broker recovery diagnostics, covered in Phase 7 by ADR 0038;
 - broker topology declaration helpers, if accepted by ADR;
 - any broader EF persistence package-family rename.
 
 ### Phase 7: Direct Provider And Persistence API Hardening
 
-Status: **In Progress**.
+Status: **Complete for the current MVP surface**.
 
 Accepted decisions:
 
 - [ADR 0038](adr/0038-provider-retry-recovery-and-settlement-boundaries.md)
+- [ADR 0039](adr/0039-startup-transport-topology-validation.md)
 - [ADR 0040](adr/0040-event-queue-fanout-diagnostics.md)
 
 Goal: harden direct provider transport and persistence APIs before broader
 public polish.
 
-Applied in this slice:
+Outcome:
 
 - define the provider retry/recovery boundary: core owns persisted outbox
   retry and terminal failure state; direct provider receive adapters own
@@ -314,16 +313,16 @@ Applied in this slice:
   fail startup when direct queue event routes are paired with split subscriber
   receive bindings, while preserving same-queue in-process fan-out.
 
-Likely next slices:
+Deferred beyond Phase 7:
 
 - refine multi-transport diagnostics into a public report shape if accepted by
   ADR;
-- refine persistence provider contracts;
 - improve operation-state failure/running/retry semantics if a safe model is
   accepted by ADR;
 - add stale inbox receive recovery if a safe model is accepted by ADR;
-- broaden provider-backed integration tests for receive reliability;
-- polish the sample into the preferred public API path.
+- add broker topology declaration helpers if accepted by ADR;
+- broaden provider-backed integration tests beyond the current command
+  success, failure handoff, and event fan-out coverage.
 
 ## Verification Policy
 

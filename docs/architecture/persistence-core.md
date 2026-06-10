@@ -113,16 +113,28 @@ or already processed, and carries the effective `DurableInboxRecord`.
 
 `IDurableInboxHandlerExecutor` is the narrow core orchestration boundary for
 handle-once execution. It composes inbox registration, a caller-supplied
-handler delegate, processed-marker staging, and a caller-supplied commit
-delegate. It does not start database transactions, call EF Core
+handler delegate, and processed-marker staging. It does not start database
+transactions, call EF Core
 `SaveChangesAsync`, acknowledge transports, discover handlers, or wrap
-ordinary in-process calls in a mediator.
+ordinary in-process calls in a mediator. In module-owned execution, provider
+transaction behaviors own the commit and persist the handler state, inbox
+marker, operation state, and outgoing outbox rows together. Low-level/root
+composition must execute the inbox executor inside the caller's chosen
+transaction or save boundary and commit outside the executor.
 
 Transport adapters that compose the executor should acknowledge transport
 messages only after the executor returns a handled or already-processed result
 and the relevant commit boundary has succeeded. Already-received but
-unprocessed rows remain unresolved until a later inbox lease or stale receive
-recovery decision; adapters should not silently treat them as handled.
+unprocessed rows are not treated as handled. Module receive pipelines surface
+them through `DurableInboxAlreadyReceivedException`, and adapters should hand
+that failure back to provider-native retry/dead-letter policy rather than
+acknowledging the message as successfully processed.
+
+Bondstone does not currently provide inbox leases, stale-row recovery hooks,
+maintenance workers, failed receive states, or provider-neutral inbox row
+mutation helpers. Applications may build their own operational recovery around
+the persisted inbox table, but that recovery owns the safety proof for any
+row mutation or handler re-execution.
 
 `IDurableInboxStore` exposes lower-level inbox store operations: read a record,
 add a receive record, and mark it processed. Provider implementations own the
@@ -156,7 +168,7 @@ ADR accepts default running, failure, cancellation, or retry semantics.
 Core contracts are intentionally provider-neutral.
 `Bondstone.Persistence.Postgres` is the PostgreSQL-specific non-EF persistence
 provider. It implements these contracts directly, owns its PostgreSQL-specific
-connection/session and transaction boundary in its own package, and passes
-explicit commit delegates to core orchestration primitives where needed.
+connection/session and transaction boundary in its own package, and commits
+outside core orchestration primitives.
 Non-EF providers should not depend on EF entity mappings,
 `DbContext`, or `IEntityFrameworkCorePersistenceScope`.

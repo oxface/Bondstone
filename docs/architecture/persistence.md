@@ -42,6 +42,13 @@ outgoing outbox writes from the target module persistence context. Existing
 single-`DbContext` setups remain supported, but modular-monolith samples should
 prefer one module-owned `DbContext` per module.
 
+Already-received but unprocessed inbox rows remain operationally loud. Current
+Bondstone persistence has no inbox lease, stale-row sweeper, failed receive
+state, or provider-neutral recovery hook that can prove handler re-execution
+is safe. Applications that need to recover those rows own the inspection,
+mutation, audit, and provider/broker coordination until a later ADR accepts a
+durable Bondstone recovery model.
+
 Module persistence metadata remains on current module registration. The
 provider name marks that the module declares persistence and lets provider
 transaction behaviors decide whether they own command or event subscriber

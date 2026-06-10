@@ -76,15 +76,20 @@ public sealed partial class PostgreSqlPersistenceTests
 
         DurableInboxRegistrationResult inboxResult = await inboxRegistrar.RegisterAsync(inboxRecord);
         DurableInboxHandleResult handleResult = await persistenceScope.ExecuteAsync(
-            async (persistence, ct) => await inboxExecutor.HandleOnceAsync(
-                handledInboxRecord,
-                _ =>
-                {
-                    handlerCalls++;
-                    return ValueTask.CompletedTask;
-                },
-                persistence.SaveChangesAsync,
-                ct));
+            async (persistence, ct) =>
+            {
+                DurableInboxHandleResult result = await inboxExecutor.HandleOnceAsync(
+                    handledInboxRecord,
+                    _ =>
+                    {
+                        handlerCalls++;
+                        return ValueTask.CompletedTask;
+                    },
+                    ct);
+
+                await persistence.SaveChangesAsync(ct);
+                return result;
+            });
         await writer.WriteAsync(envelope);
         await context.SaveChangesAsync();
 

@@ -286,13 +286,11 @@ public sealed class AddBondstoneCompositionTests
         public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
             DurableInboxRecord record,
             Func<CancellationToken, ValueTask> handler,
-            Func<CancellationToken, ValueTask> commit,
             CancellationToken ct = default)
         {
             Record = record;
             HandlerCalls++;
             await handler(ct);
-            await commit(ct);
 
             return new DurableInboxHandleResult(
                 DurableInboxHandleStatus.Handled,

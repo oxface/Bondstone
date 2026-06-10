@@ -37,7 +37,9 @@ claim lease. The provider follows the core outbox terminal status contract in
 
 `PostgreSqlDurableInboxRegistrar<TDbContext>` returns explicit registered,
 already-received, or already-processed results without using duplicate
-exceptions as the public flow.
+exceptions as the public flow. It does not implement inbox leases, stale
+receive recovery, failed receive states, or row mutation helpers for
+already-received unprocessed rows.
 
 `AddBondstonePostgreSqlPersistence<TDbContext>` configures Npgsql for a
 consumer-owned DbContext and composes the provider-neutral EF registrations,

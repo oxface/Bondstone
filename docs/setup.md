@@ -213,6 +213,14 @@ also expose opt-in hosted receive helpers. Bondstone's receive responsibility
 is the native settlement handoff; broker retry schedules, delivery counts, and
 DLQ settings remain provider/app-owned.
 
+If a receive attempt finds an inbox row that was already received but not
+processed, Bondstone fails the module receive with
+`DurableInboxAlreadyReceivedException` instead of re-running the handler. The
+provider worker then uses its normal failure handoff, such as RabbitMQ negative
+acknowledgement or Service Bus abandon. Recovery of the stale inbox row is an
+operator or application procedure until a later Bondstone recovery model is
+accepted.
+
 Provider packages also expose native receive message mappers:
 
 - `RabbitMqReceivedMessageMapper` for RabbitMQ deliveries;

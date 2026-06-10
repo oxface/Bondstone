@@ -14,6 +14,12 @@ durable module messaging persistence without `DbContext`:
 - a scoped `IPostgresModuleSession` exposing the current
   `NpgsqlConnection` and transaction for module handler SQL.
 
+Inbox registration returns registered, already-received, or already-processed
+results using PostgreSQL `INSERT ... ON CONFLICT DO NOTHING` semantics.
+Already-received but unprocessed rows stay operationally loud through the
+module receive pipelines; this package does not add inbox leases, stale-row
+recovery, failed receive states, or provider-neutral row mutation helpers.
+
 Dapper is an implementation helper, not a generic product abstraction. The
 public API is provider-specific and keeps PostgreSQL session/transaction
 ownership inside this package.
@@ -46,6 +52,10 @@ module.UsePostgresPersistence(connectionString, schema: "billing");
 
 Handlers that need application SQL can take `IPostgresModuleSession` and
 execute commands through the current connection and transaction.
+
+The module transaction owns the commit boundary for handler SQL, inbox markers,
+operation state, and outgoing outbox rows. The low-level inbox executor only
+stages receive-side work inside that transaction.
 
 `UsePostgresPersistence(...)` records the module persistence provider name but
 does not record or require a CLR context type. Provider-specific details such

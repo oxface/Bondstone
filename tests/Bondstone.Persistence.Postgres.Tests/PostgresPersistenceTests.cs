@@ -126,7 +126,6 @@ public sealed class PostgresPersistenceTests(PostgresFixture fixture)
             async ct => await executor.HandleOnceAsync(
                 record,
                 _ => ValueTask.CompletedTask,
-                _ => ValueTask.CompletedTask,
                 ct),
             CancellationToken.None);
 

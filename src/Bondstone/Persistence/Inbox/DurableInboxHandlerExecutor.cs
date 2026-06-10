@@ -15,12 +15,10 @@ public sealed class DurableInboxHandlerExecutor(
     public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
         DurableInboxRecord record,
         Func<CancellationToken, ValueTask> handler,
-        Func<CancellationToken, ValueTask> commit,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(handler);
-        ArgumentNullException.ThrowIfNull(commit);
 
         DurableInboxRegistrationResult registration = await _registrar.RegisterAsync(
             record,
@@ -47,8 +45,6 @@ public sealed class DurableInboxHandlerExecutor(
             registration.Record.Key,
             processedAtUtc,
             ct);
-
-        await commit(ct);
 
         return new DurableInboxHandleResult(
             DurableInboxHandleStatus.Handled,

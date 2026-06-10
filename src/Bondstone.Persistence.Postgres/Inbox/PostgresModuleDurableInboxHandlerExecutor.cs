@@ -23,9 +23,8 @@ public sealed class PostgresModuleDurableInboxHandlerExecutor(
     public ValueTask<DurableInboxHandleResult> HandleOnceAsync(
         DurableInboxRecord record,
         Func<CancellationToken, ValueTask> handler,
-        Func<CancellationToken, ValueTask> commit,
         CancellationToken ct = default)
     {
-        return _executor.HandleOnceAsync(record, handler, commit, ct);
+        return _executor.HandleOnceAsync(record, handler, ct);
     }
 }

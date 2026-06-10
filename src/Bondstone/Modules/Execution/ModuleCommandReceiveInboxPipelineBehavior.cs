@@ -43,7 +43,6 @@ internal sealed class ModuleCommandReceiveInboxPipelineBehavior<TCommand>(
         DurableInboxHandleResult result = await inboxHandlerExecutor.HandleOnceAsync(
             receiveInboxRecord,
             handlerCt => next(handlerCt),
-            _ => ValueTask.CompletedTask,
             ct);
 
         context.SetReceiveInboxResult(result);

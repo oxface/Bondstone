@@ -25,13 +25,11 @@ public sealed class PostgreSqlModuleDurableInboxHandlerExecutor<TDbContext>(
     public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
         DurableInboxRecord record,
         Func<CancellationToken, ValueTask> handler,
-        Func<CancellationToken, ValueTask> commit,
         CancellationToken ct = default)
     {
         return await _executor.HandleOnceAsync(
             record,
             handler,
-            commit,
             ct);
     }
 }

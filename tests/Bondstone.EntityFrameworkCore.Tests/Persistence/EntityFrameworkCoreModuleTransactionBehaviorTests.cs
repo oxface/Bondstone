@@ -699,13 +699,11 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
         public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
             DurableInboxRecord record,
             Func<CancellationToken, ValueTask> handler,
-            Func<CancellationToken, ValueTask> commit,
             CancellationToken ct = default)
         {
             if (status == DurableInboxHandleStatus.Handled)
             {
                 await handler(ct);
-                await commit(ct);
             }
 
             return new DurableInboxHandleResult(status, record);

@@ -15,8 +15,6 @@ stable docs, and remove stale backlog language.
 
 ## Active Items
 
-- [06-inbox-recovery.md](06-inbox-recovery.md) decides stale
-  already-received inbox recovery and commit-boundary shape.
 - [07-outbox-worker-topology.md](07-outbox-worker-topology.md) decides whether
   aggregate outbox workers need module-targeted isolation options.
 - [08-execution-context-and-api-surface.md](08-execution-context-and-api-surface.md)
@@ -42,3 +40,5 @@ stable docs, and remove stale backlog language.
 - [archive/05-module-persistence-metadata.md](archive/05-module-persistence-metadata.md)
   accepted the current module persistence metadata shape and fallback service
   stance.
+- [archive/06-inbox-recovery.md](archive/06-inbox-recovery.md) accepted the
+  current loud already-received inbox behavior and commit-delegate stance.

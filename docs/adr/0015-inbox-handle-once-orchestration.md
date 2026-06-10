@@ -64,6 +64,16 @@ contract. Module identity scopes, domain-event capture, handler discovery,
 transport acknowledgement, receive retry policy, and broader module-scoped
 unit-of-work behavior remain future decisions.
 
+## Amendment 2026-06-10: Commit Ownership Cleanup
+
+ADR 0043 later removes the commit delegate from
+`IDurableInboxHandlerExecutor`. The executor now composes inbox registration,
+the caller-supplied handler delegate, and processed-marker staging only.
+Transaction and save ownership lives outside the executor, normally in module
+provider transaction behaviors. A `Handled` result means the handler ran and
+the processed marker was staged in the current persistence context; the
+surrounding transaction still determines durable commit or rollback.
+
 ## Consequences
 
 The first handle-once primitive is usable by transport adapters and samples
@@ -88,8 +98,8 @@ decisions.
 
 - Current contract: `IDurableInboxHandlerExecutor` runs a caller-supplied
   handler once for newly registered inbox records, stages the processed marker,
-  invokes a caller-supplied commit delegate, and returns an explicit
-  `DurableInboxHandleResult`.
+  and returns an explicit `DurableInboxHandleResult`. It does not own the
+  surrounding transaction or save boundary.
 - Stable docs: Current messaging and persistence rules are described in
   [docs/architecture/messaging.md](../architecture/messaging.md) and
   [docs/architecture/persistence.md](../architecture/persistence.md), with
@@ -122,3 +132,12 @@ with:
 - `dotnet pack Bondstone.slnx --configuration Release --no-build --output artifacts/packages`
 
 Later checkpoint verification restored the default `pnpm check` gate.
+
+The 2026-06-10 commit ownership cleanup was verified with:
+
+- `git diff --check`
+- `pnpm format:check`
+- `pnpm backend:build`
+- `pnpm backend:test:fast`
+- `pnpm backend:test:integration`
+- `dotnet test tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --no-build --filter "Category=Integration"`

@@ -129,7 +129,6 @@ public sealed class ModuleEventSubscriberExecutionTests
         EventCallLog log = serviceProvider.GetRequiredService<EventCallLog>();
         Assert.Equal(["handle:order-123:fulfillment"], log.Calls);
         Assert.Equal(1, inboxExecutor.HandlerCalls);
-        Assert.Equal(1, inboxExecutor.CommitCalls);
     }
 
     [Fact]
@@ -166,7 +165,6 @@ public sealed class ModuleEventSubscriberExecutionTests
         Assert.Equal(DurableInboxHandleStatus.AlreadyProcessed, result.ReceiveInboxResult?.Status);
         Assert.Empty(serviceProvider.GetRequiredService<EventCallLog>().Calls);
         Assert.Equal(0, inboxExecutor.HandlerCalls);
-        Assert.Equal(0, inboxExecutor.CommitCalls);
     }
 
     [Fact]
@@ -307,12 +305,9 @@ public sealed class ModuleEventSubscriberExecutionTests
 
         public int HandlerCalls { get; private set; }
 
-        public int CommitCalls { get; private set; }
-
         public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
             DurableInboxRecord record,
             Func<CancellationToken, ValueTask> handler,
-            Func<CancellationToken, ValueTask> commit,
             CancellationToken ct = default)
         {
             Record = record;
@@ -326,8 +321,6 @@ public sealed class ModuleEventSubscriberExecutionTests
 
             HandlerCalls++;
             await handler(ct);
-            CommitCalls++;
-            await commit(ct);
 
             return new DurableInboxHandleResult(
                 DurableInboxHandleStatus.Handled,

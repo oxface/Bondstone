@@ -102,6 +102,9 @@ change-tracker `AddAsync` as proof that a duplicate message cannot exist.
 Unique-constraint conflicts and races are relational/provider behavior that
 must be verified with integration tests.
 
+Already-received but unprocessed inbox rows remain a loud receive outcome, not
+an EF Core stale-row recovery feature.
+
 `EntityFrameworkCoreDurableOperationStateStore<TDbContext>` reads and stages
 durable operation state in the current EF Core `DbContext`. It does not own
 transition policy, optimistic concurrency, or automatic transaction boundaries.
@@ -121,7 +124,7 @@ for lower-level durable primitives. It:
 - executes a caller-supplied operation inside an EF Core transaction when one
   is not already active;
 - joins the current transaction when one exists;
-- exposes `SaveChangesAsync` as an explicit commit delegate;
+- exposes `SaveChangesAsync` for callers that own an explicit EF save point;
 - commits or rolls back only transactions it started.
 
 It does not discover handlers, publish messages, acknowledge transports,
@@ -139,8 +142,10 @@ opted-in module command execution and event subscriber execution. Command
 receive can also save successful operation-state completion updates through
 the EF scope. Event receive operation-state completion, receive failure state,
 retry state, stale receive recovery, and receive acknowledgement policy are
-outside the current EF persistence contract. The EF scope remains the
-lower-level transaction companion, not a standalone public unit-of-work API.
+outside the current EF persistence contract. This outer module transaction is
+the commit owner; the low-level inbox executor only stages the processed marker
+in the current `DbContext`. The EF scope remains the lower-level transaction
+companion, not a standalone public unit-of-work API.
 
 Sample and integration verification should assert persisted state after the EF
 transaction commits. In-handler signals are not durable completion evidence

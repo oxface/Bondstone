@@ -13,7 +13,7 @@ public sealed class DurableInboxHandlerExecutorTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task HandleOnceAsync_WhenRecordIsNew_RunsHandlerMarksProcessedAndCommits()
+    public async Task HandleOnceAsync_WhenRecordIsNew_RunsHandlerAndMarksProcessed()
     {
         DurableInboxRecord record = CreateRecord();
         var registrar = new CapturingInboxRegistrar(
@@ -24,18 +24,12 @@ public sealed class DurableInboxHandlerExecutorTests
             inboxStore,
             new FixedTimeProvider(ProcessedAtUtc));
         var handlerCalls = 0;
-        var commitCalls = 0;
 
         DurableInboxHandleResult result = await executor.HandleOnceAsync(
             record,
             _ =>
             {
                 handlerCalls++;
-                return ValueTask.CompletedTask;
-            },
-            _ =>
-            {
-                commitCalls++;
                 return ValueTask.CompletedTask;
             });
 
@@ -45,7 +39,6 @@ public sealed class DurableInboxHandlerExecutorTests
         Assert.Equal(ProcessedAtUtc, result.Record.ProcessedAtUtc);
         Assert.Same(record, registrar.Record);
         Assert.Equal(1, handlerCalls);
-        Assert.Equal(1, commitCalls);
         Assert.Equal(record.Key, inboxStore.MarkedKey);
         Assert.Equal(ProcessedAtUtc, inboxStore.MarkedProcessedAtUtc);
     }
@@ -54,7 +47,7 @@ public sealed class DurableInboxHandlerExecutorTests
     [Trait("Category", "Unit")]
     [InlineData(DurableInboxRegistrationStatus.AlreadyReceived, DurableInboxHandleStatus.AlreadyReceived)]
     [InlineData(DurableInboxRegistrationStatus.AlreadyProcessed, DurableInboxHandleStatus.AlreadyProcessed)]
-    public async Task HandleOnceAsync_WhenRecordIsDuplicate_SkipsHandlerAndCommit(
+    public async Task HandleOnceAsync_WhenRecordIsDuplicate_SkipsHandler(
         DurableInboxRegistrationStatus registrationStatus,
         DurableInboxHandleStatus expectedStatus)
     {
@@ -71,8 +64,7 @@ public sealed class DurableInboxHandlerExecutorTests
 
         DurableInboxHandleResult result = await executor.HandleOnceAsync(
             record,
-            _ => throw new InvalidOperationException("Handler should not run."),
-            _ => throw new InvalidOperationException("Commit should not run."));
+            _ => throw new InvalidOperationException("Handler should not run."));
 
         Assert.Equal(expectedStatus, result.Status);
         Assert.True(result.WasSkipped);
@@ -82,7 +74,7 @@ public sealed class DurableInboxHandlerExecutorTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task HandleOnceAsync_WhenHandlerThrows_DoesNotMarkProcessedOrCommit()
+    public async Task HandleOnceAsync_WhenHandlerThrows_DoesNotMarkProcessed()
     {
         DurableInboxRecord record = CreateRecord();
         var registrar = new CapturingInboxRegistrar(
@@ -92,25 +84,18 @@ public sealed class DurableInboxHandlerExecutorTests
             registrar,
             inboxStore,
             new FixedTimeProvider(ProcessedAtUtc));
-        var commitCalls = 0;
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await executor.HandleOnceAsync(
                 record,
-                _ => throw new InvalidOperationException("Handler failed."),
-                _ =>
-                {
-                    commitCalls++;
-                    return ValueTask.CompletedTask;
-                }));
+                _ => throw new InvalidOperationException("Handler failed.")));
 
-        Assert.Equal(0, commitCalls);
         Assert.Null(inboxStore.MarkedKey);
     }
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task HandleOnceAsync_WhenMarkProcessedThrows_DoesNotCommit()
+    public async Task HandleOnceAsync_WhenMarkProcessedThrows_PropagatesException()
     {
         DurableInboxRecord record = CreateRecord();
         var registrar = new CapturingInboxRegistrar(
@@ -123,41 +108,11 @@ public sealed class DurableInboxHandlerExecutorTests
             registrar,
             inboxStore,
             new FixedTimeProvider(ProcessedAtUtc));
-        var commitCalls = 0;
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await executor.HandleOnceAsync(
                 record,
-                _ => ValueTask.CompletedTask,
-                _ =>
-                {
-                    commitCalls++;
-                    return ValueTask.CompletedTask;
-                }));
-
-        Assert.Equal(0, commitCalls);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task HandleOnceAsync_WhenCommitThrows_PropagatesException()
-    {
-        DurableInboxRecord record = CreateRecord();
-        var registrar = new CapturingInboxRegistrar(
-            new DurableInboxRegistrationResult(DurableInboxRegistrationStatus.Registered, record));
-        var inboxStore = new CapturingInboxStore();
-        var executor = new DurableInboxHandlerExecutor(
-            registrar,
-            inboxStore,
-            new FixedTimeProvider(ProcessedAtUtc));
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.HandleOnceAsync(
-                record,
-                _ => ValueTask.CompletedTask,
-                _ => throw new InvalidOperationException("Commit failed.")));
-
-        Assert.Equal(record.Key, inboxStore.MarkedKey);
+                _ => ValueTask.CompletedTask));
     }
 
     [Fact]
@@ -197,17 +152,10 @@ public sealed class DurableInboxHandlerExecutorTests
         await Assert.ThrowsAsync<ArgumentNullException>(
             async () => await executor.HandleOnceAsync(
                 null!,
-                _ => ValueTask.CompletedTask,
                 _ => ValueTask.CompletedTask));
         await Assert.ThrowsAsync<ArgumentNullException>(
             async () => await executor.HandleOnceAsync(
                 CreateRecord(),
-                null!,
-                _ => ValueTask.CompletedTask));
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await executor.HandleOnceAsync(
-                CreateRecord(),
-                _ => ValueTask.CompletedTask,
                 null!));
     }
 

@@ -81,9 +81,15 @@ tracked in [../backlog/09-future-work.md](../backlog/09-future-work.md).
 
 Receive-side handle-once execution is represented by
 `IDurableInboxHandlerExecutor`. It accepts a durable inbox record, a handler
-delegate, and a commit delegate. It runs the handler only when the inbox record
-is newly registered, stages the processed marker after the handler completes,
-invokes the commit delegate, and returns a `DurableInboxHandleResult`.
+delegate, and a cancellation token. It runs the handler only when the inbox
+record is newly registered, stages the processed marker after the handler
+completes, and returns a `DurableInboxHandleResult`.
+
+The executor does not commit persistence. Module transaction behaviors own the
+surrounding commit so handler state, inbox markers, operation state, and
+outgoing outbox rows persist together. A low-level caller that uses the
+executor directly must place it inside the caller's transaction or save
+boundary and commit outside the executor.
 
 Command inbox identity is:
 
@@ -101,7 +107,11 @@ Already processed records are skipped. Already received but unprocessed
 records are operationally loud through `DurableInboxAlreadyReceivedException`
 when using the module receive pipeline, because Bondstone has no inbox lease or
 stale receive recovery model that can prove a second handler execution is
-safe.
+safe. Recovery for those rows is currently operator-owned or application-owned:
+the application must inspect its persisted inbox and provider state, decide
+whether and how to mutate the row or broker message, and own the safety proof.
+Bondstone does not provide a default stale-row sweeper, recovery hook, failed
+receive state, or provider-neutral receive dead-letter abstraction.
 
 ## Neutral Receive Pipeline
 
@@ -120,7 +130,10 @@ acknowledgement behavior.
 
 Direct transport receive adapters should parse their provider-native body into
 the neutral durable envelope and call these pipelines inside the provider
-message acknowledgement boundary.
+message acknowledgement boundary. An already-received unprocessed inbox row is
+a dispatch failure for normal module receive, so provider settlement must
+follow the same failure handoff as other dispatch exceptions rather than
+acknowledging the message as handled.
 
 ## Durable Envelope
 

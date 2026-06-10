@@ -52,6 +52,7 @@ internal sealed class ServiceBusTopologyConfigurationValidator(
         }
 
         ValidateSubscriberReceiveBindings(context);
+        ValidateQueueDestinationReceiveBindings(context);
     }
 
     private void ValidateSubscriberReceiveBindings(BondstoneConfigurationValidationContext context)
@@ -112,5 +113,47 @@ internal sealed class ServiceBusTopologyConfigurationValidator(
                 subscription.MessageTypeName == messageTypeName
                 && subscription.SubscriberModule == subscriberModule
                 && subscription.SubscriberIdentity == subscriberIdentity);
+    }
+
+    private void ValidateQueueDestinationReceiveBindings(BondstoneConfigurationValidationContext context)
+    {
+        foreach (string messageTypeName in context.EventSubscribers
+            .Select(static subscriber => subscriber.MessageTypeName)
+            .Distinct(StringComparer.Ordinal))
+        {
+            ServiceBusEventDestinationDiagnostic destinationDiagnostic =
+                eventTopology.DescribeDestination(messageTypeName);
+
+            if (destinationDiagnostic.DestinationKind != ServiceBusEventDestinationKind.Queue
+                || destinationDiagnostic.EntityName is null)
+            {
+                continue;
+            }
+
+            ServiceBusReceiveSource[] receiveSources = receiveTopology.Sources
+                .Where(source => receiveTopology.DescribeSource(source)
+                    .EventSubscriptions
+                    .Any(subscription => subscription.MessageTypeName == messageTypeName))
+                .OrderBy(static source => source.DisplayName, StringComparer.Ordinal)
+                .ToArray();
+
+            if (receiveSources.Length == 1
+                && receiveSources[0].Kind == ServiceBusReceiveSourceKind.Queue
+                && StringComparer.Ordinal.Equals(receiveSources[0].EntityName, destinationDiagnostic.EntityName))
+            {
+                continue;
+            }
+
+            throw new InvalidOperationException(
+                $"Service Bus event '{messageTypeName}' is routed directly to queue '{destinationDiagnostic.EntityName}', but its receive bindings are configured on {FormatReceiveSources(receiveSources)}. Direct queue event routing supports same-queue in-process fan-out; split subscribers should use a topic with separate subscriptions.");
+        }
+    }
+
+    private static string FormatReceiveSources(
+        IReadOnlyCollection<ServiceBusReceiveSource> sources)
+    {
+        return sources.Count == 0
+            ? "no Service Bus receive sources"
+            : $"Service Bus receive source(s): {string.Join(", ", sources.Select(static source => source.DisplayName))}";
     }
 }

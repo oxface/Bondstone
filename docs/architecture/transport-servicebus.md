@@ -44,9 +44,13 @@ Bondstone's aggregate outbound route ownership validation. Receive source
 bindings always validate that accepted modules have durable command handlers
 and subscribed event identities match registered Bondstone event subscribers.
 In a single-transport host, Service Bus also fails startup when registered
-event subscribers have no Service Bus receive binding. This validation is
-diagnostic only; it does not create Service Bus queues, topics, subscriptions,
-rules, retry policy, or dead-letter settings.
+event subscribers have no Service Bus receive binding. Queue-style event
+destinations also validate that receive bindings for the event are on the
+destination queue. Multiple subscriber bindings on that one queue remain valid
+in-process fan-out; split subscribers should use a topic with
+application-owned subscriptions and rules. This validation is diagnostic only;
+it does not create Service Bus queues, topics, subscriptions, rules, retry
+policy, or dead-letter settings.
 
 Receive topology is declared with Service Bus receive source vocabulary:
 
@@ -146,5 +150,4 @@ remain separate ADR-backed decisions.
 Service Bus has emulator-backed receive worker integration tests for real queue
 delivery, completion after successful command dispatch, abandon/dead-letter
 handoff after failed dispatch, and topic subscription fan-out to configured
-subscriber identities. Split-subscriber fan-out mismatch diagnostics and
-broker topology declaration remain future slices.
+subscriber identities. Broker topology declaration remains a future slice.

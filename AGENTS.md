@@ -86,6 +86,11 @@ Start with:
   [ADR 0039](docs/adr/0039-startup-transport-topology-validation.md): validate
   configured durable routes and receive bindings against registered Bondstone
   handlers/subscribers without turning validation into broker provisioning.
+  Queue-style event destination fan-out diagnostics follow
+  [ADR 0040](docs/adr/0040-event-queue-fanout-diagnostics.md): same-queue
+  in-process fan-out remains valid, while split subscribers should use
+  provider-native broker fan-out such as RabbitMQ exchange bindings or Service
+  Bus topic subscriptions.
 - Provider retry and recovery boundaries follow
   [ADR 0038](docs/adr/0038-provider-retry-recovery-and-settlement-boundaries.md):
   Bondstone owns persisted outbox retry and terminal failure state, while

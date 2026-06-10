@@ -94,6 +94,7 @@ declaration helpers remain future ADR-backed work.
 - [0033 First-Class Event Publish/Subscribe Topology](0033-first-class-event-publish-subscribe-topology.md)
 - [0036 Direct Transport Adapters And Rebus Removal](0036-direct-transport-adapters-and-rebus-removal.md)
 - [0038 Provider Retry Recovery And Settlement Boundaries](0038-provider-retry-recovery-and-settlement-boundaries.md)
+- [0040 Event Queue Fan-Out Diagnostics](0040-event-queue-fanout-diagnostics.md)
 
 ## Application Notes
 
@@ -118,9 +119,9 @@ declaration helpers remain future ADR-backed work.
   metadata so validators can distinguish events published by the current app
   from events that are only subscribed, and the durable event publisher
   requires the source module to have declared the published event.
-- Pending or deferred: Split-service fan-out mismatch diagnostics, broker
-  topology declaration helpers, and any public report object beyond startup
-  validation and existing provider diagnostics.
+- Pending or deferred: Broker topology declaration helpers and any public
+  report object beyond startup validation and existing provider diagnostics.
+  Queue-destination event fan-out diagnostics are now covered by ADR 0040.
 
 ## Verification
 

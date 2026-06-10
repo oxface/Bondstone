@@ -125,6 +125,90 @@ public sealed class RabbitMqTopologyConfigurationValidatorTests
         Assert.Contains("fulfillment.test-event.v1", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenRabbitMqQueueEventRouteHasSplitReceiveQueues_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                RegisterPublishedAndSubscribedEvent(bondstone);
+                bondstone.UseRabbitMqTransport(rabbitMq =>
+                {
+                    rabbitMq.RouteEvent("sales.test.event.v1").ToQueue("sales-events");
+                    rabbitMq.ReceiveQueue("fulfillment-events")
+                        .SubscribeEvent(
+                            "sales.test.event.v1",
+                            "fulfillment",
+                            "fulfillment.test-event.v1");
+                    rabbitMq.ReceiveQueue("billing-events")
+                        .SubscribeEvent(
+                            "sales.test.event.v1",
+                            "billing",
+                            "billing.test-event.v1");
+                });
+            }));
+
+        Assert.Contains("routed directly to queue 'sales-events'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment-events", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("billing-events", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("split subscribers should use an exchange route", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenRabbitMqQueueEventRouteUsesSameReceiveQueue_AllowsInProcessFanOut()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
+
+        services.AddBondstone(bondstone =>
+        {
+            RegisterPublishedAndSubscribedEvent(bondstone);
+            bondstone.UseRabbitMqTransport(rabbitMq =>
+            {
+                rabbitMq.RouteEvent("sales.test.event.v1").ToQueue("sales-events");
+                rabbitMq.ReceiveQueue("sales-events")
+                    .SubscribeEvent(
+                        "sales.test.event.v1",
+                        "fulfillment",
+                        "fulfillment.test-event.v1")
+                    .SubscribeEvent(
+                        "sales.test.event.v1",
+                        "billing",
+                        "billing.test-event.v1");
+            });
+        });
+    }
+
+    private static void RegisterPublishedAndSubscribedEvent(
+        BondstoneBuilder bondstone)
+    {
+        bondstone.Module("sales", module =>
+        {
+            module.UseDurableMessaging();
+            module.UsePersistence("test persistence");
+            module.Events.RegisterPublishedEvent<TestEvent>();
+        });
+        bondstone.Module("fulfillment", module =>
+        {
+            module.UseDurableMessaging();
+            module.UsePersistence("test persistence");
+            module.Events.RegisterSubscriber<TestEvent, TestEventHandler>(
+                "fulfillment.test-event.v1");
+        });
+        bondstone.Module("billing", module =>
+        {
+            module.UseDurableMessaging();
+            module.UsePersistence("test persistence");
+            module.Events.RegisterSubscriber<TestEvent, TestEventHandler>(
+                "billing.test-event.v1");
+        });
+    }
+
     [DurableCommandIdentity("fulfillment.test.command.v1")]
     private sealed record TestCommand : IDurableCommand;
 

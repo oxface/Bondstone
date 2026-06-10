@@ -278,6 +278,7 @@ Status: **In Progress**.
 Accepted decisions:
 
 - [ADR 0038](adr/0038-provider-retry-recovery-and-settlement-boundaries.md)
+- [ADR 0040](adr/0040-event-queue-fanout-diagnostics.md)
 
 Goal: harden direct provider transport and persistence APIs before broader
 public polish.
@@ -307,12 +308,14 @@ Applied in this slice:
   diagnostics.
 - cover missing single-transport event subscriber receive bindings in RabbitMQ
   and Service Bus topology validation tests.
+- add queue-destination event fan-out diagnostics so RabbitMQ and Service Bus
+  fail startup when direct queue event routes are paired with split subscriber
+  receive bindings, while preserving same-queue in-process fan-out.
 
 Likely next slices:
 
 - refine multi-transport diagnostics into a public report shape if accepted by
   ADR;
-- add split-subscriber fan-out mismatch diagnostics if accepted by ADR;
 - refine persistence provider contracts;
 - improve operation-state failure/running/retry semantics if a safe model is
   accepted by ADR;

@@ -88,9 +88,9 @@ in explicit `Integration` tests.
 
 Transport topology validation is fast startup behavior. Cover missing command
 routes, missing published-event destinations, ambiguous multi-transport route
-ownership, missing subscriber bindings, and invalid receive bindings with
-`Unit` or `Application` tests unless the assertion depends on a real broker
-handoff.
+ownership, missing subscriber bindings, invalid receive bindings, and
+queue-destination event fan-out mismatches with `Unit` or `Application` tests
+unless the assertion depends on a real broker handoff.
 
 ## Verification Surface
 

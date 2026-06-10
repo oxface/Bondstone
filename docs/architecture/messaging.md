@@ -205,7 +205,12 @@ Provider receive bindings always validate that accepted command modules have
 registered durable command handlers and event subscription bindings have
 matching registered subscribers. In a single-transport host, provider
 validators also fail when registered event subscribers have no receive binding.
-Split-service fan-out mismatch reporting remains a future diagnostic slice.
+They also validate queue-style event destinations against receive bindings:
+same-queue in-process fan-out remains valid, but direct queue event routing
+fails startup when receive bindings for that event are on another receive
+entity or spread across multiple receive entities. Split subscribers should use
+provider-native broker fan-out, such as RabbitMQ exchange bindings or Service
+Bus topic subscriptions.
 
 RabbitMQ and Service Bus map received provider-native messages into the neutral
 receive pipelines. Provider packages also expose native received message

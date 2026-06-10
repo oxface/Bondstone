@@ -45,9 +45,12 @@ aggregate outbound route ownership validation. Receive queue bindings always
 validate that accepted modules have durable command handlers and subscribed
 event identities match registered Bondstone event subscribers. In a
 single-transport host, RabbitMQ also fails startup when registered event
-subscribers have no RabbitMQ receive binding. This validation is diagnostic
-only; it does not declare RabbitMQ exchanges, queues, bindings, DLX, retry
-queues, or policies.
+subscribers have no RabbitMQ receive binding. Queue-style event routes also
+validate that receive bindings for the event are on the routed queue. Multiple
+subscriber bindings on that one queue remain valid in-process fan-out; split
+subscribers should use an exchange route with application-owned queue
+bindings. This validation is diagnostic only; it does not declare RabbitMQ
+exchanges, queues, bindings, DLX, retry queues, or policies.
 
 Use `.ToQueue(...)` or `UseEventQueueConvention(...)` when an event should be
 sent directly to a queue.
@@ -147,5 +150,4 @@ queue delivery, acknowledgement after successful command dispatch, and failed
 dispatch handoff to application-owned dead-letter topology through negative
 acknowledgement with `requeue: false`. It also proves event receive fan-out
 from one broker queue delivery to each configured subscriber identity before
-acknowledgement. Split-subscriber fan-out mismatch diagnostics and broker
-topology declaration remain future slices.
+acknowledgement. Broker topology declaration remains a future slice.

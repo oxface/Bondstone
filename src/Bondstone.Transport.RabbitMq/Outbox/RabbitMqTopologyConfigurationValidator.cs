@@ -52,6 +52,7 @@ internal sealed class RabbitMqTopologyConfigurationValidator(
         }
 
         ValidateSubscriberReceiveBindings(context);
+        ValidateQueueDestinationReceiveBindings(context);
     }
 
     private void ValidateSubscriberReceiveBindings(BondstoneConfigurationValidationContext context)
@@ -112,5 +113,48 @@ internal sealed class RabbitMqTopologyConfigurationValidator(
                 subscription.MessageTypeName == messageTypeName
                 && subscription.SubscriberModule == subscriberModule
                 && subscription.SubscriberIdentity == subscriberIdentity);
+    }
+
+    private void ValidateQueueDestinationReceiveBindings(BondstoneConfigurationValidationContext context)
+    {
+        foreach (string messageTypeName in context.EventSubscribers
+            .Select(static subscriber => subscriber.MessageTypeName)
+            .Distinct(StringComparer.Ordinal))
+        {
+            RabbitMqEventRoutingDiagnostic routeDiagnostic =
+                eventTopology.DescribeRoute(messageTypeName);
+
+            if (routeDiagnostic.DestinationKind != RabbitMqPublishDestinationKind.Queue
+                || routeDiagnostic.RoutingKey is null)
+            {
+                continue;
+            }
+
+            string[] receiveQueueNames = receiveTopology.QueueNames
+                .Select(receiveTopology.DescribeQueue)
+                .Where(queue => queue.EventSubscriptions.Any(subscription =>
+                    subscription.MessageTypeName == messageTypeName))
+                .Select(static queue => queue.QueueName)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(static queueName => queueName, StringComparer.Ordinal)
+                .ToArray();
+
+            if (receiveQueueNames.Length == 1
+                && StringComparer.Ordinal.Equals(receiveQueueNames[0], routeDiagnostic.RoutingKey))
+            {
+                continue;
+            }
+
+            throw new InvalidOperationException(
+                $"RabbitMQ event '{messageTypeName}' is routed directly to queue '{routeDiagnostic.RoutingKey}', but its receive bindings are configured on {FormatReceiveQueues(receiveQueueNames)}. Direct queue event routing supports same-queue in-process fan-out; split subscribers should use an exchange route with separate queue bindings.");
+        }
+    }
+
+    private static string FormatReceiveQueues(
+        IReadOnlyCollection<string> queueNames)
+    {
+        return queueNames.Count == 0
+            ? "no RabbitMQ receive queues"
+            : $"RabbitMQ receive queue(s): '{string.Join("', '", queueNames)}'";
     }
 }

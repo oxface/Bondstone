@@ -31,7 +31,7 @@ Samples should demonstrate:
 - eventual service extraction shape.
 
 Future sample ideas are tracked in
-[backlog/09-future-work.md](backlog/09-future-work.md).
+[backlog/14-future-work.md](backlog/14-future-work.md).
 
 ## Modular Monolith Sample
 

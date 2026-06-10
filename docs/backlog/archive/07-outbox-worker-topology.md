@@ -19,7 +19,8 @@ dispatcher.
 Module-targeted worker registration, selected-module dispatch, per-module
 worker options, parallel aggregate dispatch, dispatch timeout policy,
 per-module concurrency controls, and stronger noisy-neighbor isolation remain
-future work in [../09-future-work.md](../09-future-work.md).
+future work in
+[../12-transport-and-hosting-ergonomics.md](../12-transport-and-hosting-ergonomics.md).
 
 ## Verification
 

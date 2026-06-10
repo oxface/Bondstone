@@ -114,7 +114,7 @@ that does not map operation state.
 
 EF Core does not collect or persist domain events. Optional domain event
 persistence is outside the current EF Core persistence contract and is tracked
-in [../backlog/09-future-work.md](../backlog/09-future-work.md).
+in [../backlog/09-domain-events.md](../backlog/09-domain-events.md).
 
 ## Persistence Scope
 

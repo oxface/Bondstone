@@ -67,6 +67,26 @@ builder while preserving the dependency direction above. The builder is a
 guardrail for common host setup, not a replacement for lower-level
 registration methods needed by advanced consumers and tests.
 
+## Public API Surface
+
+Normal user-facing API is the setup and module contract surface: message
+markers and identity attributes, module registration builders, `AddBondstone`
+composition, provider/transport builder extensions, durable send/publish
+contracts, receive pipeline contracts, result types, options, and documented
+diagnostic shapes.
+
+Some public low-level persistence, transport, receive, dispatcher, resolver,
+and concrete provider types remain available for advanced composition, tests,
+custom schedulers, and app-owned provider consumers. Their visibility does not
+automatically make them the preferred setup path or an open-ended extension
+point. Stable docs should steer normal users to the builder and module-owned
+helpers first.
+
+After publication, broad public type removal, visibility reduction, renaming,
+or parameter-name churn is compatibility-sensitive. Do not perform that work
+without a public API inventory, a compatibility plan, and ADR review when the
+change affects public API shape or package boundaries.
+
 ## Version And Dependency Management
 
 Use central package management through `Directory.Packages.props`.
@@ -116,4 +136,4 @@ nuget.org, not GitHub Packages.
 Initial packages have been published to nuget.org. Keep this document focused
 on package boundaries, dependency direction, versioning, and publishing rules.
 Future packaging ideas are tracked in
-[backlog/09-future-work.md](backlog/09-future-work.md).
+[backlog/14-future-work.md](backlog/14-future-work.md).

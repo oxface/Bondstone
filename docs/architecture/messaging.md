@@ -29,7 +29,8 @@ and optional metadata such as partition key, durable operation id, trace
 context, and causation id. The default sender requires a current module
 execution context, uses the executing module as the source module, serializes
 the command through `IDurablePayloadSerializer`, and stages a command envelope
-through `IDurableOutboxWriter`.
+through `IDurableOutboxWriter`. It is not a general background-work API and
+does not expose a public source-module override.
 
 Module command execution is registered through module command routes and
 executed through `IModuleCommandExecutor`. The executor runs typed
@@ -73,9 +74,28 @@ their distinction. A subscriber, saga, process manager, or orchestrator can
 react to an integration event and send durable commands as follow-up work.
 
 Domain events remain module-local/private. Bondstone does not collect,
-persist, dispatch, or publish domain events automatically. Optional domain
-event persistence is outside the current durable messaging contract and is
-tracked in [../backlog/09-future-work.md](../backlog/09-future-work.md).
+persist, dispatch, or publish domain events automatically. Domain event
+follow-up work is tracked in
+[../backlog/09-domain-events.md](../backlog/09-domain-events.md).
+
+## Module Execution Context
+
+Module command execution and module event subscriber execution establish the
+current source module through Bondstone's module execution context. The
+current implementation uses an ambient `AsyncLocal` accessor owned by
+`AddBondstone`; command and event subscriber system pipeline behaviors push
+the executing module before application handlers run and restore the previous
+context when the pipeline completes.
+
+Durable command sending and integration event publishing require that current
+module execution flow. Calls from queued work after the handler returns, code
+that suppresses execution-context flow, or arbitrary background services do
+not have a supported source module. HTTP endpoints, schedulers, and other
+custom app-owned entrypoints that need module command behavior should execute
+registered module commands through `IModuleCommandExecutor`; the handler then
+gets the normal durable send/publish context. Bondstone does not currently
+provide module-scoped durable sender/publisher clients or public APIs for
+arbitrary source-module selection.
 
 ## Inbox Identity
 

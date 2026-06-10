@@ -41,7 +41,7 @@ builder.Services.AddBondstone(bondstone =>
 Provider-native transport configuration, broker administration, retry,
 dead-letter policy, worker settings, credentials, and topology declaration stay
 app-owned. Bounded helper ideas are tracked outside current guidance in
-[../backlog/09-future-work.md](../backlog/09-future-work.md).
+[../backlog/14-future-work.md](../backlog/14-future-work.md).
 
 ## Durable Messaging Capability
 
@@ -78,6 +78,11 @@ command receive inbox key and must remain stable.
 application pipeline behaviors. It is not a generic mediator for arbitrary
 in-process calls.
 
+During command execution, Bondstone's system pipeline sets the current module
+execution context to the route's module before the application handler runs
+and restores the previous context afterward. This is the source-module context
+used by durable command sending and event publishing inside the handler.
+
 ## Event Registration
 
 Modules register published integration events and subscribers explicitly:
@@ -100,6 +105,25 @@ Bondstone message id, subscriber module, and subscriber identity.
 `IModuleEventSubscriberExecutor` resolves registered subscribers and executes
 typed `IIntegrationEventHandler<TEvent>` handlers through event subscriber
 pipeline behaviors.
+
+During subscriber execution, Bondstone's system pipeline sets the current
+module execution context to the subscriber module before the application
+handler runs and restores the previous context afterward. Follow-up durable
+commands published from a subscriber therefore use the subscriber module as
+their source module.
+
+## Execution Context Limits
+
+The module execution context is ambient and handler-flow scoped. It flows
+through normal awaited asynchronous work, but it is not a durable source-module
+token that can be captured for arbitrary background work, reused after handler
+completion, or supplied manually by HTTP routes and custom hosts.
+
+Application-owned entrypoints that need module command behavior should call
+`IModuleCommandExecutor` for a registered module command rather than calling
+`IDurableCommandSender` directly outside a module execution context. Explicit
+source-module send/publish APIs, module-scoped clients, and mediator-like HTTP
+command routing are not part of the current module contract.
 
 ## Receive Pipeline
 

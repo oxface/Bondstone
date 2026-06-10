@@ -1,7 +1,7 @@
 # 0046 Public API Surface Policy
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Partially Applied
 Date: 2026-06-10
 
 ## Context
@@ -17,48 +17,69 @@ types, low-level constructors, and internal composition patterns.
 
 ## Decision
 
-Decide a public API surface policy before tightening implementation
-visibility, adding compatibility tests, or marking advanced APIs.
+Bondstone adopts a compatibility-first public API surface policy before any
+cleanup removes, hides, or renames public types.
 
-The candidate direction is:
+Clear user-facing contracts, attributes, result types, setup builders, module
+registration APIs, and normal host composition extensions remain public stable
+API.
 
-- Keep clear user-facing contracts and builder APIs public.
-- Mark low-level composition types as intentionally advanced where they remain
-  public.
-- Hide or stop expanding public implementation classes that are not intended
-  as durable extension points.
-- Add an API review or baseline process before making compatibility promises
-  stronger.
+Low-level persistence, transport, receive, dispatcher, resolver, diagnostic,
+and provider composition contracts may also remain public when they are needed
+for tests, app-owned consumers, custom schedulers, provider integration, or
+advanced composition. These APIs should be documented as advanced when they are
+not the normal setup path.
+
+Public concrete implementation classes that exist because of early extraction
+or advanced composition are not automatically open-ended extension points.
+They should not grow additional public surface casually. Hiding, renaming, or
+removing them after publication requires an explicit compatibility plan,
+release-note treatment, and, for broad cleanup, follow-up ADR review.
+
+Bondstone should add a public API inventory or baseline before making
+compatibility promises stronger or performing broad surface reduction.
 
 ## Consequences
 
-A policy would reduce accidental compatibility pressure and help future agents
-know whether a type is a stable extension point or an implementation detail.
+The policy reduces accidental compatibility pressure and helps future agents
+distinguish normal setup APIs, advanced composition APIs, and public
+implementation details exposed for now.
 
 Tightening public types after publication can be breaking and needs careful
 versioning and release-note treatment.
 
-Leaving the surface broad avoids immediate churn but makes future cleanup
-harder.
+The current broad surface remains in place until the cleanup backlog completes
+an inventory and compatibility plan.
 
 ## Related Decisions
 
 - [0003 Package Boundaries And Target Framework](0003-package-boundaries-and-target-framework.md)
 - [0021 Fluent Service Composition Guardrails](0021-fluent-service-composition-guardrails.md)
 - [0036 Direct Transport Adapters And Rebus Removal](0036-direct-transport-adapters-and-rebus-removal.md)
+- [0045 Module Execution Context Semantics](0045-module-execution-context-semantics.md)
 
 ## Application Notes
 
-- Current contract: proposed only; no binding change yet.
-- Stable docs: if accepted, update packaging and repository docs with API
-  stability and advanced-composition guidance.
-- Agent guidance: if accepted, update root AGENTS with compatibility and
-  public surface rules.
-- Application evidence: current packages build and pack with a broad public
-  implementation surface.
-- Pending or deferred: decide baseline tooling, breaking-change policy, and
-  which public implementation classes remain supported.
+- Current contract: normal setup APIs stay public, low-level public APIs are
+  advanced composition unless documented otherwise, and broad public surface
+  removal or renaming requires compatibility planning before implementation.
+- Stable docs: applied to [docs/packaging.md](../packaging.md). Existing
+  architecture docs already steer normal users to `AddBondstone`, module-owned
+  persistence, provider transport builders, and documented receive helpers.
+- Agent guidance: root [AGENTS.md](../../AGENTS.md) now records the
+  compatibility-first public API rule.
+- Application evidence: current packages still build with the broad public
+  implementation surface. The review for backlog item 08 found receive
+  dispatchers and settlement helpers intentionally useful for app-owned
+  provider consumers, while lower-level public implementation types need a
+  package-by-package inventory before cleanup.
+- Pending or deferred: public API inventory/baseline work, explicit
+  classification of concrete public types, compatibility test/process design,
+  and any public surface reduction remain in
+  [docs/backlog/10-public-api-and-composition-cleanup.md](../backlog/10-public-api-and-composition-cleanup.md).
 
 ## Verification
 
-No executable verification yet; this is a proposed decision draft.
+Read back this ADR and affected stable docs. No public API was removed or
+renamed in this decision slice. Verified this policy update with the commands
+reported in the backlog resolution.

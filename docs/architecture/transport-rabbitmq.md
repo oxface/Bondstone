@@ -87,12 +87,13 @@ bondstone.UseRabbitMqTransport(rabbitMq =>
 declared DLX or retry-queue topology for the receive queue. Set it to `true`
 only when immediate broker redelivery is intentional and safe for that queue.
 
-`IRabbitMqReceivedMessageDispatcher` maps a received RabbitMQ transport
-message back to a Bondstone durable envelope. Command messages dispatch through
-`IModuleCommandReceivePipeline`; event messages dispatch through
-`IModuleEventReceivePipeline` once per subscriber binding on the receive
-queue. A RabbitMQ consumer should acknowledge the broker delivery only after
-the dispatcher returns.
+`IRabbitMqReceivedMessageDispatcher` is the lower-level receive processing
+service for app-owned RabbitMQ consumers and the hosted worker. It maps a
+received RabbitMQ transport message back to a Bondstone durable envelope.
+Command messages dispatch through `IModuleCommandReceivePipeline`; event
+messages dispatch through `IModuleEventReceivePipeline` once per subscriber
+binding on the receive queue. A RabbitMQ consumer should acknowledge the
+broker delivery only after the dispatcher returns.
 
 `RabbitMqReceivedMessageMapper` converts native `BasicDeliverEventArgs`, or a
 body plus `IReadOnlyBasicProperties`, into `RabbitMqTransportMessage`. This is
@@ -100,7 +101,9 @@ the adapter boundary for app-owned consumers before they call the dispatcher.
 
 `IRabbitMqReceivedMessageHandler` composes native delivery mapping, dispatcher
 execution, and a caller-supplied acknowledgement delegate. It acknowledges only
-after dispatch succeeds and leaves failures visible to the caller.
+after dispatch succeeds and leaves failures visible to the caller. This helper
+is a settlement-ordering convenience over the dispatcher, not a hosted receive
+loop.
 
 `UseReceiveWorker(...)` is an opt-in hosted consumer helper. It consumes the
 configured receive queues with `autoAck: false`, dispatches each delivery
@@ -148,4 +151,4 @@ dispatch handoff to application-owned dead-letter topology through negative
 acknowledgement with `requeue: false`. It also proves event receive fan-out
 from one broker queue delivery to each configured subscriber identity before
 acknowledgement. Follow-up transport ideas are tracked in
-[../backlog/09-future-work.md](../backlog/09-future-work.md).
+[../backlog/14-future-work.md](../backlog/14-future-work.md).

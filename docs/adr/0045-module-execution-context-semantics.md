@@ -1,7 +1,7 @@
 # 0045 Module Execution Context Semantics
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Applied
 Date: 2026-06-10
 
 ## Context
@@ -20,24 +20,42 @@ pipeline scope is disposed.
 
 ## Decision
 
-Decide whether Bondstone should keep ambient module execution context as the
-primary send/publish source-module mechanism or add explicit alternatives.
+Bondstone keeps ambient module execution context as the primary source-module
+mechanism for durable command sending and integration event publishing in
+normal module handler execution.
 
-The candidate direction is:
+The current execution context is intentionally scoped to module command and
+event subscriber execution. System pipeline behaviors push the executing
+module into the ambient context before application handlers run and restore the
+previous context after the handler pipeline completes. `IDurableCommandSender`
+and `IDurableEventPublisher` use the current module as the source module and
+fail fast when no current module execution context exists.
 
-- Keep the current ambient context for normal module handler ergonomics.
-- Document that durable send/publish APIs require the current module execution
-  flow and are not general background-work APIs.
-- Consider explicit lower-level APIs, module-scoped clients, or provider-owned
-  execution context objects before broadening usage to HTTP command routing or
-  custom execution hosts.
+The ambient context is not a general source-module override API. Durable
+send/publish APIs are intended to be called from work that is executing inside
+the current module execution flow. Code that queues work beyond the handler
+lifetime, suppresses execution-context flow, or calls durable send/publish
+after the pipeline scope is disposed has no supported source-module context.
+
+HTTP routes, custom hosts, and other app-owned entrypoints should execute
+registered module commands through `IModuleCommandExecutor` when they need
+module command semantics and handler-scoped durable send/publish. Bondstone
+does not currently provide explicit module-scoped durable sender/publisher
+clients or public APIs that let arbitrary code select a source module for
+durable send/publish.
+
+Adding explicit lower-level APIs, module-scoped clients, provider-owned
+execution context objects, or mediator-like HTTP command routing requires a
+later compatibility/API decision.
 
 ## Consequences
 
-Keeping ambient context preserves simple handler APIs.
+Keeping ambient context preserves simple handler APIs and aligns source-module
+selection with the executing module.
 
-Adding explicit alternatives can reduce surprises and make non-handler
-execution scenarios clearer.
+The limit is explicit: durable send/publish is handler-flow scoped. Non-handler
+execution scenarios must either route through module command execution or wait
+for a later accepted explicit source-module API.
 
 Changing source-module context semantics affects public messaging APIs and
 handler authoring style, so it requires compatibility review.
@@ -47,19 +65,33 @@ handler authoring style, so it requires compatibility review.
 - [0025 Module Command Execution Boundary](0025-module-command-execution-boundary.md)
 - [0031 Durable Operation State Integration](0031-durable-operation-state-integration.md)
 - [0033 First-Class Event Publish Subscribe Topology](0033-first-class-event-publish-subscribe-topology.md)
+- [0046 Public API Surface Policy](0046-public-api-surface-policy.md)
 
 ## Application Notes
 
-- Current contract: proposed only; no binding change yet.
-- Stable docs: if accepted, update messaging, modules, and setup docs.
-- Agent guidance: if accepted, update architecture direction if ambient context
-  constraints or alternatives become current guidance.
+- Current contract: durable send/publish uses the current module execution
+  context as the source module. Command and event subscriber execution
+  pipelines provide that context for handlers and restore the previous context
+  afterward. No explicit public source-module override or module-scoped
+  sender/publisher API exists.
+- Stable docs: applied to
+  [docs/architecture/messaging.md](../architecture/messaging.md),
+  [docs/architecture/modules.md](../architecture/modules.md), and
+  [docs/setup.md](../setup.md).
+- Agent guidance: root [AGENTS.md](../../AGENTS.md) already requires ADR
+  review before public API, durable behavior, or module runtime changes. No
+  additional agent instruction is needed for this accepted current behavior.
 - Application evidence: current code uses `ModuleExecutionContextAccessor` and
   module execution context pipeline behaviors for command and event subscriber
-  execution.
-- Pending or deferred: decide whether explicit APIs are needed before HTTP
-  command execution or custom receive hosts become first-class.
+  execution. `DurableCommandSender` and `DurableEventPublisher` throw when no
+  current module execution context exists, and existing unit tests cover
+  context setup/cleanup plus missing-context failures.
+- Pending or deferred: explicit source-module APIs, module-scoped clients, and
+  mediator-like HTTP/custom execution APIs remain deferred to the public API
+  cleanup and real-project readiness backlog tracks.
 
 ## Verification
 
-No executable verification yet; this is a proposed decision draft.
+Read back this ADR and affected stable docs. Existing fast tests cover the
+accepted behavior. Verified this decision update with the commands reported in
+the backlog resolution.

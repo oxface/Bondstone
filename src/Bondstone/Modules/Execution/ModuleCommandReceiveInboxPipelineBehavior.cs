@@ -1,6 +1,5 @@
 using Bondstone.Messaging;
 using Bondstone.Persistence;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bondstone.Modules;
 

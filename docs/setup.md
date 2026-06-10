@@ -169,7 +169,9 @@ public sealed class BillingBondstoneModule(string connectionString)
 
 Durable commands are sent from inside a module execution context. The default
 sender stages a command envelope in the current module outbox and uses the
-current module as the source module.
+current module as the source module. The intended caller is a module command
+handler, event subscriber, or other work already executing through Bondstone's
+module command/subscriber pipeline.
 
 ```csharp
 await durableCommandSender.SendAsync(
@@ -182,12 +184,20 @@ await durableCommandSender.SendAsync(
 The send result means the message was accepted into the source module outbox.
 It does not mean the target module has handled it.
 
+HTTP endpoints, schedulers, and custom app-owned entrypoints that need module
+command behavior should execute a registered module command through
+`IModuleCommandExecutor`; durable sends from that handler then use the normal
+module execution context. Bondstone does not currently provide a public
+source-module override for `IDurableCommandSender`.
+
 ## Publishing Events
 
 Integration events are explicit durable facts. Publishing stages an event
 envelope in the source module outbox. Event envelopes do not have
 `TargetModule`; subscribers own their stable subscriber identities and inbox
-keys.
+keys. Publishing also requires the current module execution context, and the
+publishing module must have registered the event through
+`RegisterPublishedEvent`.
 
 ```csharp
 await durableEventPublisher.PublishAsync(

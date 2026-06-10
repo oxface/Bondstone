@@ -43,6 +43,9 @@ follow its references. The repository context-index convention is documented in
 - Do not use `InternalsVisibleTo` for production package collaboration. Reserve
   friend assemblies for tests; runtime packages should collaborate through
   explicit contracts or package-local implementation.
+- Treat public API cleanup as compatibility-sensitive. Normal setup APIs,
+  documented advanced composition APIs, and public implementation types exposed
+  for now must be inventoried before broad hiding, renaming, or removal.
 
 ## Repository Direction
 

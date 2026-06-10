@@ -91,12 +91,13 @@ Retry and dead-letter policy remains on the Service Bus queue or subscription,
 such as max delivery count and dead-letter settings configured through Azure
 infrastructure or native administration.
 
-`IServiceBusReceivedMessageDispatcher` maps a received Service Bus transport
-message back to a Bondstone durable envelope. Command messages dispatch
-through `IModuleCommandReceivePipeline`; event messages dispatch through
-`IModuleEventReceivePipeline` once per subscriber binding on the receive
-source. A Service Bus processor should complete the broker message only after
-the dispatcher returns.
+`IServiceBusReceivedMessageDispatcher` is the lower-level receive processing
+service for app-owned Service Bus processors and the hosted worker. It maps a
+received Service Bus transport message back to a Bondstone durable envelope.
+Command messages dispatch through `IModuleCommandReceivePipeline`; event
+messages dispatch through `IModuleEventReceivePipeline` once per subscriber
+binding on the receive source. A Service Bus processor should complete the
+broker message only after the dispatcher returns.
 
 `ServiceBusReceivedMessageMapper` converts native `ServiceBusReceivedMessage`
 instances into `ServiceBusTransportMessage`. This is the adapter boundary for
@@ -104,7 +105,9 @@ app-owned processors before they call the dispatcher.
 
 `IServiceBusReceivedMessageHandler` composes native message mapping,
 dispatcher execution, and a caller-supplied completion delegate. It completes
-only after dispatch succeeds and leaves failures visible to the caller.
+only after dispatch succeeds and leaves failures visible to the caller. This
+helper is a settlement-ordering convenience over the dispatcher, not a hosted
+receive loop.
 
 `UseReceiveWorker(...)` is an opt-in hosted processor helper. It starts
 processors for the configured receive queues and topic subscriptions with
@@ -149,4 +152,4 @@ Service Bus has emulator-backed receive worker integration tests for real queue
 delivery, completion after successful command dispatch, abandon/dead-letter
 handoff after failed dispatch, and topic subscription fan-out to configured
 subscriber identities. Follow-up transport ideas are tracked in
-[../backlog/09-future-work.md](../backlog/09-future-work.md).
+[../backlog/14-future-work.md](../backlog/14-future-work.md).

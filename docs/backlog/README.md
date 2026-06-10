@@ -15,11 +15,18 @@ stable docs, and remove stale backlog language.
 
 ## Active Items
 
-- [08-execution-context-and-api-surface.md](08-execution-context-and-api-surface.md)
-  decides execution-context alternatives, receive helper shape, and public API
-  surface policy.
-- [09-future-work.md](09-future-work.md) collects non-current follow-up ideas
-  that are not yet active decision work.
+- [09-domain-events.md](09-domain-events.md) defines explicit module-local
+  domain event behavior before real-project validation.
+- [10-public-api-and-composition-cleanup.md](10-public-api-and-composition-cleanup.md)
+  turns the decision work into focused API and composition cleanup.
+- [11-persistence-recovery-and-maintenance.md](11-persistence-recovery-and-maintenance.md)
+  tracks operational persistence recovery, retention, and operation-state work.
+- [12-transport-and-hosting-ergonomics.md](12-transport-and-hosting-ergonomics.md)
+  tracks worker, receive-helper, topology, and provider ergonomics.
+- [13-real-project-readiness.md](13-real-project-readiness.md) tracks sample,
+  setup, and adoption work needed before broader real-project validation.
+- [14-future-work.md](14-future-work.md) collects lower-priority ideas that
+  are not yet active decision or implementation work.
 
 ## Archived Campaigns
 
@@ -43,3 +50,6 @@ stable docs, and remove stale backlog language.
 - [archive/07-outbox-worker-topology.md](archive/07-outbox-worker-topology.md)
   accepted the current aggregate-only worker topology and deferred
   module-targeted worker APIs.
+- [archive/08-execution-context-and-api-surface.md](archive/08-execution-context-and-api-surface.md)
+  accepted ambient module execution context semantics, accepted the public API
+  surface policy, and deferred implementation cleanup to the active tracks.

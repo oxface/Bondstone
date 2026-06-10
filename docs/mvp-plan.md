@@ -306,6 +306,8 @@ Applied in this slice:
 - harden module-owned persistence provider contracts so duplicate
   `IDurableModule*` registrations for the same module fail with clear
   diagnostics.
+- extend module-owned persistence diagnostics to outbox dispatchers and missing
+  module service registrations so errors name the declared provider.
 - cover missing single-transport event subscriber receive bindings in RabbitMQ
   and Service Bus topology validation tests.
 - add queue-destination event fan-out diagnostics so RabbitMQ and Service Bus

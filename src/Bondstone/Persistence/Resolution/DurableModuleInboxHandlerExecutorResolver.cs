@@ -1,16 +1,20 @@
 using Bondstone.Utility;
+using Bondstone.Modules;
 
 namespace Bondstone.Persistence;
 
 internal sealed class DurableModuleInboxHandlerExecutorResolver(
     IEnumerable<IDurableModuleInboxHandlerExecutor> moduleExecutors,
-    IDurableInboxHandlerExecutor? fallbackExecutor)
+    IDurableInboxHandlerExecutor? fallbackExecutor,
+    IBondstoneModuleRegistry moduleRegistry)
 {
     private readonly IDurableModuleInboxHandlerExecutor[] _moduleExecutors =
         DurableModulePersistenceRegistrationValidator.ToValidatedArray(
             moduleExecutors,
             static executor => executor.ModuleName,
             "durable module inbox handler executor");
+    private readonly IBondstoneModuleRegistry _moduleRegistry =
+        moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
 
     public IDurableInboxHandlerExecutor Resolve(string moduleName)
     {
@@ -36,6 +40,9 @@ internal sealed class DurableModuleInboxHandlerExecutorResolver(
         }
 
         throw new InvalidOperationException(
-            $"No durable inbox handler executor is registered for module '{normalizedModuleName}'.");
+            DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
+                _moduleRegistry,
+                normalizedModuleName,
+                "durable module inbox handler executor"));
     }
 }

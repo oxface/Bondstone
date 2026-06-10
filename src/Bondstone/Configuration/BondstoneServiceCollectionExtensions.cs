@@ -42,15 +42,18 @@ public static class BondstoneServiceCollectionExtensions
         services.TryAddScoped(serviceProvider =>
             new DurableModuleOutboxWriterResolver(
                 serviceProvider.GetServices<IDurableModuleOutboxWriter>(),
-                serviceProvider.GetService<IDurableOutboxWriter>()));
+                serviceProvider.GetService<IDurableOutboxWriter>(),
+                serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
         services.TryAddScoped(serviceProvider =>
             new DurableModuleInboxHandlerExecutorResolver(
                 serviceProvider.GetServices<IDurableModuleInboxHandlerExecutor>(),
-                serviceProvider.GetService<IDurableInboxHandlerExecutor>()));
+                serviceProvider.GetService<IDurableInboxHandlerExecutor>(),
+                serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
         services.TryAddScoped(serviceProvider =>
             new DurableModuleOperationStateStoreResolver(
                 serviceProvider.GetServices<IDurableModuleOperationStateStore>(),
-                serviceProvider.GetService<IDurableOperationStateStore>()));
+                serviceProvider.GetService<IDurableOperationStateStore>(),
+                serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
         services.TryAddScoped<IDurableOperationReader>(serviceProvider =>
             new DurableModuleOperationReader(
                 serviceProvider.GetServices<IDurableModuleOperationStateStore>(),

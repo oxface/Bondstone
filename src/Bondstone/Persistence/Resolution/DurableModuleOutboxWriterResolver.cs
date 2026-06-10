@@ -1,16 +1,20 @@
 using Bondstone.Utility;
+using Bondstone.Modules;
 
 namespace Bondstone.Persistence;
 
 internal sealed class DurableModuleOutboxWriterResolver(
     IEnumerable<IDurableModuleOutboxWriter> moduleWriters,
-    IDurableOutboxWriter? fallbackWriter)
+    IDurableOutboxWriter? fallbackWriter,
+    IBondstoneModuleRegistry moduleRegistry)
 {
     private readonly IDurableModuleOutboxWriter[] _moduleWriters =
         DurableModulePersistenceRegistrationValidator.ToValidatedArray(
             moduleWriters,
             static writer => writer.ModuleName,
             "durable module outbox writer");
+    private readonly IBondstoneModuleRegistry _moduleRegistry =
+        moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
 
     public IDurableOutboxWriter Resolve(string moduleName)
     {
@@ -36,6 +40,9 @@ internal sealed class DurableModuleOutboxWriterResolver(
         }
 
         throw new InvalidOperationException(
-            $"No durable outbox writer is registered for module '{normalizedModuleName}'.");
+            DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
+                _moduleRegistry,
+                normalizedModuleName,
+                "durable module outbox writer"));
     }
 }

@@ -7,7 +7,10 @@ public sealed class DurableModuleOutboxDispatchAggregator(
     : IDurableOutboxDispatcher
 {
     private readonly IDurableModuleOutboxDispatcher[] _moduleDispatchers =
-        moduleDispatchers?.ToArray() ?? throw new ArgumentNullException(nameof(moduleDispatchers));
+        DurableModulePersistenceRegistrationValidator.ToValidatedArray(
+            moduleDispatchers,
+            static dispatcher => dispatcher.ModuleName,
+            "durable module outbox dispatcher");
 
     public async ValueTask<DurableOutboxDispatchResult> DispatchAsync(
         string claimedBy,

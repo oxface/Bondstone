@@ -76,9 +76,12 @@ such as PostgreSQL module persistence registration.
 
 Provider packages must register at most one module-owned implementation of
 each `IDurableModule*` contract for a given module name. Core validates
-duplicate module outbox writer, inbox handler executor, and operation-state
-store registrations when those services are resolved so provider composition
-errors fail with module-specific diagnostics.
+duplicate module outbox writer, outbox dispatcher, inbox handler executor, and
+operation-state store registrations when those services are resolved so
+provider composition errors fail with module-specific diagnostics. When a
+module declares persistence but the matching module-owned service is missing,
+runtime diagnostics name the module and its declared persistence provider so
+provider setup gaps are easier to identify.
 
 ## Inbox
 

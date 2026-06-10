@@ -1,16 +1,20 @@
 using Bondstone.Utility;
+using Bondstone.Modules;
 
 namespace Bondstone.Persistence;
 
 internal sealed class DurableModuleOperationStateStoreResolver(
     IEnumerable<IDurableModuleOperationStateStore> moduleStores,
-    IDurableOperationStateStore? fallbackStore)
+    IDurableOperationStateStore? fallbackStore,
+    IBondstoneModuleRegistry moduleRegistry)
 {
     private readonly IDurableModuleOperationStateStore[] _moduleStores =
         DurableModulePersistenceRegistrationValidator.ToValidatedArray(
             moduleStores,
             static store => store.ModuleName,
             "durable module operation-state store");
+    private readonly IBondstoneModuleRegistry _moduleRegistry =
+        moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
 
     public IDurableOperationStateStore Resolve(
         string moduleName,
@@ -37,8 +41,11 @@ internal sealed class DurableModuleOperationStateStoreResolver(
             return fallbackStore;
         }
 
+        string message = DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
+            _moduleRegistry,
+            normalizedModuleName,
+            "durable module operation-state store");
         throw new InvalidOperationException(
-            $"Durable operation id '{durableOperationId}' requires {nameof(IDurableOperationStateStore)} "
-            + $"for module '{normalizedModuleName}'.");
+            $"Durable operation id '{durableOperationId}' requires {nameof(IDurableOperationStateStore)}. {message}");
     }
 }

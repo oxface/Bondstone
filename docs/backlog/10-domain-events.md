@@ -117,6 +117,7 @@ Verification:
 ### DE-02: Add Core Module-Local Domain Event Contracts
 
 Priority: P0 if DE-01 accepts a Bondstone-owned contract.
+Status: Resolved 2026-06-10
 Dependency: none after the 2026-06-10 first pipeline cleanup slice. DE-02 must
 not add runtime pipeline behavior.
 
@@ -133,6 +134,9 @@ Accepted guidance:
   collection;
 - add an `IDomainEventHandler<TDomainEvent>`-style local handler contract
   constrained to `IDomainEvent`;
+- place the contracts under `Bondstone.DomainEvents` because domain events
+  are a DDD/domain-model concept rather than durable messaging or event
+  delivery;
 - keep the contracts independent from EF Core, transport packages, and durable
   message topology;
 - do not register domain events in `MessageTypeRegistry`, add a `MessageKind`,
@@ -143,15 +147,22 @@ Accepted guidance:
 
 Candidate files:
 
-- `src/Bondstone/Messaging/Contracts`
-- `src/Bondstone/Modules/Contracts`
-- `tests/Bondstone.Tests/Messaging`
-- `tests/Bondstone.Tests/Modules`
+- `src/Bondstone/DomainEvents`
+- `tests/Bondstone.Tests/DomainEvents`
 
 Verification:
 
 - `pnpm backend:build`
 - `pnpm backend:test:fast`
+
+Resolved by adding the core module-local contracts in `Bondstone`:
+`IDomainEvent`, `DomainEventIdentityAttribute`, `IDomainEventSource`, and
+`IDomainEventHandler<TDomainEvent>` under `Bondstone.DomainEvents`.
+`IDomainEvent` does not extend the messaging `IMessage` marker. Domain events
+are not registered in `MessageTypeRegistry`, do not add a `MessageKind`, and
+are not wrapped in `DurableMessageEnvelope`. No runtime collection,
+persistence, publication, discovery, outbox/inbox, EF Core, transport, or
+integration-event mapping behavior was added in this slice.
 
 ### DE-03: Add EF Core Collection And Clearing
 

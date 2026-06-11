@@ -120,7 +120,7 @@ runtime pipeline and capability planning tracked in
 
 The accepted EF collection mechanism is narrow: the module transaction
 behavior collects domain events through `DbContext.ChangeTracker` entries
-whose entities implement Bondstone's explicit domain event source/accessor
+whose entities implement the `Bondstone.DomainEvents.IDomainEventSource`
 contract. EF Core must not require a Bondstone aggregate base class, a custom
 DbContext base class, `SaveChangesAsync` interception, arbitrary method-name
 reflection, or automatic publication from EF interceptors.

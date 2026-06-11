@@ -1,6 +1,6 @@
 # 0028 Domain Event Persistence Capability
 
-Status: Accepted
+Status: Amended
 Application: Partially Applied
 Date: 2026-06-10
 
@@ -144,6 +144,20 @@ transaction ordering and clear-on-success semantics are subtle.
 Integration-event mapping remains separate future work and should depend on
 the first-class event model and the EF collection proof.
 
+## Amendments
+
+### 2026-06-10: Domain Events Are Not Messaging Contracts
+
+The core domain event contracts live under the `Bondstone.DomainEvents`
+namespace and do not extend `IMessage`. Domain events are a DDD/domain-model
+concept, not durable messaging or event-delivery contracts.
+
+This narrows the original allowance that `IDomainEvent` may extend the neutral
+`IMessage` marker. Persistence providers that collect or serialize domain
+events must use the domain event contracts directly instead of routing them
+through durable message identity, registry, envelope, topology, inbox, outbox,
+or transport abstractions.
+
 ## Related Decisions
 
 - [0004 Positioning And Service Extraction Path](0004-positioning-and-service-extraction-path.md)
@@ -156,12 +170,13 @@ the first-class event model and the EF collection proof.
 
 ## Application Notes
 
-- Current contract: Accepted next behavior. Bondstone will own a small
-  module-local `IDomainEvent` contract, `DomainEventIdentityAttribute`, an
-  explicit domain event source/accessor contract, and a local handler contract
-  in core. EF Core will be the first provider-backed collection and optional
-  persistence implementation, using `ChangeTracker` plus the explicit
-  source/accessor interface. Domain events stay module-local unless module
+- Current contract: Bondstone owns a small module-local `IDomainEvent`
+  contract, `DomainEventIdentityAttribute`, `IDomainEventSource`, and
+  `IDomainEventHandler<TDomainEvent>` in core under the
+  `Bondstone.DomainEvents` namespace. `IDomainEvent` does not extend the
+  messaging `IMessage` marker. EF Core will be the first provider-backed
+  collection and optional persistence implementation, using `ChangeTracker`
+  plus `IDomainEventSource`. Domain events stay module-local unless module
   code explicitly maps selected facts to integration events.
 - Stable docs: Current domain event direction is described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
@@ -174,11 +189,11 @@ the first-class event model and the EF collection proof.
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, package-boundary, persistence, provider, durable behavior, or
   module runtime changes.
-- Application evidence: Stable docs and backlog guidance are updated. Code
-  implementation is pending.
-- Pending or deferred: Apply the core contracts, EF collection/persistence
-  implementation, module opt-in, stable docs for the final API names, and
-  tests. Non-EF PostgreSQL staging and integration-event mapping remain
+- Application evidence: Stable docs and backlog guidance are updated. Core
+  contracts and contract tests are implemented in `Bondstone`.
+- Pending or deferred: EF collection/persistence implementation, module
+  opt-in, persisted record contracts, provider mapping, and tests remain
+  pending. Non-EF PostgreSQL staging and integration-event mapping remain
   deferred.
 
 ## Verification

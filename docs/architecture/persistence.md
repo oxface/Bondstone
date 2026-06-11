@@ -73,13 +73,14 @@ inside the owning module persistence boundary; it does not write outgoing
 outbox messages, create inbox records, publish transport events, or expose
 domain events as integration contracts.
 
-The accepted core shape is intentionally small: module domain objects expose
-pending `IDomainEvent` instances through an explicit source/accessor contract,
-and provider packages may collect, stage, and clear those events when the
-module opts into the capability. Persisted records should carry a stable
-record id, owning module, `DomainEventIdentityAttribute` name, timestamps,
-serialized payload, payload metadata, and trace or causation metadata when
-available.
+The core shape is intentionally small and lives under
+`Bondstone.DomainEvents`: module domain objects may implement
+`IDomainEventSource` to expose pending `IDomainEvent` instances through
+`PendingDomainEvents` and clear them through `ClearPendingDomainEvents()`.
+Provider packages may collect, stage, and clear those events when the module
+opts into the capability. Persisted records should carry a stable record id,
+owning module, `DomainEventIdentityAttribute` name, timestamps, serialized
+payload, payload metadata, and trace or causation metadata when available.
 
 EF Core is the first accepted provider implementation. Non-EF PostgreSQL
 domain event staging remains application-owned until a later decision accepts

@@ -41,7 +41,7 @@ builder.Services.AddBondstone(bondstone =>
 Provider-native transport configuration, broker administration, retry,
 dead-letter policy, worker settings, credentials, and topology declaration stay
 app-owned. Bounded helper ideas are tracked outside current guidance in
-[../backlog/15-future-work.md](../backlog/15-future-work.md).
+[../backlog/00-plans.md](../backlog/00-plans.md).
 
 ## Durable Messaging Capability
 

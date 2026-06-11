@@ -151,4 +151,4 @@ dispatch handoff to application-owned dead-letter topology through negative
 acknowledgement with `requeue: false`. It also proves event receive fan-out
 from one broker queue delivery to each configured subscriber identity before
 acknowledgement. Follow-up transport ideas are tracked in
-[../backlog/15-future-work.md](../backlog/15-future-work.md).
+[../backlog/00-plans.md](../backlog/00-plans.md).

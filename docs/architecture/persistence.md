@@ -115,7 +115,5 @@ directly and owns its connection/session and transaction boundary without
 depending on EF entity mappings, `DbContext`, or
 `IEntityFrameworkCorePersistenceScope`.
 
-Domain event follow-up work is tracked in
-[../backlog/10-domain-events.md](../backlog/10-domain-events.md).
-Other persistence ideas outside the current contract are tracked in
-[../backlog/15-future-work.md](../backlog/15-future-work.md).
+Domain event and other persistence ideas outside the current contract are
+tracked in [../backlog/00-plans.md](../backlog/00-plans.md).

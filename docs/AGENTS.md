@@ -8,7 +8,8 @@ Start with:
 - [adr/README.md](adr/README.md) before changing ADRs.
 - [architecture/README.md](architecture/README.md) before changing runtime
   architecture docs.
-- [backlog/README.md](backlog/README.md) before changing backlog campaigns.
+- [backlog/README.md](backlog/README.md) before changing ad hoc planning
+  notes.
 - [repository.md](repository.md) before changing repository layout, tooling, or
   context-index structure.
 

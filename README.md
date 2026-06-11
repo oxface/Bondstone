@@ -4,8 +4,8 @@ Bondstone is a .NET library for durable module boundaries, durable command
 sending, EF Core backed inbox/outbox persistence, and transport adapters.
 
 Stable docs describe the current package, architecture, setup, repository,
-sample, and verification contracts. Backlog docs track review campaigns and
-future ideas that are not current operating guidance.
+sample, and verification contracts. Backlog docs hold ad hoc planning notes
+and active issue notes that are not current operating guidance.
 
 ## Packages
 
@@ -19,8 +19,8 @@ publishing policy are recorded in [docs/packaging.md](docs/packaging.md).
 - [docs/architecture/README.md](docs/architecture/README.md) records runtime
   positioning.
 - [docs/setup.md](docs/setup.md) is the single user-facing setup example.
-- [docs/backlog/README.md](docs/backlog/README.md) tracks review campaigns and
-  future ideas.
+- [docs/backlog/README.md](docs/backlog/README.md) explains ad hoc planning
+  notes and active issue extraction.
 - [docs/packaging.md](docs/packaging.md) records package and release policy.
 - [docs/repository.md](docs/repository.md) records repository layout and
   tooling.

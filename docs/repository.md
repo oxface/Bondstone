@@ -41,6 +41,14 @@ When adding a package, test boundary, sample, docs area, or agent workflow
 folder, add the local indexes in the same change or explain why an existing
 parent index is enough.
 
+## Planning Notes
+
+`docs/backlog` is an ad hoc planning area, not a maintained roadmap. Keep loose
+future-work ideas in `docs/backlog/00-plans.md` and extract focused issue notes
+only for immediate work. When an issue is resolved, move durable decisions into
+ADRs, move current behavior into stable docs, and remove the resolved issue
+note unless it still contains short-term context that has not moved elsewhere.
+
 ## Tooling
 
 Use root `package.json`, pnpm, Husky, commitlint, Prettier, and lightweight

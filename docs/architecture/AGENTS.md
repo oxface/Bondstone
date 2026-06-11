@@ -13,5 +13,5 @@ Start with:
   that provider.
 
 Do not put future ideas here unless an accepted ADR makes them current
-guidance. Use [../backlog/README.md](../backlog/README.md) for speculative or
-campaign-sized work.
+guidance. Use [../backlog/00-plans.md](../backlog/00-plans.md) for speculative
+planning.

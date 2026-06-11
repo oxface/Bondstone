@@ -75,8 +75,8 @@ an inventory and compatibility plan.
   package-by-package inventory before cleanup.
 - Pending or deferred: public API inventory/baseline work, explicit
   classification of concrete public types, compatibility test/process design,
-  and any public surface reduction remain in
-  [docs/backlog/11-public-api-and-composition-cleanup.md](../backlog/11-public-api-and-composition-cleanup.md).
+  and any public surface reduction remain future planning items in
+  [docs/backlog/00-plans.md](../backlog/00-plans.md).
 
 ## Verification
 

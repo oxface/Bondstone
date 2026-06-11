@@ -120,8 +120,8 @@ capability-step registry, public named pipeline slots, or a separate
 EF Core collection persists module-local domain event records and clears
 sources only after the EF module transaction saves and commits successfully.
 Integration-event mapping remains pending and must stay explicit module code.
-Domain event follow-up work is tracked in
-[../backlog/10-domain-events.md](../backlog/10-domain-events.md).
+Domain event follow-up ideas are tracked in
+[../backlog/00-plans.md](../backlog/00-plans.md).
 
 ## Module Execution Context
 

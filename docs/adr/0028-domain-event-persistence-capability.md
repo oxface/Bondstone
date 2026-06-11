@@ -244,10 +244,8 @@ application-owned.
   [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md).
   The non-EF PostgreSQL boundary is described in
   [docs/architecture/persistence-postgres.md](../architecture/persistence-postgres.md).
-  Runtime pipeline and capability planning is tracked in
-  [docs/backlog/09-module-pipeline-and-capability-runtime.md](../backlog/09-module-pipeline-and-capability-runtime.md).
-  Domain event implementation sequencing is tracked in
-  [docs/backlog/10-domain-events.md](../backlog/10-domain-events.md).
+  Remaining Domain Events follow-up ideas are tracked in
+  [docs/backlog/00-plans.md](../backlog/00-plans.md).
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) requires ADR review before
   public API, package-boundary, persistence, provider, durable behavior, or
   module runtime changes.

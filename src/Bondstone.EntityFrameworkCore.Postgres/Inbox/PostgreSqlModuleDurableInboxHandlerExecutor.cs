@@ -10,7 +10,7 @@ public sealed class PostgreSqlModuleDurableInboxHandlerExecutor<TDbContext>(
     TDbContext context,
     TimeProvider? timeProvider = null,
     string? schema = null)
-    : IDurableModuleInboxHandlerExecutor
+    : IDurableInboxHandlerExecutor
     where TDbContext : DbContext
 {
     private readonly DurableInboxHandlerExecutor _executor = new(

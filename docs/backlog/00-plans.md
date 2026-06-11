@@ -9,16 +9,13 @@ behavior into stable docs, and return any remaining ideas here.
 
 ## Immediate
 
-- Module runtime isolation: same-host modular monoliths share one DI
-  container, so provider and capability code must stop relying only on raw
-  `moduleName` checks and scattered global-service filtering. See
-  [01-module-runtime-isolation.md](01-module-runtime-isolation.md).
+- Public API and composition cleanup: inventory public package surfaces,
+  distinguish normal setup APIs from advanced composition APIs, and avoid
+  broad hiding or renaming without ADR 0046 compatibility planning. See
+  [01-public-api-and-composition-cleanup.md](01-public-api-and-composition-cleanup.md).
 
 ## Known Pressure Points
 
-- Public API and composition cleanup: inventory public package surfaces,
-  distinguish normal setup APIs from advanced composition APIs, and avoid
-  broad hiding or renaming without ADR 0046 compatibility planning.
 - Persistence recovery and maintenance: document operator-owned recovery for
   terminal outbox rows, already-received inbox rows, failure text, claim
   leases, and provider receive retry; add helpers only after a concrete

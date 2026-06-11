@@ -14,10 +14,12 @@ public sealed class DurableModulePersistenceRegistrationTests
     public void CommandSender_WhenDuplicateModuleOutboxWritersAreRegistered_ThrowsClearError()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IDurableModuleOutboxWriter>(
-            new TestModuleOutboxWriter("sales"));
-        services.AddSingleton<IDurableModuleOutboxWriter>(
-            new TestModuleOutboxWriter(" sales "));
+        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+            "sales",
+            _ => new TestModuleOutboxWriter("sales")));
+        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+            " sales ",
+            _ => new TestModuleOutboxWriter(" sales ")));
         services.AddBondstone(_ => { });
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -35,10 +37,12 @@ public sealed class DurableModulePersistenceRegistrationTests
     public void CommandPipelineBehavior_WhenDuplicateModuleInboxExecutorsAreRegistered_ThrowsClearError()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IDurableModuleInboxHandlerExecutor>(
-            new TestModuleInboxHandlerExecutor("fulfillment"));
-        services.AddSingleton<IDurableModuleInboxHandlerExecutor>(
-            new TestModuleInboxHandlerExecutor(" fulfillment "));
+        services.AddSingleton(new DurableModuleInboxHandlerExecutorRegistration(
+            "fulfillment",
+            _ => new TestModuleInboxHandlerExecutor("fulfillment")));
+        services.AddSingleton(new DurableModuleInboxHandlerExecutorRegistration(
+            " fulfillment ",
+            _ => new TestModuleInboxHandlerExecutor(" fulfillment ")));
         services.AddBondstone(bondstone =>
         {
             bondstone.Module("fulfillment", module =>
@@ -66,10 +70,12 @@ public sealed class DurableModulePersistenceRegistrationTests
     public void OperationReader_WhenDuplicateModuleOperationStoresAreRegistered_ThrowsClearError()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IDurableModuleOperationStateStore>(
-            new TestModuleOperationStateStore("sales"));
-        services.AddSingleton<IDurableModuleOperationStateStore>(
-            new TestModuleOperationStateStore(" sales "));
+        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+            "sales",
+            _ => new TestModuleOperationStateStore("sales")));
+        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+            " sales ",
+            _ => new TestModuleOperationStateStore(" sales ")));
         services.AddBondstone(_ => { });
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -132,7 +138,9 @@ public sealed class DurableModulePersistenceRegistrationTests
         var fulfillmentWriter = new CapturingModuleOutboxWriter("fulfillment");
         var services = new ServiceCollection();
         services.AddSingleton<IDurableOutboxWriter>(fallbackWriter);
-        services.AddSingleton<IDurableModuleOutboxWriter>(fulfillmentWriter);
+        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+            fulfillmentWriter.ModuleName,
+            _ => fulfillmentWriter));
         services.AddBondstone(bondstone =>
         {
             RegisterSalesSendingCommand(bondstone);
@@ -191,7 +199,9 @@ public sealed class DurableModulePersistenceRegistrationTests
         var billingExecutor = new CapturingModuleInboxHandlerExecutor("billing");
         var services = new ServiceCollection();
         services.AddSingleton<IDurableInboxHandlerExecutor>(fallbackExecutor);
-        services.AddSingleton<IDurableModuleInboxHandlerExecutor>(billingExecutor);
+        services.AddSingleton(new DurableModuleInboxHandlerExecutorRegistration(
+            billingExecutor.ModuleName,
+            _ => billingExecutor));
         services.AddBondstone(bondstone =>
         {
             bondstone.Module("fulfillment", module =>
@@ -258,9 +268,13 @@ public sealed class DurableModulePersistenceRegistrationTests
         var fallbackStore = new CapturingOperationStateStore();
         var fulfillmentStore = new CapturingModuleOperationStateStore("fulfillment");
         var services = new ServiceCollection();
-        services.AddSingleton<IDurableModuleOutboxWriter>(salesWriter);
+        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+            salesWriter.ModuleName,
+            _ => salesWriter));
         services.AddSingleton<IDurableOperationStateStore>(fallbackStore);
-        services.AddSingleton<IDurableModuleOperationStateStore>(fulfillmentStore);
+        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+            fulfillmentStore.ModuleName,
+            _ => fulfillmentStore));
         services.AddBondstone(bondstone =>
         {
             RegisterSalesSendingCommand(bondstone);
@@ -388,7 +402,7 @@ public sealed class DurableModulePersistenceRegistrationTests
     }
 
     private sealed class CapturingModuleOutboxWriter(string moduleName)
-        : IDurableModuleOutboxWriter
+        : IDurableOutboxWriter
     {
         public string ModuleName { get; } = moduleName;
 
@@ -404,7 +418,7 @@ public sealed class DurableModulePersistenceRegistrationTests
     }
 
     private sealed class TestModuleOutboxWriter(string moduleName)
-        : IDurableModuleOutboxWriter
+        : IDurableOutboxWriter
     {
         public string ModuleName { get; } = moduleName;
 
@@ -449,7 +463,7 @@ public sealed class DurableModulePersistenceRegistrationTests
     }
 
     private sealed class CapturingModuleInboxHandlerExecutor(string moduleName)
-        : IDurableModuleInboxHandlerExecutor
+        : IDurableInboxHandlerExecutor
     {
         public string ModuleName { get; } = moduleName;
 
@@ -469,7 +483,7 @@ public sealed class DurableModulePersistenceRegistrationTests
     }
 
     private sealed class TestModuleInboxHandlerExecutor(string moduleName)
-        : IDurableModuleInboxHandlerExecutor
+        : IDurableInboxHandlerExecutor
     {
         public string ModuleName { get; } = moduleName;
 
@@ -503,7 +517,7 @@ public sealed class DurableModulePersistenceRegistrationTests
     }
 
     private sealed class CapturingModuleOperationStateStore(string moduleName)
-        : IDurableModuleOperationStateStore
+        : IDurableOperationStateStore
     {
         public string ModuleName { get; } = moduleName;
 
@@ -526,7 +540,7 @@ public sealed class DurableModulePersistenceRegistrationTests
     }
 
     private sealed class TestModuleOperationStateStore(string moduleName)
-        : IDurableModuleOperationStateStore
+        : IDurableOperationStateStore
     {
         public string ModuleName { get; } = moduleName;
 

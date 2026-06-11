@@ -3,22 +3,29 @@ using Bondstone.Modules;
 
 namespace Bondstone.Persistence;
 
-internal sealed class DurableModuleOperationReader(
-    ModuleRuntimeRegistry moduleRuntimeRegistry,
-    IDurableOperationReader? fallbackReader)
-    : IDurableOperationReader
+internal sealed class DurableModuleOperationReader : IDurableOperationReader
 {
-    private readonly IDurableModuleOperationStateStore[] _moduleStores =
-        (moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry)))
-        .DurableOperationStateStores
-        .ToArray();
+    private readonly ModuleRuntimeRegistry _moduleRuntimeRegistry;
+    private readonly Func<IDurableOperationReader?> _fallbackReaderFactory;
+
+    public DurableModuleOperationReader(
+        ModuleRuntimeRegistry moduleRuntimeRegistry,
+        Func<IDurableOperationReader?> fallbackReaderFactory)
+    {
+        _moduleRuntimeRegistry =
+            moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
+        _fallbackReaderFactory = fallbackReaderFactory
+            ?? throw new ArgumentNullException(nameof(fallbackReaderFactory));
+        _moduleRuntimeRegistry.ValidateDurableOperationStateStores();
+    }
 
     public async ValueTask<DurableOperationState?> GetStateAsync(
         Guid durableOperationId,
         CancellationToken ct = default)
     {
-        if (_moduleStores.Length == 0)
+        if (!_moduleRuntimeRegistry.HasDurableOperationStateStores)
         {
+            IDurableOperationReader? fallbackReader = _fallbackReaderFactory();
             if (fallbackReader is null)
             {
                 return null;
@@ -28,7 +35,8 @@ internal sealed class DurableModuleOperationReader(
         }
 
         DurableOperationState? bestState = null;
-        foreach (IDurableModuleOperationStateStore store in _moduleStores)
+        foreach (IDurableOperationStateStore store in _moduleRuntimeRegistry
+            .CreateDurableOperationStateStores())
         {
             DurableOperationState? state = await store.GetStateAsync(
                 durableOperationId,

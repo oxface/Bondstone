@@ -5,68 +5,76 @@ namespace Bondstone.Modules;
 
 internal sealed class ModuleRuntimeRegistry
 {
+    private readonly IServiceProvider _serviceProvider;
     private readonly IBondstoneModuleRegistry _moduleRegistry;
-    private readonly Lazy<IReadOnlyDictionary<string, IDurableModuleOutboxWriter>>
-        _outboxWriters;
-    private readonly Lazy<IReadOnlyDictionary<string, IDurableModuleInboxHandlerExecutor>>
-        _inboxHandlerExecutors;
-    private readonly Lazy<IReadOnlyDictionary<string, IDurableModuleOperationStateStore>>
-        _operationStateStores;
+    private readonly Lazy<IReadOnlyDictionary<string, DurableModuleOutboxWriterRegistration>>
+        _outboxWriterRegistrations;
+    private readonly Lazy<IReadOnlyDictionary<string, DurableModuleInboxHandlerExecutorRegistration>>
+        _inboxHandlerExecutorRegistrations;
+    private readonly Lazy<IReadOnlyDictionary<string, DurableModuleOperationStateStoreRegistration>>
+        _operationStateStoreRegistrations;
 
     public ModuleRuntimeRegistry(
+        IServiceProvider serviceProvider,
         IBondstoneModuleRegistry moduleRegistry,
-        IEnumerable<IDurableModuleOutboxWriter> outboxWriters,
-        IEnumerable<IDurableModuleInboxHandlerExecutor> inboxHandlerExecutors,
-        IEnumerable<IDurableModuleOperationStateStore> operationStateStores)
+        IEnumerable<DurableModuleOutboxWriterRegistration> outboxWriterRegistrations,
+        IEnumerable<DurableModuleInboxHandlerExecutorRegistration> inboxHandlerExecutorRegistrations,
+        IEnumerable<DurableModuleOperationStateStoreRegistration> operationStateStoreRegistrations)
     {
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _moduleRegistry = moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
-        ArgumentNullException.ThrowIfNull(outboxWriters);
-        ArgumentNullException.ThrowIfNull(inboxHandlerExecutors);
-        ArgumentNullException.ThrowIfNull(operationStateStores);
+        ArgumentNullException.ThrowIfNull(outboxWriterRegistrations);
+        ArgumentNullException.ThrowIfNull(inboxHandlerExecutorRegistrations);
+        ArgumentNullException.ThrowIfNull(operationStateStoreRegistrations);
 
-        _outboxWriters = new Lazy<IReadOnlyDictionary<string, IDurableModuleOutboxWriter>>(
+        _outboxWriterRegistrations =
+            new Lazy<IReadOnlyDictionary<string, DurableModuleOutboxWriterRegistration>>(
             () => ToModuleMap(
-                outboxWriters,
-                static writer => writer.ModuleName,
+                outboxWriterRegistrations,
+                static registration => registration.ModuleName,
                 "durable module outbox writer"));
-        _inboxHandlerExecutors =
-            new Lazy<IReadOnlyDictionary<string, IDurableModuleInboxHandlerExecutor>>(
+        _inboxHandlerExecutorRegistrations =
+            new Lazy<IReadOnlyDictionary<string, DurableModuleInboxHandlerExecutorRegistration>>(
                 () => ToModuleMap(
-                    inboxHandlerExecutors,
-                    static executor => executor.ModuleName,
+                    inboxHandlerExecutorRegistrations,
+                    static registration => registration.ModuleName,
                     "durable module inbox handler executor"));
-        _operationStateStores =
-            new Lazy<IReadOnlyDictionary<string, IDurableModuleOperationStateStore>>(
+        _operationStateStoreRegistrations =
+            new Lazy<IReadOnlyDictionary<string, DurableModuleOperationStateStoreRegistration>>(
                 () => ToModuleMap(
-                    operationStateStores,
-                    static store => store.ModuleName,
+                    operationStateStoreRegistrations,
+                    static registration => registration.ModuleName,
                     "durable module operation-state store"));
     }
 
-    public bool HasDurableOutboxWriters => _outboxWriters.Value.Count > 0;
+    public bool HasDurableOutboxWriters => _outboxWriterRegistrations.Value.Count > 0;
 
     public bool HasDurableInboxHandlerExecutors =>
-        _inboxHandlerExecutors.Value.Count > 0;
+        _inboxHandlerExecutorRegistrations.Value.Count > 0;
 
     public bool HasDurableOperationStateStores =>
-        _operationStateStores.Value.Count > 0;
-
-    public IReadOnlyCollection<IDurableModuleOperationStateStore>
-        DurableOperationStateStores => _operationStateStores.Value.Values.ToArray();
+        _operationStateStoreRegistrations.Value.Count > 0;
 
     public void ValidateDurableOutboxWriters()
     {
-        _ = _outboxWriters.Value;
+        _ = _outboxWriterRegistrations.Value;
     }
 
     public void ValidateDurableInboxHandlerExecutors()
     {
-        _ = _inboxHandlerExecutors.Value;
+        _ = _inboxHandlerExecutorRegistrations.Value;
     }
 
     public void ValidateDurableOperationStateStores()
     {
-        _ = _operationStateStores.Value;
+        _ = _operationStateStoreRegistrations.Value;
+    }
+
+    public IReadOnlyList<IDurableOperationStateStore> CreateDurableOperationStateStores()
+    {
+        return _operationStateStoreRegistrations.Value.Values
+            .Select(registration => registration.CreateStore(_serviceProvider))
+            .ToArray();
     }
 
     public bool TryGetRuntime(
@@ -88,24 +96,35 @@ internal sealed class ModuleRuntimeRegistry
     {
         return new ModuleRuntimeDescriptor(
             module,
-            new Lazy<IDurableModuleOutboxWriter?>(
-                () => GetModuleRegistration(_outboxWriters.Value, module.Name)),
-            new Lazy<IDurableModuleInboxHandlerExecutor?>(
-                () => GetModuleRegistration(_inboxHandlerExecutors.Value, module.Name)),
-            new Lazy<IDurableModuleOperationStateStore?>(
-                () => GetModuleRegistration(_operationStateStores.Value, module.Name)));
+            new Lazy<IDurableOutboxWriter?>(
+                () => CreateModuleService(
+                    _outboxWriterRegistrations.Value,
+                    module.Name,
+                    registration => registration.CreateWriter(_serviceProvider))),
+            new Lazy<IDurableInboxHandlerExecutor?>(
+                () => CreateModuleService(
+                    _inboxHandlerExecutorRegistrations.Value,
+                    module.Name,
+                    registration => registration.CreateExecutor(_serviceProvider))),
+            new Lazy<IDurableOperationStateStore?>(
+                () => CreateModuleService(
+                    _operationStateStoreRegistrations.Value,
+                    module.Name,
+                    registration => registration.CreateStore(_serviceProvider))));
     }
 
-    private static TRegistration? GetModuleRegistration<TRegistration>(
+    private static TService? CreateModuleService<TRegistration, TService>(
         IReadOnlyDictionary<string, TRegistration> registrationsByModule,
-        string moduleName)
+        string moduleName,
+        Func<TRegistration, TService> createService)
         where TRegistration : class
+        where TService : class
     {
         if (registrationsByModule.TryGetValue(
             NormalizeModuleName(moduleName),
             out TRegistration? registration))
         {
-            return registration;
+            return createService(registration);
         }
 
         return null;

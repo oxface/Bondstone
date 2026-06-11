@@ -43,26 +43,27 @@ public static class BondstoneServiceCollectionExtensions
         services.TryAddScoped<IModuleEventReceivePipeline, ModuleEventReceivePipeline>();
         services.TryAddScoped(serviceProvider =>
             new ModuleRuntimeRegistry(
+                serviceProvider,
                 serviceProvider.GetRequiredService<IBondstoneModuleRegistry>(),
-                serviceProvider.GetServices<IDurableModuleOutboxWriter>(),
-                serviceProvider.GetServices<IDurableModuleInboxHandlerExecutor>(),
-                serviceProvider.GetServices<IDurableModuleOperationStateStore>()));
+                serviceProvider.GetServices<DurableModuleOutboxWriterRegistration>(),
+                serviceProvider.GetServices<DurableModuleInboxHandlerExecutorRegistration>(),
+                serviceProvider.GetServices<DurableModuleOperationStateStoreRegistration>()));
         services.TryAddScoped(serviceProvider =>
             new DurableModuleOutboxWriterResolver(
-                serviceProvider.GetService<IDurableOutboxWriter>(),
+                () => serviceProvider.GetService<IDurableOutboxWriter>(),
                 serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
         services.TryAddScoped(serviceProvider =>
             new DurableModuleInboxHandlerExecutorResolver(
-                serviceProvider.GetService<IDurableInboxHandlerExecutor>(),
+                () => serviceProvider.GetService<IDurableInboxHandlerExecutor>(),
                 serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
         services.TryAddScoped(serviceProvider =>
             new DurableModuleOperationStateStoreResolver(
-                serviceProvider.GetService<IDurableOperationStateStore>(),
+                () => serviceProvider.GetService<IDurableOperationStateStore>(),
                 serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
         services.TryAddScoped<IDurableOperationReader>(serviceProvider =>
             new DurableModuleOperationReader(
                 serviceProvider.GetRequiredService<ModuleRuntimeRegistry>(),
-                serviceProvider.GetService<IDurableOperationStateStore>()));
+                () => serviceProvider.GetService<IDurableOperationStateStore>()));
         services.TryAddScoped<IDurableCommandSender>(serviceProvider =>
             new DurableCommandSender(
                 serviceProvider.GetRequiredService<DurableModuleOutboxWriterResolver>(),

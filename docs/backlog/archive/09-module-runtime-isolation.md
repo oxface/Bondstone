@@ -53,29 +53,47 @@ only the provider/capability state owned by that module.
   transaction activation. EF domain event persistence activation now uses the
   EF provider runtime descriptor instead of scanning EF opt-in registrations
   ad hoc from behavior code.
+- Split module-owned durable command/receive runtime metadata from executable
+  persistence services. Core now builds module maps from passive
+  `DurableModule*Registration` records and invokes only the selected module's
+  scoped factory for outbox writer, inbox executor, and operation-state store
+  services.
 - Added focused unit coverage proving that a module does not use another
   module's outbox writer, inbox executor, or operation-state store when both
   modules share the same DI scope. Added EF domain event coverage proving one
   EF module's domain event opt-in does not activate collection for another EF
   module in the same host.
-- Did not add public APIs, provider contracts, child containers, or
-  module-specific `IServiceProvider` instances.
+- Added non-EF PostgreSQL runtime coverage proving Postgres transaction
+  behavior wraps Postgres-backed module execution, preserves ordering, and
+  does not resolve `IPostgresModuleSession` for EF-provider, other-provider,
+  or non-persistence modules in the same host.
+- Added runtime factory coverage proving unrelated non-EF PostgreSQL sessions
+  and EF PostgreSQL `DbContext` instances are not resolved while another
+  module performs durable sends in the same host.
+- Left global operation-state reads as the intentional fan-out path: because
+  `IDurableOperationReader.GetStateAsync(...)` has no module identity, it may
+  create and query every configured module operation-state store until a later
+  module-targeted read contract is accepted.
+- Did not add child containers, module-specific `IServiceProvider` instances,
+  or a generalized capability registry. Added the small provider-facing
+  durable module runtime registration records accepted by the ADR 0042
+  amendment.
 
-No ADR amendment was needed for this slice because the change is internal and
-does not alter durable behavior, provider contracts, package boundaries, or
-public API. Provider-specific runtime descriptors remain package-local bridges
-because exposing the core runtime descriptor across package boundaries would
-require compatibility review.
+ADR 0042 was amended for the provider-facing durable module runtime
+registration pattern. Provider-specific runtime descriptors remain
+package-local bridges because exposing the core runtime descriptor across
+package boundaries would require compatibility review.
 
 ## Questions
 
-- Which provider package path should move behind the runtime next:
-  EF transaction completion state, additional provider-owned capability
-  metadata, or outbound dispatcher ownership?
+- Which provider package path should move behind the runtime next, if real
+  leakage appears: EF transaction completion state, additional provider-owned
+  capability metadata, or outbound dispatcher ownership?
 - Should command routes and event subscriber registrations hold or resolve a
   module runtime descriptor at execution time?
-- How should provider packages contribute module-owned runtime state without
-  introducing a public generalized capability registry?
+- Should the new durable module runtime registration pattern eventually expand
+  to a public generalized capability registry, or remain specific to durable
+  command/receive persistence?
 - Can EF Core domain event activation and transaction completion state become
   module-owned through this runtime instead of relying on global service
   enumeration plus module-name filtering?

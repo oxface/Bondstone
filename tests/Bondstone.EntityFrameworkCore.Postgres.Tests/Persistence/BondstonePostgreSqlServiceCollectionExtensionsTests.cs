@@ -109,9 +109,9 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         });
 
         Assert.True(persistenceWasMarked);
-        AssertContainsScopedFactory<IDurableModuleOutboxWriter>(services);
-        AssertContainsScopedFactory<IDurableModuleInboxHandlerExecutor>(services);
-        AssertContainsScopedFactory<IDurableModuleOperationStateStore>(services);
+        AssertContainsSingletonInstance<DurableModuleOutboxWriterRegistration>(services);
+        AssertContainsSingletonInstance<DurableModuleInboxHandlerExecutorRegistration>(services);
+        AssertContainsSingletonInstance<DurableModuleOperationStateStoreRegistration>(services);
         AssertContainsScopedFactory<IDurableModuleOutboxDispatcher>(services);
         AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
     }
@@ -138,9 +138,9 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         });
 
         Assert.True(persistenceWasMarked);
-        AssertContainsScopedFactory<IDurableModuleOutboxWriter>(services);
-        AssertContainsScopedFactory<IDurableModuleInboxHandlerExecutor>(services);
-        AssertContainsScopedFactory<IDurableModuleOperationStateStore>(services);
+        AssertContainsSingletonInstance<DurableModuleOutboxWriterRegistration>(services);
+        AssertContainsSingletonInstance<DurableModuleInboxHandlerExecutorRegistration>(services);
+        AssertContainsSingletonInstance<DurableModuleOperationStateStoreRegistration>(services);
         AssertContainsScopedFactory<IDurableModuleOutboxDispatcher>(services);
         AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
 
@@ -196,6 +196,49 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
                 && descriptor.ImplementationType == typeof(DurableModuleOutboxDispatchAggregator));
     }
 
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task DurableSend_WhenAnotherEfPostgreSqlModuleSharesHost_DoesNotResolveItsDbContext()
+    {
+        var writer = new CapturingOutboxWriter();
+        var services = new ServiceCollection();
+        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+            "fulfillment",
+            _ => writer));
+        services.AddBondstone(builder =>
+        {
+            builder.Module("billing", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePostgreSqlPersistence<PostgreSqlTestDbContext>(
+                    "Host=localhost;Database=bondstone",
+                    schema: "billing");
+            });
+            builder.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<SendTestCommand, SendTestCommandHandler>();
+                module.Commands.RegisterHandler<TestDurableCommand, TestDurableCommandHandler>();
+            });
+        });
+        services.AddScoped<PostgreSqlTestDbContext>(_ =>
+            throw new InvalidOperationException("PostgreSQL EF DbContext should not be resolved."));
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "fulfillment",
+                new SendTestCommand());
+
+        DurableMessageEnvelope envelope = Assert.Single(writer.Envelopes);
+        Assert.Equal("fulfillment", envelope.SourceModule);
+        Assert.Equal("fulfillment", envelope.TargetModule);
+    }
+
     private static void AssertContainsScoped<TService>(
         IServiceCollection services)
     {
@@ -217,6 +260,17 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
                 && descriptor.Lifetime == ServiceLifetime.Scoped);
     }
 
+    private static void AssertContainsSingletonInstance<TService>(
+        IServiceCollection services)
+    {
+        Assert.Contains(
+            services,
+            static descriptor =>
+                descriptor.ServiceType == typeof(TService)
+                && descriptor.ImplementationInstance is TService
+                && descriptor.Lifetime == ServiceLifetime.Singleton);
+    }
+
     private static void AssertContainsTransient<TImplementation>(
         IServiceCollection services)
     {
@@ -231,12 +285,41 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
     [DurableCommandIdentity("fulfillment.test.command.v1")]
     public sealed record TestDurableCommand : IDurableCommand;
 
+    public sealed record SendTestCommand : ICommand;
+
     public sealed class TestDurableCommandHandler : ICommandHandler<TestDurableCommand>
     {
         public ValueTask HandleAsync(
             TestDurableCommand command,
             CancellationToken ct = default)
         {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed class SendTestCommandHandler(IDurableCommandSender sender)
+        : ICommandHandler<SendTestCommand>
+    {
+        public async ValueTask HandleAsync(
+            SendTestCommand command,
+            CancellationToken ct = default)
+        {
+            await sender.SendAsync(
+                new TestDurableCommand(),
+                "fulfillment",
+                ct);
+        }
+    }
+
+    private sealed class CapturingOutboxWriter : IDurableOutboxWriter
+    {
+        public List<DurableMessageEnvelope> Envelopes { get; } = [];
+
+        public ValueTask WriteAsync(
+            DurableMessageEnvelope envelope,
+            CancellationToken ct = default)
+        {
+            Envelopes.Add(envelope);
             return ValueTask.CompletedTask;
         }
     }

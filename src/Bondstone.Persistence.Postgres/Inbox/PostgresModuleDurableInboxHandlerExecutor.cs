@@ -9,7 +9,7 @@ public sealed class PostgresModuleDurableInboxHandlerExecutor(
     IPostgresModuleSession session,
     TimeProvider? timeProvider = null,
     string? schema = null)
-    : IDurableModuleInboxHandlerExecutor
+    : IDurableInboxHandlerExecutor
 {
     private readonly DurableInboxHandlerExecutor _executor = new(
         new PostgresDurableInboxRegistrar(session, schema),

@@ -62,12 +62,17 @@ durable messaging mappings. Non-EF providers keep provider-specific metadata
 such as schema, session, connection, and SQL configuration in provider-owned
 services.
 
-Fallback non-module persistence services are intentionally supported advanced
-composition for now. When no module-owned durable persistence implementations
-are registered, core resolvers may use root-level outbox writer, inbox handler
-executor, operation-state store, and operation reader services. This is useful
-for low-level single-store composition and compatibility tests, but it is not
-the preferred module-boundary setup.
+Provider module helpers contribute passive durable module runtime
+registrations for command and receive execution. Those registrations carry the
+module name plus factories for executable outbox writer, inbox executor, and
+operation-state store services, and the factories run only for the selected
+module inside the current DI scope. Fallback non-module persistence services
+are intentionally supported advanced composition for now. When no
+module-owned durable runtime registrations are registered, core resolvers may
+use root-level outbox writer, inbox handler executor, operation-state store,
+and operation reader services. This is useful for low-level single-store
+composition and compatibility tests, but it is not the preferred
+module-boundary setup.
 
 ## Domain Event Persistence
 

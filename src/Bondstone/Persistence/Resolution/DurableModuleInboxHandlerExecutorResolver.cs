@@ -5,14 +5,15 @@ namespace Bondstone.Persistence;
 
 internal sealed class DurableModuleInboxHandlerExecutorResolver
 {
-    private readonly IDurableInboxHandlerExecutor? _fallbackExecutor;
+    private readonly Func<IDurableInboxHandlerExecutor?> _fallbackExecutorFactory;
     private readonly ModuleRuntimeRegistry _moduleRuntimeRegistry;
 
     public DurableModuleInboxHandlerExecutorResolver(
-        IDurableInboxHandlerExecutor? fallbackExecutor,
+        Func<IDurableInboxHandlerExecutor?> fallbackExecutorFactory,
         ModuleRuntimeRegistry moduleRuntimeRegistry)
     {
-        _fallbackExecutor = fallbackExecutor;
+        _fallbackExecutorFactory = fallbackExecutorFactory
+            ?? throw new ArgumentNullException(nameof(fallbackExecutorFactory));
         _moduleRuntimeRegistry =
             moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
         _moduleRuntimeRegistry.ValidateDurableInboxHandlerExecutors();
@@ -25,9 +26,9 @@ internal sealed class DurableModuleInboxHandlerExecutorResolver
             "Module name");
 
         if (!_moduleRuntimeRegistry.HasDurableInboxHandlerExecutors
-            && _fallbackExecutor is not null)
+            && _fallbackExecutorFactory() is IDurableInboxHandlerExecutor fallbackExecutor)
         {
-            return _fallbackExecutor;
+            return fallbackExecutor;
         }
 
         if (!_moduleRuntimeRegistry.TryGetRuntime(

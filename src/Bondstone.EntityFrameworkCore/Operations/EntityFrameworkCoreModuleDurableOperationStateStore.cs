@@ -8,7 +8,7 @@ namespace Bondstone.EntityFrameworkCore.Operations;
 public sealed class EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>(
     string moduleName,
     TDbContext context)
-    : IDurableModuleOperationStateStore
+    : IDurableOperationStateStore
     where TDbContext : DbContext
 {
     private readonly EntityFrameworkCoreDurableOperationStateStore<TDbContext> _store =

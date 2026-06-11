@@ -4,16 +4,16 @@ namespace Bondstone.Modules;
 
 internal sealed class ModuleRuntimeDescriptor(
     BondstoneModuleRegistration module,
-    Lazy<IDurableModuleOutboxWriter?> durableOutboxWriter,
-    Lazy<IDurableModuleInboxHandlerExecutor?> durableInboxHandlerExecutor,
-    Lazy<IDurableModuleOperationStateStore?> durableOperationStateStore)
+    Lazy<IDurableOutboxWriter?> durableOutboxWriter,
+    Lazy<IDurableInboxHandlerExecutor?> durableInboxHandlerExecutor,
+    Lazy<IDurableOperationStateStore?> durableOperationStateStore)
 {
-    private readonly Lazy<IDurableModuleOutboxWriter?> _durableOutboxWriter =
+    private readonly Lazy<IDurableOutboxWriter?> _durableOutboxWriter =
         durableOutboxWriter ?? throw new ArgumentNullException(nameof(durableOutboxWriter));
-    private readonly Lazy<IDurableModuleInboxHandlerExecutor?>
+    private readonly Lazy<IDurableInboxHandlerExecutor?>
         _durableInboxHandlerExecutor = durableInboxHandlerExecutor
             ?? throw new ArgumentNullException(nameof(durableInboxHandlerExecutor));
-    private readonly Lazy<IDurableModuleOperationStateStore?> _durableOperationStateStore =
+    private readonly Lazy<IDurableOperationStateStore?> _durableOperationStateStore =
         durableOperationStateStore
         ?? throw new ArgumentNullException(nameof(durableOperationStateStore));
 

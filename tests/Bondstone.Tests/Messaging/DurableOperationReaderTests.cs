@@ -117,8 +117,10 @@ public sealed class DurableOperationReaderTests
         {
             switch (storeOrReader)
             {
-                case IDurableModuleOperationStateStore moduleStore:
-                    services.AddSingleton(moduleStore);
+                case CapturingModuleOperationStateStore moduleStore:
+                    services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+                        moduleStore.ModuleName,
+                        _ => moduleStore));
                     break;
                 case IDurableOperationStateStore operationStateStore:
                     services.AddSingleton(operationStateStore);
@@ -138,7 +140,7 @@ public sealed class DurableOperationReaderTests
     }
 
     private sealed class CapturingModuleOperationStateStore(string moduleName)
-        : IDurableModuleOperationStateStore
+        : IDurableOperationStateStore
     {
         public string ModuleName { get; } = moduleName;
 

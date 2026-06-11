@@ -62,7 +62,7 @@ provider-neutral. It does not configure a database provider, migrations, hosted
 dispatchers, locks, or retries.
 
 Those root-level services can also serve the advanced non-module fallback path
-when no module-owned durable persistence implementations are registered. Normal
+when no module-owned durable runtime registrations are registered. Normal
 durable module-boundary setup should prefer provider-specific module helpers so
 source-module sends and target-module receives use the owning module
 persistence boundary.
@@ -88,7 +88,8 @@ behavior and mapping validation; it is not a general requirement for non-EF
 persistence providers.
 
 For modular-monolith durable messaging, the command loop resolves durable EF
-stores by module name when module-specific provider registrations are present.
+stores by module name when module-specific provider runtime registrations are
+present.
 Source-module sends stage outgoing outbox rows and caller-supplied `Pending`
 operation state through the source module `DbContext`. Target-module receives
 stage inbox markers, handler state, successful `Completed` operation state,

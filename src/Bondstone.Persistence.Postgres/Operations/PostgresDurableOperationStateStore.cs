@@ -79,7 +79,7 @@ public sealed class PostgresModuleDurableOperationStateStore(
     string moduleName,
     IPostgresModuleSession session,
     string? schema = null)
-    : IDurableModuleOperationStateStore
+    : IDurableOperationStateStore
 {
     private readonly PostgresDurableOperationStateStore _store = new(
         session,

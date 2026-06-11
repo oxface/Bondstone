@@ -249,8 +249,12 @@ public sealed class DurableCommandSenderTests
         var salesWriter = new CapturingModuleOutboxWriter("sales");
         var billingWriter = new CapturingModuleOutboxWriter("billing");
         var services = new ServiceCollection();
-        services.AddSingleton<IDurableModuleOutboxWriter>(salesWriter);
-        services.AddSingleton<IDurableModuleOutboxWriter>(billingWriter);
+        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+            salesWriter.ModuleName,
+            _ => salesWriter));
+        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+            billingWriter.ModuleName,
+            _ => billingWriter));
 
         services.AddBondstone(bondstone =>
         {
@@ -293,9 +297,15 @@ public sealed class DurableCommandSenderTests
         var billingStore = new CapturingModuleOperationStateStore("billing");
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
         var services = new ServiceCollection();
-        services.AddSingleton<IDurableModuleOutboxWriter>(salesWriter);
-        services.AddSingleton<IDurableModuleOperationStateStore>(salesStore);
-        services.AddSingleton<IDurableModuleOperationStateStore>(billingStore);
+        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+            salesWriter.ModuleName,
+            _ => salesWriter));
+        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+            salesStore.ModuleName,
+            _ => salesStore));
+        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+            billingStore.ModuleName,
+            _ => billingStore));
 
         services.AddBondstone(bondstone =>
         {
@@ -444,7 +454,7 @@ public sealed class DurableCommandSenderTests
     }
 
     private sealed class CapturingModuleOutboxWriter(string moduleName)
-        : IDurableModuleOutboxWriter
+        : IDurableOutboxWriter
     {
         public string ModuleName { get; } = moduleName;
 
@@ -486,7 +496,7 @@ public sealed class DurableCommandSenderTests
     }
 
     private sealed class CapturingModuleOperationStateStore(string moduleName)
-        : IDurableModuleOperationStateStore
+        : IDurableOperationStateStore
     {
         public string ModuleName { get; } = moduleName;
 

@@ -66,23 +66,26 @@ public static class BondstonePostgresServiceCollectionExtensions
         }
 
         ReplaceDefaultDispatcherWithModuleAggregator(services);
-        services.AddScoped<IDurableModuleOutboxWriter>(serviceProvider =>
-            new PostgresModuleDurableOutboxWriter(
+        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+            moduleName,
+            serviceProvider => new PostgresModuleDurableOutboxWriter(
                 moduleName,
                 serviceProvider.GetRequiredService<IPostgresModuleSession>(),
                 serviceProvider.GetService<TimeProvider>(),
-                schema));
-        services.AddScoped<IDurableModuleInboxHandlerExecutor>(serviceProvider =>
-            new PostgresModuleDurableInboxHandlerExecutor(
+                schema)));
+        services.AddSingleton(new DurableModuleInboxHandlerExecutorRegistration(
+            moduleName,
+            serviceProvider => new PostgresModuleDurableInboxHandlerExecutor(
                 moduleName,
                 serviceProvider.GetRequiredService<IPostgresModuleSession>(),
                 serviceProvider.GetService<TimeProvider>(),
-                schema));
-        services.AddScoped<IDurableModuleOperationStateStore>(serviceProvider =>
-            new PostgresModuleDurableOperationStateStore(
+                schema)));
+        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+            moduleName,
+            serviceProvider => new PostgresModuleDurableOperationStateStore(
                 moduleName,
                 serviceProvider.GetRequiredService<IPostgresModuleSession>(),
-                schema));
+                schema)));
         services.AddScoped<IDurableModuleOutboxDispatcher>(serviceProvider =>
             new PostgresModuleDurableOutboxDispatcher(
                 moduleName,

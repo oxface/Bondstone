@@ -22,8 +22,9 @@ cost belongs in ADRs and stable docs, not in speculative planning files.
 
 ## Active Issue Notes
 
-- [01-module-runtime-isolation.md](01-module-runtime-isolation.md) explores an
-  internal module runtime descriptor to reduce same-host module leakage.
+- [01-public-api-and-composition-cleanup.md](01-public-api-and-composition-cleanup.md)
+  explores public API classification and setup/composition cleanup before
+  stable compatibility expectations harden.
 
 ## Historical Notes
 

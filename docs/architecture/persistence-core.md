@@ -76,26 +76,42 @@ shares the caller's `maxCount` as one aggregate batch budget, passes each
 module dispatcher only the remaining budget, and propagates module dispatcher
 failures to its caller. The underlying claim, lease, transport, and
 outcome-recording contracts remain per persistence boundary.
-The `IDurableModule*` persistence contracts are provider-extension contracts;
-application code should normally configure them through provider setup helpers
-such as PostgreSQL module persistence registration.
 
-Provider packages must register at most one module-owned implementation of
-each `IDurableModule*` contract for a given module name. Core validates
-duplicate module outbox writer, outbox dispatcher, inbox handler executor, and
-operation-state store registrations when those services are resolved so
-provider composition errors fail with module-specific diagnostics. When a
-module declares persistence but the matching module-owned service is missing,
-runtime diagnostics name the module and its declared persistence provider so
-provider setup gaps are easier to identify.
+Provider packages contribute module-owned command and receive runtime
+persistence through passive durable module runtime registrations. Each
+registration carries a module name plus a factory for the executable
+`IDurableOutboxWriter`, `IDurableInboxHandlerExecutor`, or
+`IDurableOperationStateStore` used by that module. Core builds module maps
+from the passive registrations and invokes only the selected module's factory
+inside the current DI scope. This keeps module metadata lookup from
+constructing unrelated provider dependencies such as another module's
+`DbContext` or PostgreSQL session. Executable writer, inbox executor, and
+operation-state store services use the ordinary role contracts returned by
+those factories; only module outbox dispatch keeps an executable
+module-specific contract because aggregate dispatch intentionally scans local
+module outboxes. Provider factories should create lightweight wrappers around
+services resolved from the current DI scope and should not create owned
+disposable resources outside DI ownership.
 
-If no module-owned implementations are registered at all, core can fall back to
-root-level non-module persistence services such as `IDurableOutboxWriter`,
-`IDurableInboxHandlerExecutor`, `IDurableOperationStateStore`, and
-`IDurableOperationReader`. That fallback is supported advanced single-store
-composition and compatibility behavior. It does not replace the preferred
-module-owned durable messaging path, and fallback removal would be a
-compatibility/API decision.
+Provider packages must register at most one runtime registration for each
+module command/receive durable role, and at most one module outbox dispatcher
+service for each local module outbox. Core validates duplicate module outbox
+writer, outbox dispatcher, inbox handler executor, and operation-state store
+registrations when those services are resolved so provider composition errors
+fail with module-specific diagnostics. When a module declares persistence but
+the matching module-owned service is missing, runtime diagnostics name the
+module and its declared persistence provider so provider setup gaps are easier
+to identify. Application code should normally configure module-owned
+persistence through provider setup helpers rather than directly registering
+provider-facing runtime registrations.
+
+If no module-owned runtime registrations are registered at all, core can fall
+back to root-level non-module persistence services such as
+`IDurableOutboxWriter`, `IDurableInboxHandlerExecutor`,
+`IDurableOperationStateStore`, and `IDurableOperationReader`. That fallback is
+supported advanced single-store composition and compatibility behavior. It
+does not replace the preferred module-owned durable messaging path, and
+fallback removal would be a compatibility/API decision.
 
 ## Inbox
 
@@ -160,10 +176,13 @@ states, retry state, stale receive recovery, cancellation, and result payloads
 remain later policy.
 
 When module-owned operation stores are configured, operation reads can
-aggregate across local module stores. Terminal states (`Completed`, `Failed`,
-and `Cancelled`) take precedence over `Running`, and `Running` takes
-precedence over `Pending`. When statuses have the same precedence, the newest
-`UpdatedAtUtc` wins. The default command loop currently writes only `Pending`
+aggregate across local module stores. This global read has no module identity,
+so it intentionally creates each configured module operation-state store from
+its runtime registration and queries all of them. Terminal states
+(`Completed`, `Failed`, and `Cancelled`) take precedence over `Running`, and
+`Running` takes precedence over `Pending`. When statuses have the same
+precedence, the newest `UpdatedAtUtc` wins. The default command loop currently
+writes only `Pending`
 and `Completed`; other statuses are read-model/storage values until a later
 ADR accepts default running, failure, cancellation, or retry semantics.
 

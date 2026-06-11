@@ -5,14 +5,15 @@ namespace Bondstone.Persistence;
 
 internal sealed class DurableModuleOutboxWriterResolver
 {
-    private readonly IDurableOutboxWriter? _fallbackWriter;
+    private readonly Func<IDurableOutboxWriter?> _fallbackWriterFactory;
     private readonly ModuleRuntimeRegistry _moduleRuntimeRegistry;
 
     public DurableModuleOutboxWriterResolver(
-        IDurableOutboxWriter? fallbackWriter,
+        Func<IDurableOutboxWriter?> fallbackWriterFactory,
         ModuleRuntimeRegistry moduleRuntimeRegistry)
     {
-        _fallbackWriter = fallbackWriter;
+        _fallbackWriterFactory = fallbackWriterFactory
+            ?? throw new ArgumentNullException(nameof(fallbackWriterFactory));
         _moduleRuntimeRegistry =
             moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
         _moduleRuntimeRegistry.ValidateDurableOutboxWriters();
@@ -24,9 +25,13 @@ internal sealed class DurableModuleOutboxWriterResolver
             nameof(moduleName),
             "Module name");
 
-        if (!_moduleRuntimeRegistry.HasDurableOutboxWriters && _fallbackWriter is not null)
+        if (!_moduleRuntimeRegistry.HasDurableOutboxWriters)
         {
-            return _fallbackWriter;
+            IDurableOutboxWriter? fallbackWriter = _fallbackWriterFactory();
+            if (fallbackWriter is not null)
+            {
+                return fallbackWriter;
+            }
         }
 
         if (!_moduleRuntimeRegistry.TryGetRuntime(

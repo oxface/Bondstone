@@ -71,21 +71,24 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
         }
 
         ReplaceDefaultDispatcherWithModuleAggregator(services);
-        services.AddScoped<IDurableModuleOutboxWriter>(serviceProvider =>
-            new EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext>(
+        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+            moduleName,
+            serviceProvider => new EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext>(
                 moduleName,
                 serviceProvider.GetRequiredService<TDbContext>(),
-                serviceProvider.GetService<TimeProvider>()));
-        services.AddScoped<IDurableModuleInboxHandlerExecutor>(serviceProvider =>
-            new PostgreSqlModuleDurableInboxHandlerExecutor<TDbContext>(
+                serviceProvider.GetService<TimeProvider>())));
+        services.AddSingleton(new DurableModuleInboxHandlerExecutorRegistration(
+            moduleName,
+            serviceProvider => new PostgreSqlModuleDurableInboxHandlerExecutor<TDbContext>(
                 moduleName,
                 serviceProvider.GetRequiredService<TDbContext>(),
                 serviceProvider.GetService<TimeProvider>(),
-                schema));
-        services.AddScoped<IDurableModuleOperationStateStore>(serviceProvider =>
-            new EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>(
+                schema)));
+        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+            moduleName,
+            serviceProvider => new EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>(
                 moduleName,
-                serviceProvider.GetRequiredService<TDbContext>()));
+                serviceProvider.GetRequiredService<TDbContext>())));
         services.AddScoped<IDurableModuleOutboxDispatcher>(serviceProvider =>
             new PostgreSqlModuleDurableOutboxDispatcher<TDbContext>(
                 moduleName,

@@ -65,8 +65,14 @@ dispatchers still perform provider-specific claim, lease renewal, and outcome
 recording for their module, while the aggregate dispatcher only chooses the
 sequential call order and shared batch budget.
 
+Command and receive execution use passive durable module runtime registrations
+for the module writer, inbox executor, and operation-state store. Those
+registrations carry the module name and create EF-backed executable services
+only for the selected module inside the current DI scope, so resolving another
+module's runtime metadata does not construct this module's `DbContext`.
+
 Application code should prefer this module-aware setup helper over directly
-registering the provider-facing `IDurableModule*` persistence services.
+registering provider-facing durable module runtime registrations.
 
 ## Integration Tests
 

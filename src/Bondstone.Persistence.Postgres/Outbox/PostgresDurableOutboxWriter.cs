@@ -82,7 +82,7 @@ public sealed class PostgresModuleDurableOutboxWriter(
     IPostgresModuleSession session,
     TimeProvider? timeProvider = null,
     string? schema = null)
-    : IDurableModuleOutboxWriter
+    : IDurableOutboxWriter
 {
     private readonly PostgresDurableOutboxWriter _writer = new(
         session,

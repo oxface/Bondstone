@@ -57,6 +57,13 @@ The module transaction owns the commit boundary for handler SQL, inbox markers,
 operation state, and outgoing outbox rows. The low-level inbox executor only
 stages receive-side work inside that transaction.
 
+The provider contributes passive durable module runtime registrations for the
+module writer, inbox executor, and operation-state store. Those registrations
+carry the module name and create PostgreSQL executable services only for the
+selected module inside the current DI scope, so resolving another module's
+runtime metadata does not open or resolve this provider's
+`IPostgresModuleSession`.
+
 ## Domain Events
 
 `Bondstone.Persistence.Postgres` does not currently own module-local domain

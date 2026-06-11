@@ -142,8 +142,9 @@ EF-backed module `DbContext` models must map the durable tables they use with
 `ApplyBondstoneInbox()`, and `ApplyBondstoneOperationState()` helpers.
 
 Provider-specific module helpers are the preferred setup path because they
-record module persistence metadata and register the module-owned outbox, inbox,
-operation-state, transaction, and dispatch services used by durable messaging.
+record module persistence metadata and register the module-owned runtime
+factories, transaction behavior, and dispatch services used by durable
+messaging.
 
 Modules that do not use EF Core can use `Bondstone.Persistence.Postgres`:
 

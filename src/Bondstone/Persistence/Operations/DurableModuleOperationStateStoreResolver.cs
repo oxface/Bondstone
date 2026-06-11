@@ -5,14 +5,15 @@ namespace Bondstone.Persistence;
 
 internal sealed class DurableModuleOperationStateStoreResolver
 {
-    private readonly IDurableOperationStateStore? _fallbackStore;
+    private readonly Func<IDurableOperationStateStore?> _fallbackStoreFactory;
     private readonly ModuleRuntimeRegistry _moduleRuntimeRegistry;
 
     public DurableModuleOperationStateStoreResolver(
-        IDurableOperationStateStore? fallbackStore,
+        Func<IDurableOperationStateStore?> fallbackStoreFactory,
         ModuleRuntimeRegistry moduleRuntimeRegistry)
     {
-        _fallbackStore = fallbackStore;
+        _fallbackStoreFactory = fallbackStoreFactory
+            ?? throw new ArgumentNullException(nameof(fallbackStoreFactory));
         _moduleRuntimeRegistry =
             moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
         _moduleRuntimeRegistry.ValidateDurableOperationStateStores();
@@ -26,9 +27,10 @@ internal sealed class DurableModuleOperationStateStoreResolver
             nameof(moduleName),
             "Module name");
 
-        if (!_moduleRuntimeRegistry.HasDurableOperationStateStores && _fallbackStore is not null)
+        if (!_moduleRuntimeRegistry.HasDurableOperationStateStores
+            && _fallbackStoreFactory() is IDurableOperationStateStore fallbackStore)
         {
-            return _fallbackStore;
+            return fallbackStore;
         }
 
         if (!_moduleRuntimeRegistry.TryGetRuntime(

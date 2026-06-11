@@ -1,6 +1,6 @@
 # 0042 Module Persistence Capability Metadata
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-10
 
@@ -60,6 +60,36 @@ messaging path remains module-owned persistence through provider-specific
 module helpers. Retiring fallback behavior or removing public low-level service
 composition requires later compatibility/API decision work.
 
+## Amendment 2026-06-11: Runtime Factory Registrations
+
+Separate module-owned durable persistence metadata from executable persistence
+services. Provider module helpers must contribute passive runtime
+registrations that carry the module name plus a factory for the executable
+writer, inbox handler executor, or operation-state store. Core runtime
+assembly builds module maps from those passive registrations and invokes only
+the factory for the selected module inside the current DI scope.
+
+Executable services such as `IDurableOutboxWriter`,
+`IDurableInboxHandlerExecutor`, and `IDurableOperationStateStore` remain the
+runtime contracts that provider factories create. Core runtime discovery must
+not enumerate executable module-owned writer, inbox executor, or
+operation-state store services merely to read `ModuleName`. Enumerating
+executable services can construct unrelated provider dependencies such as an
+EF `DbContext` or non-EF PostgreSQL session while another module is executing.
+The older executable module-owned writer, inbox executor, and operation-state
+store contracts are not retained as active extension contracts because
+Bondstone does not need backward compatibility for this narrow provider
+composition surface before its first stable, compatibility-bearing release.
+
+Do not introduce module-specific `IServiceProvider` instances or child
+containers for this change. Factories use the current execution scope's
+service provider only when the selected module actually needs the provider
+service. Provider factories should return lightweight executable wrappers over
+scoped dependencies resolved from the current scope; they should not create
+new owned disposable resources that the DI scope cannot dispose. A broader
+provider capability registry, keyed DI model, or fallback retirement remains
+future compatibility/API work.
+
 ## Consequences
 
 The current public module registration shape remains stable for existing
@@ -91,26 +121,39 @@ durable messaging toward module-owned provider helpers.
 - Current contract: module persistence declarations continue to use
   `UsePersistence(...)` or provider-specific module helpers. The provider name
   is the active module persistence marker. EF Core module persistence also
-  records the module `DbContext` type. Non-EF provider details stay
-  provider-owned.
+  records the module `DbContext` type. Provider-specific module helpers
+  contribute passive durable module runtime registrations with module names and
+  scoped factories for executable writer, inbox executor, and operation-state
+  store services. Non-EF provider details stay provider-owned.
 - Stable docs: applied to module architecture, persistence architecture, core
   persistence, EF Core persistence, PostgreSQL EF persistence, non-EF
   PostgreSQL persistence, and setup guidance.
-- Agent guidance: no root AGENTS update is required because package
-  boundaries, public API shape, and provider ownership rules are unchanged.
+- Agent guidance: no root AGENTS update is required because package boundaries
+  and provider ownership rules are unchanged. The small public provider
+  composition additions are documented in this ADR and stable persistence docs.
 - Application evidence: current code stores provider name and optional context
-  type in `BondstoneModuleRegistration` and uses module-owned service
-  resolvers for writers, inbox executors, dispatchers, and operation stores.
-  PostgreSQL EF integration tests prove the supported single-root fallback
-  path for command send outbox/operation-state writes and command receive
-  inbox/handler/operation-state writes when no module-owned services are
-  registered.
-- Pending or deferred: a provider-owned metadata registry, resolver
-  consolidation, or fallback-service retirement remains future
+  type in `BondstoneModuleRegistration`; uses passive durable module runtime
+  registrations for command/event execution writer, inbox executor, and
+  operation-state store selection; and keeps module outbox dispatchers as
+  executable services because dispatch aggregation intentionally enumerates
+  local module dispatchers. PostgreSQL EF integration tests prove the
+  supported single-root fallback path for command send outbox/operation-state
+  writes and command receive inbox/handler/operation-state writes when no
+  module-owned runtime registrations are present. Runtime tests prove unrelated
+  EF DbContext and non-EF PostgreSQL session dependencies are not resolved
+  while another module executes.
+- Pending or deferred: a broader provider-owned metadata registry, resolver
+  consolidation, keyed DI model, or fallback-service retirement remains future
   compatibility/API work and should be handled with ADR 0046 or a later
   focused ADR.
 
 ## Verification
+
+The 2026-06-11 runtime factory registration amendment was verified with:
+
+- `pnpm format:check`
+- `pnpm backend:build`
+- `pnpm backend:test:fast`
 
 Verified decision application with:
 

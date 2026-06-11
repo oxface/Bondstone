@@ -9,7 +9,7 @@ public sealed class EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext>(
     string moduleName,
     TDbContext context,
     TimeProvider? timeProvider = null)
-    : IDurableModuleOutboxWriter
+    : IDurableOutboxWriter
     where TDbContext : DbContext
 {
     private readonly EntityFrameworkCoreDurableOutboxWriter<TDbContext> _writer =

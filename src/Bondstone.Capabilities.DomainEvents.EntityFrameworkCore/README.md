@@ -7,10 +7,8 @@ This package owns EF change-tracker collection, EF record mapping, and the
 system pipeline behavior that stages domain event records inside an observed
 EF module transaction.
 
-The EF bridge exposes pending domain event sources through
-`IDomainEventSourceFeature` while its persistence behavior is active. It does
-not dispatch handlers by itself; modules that also call
-`UseDomainEventDispatch()` get provider-neutral local dispatch before EF
-collection and staging.
+The EF bridge does not dispatch local `IDomainEventHandler<TDomainEvent>`
+handlers or map domain events to integration events. It persists module-local
+domain event records only.
 
 See [../../docs/architecture/persistence-ef-core.md](../../docs/architecture/persistence-ef-core.md).

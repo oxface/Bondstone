@@ -11,19 +11,35 @@ internal sealed class EntityFrameworkCoreDomainEventModuleRuntimeRegistry(
 {
     private readonly IBondstoneModuleRegistry _moduleRegistry =
         moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
-    private readonly Lazy<IReadOnlySet<string>> _domainEventPersistenceModules =
-        new(() => domainEventPersistenceModules
-            .Select(static module => module.ModuleName.NormalizeRequired(
-                nameof(EntityFrameworkCoreDomainEventPersistenceModule.ModuleName),
-                "Module name"))
-            .ToHashSet(StringComparer.Ordinal));
+    private readonly Lazy<IReadOnlySet<string>>
+        _domainEventPersistenceModules =
+            new(() => BuildDomainEventPersistenceModuleSet(domainEventPersistenceModules));
 
     public EntityFrameworkCoreDomainEventModuleRuntimeDescriptor GetRuntime(string moduleName)
     {
         BondstoneModuleRegistration module = _moduleRegistry.GetModule(moduleName);
+        bool usesDomainEventPersistence = _domainEventPersistenceModules.Value.Contains(module.Name);
+
         return new EntityFrameworkCoreDomainEventModuleRuntimeDescriptor(
             module,
-            _domainEventPersistenceModules.Value.Contains(module.Name));
+            usesDomainEventPersistence);
+    }
+
+    private static IReadOnlySet<string> BuildDomainEventPersistenceModuleSet(
+            IEnumerable<EntityFrameworkCoreDomainEventPersistenceModule> modules)
+    {
+        HashSet<string> moduleNames = new(StringComparer.Ordinal);
+
+        foreach (EntityFrameworkCoreDomainEventPersistenceModule module in modules)
+        {
+            string moduleName = module.ModuleName.NormalizeRequired(
+                nameof(EntityFrameworkCoreDomainEventPersistenceModule.ModuleName),
+                "Module name");
+
+            moduleNames.Add(moduleName);
+        }
+
+        return moduleNames;
     }
 }
 

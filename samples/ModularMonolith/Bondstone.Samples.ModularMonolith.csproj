@@ -4,6 +4,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Bondstone.Capabilities.DomainEvents.EntityFrameworkCore\Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore.Postgres\Bondstone.Persistence.EntityFrameworkCore.Postgres.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore\Bondstone.Persistence.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Hosting\Bondstone.Hosting.csproj" />

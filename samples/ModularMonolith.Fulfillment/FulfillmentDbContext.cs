@@ -1,3 +1,4 @@
+using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,7 @@ public sealed class FulfillmentDbContext(
             entity.HasKey(reservation => reservation.Id);
             entity.Property(reservation => reservation.OrderId).IsRequired();
             entity.Property(reservation => reservation.Sku).IsRequired();
+            entity.Ignore(reservation => reservation.PendingDomainEvents);
         });
 
         modelBuilder.Entity<FulfillmentOrderEvent>(entity =>
@@ -31,5 +33,6 @@ public sealed class FulfillmentDbContext(
         });
 
         modelBuilder.ApplyBondstonePersistence(FulfillmentModule.ModuleName);
+        modelBuilder.ApplyBondstoneDomainEvents(FulfillmentModule.ModuleName);
     }
 }

@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
@@ -248,6 +249,17 @@ public static class ModularMonolithApplication
             + await fulfillmentContext
                 .Set<OutboxMessageEntity>()
                 .CountAsync(entity => entity.Status == DurableOutboxStatus.Dispatched, ct);
+        int fulfillmentDomainEventRecordCount =
+            await fulfillmentContext
+                .Set<DomainEventRecordEntity>()
+                .CountAsync(entity => entity.ModuleName == FulfillmentModule.ModuleName, ct);
+        string? fulfillmentDomainEventName =
+            await fulfillmentContext
+                .Set<DomainEventRecordEntity>()
+                .Where(entity => entity.ModuleName == FulfillmentModule.ModuleName)
+                .OrderBy(entity => entity.CapturedAtUtc)
+                .Select(entity => entity.DomainEventName)
+                .SingleOrDefaultAsync(ct);
 
         return new OrderStatusResult(
             orderId,
@@ -259,6 +271,8 @@ public static class ModularMonolithApplication
             await serviceProvider.CountBillingInvoicesAsync(ct),
             processedInboxCount,
             dispatchedOutboxCount,
+            fulfillmentDomainEventRecordCount,
+            fulfillmentDomainEventName,
             operationState?.Status);
     }
 
@@ -346,4 +360,6 @@ public sealed record OrderStatusResult(
     int BillingInvoiceCount,
     int ProcessedInboxCount,
     int DispatchedOutboxCount,
+    int FulfillmentDomainEventRecordCount,
+    string? FulfillmentDomainEventName,
     DurableOperationStatus? OperationStatus);

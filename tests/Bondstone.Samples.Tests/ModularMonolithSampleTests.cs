@@ -59,6 +59,8 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
             Assert.Equal(1, result.BillingInvoiceCount);
             Assert.Equal(4, result.ProcessedInboxCount);
             Assert.Equal(3, result.DispatchedOutboxCount);
+            Assert.Equal(1, result.FulfillmentDomainEventRecordCount);
+            Assert.Equal("fulfillment.inventory-reservation-recorded.v1", result.FulfillmentDomainEventName);
             Assert.Equal(DurableOperationStatus.Completed, result.OperationStatus);
         }
         finally
@@ -115,6 +117,8 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
                     BillingInvoiceCount: 1,
                     ProcessedInboxCount: 4,
                     DispatchedOutboxCount: 3,
+                    FulfillmentDomainEventRecordCount: 1,
+                    FulfillmentDomainEventName: "fulfillment.inventory-reservation-recorded.v1",
                     OperationStatus: DurableOperationStatus.Completed,
                 })
             {

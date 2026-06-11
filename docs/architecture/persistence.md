@@ -94,11 +94,10 @@ record id, owning module, `DomainEventIdentityAttribute` name, timestamps,
 serialized payload, payload metadata, and trace or causation metadata when
 available.
 
-Local domain event dispatch is separate from persistence. Modules that call
-`UseDomainEventDispatch()` dispatch pending `IDomainEvent` instances to
-registered `IDomainEventHandler<TDomainEvent>` services only when an active
-provider or application behavior exposes `IDomainEventSourceFeature` in the
-current module execution. Dispatch does not clear pending events.
+Local domain event dispatch remains deferred. Registering
+`IDomainEventHandler<TDomainEvent>` services does not cause Bondstone to
+dispatch pending `IDomainEvent` instances from the module command or event
+subscriber pipelines.
 
 EF Core is the first accepted capability bridge implementation. Non-EF
 PostgreSQL domain event staging remains application-owned until a later
@@ -107,7 +106,7 @@ decision accepts a concrete provider bridge contract.
 Domain event persistence activation stays narrow. There is no public
 capability-step registry, public named pipeline-slot API, or generic provider
 metadata registry. The `Bondstone.Capabilities.DomainEvents` package contains
-the shared contracts and opt-in local dispatch behavior; the
+the shared contracts; the
 `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` bridge activates
 from a module's EF persistence declaration, an explicit
 `UseEntityFrameworkCoreDomainEventPersistence()` module opt-in, and
@@ -115,10 +114,9 @@ bridge-owned EF services.
 
 The EF runtime behavior belongs inside module command and integration event
 subscriber execution. It collects and stages pending domain events after
-application behavior, handler logic, and any opt-in local domain event
-dispatch, while the module execution context is still active, and before the
-EF transaction owner saves and commits. Pending events are cleared only after
-collection, staging, save, and commit succeed.
+application behavior and handler logic, while the module execution context is
+still active, and before the EF transaction owner saves and commits. Pending
+events are cleared only after collection, staging, save, and commit succeed.
 
 Capability bridge packages own their persisted shapes and provider-specific
 tests. Provider-owned SQL should reuse table, column, and constraint names

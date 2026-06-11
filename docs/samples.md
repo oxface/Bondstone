@@ -41,10 +41,11 @@ module-owned `IBondstoneModule` registration objects.
 
 Ordering and fulfillment use separate module-owned EF Core `DbContext` types
 and PostgreSQL schemas. Billing uses `Bondstone.Persistence.Postgres` with its
-own schema. Ordering publishes `OrderPlacedEvent` and sends a
-durable command to fulfillment. Fulfillment handles the command, records
-state, and publishes `InventoryReservedEvent`. Ordering and billing subscribe
-to integration events and record projections/invoices through their own module
+own schema. Ordering publishes `OrderPlacedEvent` and sends a durable command
+to fulfillment. Fulfillment handles the command, records state, persists a
+module-local domain event record through the EF domain-event capability, and
+publishes `InventoryReservedEvent`. Ordering and billing subscribe to
+integration events and record projections/invoices through their own module
 persistence boundaries.
 
 The sample uses `Bondstone.Transport.Local` through explicit local queue

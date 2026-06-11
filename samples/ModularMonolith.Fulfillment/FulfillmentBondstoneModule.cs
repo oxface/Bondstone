@@ -1,3 +1,4 @@
+using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Modules;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
@@ -26,6 +27,7 @@ public sealed class FulfillmentBondstoneModule : IBondstoneModule
         module.UsePostgreSqlPersistence<FulfillmentDbContext>(
             _connectionString,
             schema: FulfillmentModule.ModuleName);
+        module.UseEntityFrameworkCoreDomainEventPersistence();
         module.Commands.RegisterFromAssemblyContaining<ReserveInventoryHandler>();
         module.Events.RegisterPublishedEvent<InventoryReservedEvent>();
         module.Events.RegisterSubscriber<OrderPlacedEvent, RecordOrderPlacedHandler>(

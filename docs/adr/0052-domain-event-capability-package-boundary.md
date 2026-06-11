@@ -139,6 +139,61 @@ handlers. EF only contributes `IDomainEventSourceFeature` from its change
 tracker while its persistence behavior is active. Local dispatch requires the
 separate `UseDomainEventDispatch()` opt-in.
 
+### 2026-06-11: EF Bridge Owns Local Dispatch Timing
+
+This amendment supersedes the same-day provider-neutral dispatch pipeline
+without rewriting the historical amendment above.
+`Bondstone.Capabilities.DomainEvents` returns to an abstractions-only package:
+it owns domain event contracts and handler contracts, but no module pipeline
+behavior and no `UseDomainEventDispatch()` setup API.
+
+`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` owns the EF-backed
+runtime behavior end to end. Modules opt into EF domain event persistence with
+`UseEntityFrameworkCoreDomainEventPersistence()`. They may enable local handler
+dispatch on that EF bridge with
+`UseEntityFrameworkCoreDomainEventPersistence(options =>
+options.DispatchLocalHandlers = true)`.
+
+The EF bridge resolves pending domain event sources from the EF change
+tracker, optionally dispatches local `IDomainEventHandler<TDomainEvent>`
+handlers after application pipeline behavior and handler logic, then collects
+and stages all still-pending domain events before `SaveChangesAsync`. Events
+raised by local domain event handlers are therefore persisted in the same EF
+transaction. Dispatch does not clear sources; EF persistence remains the
+clear-on-observed-commit owner.
+
+No provider-neutral source feature or standalone domain event dispatch system
+behavior is introduced in this slice. A future non-EF provider bridge should
+own its own source discovery and dispatch timing instead of relying on global
+capability ordering.
+
+### 2026-06-11: Local Dispatch Is Deferred Again
+
+This amendment supersedes the same-day EF-owned local dispatch amendment
+without rewriting the historical amendment above. The runtime slice keeps the
+smallest applied behavior: `Bondstone.Capabilities.DomainEvents` owns domain
+event contracts only, and
+`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` owns EF-backed
+collection, staging, and clear-on-observed-commit only.
+
+`UseEntityFrameworkCoreDomainEventPersistence()` has no
+`DispatchLocalHandlers` option. Registering
+`IDomainEventHandler<TDomainEvent>` services does not cause Bondstone to
+invoke them from module command or event subscriber execution. The handler
+contract remains future-facing for now because removing it is a separate
+public API cleanup decision, and because local dispatch still needs a clear
+answer for provider-neutral source discovery, recursive handling, failure
+semantics, handler scope, and mapping selected domain events to integration
+events.
+
+EF domain event persistence must not become a hidden domain-event bus. It may
+discover pending `IDomainEventSource` instances through EF Core's change
+tracker, stage module-local `DomainEventRecordEntity` rows after application
+pipeline behavior and handler logic, and clear pending events only after the
+observed EF commit succeeds. Mapping persisted or pending domain events to
+public integration events remains explicit module code and is deferred from
+this runtime slice.
+
 ## Related Decisions
 
 - Amends [0051 Package Boundary Split](0051-package-boundary-split.md).
@@ -154,9 +209,8 @@ separate `UseDomainEventDispatch()` opt-in.
   in [docs/packaging.md](../packaging.md). Source package navigation is
   documented in [src/README.md](../../src/README.md), and test project
   boundaries are documented in [tests/README.md](../../tests/README.md).
-  `IDomainEventHandler<TDomainEvent>` is an implemented local handler
-  contract when a module opts into `UseDomainEventDispatch()` and an active
-  provider or application behavior exposes `IDomainEventSourceFeature`.
+  `IDomainEventHandler<TDomainEvent>` remains a public, future-facing local
+  handler contract, but Bondstone does not dispatch it automatically.
 - Stable docs: Domain event capability behavior is described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/persistence.md](../architecture/persistence.md), and
@@ -170,7 +224,9 @@ separate `UseDomainEventDispatch()` opt-in.
   `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`.
 - Pending or deferred: Broad capability registries, named public pipeline
   slots, non-EF provider bridges, integration-event mapping, old-package
-  compatibility shims, and richer handler scoping remain separate decisions.
+  compatibility shims, automatic local domain-event handler dispatch,
+  reusable provider-neutral dispatch services, and richer handler scoping
+  remain separate decisions.
 
 ## Verification
 
@@ -184,5 +240,14 @@ separate `UseDomainEventDispatch()` opt-in.
   behavior, EF source feature composition, provider-neutral dispatch tests,
   and EF ordering tests. Ran focused domain-event tests, `pnpm format:check`,
   `pnpm backend:build`, and `pnpm backend:test:fast`.
+- 2026-06-11 EF-owned dispatch amendment: removed the provider-neutral
+  dispatch pipeline behavior and moved optional local handler dispatch into
+  the EF bridge behavior. Ran focused domain-event tests, `pnpm format:check`,
+  `pnpm backend:build`, and `pnpm backend:test:fast`.
+- 2026-06-11 local-dispatch deferral amendment: removed the EF
+  `DispatchLocalHandlers` option, kept EF behavior persistence-only, and
+  updated stable architecture docs and package READMEs. Ran focused domain
+  event tests, `pnpm format:check`, `pnpm backend:build`, and
+  `pnpm backend:test:fast`.
 - `dotnet restore Bondstone.slnx`
 - `dotnet build Bondstone.slnx --configuration Release --no-restore`

@@ -15,6 +15,7 @@ sample. It proves the current durable command and integration event loop with:
   `OrderPlacedEvent` and `InventoryReservedEvent`;
 - separate module-owned EF Core `DbContext` types and PostgreSQL schemas;
 - a billing schema using `Bondstone.Persistence.Postgres`;
+- EF-backed module-local domain event persistence in fulfillment;
 - outbox-backed durable command sending from ordering to fulfillment;
 - outbox-backed durable event publishing from ordering and fulfillment;
 - durable outbox worker dispatch through explicit

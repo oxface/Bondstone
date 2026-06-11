@@ -64,7 +64,7 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task ModuleCommands_WhenDomainEventHandlerIsRegisteredWithoutDispatchOptIn_DoesNotDispatchAndStagesBeforeSave()
+    public async Task ModuleCommands_WhenDomainEventHandlerIsRegistered_DoesNotDispatchAndStagesBeforeSave()
     {
         string databaseName = Guid.NewGuid().ToString("N");
         var services = new ServiceCollection();
@@ -120,74 +120,6 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
         DomainEventRecordEntity record = await context.Set<DomainEventRecordEntity>().SingleAsync();
 
         Assert.Equal("fulfillment.inventory-reserved.v1", record.DomainEventName);
-    }
-
-    [Fact]
-    [Trait("Category", "Application")]
-    public async Task ModuleCommands_WhenDomainEventDispatchIsOptedIn_DispatchesBeforePersistenceStages()
-    {
-        string databaseName = Guid.NewGuid().ToString("N");
-        var services = new ServiceCollection();
-        services.AddSingleton<DomainEventCapture>();
-        services.AddScoped<
-            IModuleCommandPipelineBehavior<RaiseLoggedDomainEventCommand>,
-            LoggedDomainEventCommandBehavior>();
-        services.AddScoped<
-            IDomainEventHandler<InventoryReservedDomainEvent>,
-            RecordingInventoryReservedDomainEventHandler>();
-        services.AddDbContext<DomainEventTestDbContext>(options =>
-            UseInMemory(options, databaseName));
-
-        services.AddBondstone(bondstone =>
-        {
-            bondstone.Module("fulfillment", module =>
-            {
-                module.UseEntityFrameworkCorePersistence<DomainEventTestDbContext>();
-                module.UseEntityFrameworkCoreDomainEventPersistence();
-                module.UseDomainEventDispatch();
-                module.Commands.RegisterHandler<
-                    RaiseLoggedDomainEventCommand,
-                    RaiseLoggedDomainEventCommandHandler>();
-            });
-        });
-
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        DomainEventCapture capture = serviceProvider.GetRequiredService<DomainEventCapture>();
-        capture.RecordStagedDomainEventsAtSave = true;
-
-        using (IServiceScope scope = serviceProvider.CreateScope())
-        {
-            await scope.ServiceProvider
-                .GetRequiredService<IModuleCommandExecutor>()
-                .ExecuteAsync(
-                    "fulfillment",
-                    new RaiseLoggedDomainEventCommand("A-100"));
-        }
-
-        Assert.NotNull(capture.Source);
-        Assert.Empty(capture.Source.PendingDomainEvents);
-        Assert.Equal(1, capture.Source.ClearCount);
-        Assert.Equal(
-            [
-                "application-before",
-                "handler",
-                "application-after",
-                "domain-handler",
-                "save:domain-events:2",
-                "clear",
-            ],
-            capture.Calls);
-
-        using IServiceScope verificationScope = serviceProvider.CreateScope();
-        DomainEventTestDbContext context =
-            verificationScope.ServiceProvider.GetRequiredService<DomainEventTestDbContext>();
-        DomainEventRecordEntity[] records = await context.Set<DomainEventRecordEntity>()
-            .OrderBy(record => record.DomainEventName)
-            .ToArrayAsync();
-
-        Assert.Equal(2, records.Length);
-        Assert.Equal("fulfillment.inventory-reservation-audited.v1", records[0].DomainEventName);
-        Assert.Equal("fulfillment.inventory-reserved.v1", records[1].DomainEventName);
     }
 
     [Fact]
@@ -578,7 +510,6 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
             CancellationToken ct = default)
         {
             capture.Calls.Add("domain-handler");
-            capture.Source?.RaiseAudit(domainEvent.InventoryId);
             return ValueTask.CompletedTask;
         }
     }
@@ -699,11 +630,6 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
             return source;
         }
 
-        public void RaiseAudit(string inventoryId)
-        {
-            _pendingDomainEvents.Add(new InventoryReservationAuditedDomainEvent(inventoryId));
-        }
-
         public void ClearPendingDomainEvents()
         {
             ClearCount++;
@@ -714,9 +640,6 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     [DomainEventIdentity("fulfillment.inventory-reserved.v1")]
     public sealed record InventoryReservedDomainEvent(string InventoryId) : IDomainEvent;
-
-    [DomainEventIdentity("fulfillment.inventory-reservation-audited.v1")]
-    public sealed record InventoryReservationAuditedDomainEvent(string InventoryId) : IDomainEvent;
 
     public sealed record UnnamedDomainEvent(string InventoryId) : IDomainEvent;
 

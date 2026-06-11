@@ -2,14 +2,15 @@
 
 Optional module-local domain event capability contracts for Bondstone.
 
-This package owns the domain event contracts and opt-in local dispatch
-behavior. It is not a transport event bus and does not persist domain events
-without a provider bridge such as
+This package owns the domain event contracts. It is not a transport event bus,
+does not provide module pipeline behavior by itself, and does not persist
+domain events without a provider bridge such as
 `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`.
 
-Modules that call `UseDomainEventDispatch()` dispatch pending domain events to
-registered `IDomainEventHandler<TDomainEvent>` services only when an active
-provider or application behavior exposes `IDomainEventSourceFeature` for the
-current module execution. Dispatch does not clear pending events.
+Provider bridges own source discovery and persistence semantics for their
+runtime.
+Local handler dispatch is intentionally deferred in the current runtime:
+registering `IDomainEventHandler<TDomainEvent>` services does not cause
+Bondstone to invoke them automatically.
 
 See [../../docs/architecture/messaging.md](../../docs/architecture/messaging.md).

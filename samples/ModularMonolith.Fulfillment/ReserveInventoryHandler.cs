@@ -13,13 +13,10 @@ public sealed class ReserveInventoryHandler(
         ReserveInventoryCommand command,
         CancellationToken ct = default)
     {
-        dbContext.Reservations.Add(new FulfillmentReservation
-        {
-            Id = Guid.NewGuid(),
-            OrderId = command.OrderId,
-            Sku = command.Sku,
-            Quantity = command.Quantity,
-        });
+        dbContext.Reservations.Add(FulfillmentReservation.Reserve(
+            command.OrderId,
+            command.Sku,
+            command.Quantity));
 
         await eventPublisher.PublishAsync(
             new InventoryReservedEvent(

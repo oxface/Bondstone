@@ -1,7 +1,7 @@
 # PostgreSQL Persistence
 
-`Bondstone.EntityFrameworkCore.Postgres` owns PostgreSQL-specific persistence
-behavior for Bondstone EF Core mappings.
+`Bondstone.Persistence.EntityFrameworkCore.Postgres` owns PostgreSQL-specific
+persistence behavior for Bondstone EF Core mappings.
 
 ## Provider Responsibilities
 

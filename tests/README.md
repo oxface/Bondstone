@@ -9,11 +9,17 @@ Testing policy, categories, and commands are documented in
 ## Test Projects
 
 - [Bondstone.Tests](Bondstone.Tests) covers core package behavior.
+- [Bondstone.Capabilities.DomainEvents.Tests](Bondstone.Capabilities.DomainEvents.Tests)
+  covers domain event capability contracts.
+- [Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Tests](Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Tests)
+  covers the EF Core domain event capability bridge.
+- [Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Postgres.Tests](Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Postgres.Tests)
+  covers PostgreSQL-backed EF domain event transaction behavior.
 - [Bondstone.Hosting.Tests](Bondstone.Hosting.Tests) covers hosted worker
   composition.
-- [Bondstone.EntityFrameworkCore.Tests](Bondstone.EntityFrameworkCore.Tests)
+- [Bondstone.Persistence.EntityFrameworkCore.Tests](Bondstone.Persistence.EntityFrameworkCore.Tests)
   covers EF Core mappings and boundaries.
-- [Bondstone.EntityFrameworkCore.Postgres.Tests](Bondstone.EntityFrameworkCore.Postgres.Tests)
+- [Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests](Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests)
   covers PostgreSQL EF integration.
 - [Bondstone.Persistence.Postgres.Tests](Bondstone.Persistence.Postgres.Tests)
   covers non-EF PostgreSQL persistence.

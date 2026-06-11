@@ -80,11 +80,12 @@ react to an integration event and send durable commands as follow-up work.
 Domain events are module-local facts. They are distinct from integration
 events and must not be treated as durable cross-module contracts by default.
 
-ADR 0028 accepts a small Bondstone-owned domain event contract. Core currently
-provides:
+ADR 0028 accepts a small Bondstone-owned domain event contract, and ADR 0052
+places those contracts in the optional
+`Bondstone.Capabilities.DomainEvents` package. The package currently provides:
 
 - `IDomainEvent` marks a module-local domain fact in the
-  `Bondstone.DomainEvents` namespace;
+  `Bondstone.Capabilities.DomainEvents` namespace;
 - `DomainEventIdentityAttribute` provides a stable module-local identity for
   persisted domain event records;
 - `IDomainEventSource` lets aggregate roots or entities expose
@@ -108,14 +109,14 @@ in-module dispatch, or explicit mapping to integration events, but it remains
 private to the owning module unless module code publishes a separate
 integration event.
 
-Runtime pipeline behavior for domain event persistence is provider-owned, not
-a public domain event bus. EF Core is the first runtime provider. It activates
-only for EF-backed modules that call
+Runtime pipeline behavior for domain event persistence is capability
+bridge-owned, not a public domain event bus. EF Core is the first runtime
+bridge, provided by
+`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`. It activates only
+for EF-backed modules that call
 `UseEntityFrameworkCoreDomainEventPersistence()` and map the EF domain event
 record shape explicitly with `ApplyBondstoneDomainEvents()`. Bondstone does not
-have a public
-capability-step registry, public named pipeline slots, or a separate
-`Bondstone.DomainEvents` package.
+have a public capability-step registry or public named pipeline slots.
 
 EF Core collection persists module-local domain event records and clears
 sources only after the EF module transaction saves and commits successfully.

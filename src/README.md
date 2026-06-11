@@ -8,13 +8,21 @@ documented in [../docs/packaging.md](../docs/packaging.md).
 ## Packages
 
 - [Bondstone](Bondstone) contains core abstractions.
+- [Bondstone.Capabilities.DomainEvents](Bondstone.Capabilities.DomainEvents)
+  contains optional module-local domain event capability contracts.
+- [Bondstone.Capabilities.DomainEvents.EntityFrameworkCore](Bondstone.Capabilities.DomainEvents.EntityFrameworkCore)
+  contains the EF Core bridge for domain event persistence.
 - [Bondstone.Hosting](Bondstone.Hosting) contains hosted worker composition.
-- [Bondstone.EntityFrameworkCore](Bondstone.EntityFrameworkCore) contains EF
+- [Bondstone.Persistence](Bondstone.Persistence) contains provider-neutral
+  durable persistence contracts and records.
+- [Bondstone.Persistence.EntityFrameworkCore](Bondstone.Persistence.EntityFrameworkCore) contains EF
   Core persistence mappings and boundaries.
-- [Bondstone.EntityFrameworkCore.Postgres](Bondstone.EntityFrameworkCore.Postgres)
+- [Bondstone.Persistence.EntityFrameworkCore.Postgres](Bondstone.Persistence.EntityFrameworkCore.Postgres)
   contains PostgreSQL-specific EF Core integration.
 - [Bondstone.Persistence.Postgres](Bondstone.Persistence.Postgres) contains
   PostgreSQL non-EF durable module persistence.
+- [Bondstone.Transport](Bondstone.Transport) contains provider-neutral
+  transport topology diagnostic contracts.
 - [Bondstone.Transport.Local](Bondstone.Transport.Local) contains explicit
   local queue routing for samples, tests, and local development.
 - [Bondstone.Transport.RabbitMq](Bondstone.Transport.RabbitMq) contains the

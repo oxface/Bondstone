@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageDescription>Provider-neutral transport diagnostics and topology contracts for Bondstone durable messaging.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bondstone.Persistence\Bondstone.Persistence.csproj" />
+  </ItemGroup>
+</Project>

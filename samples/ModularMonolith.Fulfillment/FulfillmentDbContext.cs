@@ -1,4 +1,4 @@
-using Bondstone.EntityFrameworkCore.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Microsoft.EntityFrameworkCore;
 

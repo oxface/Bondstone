@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Bondstone.EntityFrameworkCore.Postgres\Bondstone.EntityFrameworkCore.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore.Postgres\Bondstone.Persistence.EntityFrameworkCore.Postgres.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Hosting\Bondstone.Hosting.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Transport.RabbitMq\Bondstone.Transport.RabbitMq.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Transport.ServiceBus\Bondstone.Transport.ServiceBus.csproj" />

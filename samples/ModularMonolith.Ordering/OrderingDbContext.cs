@@ -1,4 +1,4 @@
-using Bondstone.EntityFrameworkCore.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bondstone.Samples.ModularMonolith.Ordering;

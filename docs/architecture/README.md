@@ -42,6 +42,12 @@ owning broker retry/dead-letter policy. See
 [transport-servicebus.md](transport-servicebus.md) and
 [transport-rabbitmq.md](transport-rabbitmq.md).
 
+Provider-neutral durable persistence contracts live in `Bondstone.Persistence`
+and provider-neutral transport topology diagnostics live in
+`Bondstone.Transport`. The `Bondstone` core package owns module execution,
+module registration, and module-aware runtime resolution over those neutral
+contracts.
+
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
 tests, and local development. It is not a fallback and does not replace broker
 durability. See [transport-local.md](transport-local.md).
@@ -49,6 +55,12 @@ durability. See [transport-local.md](transport-local.md).
 `Bondstone.Persistence.Postgres` is PostgreSQL-specific, Dapper-backed
 internally, and provides durable module messaging persistence without EF Core.
 See [persistence-postgres.md](persistence-postgres.md).
+
+`Bondstone.Capabilities.DomainEvents` contains small module-local domain event
+capability contracts. It is not a transport, message bus, or provider runtime
+package. `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` is the EF
+Core bridge that provides the first runtime implementation for collection and
+persistence.
 
 ## Topic Docs
 

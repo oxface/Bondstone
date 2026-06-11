@@ -1,7 +1,7 @@
 # 0037 PostgreSQL Persistence Package Identity
 
-Status: Accepted
-Application: Applied
+Status: Superseded
+Application: Not Applicable
 Date: 2026-06-09
 
 ## Context
@@ -57,6 +57,7 @@ the MVP repository.
 
 - [0035 PostgreSQL Dapper Persistence Proof](0035-postgresql-dapper-persistence-proof.md)
 - [0036 Direct Transport Adapters And Rebus Removal](0036-direct-transport-adapters-and-rebus-removal.md)
+- Superseded by [0051 Package Boundary Split](0051-package-boundary-split.md).
 
 ## Application Notes
 
@@ -78,6 +79,8 @@ the MVP repository.
   identity.
 - Pending or deferred: A larger EF package-family rename is deferred to a
   later ADR if needed.
+- Superseded: ADR 0051 accepts the larger EF package-family rename and the
+  neutral persistence/domain-event/transport package split.
 
 ## Verification
 

@@ -1,7 +1,8 @@
 # EF Core Persistence
 
-`Bondstone.EntityFrameworkCore` owns provider-neutral EF Core entity classes,
-model mappings, staging stores, and the EF persistence scope.
+`Bondstone.Persistence.EntityFrameworkCore` owns provider-neutral EF Core
+entity classes, model mappings, staging stores, and the EF persistence scope.
+It does not depend on domain-event capability packages.
 
 ## Model Mappings
 
@@ -23,15 +24,12 @@ mapping helpers:
 modelBuilder.ApplyBondstoneOutbox();
 modelBuilder.ApplyBondstoneInbox();
 modelBuilder.ApplyBondstoneOperationState();
-modelBuilder.ApplyBondstoneDomainEvents();
 ```
 
 `ApplyBondstoneOutbox` maps outbox messages, `ApplyBondstoneInbox` maps inbox
-messages, `ApplyBondstoneOperationState` maps durable operation state, and
-`ApplyBondstoneDomainEvents` maps module-local domain event records. Modules
-that only need module-owned EF transactions do not need to map durable
-messaging or domain event tables unless their chosen capabilities use those
-stores.
+messages, and `ApplyBondstoneOperationState` maps durable operation state.
+Modules that only need module-owned EF transactions do not need to map durable
+messaging tables unless their chosen capabilities use those stores.
 Consumers own migrations. Bondstone does not ship migrations or
 provider-specific migration conventions in the generic EF Core package.
 
@@ -41,8 +39,9 @@ command and event subscriber execution. The model must include outbox and
 inbox mappings, either by calling `ApplyBondstoneOutbox` and
 `ApplyBondstoneInbox`, or by using the durable `ApplyBondstonePersistence`
 helper. Operation-state mapping validation remains tied to operation-state
-store usage. Modules that opt into EF domain event persistence must map domain
-event records explicitly with `ApplyBondstoneDomainEvents()`.
+store usage. Modules that opt into EF domain event persistence through
+`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` must map domain
+event records explicitly with that package's `ApplyBondstoneDomainEvents()`.
 
 ## Registration And Stores
 
@@ -53,9 +52,7 @@ provider-neutral EF Core implementations for:
 - `IDurableInboxStore`;
 - `IDurableOperationStateStore`;
 - `IDurableOperationReader`;
-- `IEntityFrameworkCorePersistenceScope`;
-- EF domain event transaction coordination used by opted-in module
-  transaction behavior.
+- `IEntityFrameworkCorePersistenceScope`.
 
 The registration uses the consumer-owned DbContext type and stays
 provider-neutral. It does not configure a database provider, migrations, hosted
@@ -119,22 +116,24 @@ The store requires the operation-state entity mapping and fails with a clear
 `ApplyBondstoneOperationState()` mapping error if it is used with a DbContext
 that does not map operation state.
 
-ADR 0028 accepts EF Core as the first provider for optional module-local
-domain event collection and persistence. The implementation is EF-owned and
-module-scoped.
+ADR 0028 accepts EF Core as the first provider bridge for optional
+module-local domain event collection and persistence. The implementation lives
+in `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`, not in the base
+EF persistence package.
 
 The accepted EF collection mechanism is narrow: the module transaction
 behavior collects domain events through `DbContext.ChangeTracker` entries
-whose entities implement the `Bondstone.DomainEvents.IDomainEventSource`
-contract. EF Core must not require a Bondstone aggregate base class, a custom
+whose entities implement the
+`Bondstone.Capabilities.DomainEvents.IDomainEventSource` contract. The bridge
+must not require a Bondstone aggregate base class, a custom
 DbContext base class, `SaveChangesAsync` interception, arbitrary method-name
 reflection, or automatic publication from EF interceptors.
 
-EF-backed domain event persistence is provider-owned runtime behavior. It
-activates only for modules that declare EF Core persistence and explicitly opt
-into domain event persistence with
+EF-backed domain event persistence is bridge-owned runtime behavior. It
+activates only when the bridge package is referenced and modules declare EF
+Core persistence and explicitly opt into domain event persistence with
 `UseEntityFrameworkCoreDomainEventPersistence()`. The opt-in is narrow
-EF-owned module metadata; Bondstone does not provide a public capability-step
+bridge-owned module metadata; Bondstone does not provide a public capability-step
 registry or public named pipeline slots.
 
 EF-backed domain event collection belongs inside module command execution and

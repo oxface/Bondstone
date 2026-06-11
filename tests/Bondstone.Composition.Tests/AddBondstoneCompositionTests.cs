@@ -1,6 +1,6 @@
 using Bondstone.Configuration;
-using Bondstone.EntityFrameworkCore.Persistence;
-using Bondstone.EntityFrameworkCore.Postgres.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Hosting.Outbox;
 using Bondstone.Messaging;
 using Bondstone.Modules;

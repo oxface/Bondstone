@@ -1,8 +1,10 @@
 # Core Persistence
 
-Core persistence contracts live in `Bondstone` and stay independent from EF
-Core, PostgreSQL, transport adapters, SQL locking, schema migration, and
-background dispatch mechanics.
+Provider-neutral persistence contracts live in `Bondstone.Persistence` and
+stay independent from EF Core, PostgreSQL, transport adapters, SQL locking,
+schema migration, and background dispatch mechanics. The `Bondstone` core
+package owns module execution and module-aware runtime resolution over those
+contracts.
 
 ## Outbox
 
@@ -65,7 +67,8 @@ dispatching one batch when called. It composes claiming, per-record lease
 renewal, transport send, failure decision, and outcome recording. It is not a
 hosted service and does not own polling, leader election, singleton sweeper
 coordination, route circuit breaking, archiving, or terminal-failure routing.
-Hosted worker composition lives outside core in `Bondstone.Hosting`.
+Hosted worker composition lives outside the persistence package in
+`Bondstone.Hosting`.
 
 For module-owned durable persistence, module-specific outbox writers and
 outbox dispatchers can be registered by provider packages. Durable sends
@@ -81,9 +84,9 @@ Provider packages contribute module-owned command and receive runtime
 persistence through passive durable module runtime registrations. Each
 registration carries a module name plus a factory for the executable
 `IDurableOutboxWriter`, `IDurableInboxHandlerExecutor`, or
-`IDurableOperationStateStore` used by that module. Core builds module maps
-from the passive registrations and invokes only the selected module's factory
-inside the current DI scope. This keeps module metadata lookup from
+`IDurableOperationStateStore` used by that module. `Bondstone` builds module
+maps from the passive registrations and invokes only the selected module's
+factory inside the current DI scope. This keeps module metadata lookup from
 constructing unrelated provider dependencies such as another module's
 `DbContext` or PostgreSQL session. Executable writer, inbox executor, and
 operation-state store services use the ordinary role contracts returned by
@@ -95,15 +98,15 @@ disposable resources outside DI ownership.
 
 Provider packages must register at most one runtime registration for each
 module command/receive durable role, and at most one module outbox dispatcher
-service for each local module outbox. Core validates duplicate module outbox
-writer, outbox dispatcher, inbox handler executor, and operation-state store
-registrations when those services are resolved so provider composition errors
-fail with module-specific diagnostics. When a module declares persistence but
-the matching module-owned service is missing, runtime diagnostics name the
-module and its declared persistence provider so provider setup gaps are easier
-to identify. Application code should normally configure module-owned
-persistence through provider setup helpers rather than directly registering
-provider-facing runtime registrations.
+service for each local module outbox. `Bondstone` validates duplicate module
+outbox writer, outbox dispatcher, inbox handler executor, and operation-state
+store registrations when those services are resolved so provider composition
+errors fail with module-specific diagnostics. When a module declares
+persistence but the matching module-owned service is missing, runtime
+diagnostics name the module and its declared persistence provider so provider
+setup gaps are easier to identify. Application code should normally configure
+module-owned persistence through provider setup helpers rather than directly
+registering provider-facing runtime registrations.
 
 Provider transaction behaviors can publish an `IModuleTransactionFeature` into
 the current module execution context's feature collection. This is an advanced
@@ -200,7 +203,7 @@ ADR accepts default running, failure, cancellation, or retry semantics.
 
 ## Provider Boundaries
 
-Core contracts are intentionally provider-neutral.
+Persistence contracts are intentionally provider-neutral.
 `Bondstone.Persistence.Postgres` is the PostgreSQL-specific non-EF persistence
 provider. It implements these contracts directly, owns its PostgreSQL-specific
 connection/session and transaction boundary in its own package, and commits

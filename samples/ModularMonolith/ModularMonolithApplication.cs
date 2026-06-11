@@ -1,7 +1,7 @@
 using Bondstone.Configuration;
-using Bondstone.EntityFrameworkCore.Inbox;
-using Bondstone.EntityFrameworkCore.Operations;
-using Bondstone.EntityFrameworkCore.Outbox;
+using Bondstone.Persistence.EntityFrameworkCore.Inbox;
+using Bondstone.Persistence.EntityFrameworkCore.Operations;
+using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Hosting.Outbox;
 using Bondstone.Messaging;
 using Bondstone.Modules;

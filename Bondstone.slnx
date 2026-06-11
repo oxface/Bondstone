@@ -1,9 +1,13 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Bondstone.EntityFrameworkCore.Postgres/Bondstone.EntityFrameworkCore.Postgres.csproj" />
-    <Project Path="src/Bondstone.EntityFrameworkCore/Bondstone.EntityFrameworkCore.csproj" />
+    <Project Path="src/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.csproj" />
+    <Project Path="src/Bondstone.Capabilities.DomainEvents/Bondstone.Capabilities.DomainEvents.csproj" />
+    <Project Path="src/Bondstone.Persistence/Bondstone.Persistence.csproj" />
+    <Project Path="src/Bondstone.Persistence.EntityFrameworkCore.Postgres/Bondstone.Persistence.EntityFrameworkCore.Postgres.csproj" />
+    <Project Path="src/Bondstone.Persistence.EntityFrameworkCore/Bondstone.Persistence.EntityFrameworkCore.csproj" />
     <Project Path="src/Bondstone.Hosting/Bondstone.Hosting.csproj" />
     <Project Path="src/Bondstone.Persistence.Postgres/Bondstone.Persistence.Postgres.csproj" />
+    <Project Path="src/Bondstone.Transport/Bondstone.Transport.csproj" />
     <Project Path="src/Bondstone.Transport.Local/Bondstone.Transport.Local.csproj" />
     <Project Path="src/Bondstone.Transport.RabbitMq/Bondstone.Transport.RabbitMq.csproj" />
     <Project Path="src/Bondstone.Transport.ServiceBus/Bondstone.Transport.ServiceBus.csproj" />
@@ -18,9 +22,12 @@
     <Project Path="samples/ModularMonolith/Bondstone.Samples.ModularMonolith.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Bondstone.Capabilities.DomainEvents.Tests/Bondstone.Capabilities.DomainEvents.Tests.csproj" />
+    <Project Path="tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Postgres.Tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Postgres.Tests.csproj" />
+    <Project Path="tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Tests.csproj" />
     <Project Path="tests/Bondstone.Composition.Tests/Bondstone.Composition.Tests.csproj" />
-    <Project Path="tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj" />
-    <Project Path="tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.csproj" />
+    <Project Path="tests/Bondstone.Persistence.EntityFrameworkCore.Tests/Bondstone.Persistence.EntityFrameworkCore.Tests.csproj" />
     <Project Path="tests/Bondstone.Hosting.Tests/Bondstone.Hosting.Tests.csproj" />
     <Project Path="tests/Bondstone.Persistence.Postgres.Tests/Bondstone.Persistence.Postgres.Tests.csproj" />
     <Project Path="tests/Bondstone.Transport.Local.Tests/Bondstone.Transport.Local.Tests.csproj" />

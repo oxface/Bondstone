@@ -3,7 +3,8 @@
 Persistence docs are split by ownership boundary:
 
 - [persistence-core.md](persistence-core.md) describes provider-neutral
-  contracts in `Bondstone`.
+  contracts in `Bondstone.Persistence` and the module-aware core resolution
+  that composes them from `Bondstone`.
 - [persistence-ef-core.md](persistence-ef-core.md) describes provider-neutral
   EF Core mappings, stores, and the EF persistence scope.
 - [persistence-postgresql.md](persistence-postgresql.md) describes
@@ -16,9 +17,9 @@ Historical extraction details remain in
 
 ## Cross-Cutting Rules
 
-Core persistence contracts stay independent from EF Core, PostgreSQL,
-transport adapters, SQL locking, schema migration, and background dispatch
-mechanics.
+Provider-neutral persistence contracts stay independent from EF Core,
+PostgreSQL, transport adapters, SQL locking, schema migration, and background
+dispatch mechanics.
 
 EF Core components stage data and expose transaction/save boundaries, but they
 do not own transport acknowledgement, retry policy, or a generic mediator.
@@ -82,25 +83,29 @@ boundary; it does not write outgoing outbox messages, create inbox records,
 publish transport events, or expose domain events as integration contracts.
 
 The core shape is intentionally small and lives under
-`Bondstone.DomainEvents`: module domain objects may implement
+`Bondstone.Capabilities.DomainEvents` in the
+`Bondstone.Capabilities.DomainEvents` package: module domain objects may
+implement
 `IDomainEventSource` to expose pending `IDomainEvent` instances through
 `PendingDomainEvents` and clear them through `ClearPendingDomainEvents()`.
-Provider packages may collect, stage, and clear those events when the module
-opts into the capability. Persisted records should carry a stable record id,
-owning module, `DomainEventIdentityAttribute` name, timestamps, serialized
-payload, payload metadata, and trace or causation metadata when available.
+Capability bridge packages may collect, stage, and clear those events when the
+module opts into the capability. Persisted records should carry a stable
+record id, owning module, `DomainEventIdentityAttribute` name, timestamps,
+serialized payload, payload metadata, and trace or causation metadata when
+available.
 
-EF Core is the first accepted provider implementation. Non-EF PostgreSQL
-domain event staging remains application-owned until a later decision accepts
-a concrete provider contract.
+EF Core is the first accepted capability bridge implementation. Non-EF
+PostgreSQL domain event staging remains application-owned until a later
+decision accepts a concrete provider bridge contract.
 
 Domain event persistence activation stays narrow. There is no public
-capability-step registry, public named pipeline-slot API, generic provider
-metadata registry, or separate `Bondstone.DomainEvents` package in the current
-package set. EF domain event persistence activates from a module's EF
-persistence declaration, an explicit
+capability-step registry, public named pipeline-slot API, or generic provider
+metadata registry. The `Bondstone.Capabilities.DomainEvents` package contains
+contracts only; the
+`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` bridge activates
+from a module's EF persistence declaration, an explicit
 `UseEntityFrameworkCoreDomainEventPersistence()` module opt-in, and
-provider-owned EF services.
+bridge-owned EF services.
 
 The EF runtime behavior belongs inside module command and integration event
 subscriber execution. It collects and stages pending domain events after
@@ -108,14 +113,13 @@ application behavior and handler logic, while the module execution context is
 still active, and before the EF transaction owner saves and commits. Pending
 events are cleared only after collection, staging, save, and commit succeed.
 
-Provider packages own provider-specific SQL, locking, conflict detection,
-schema targeting, and integration tests. Provider-owned SQL should reuse table,
-column, and constraint names from provider-neutral mappings when those mappings
-define the persisted shape.
+Capability bridge packages own their persisted shapes and provider-specific
+tests. Provider-owned SQL should reuse table, column, and constraint names
+from the bridge mappings when those mappings define the persisted shape.
 
 `Bondstone.Persistence.Postgres` is PostgreSQL-specific and Dapper-backed, but
 Dapper is an internal implementation helper rather than the public
-abstraction. The package implements the core `Bondstone` persistence contracts
+abstraction. The package implements the `Bondstone.Persistence` contracts
 directly and owns its connection/session and transaction boundary without
 depending on EF entity mappings, `DbContext`, or
 `IEntityFrameworkCorePersistenceScope`.

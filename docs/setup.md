@@ -6,15 +6,24 @@ This document shows the current host setup shape for Bondstone.
 
 Install the packages needed for the host:
 
-- `Bondstone` for core module, command, event, inbox/outbox, and durable
-  message contracts.
+- `Bondstone` for core module, command, integration-event, and module
+  execution contracts.
+- `Bondstone.Capabilities.DomainEvents` when domain model types expose
+  module-local domain events.
+- `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` when EF-backed
+  modules opt into domain event collection and persistence.
 - `Bondstone.Hosting` when the host runs the durable outbox worker.
-- `Bondstone.EntityFrameworkCore` for EF Core durable persistence mappings and
+- `Bondstone.Persistence` for provider-neutral durable envelopes, inbox,
+  outbox, operation state, and persistence contracts used by custom
+  persistence or dispatch composition.
+- `Bondstone.Persistence.EntityFrameworkCore` for EF Core durable persistence mappings and
   module transaction behavior.
-- `Bondstone.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
+- `Bondstone.Persistence.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
   classification and provider registration.
 - `Bondstone.Persistence.Postgres` for PostgreSQL non-EF durable module
   persistence.
+- `Bondstone.Transport` for provider-neutral topology diagnostics used by
+  custom transport adapters.
 - `Bondstone.Transport.RabbitMq` or `Bondstone.Transport.ServiceBus` when the
   host dispatches durable outbox records through a direct provider adapter.
 - `Bondstone.Transport.Local` when a sample, test, or local development host

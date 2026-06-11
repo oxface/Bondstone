@@ -135,11 +135,20 @@ internal sealed class ModuleRuntimeRegistry
         Func<TRegistration, string> moduleNameSelector,
         string registrationDescription)
     {
-        TRegistration[] validatedRegistrations =
-            DurableModulePersistenceRegistrationValidator.ToValidatedArray(
-                registrations,
-                moduleNameSelector,
-                registrationDescription);
+        TRegistration[] validatedRegistrations = registrations.ToArray();
+        string[] duplicateModuleNames = validatedRegistrations
+            .Select(registration => NormalizeModuleName(moduleNameSelector(registration)))
+            .GroupBy(static moduleName => moduleName, StringComparer.Ordinal)
+            .Where(static group => group.Count() > 1)
+            .Select(static group => group.Key)
+            .OrderBy(static moduleName => moduleName, StringComparer.Ordinal)
+            .ToArray();
+
+        if (duplicateModuleNames.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"Multiple {registrationDescription} registrations exist for module(s): '{string.Join("', '", duplicateModuleNames)}'. Configure exactly one {registrationDescription} per module.");
+        }
 
         return validatedRegistrations.ToDictionary(
             registration => NormalizeModuleName(moduleNameSelector(registration)),

@@ -1,4 +1,4 @@
-using Bondstone.EntityFrameworkCore.Postgres.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Modules;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Bondstone.Samples.ModularMonolith.Ordering.Contracts;

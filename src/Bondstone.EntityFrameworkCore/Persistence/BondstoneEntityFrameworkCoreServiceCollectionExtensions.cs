@@ -1,4 +1,3 @@
-using Bondstone.EntityFrameworkCore.DomainEvents;
 using Bondstone.EntityFrameworkCore.Inbox;
 using Bondstone.EntityFrameworkCore.Operations;
 using Bondstone.EntityFrameworkCore.Outbox;
@@ -29,7 +28,6 @@ public static class BondstoneEntityFrameworkCoreServiceCollectionExtensions
         services.TryAddScoped<
             IEntityFrameworkCorePersistenceScope,
             EntityFrameworkCorePersistenceScope<TDbContext>>();
-        services.TryAddEntityFrameworkCoreDomainEventTransactionState();
 
         return services;
     }

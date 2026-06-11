@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Bondstone.EntityFrameworkCore.Inbox;
 using Bondstone.EntityFrameworkCore.Outbox;
 using Bondstone.Modules;
+using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,14 +21,15 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
         moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
 
     public async ValueTask ExecuteAsync(
-        string moduleName,
+        IModulePipelineExecutionContext context,
         Func<CancellationToken, ValueTask> next,
         CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(next);
 
         EntityFrameworkCoreModuleRuntimeDescriptor runtime =
-            _moduleRuntimeRegistry.GetRuntime(moduleName);
+            _moduleRuntimeRegistry.GetRuntime(context.ModuleName);
         if (!runtime.UsesEntityFrameworkCorePersistence)
         {
             await next(ct);
@@ -42,21 +44,34 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
 
         IEntityFrameworkCorePersistenceScope persistenceScope = CreatePersistenceScope(dbContextType);
 
-        await persistenceScope.ExecuteAsync(
-            async (scope, scopeCt) =>
+        var transactionFeature = new EntityFrameworkCoreModuleTransactionFeature(
+            observesCommit: !transactionAlreadyActive);
+        using IDisposable transactionFeatureScope = context.Features.Push<IModuleTransactionFeature>(
+            transactionFeature);
+
+        try
+        {
+            await persistenceScope.ExecuteAsync(
+                async (scope, scopeCt) =>
+                {
+                    await next(scopeCt);
+                    await scope.SaveChangesAsync(scopeCt);
+                },
+                ct);
+        }
+        catch
+        {
+            if (!transactionAlreadyActive)
             {
-                await next(scopeCt);
-                await scope.SaveChangesAsync(scopeCt);
-            },
-            ct);
+                await transactionFeature.RolledBackAsync(ct);
+            }
+
+            throw;
+        }
 
         if (!transactionAlreadyActive)
         {
-            foreach (IEntityFrameworkCoreModuleTransactionCompletion completion in _serviceProvider
-                .GetServices<IEntityFrameworkCoreModuleTransactionCompletion>())
-            {
-                await completion.OnCommittedAsync(module.Name, ct);
-            }
+            await transactionFeature.CommittedAsync(ct);
         }
     }
 

@@ -41,7 +41,6 @@ public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
             new EntityFrameworkCoreModuleRuntimeRegistry(
                 serviceProvider.GetRequiredService<IBondstoneModuleRegistry>(),
                 serviceProvider.GetServices<EntityFrameworkCoreDomainEventPersistenceModule>()));
-        services.TryAddEntityFrameworkCoreDomainEventTransactionState();
         services.TryAddEnumerable(ServiceDescriptor.Scoped(
             typeof(IModuleCommandSystemPipelineBehavior<>),
             typeof(EntityFrameworkCoreModuleTransactionBehavior<>)));

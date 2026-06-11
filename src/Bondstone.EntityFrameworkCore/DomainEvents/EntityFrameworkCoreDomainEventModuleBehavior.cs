@@ -1,6 +1,8 @@
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.EntityFrameworkCore.Persistence;
+using Bondstone.DomainEvents;
+using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,15 +10,13 @@ namespace Bondstone.EntityFrameworkCore.DomainEvents;
 
 internal sealed class EntityFrameworkCoreDomainEventModuleCommandBehavior<TCommand>(
     IServiceProvider serviceProvider,
-    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry,
-    EntityFrameworkCoreDomainEventTransactionState transactionState)
+    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry)
     : IModuleCommandSystemPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly EntityFrameworkCoreDomainEventModuleBehaviorCore _core = new(
         serviceProvider,
-        moduleRuntimeRegistry,
-        transactionState);
+        moduleRuntimeRegistry);
 
     public int Order => EntityFrameworkCoreDomainEventModuleBehaviorCore.Order;
 
@@ -31,7 +31,7 @@ internal sealed class EntityFrameworkCoreDomainEventModuleCommandBehavior<TComma
         ArgumentNullException.ThrowIfNull(next);
 
         await _core.HandleAsync(
-            context.ModuleName,
+            context,
             nextCt => next(nextCt),
             ct);
     }
@@ -39,15 +39,13 @@ internal sealed class EntityFrameworkCoreDomainEventModuleCommandBehavior<TComma
 
 internal sealed class EntityFrameworkCoreDomainEventModuleEventSubscriberBehavior<TEvent>(
     IServiceProvider serviceProvider,
-    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry,
-    EntityFrameworkCoreDomainEventTransactionState transactionState)
+    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry)
     : IModuleEventSubscriberSystemPipelineBehavior<TEvent>
     where TEvent : IIntegrationEvent
 {
     private readonly EntityFrameworkCoreDomainEventModuleBehaviorCore _core = new(
         serviceProvider,
-        moduleRuntimeRegistry,
-        transactionState);
+        moduleRuntimeRegistry);
 
     public int Order => EntityFrameworkCoreDomainEventModuleBehaviorCore.Order;
 
@@ -62,7 +60,7 @@ internal sealed class EntityFrameworkCoreDomainEventModuleEventSubscriberBehavio
         ArgumentNullException.ThrowIfNull(next);
 
         await _core.HandleAsync(
-            context.ModuleName,
+            context,
             nextCt => next(nextCt),
             ct);
     }
@@ -70,8 +68,7 @@ internal sealed class EntityFrameworkCoreDomainEventModuleEventSubscriberBehavio
 
 internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
     IServiceProvider serviceProvider,
-    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry,
-    EntityFrameworkCoreDomainEventTransactionState transactionState)
+    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry)
 {
     public const int Order = ModuleCommandSystemPipelineOrder.ExecutionContext + 10;
 
@@ -79,18 +76,17 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
         serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     private readonly EntityFrameworkCoreModuleRuntimeRegistry _moduleRuntimeRegistry =
         moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
-    private readonly EntityFrameworkCoreDomainEventTransactionState _transactionState =
-        transactionState ?? throw new ArgumentNullException(nameof(transactionState));
 
     public async ValueTask HandleAsync(
-        string moduleName,
+        IModulePipelineExecutionContext context,
         Func<CancellationToken, ValueTask> next,
         CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(next);
 
         if (!ShouldCollect(
-                moduleName,
+                context.ModuleName,
                 out EntityFrameworkCoreModuleRuntimeDescriptor? runtime))
         {
             await next(ct);
@@ -110,9 +106,26 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
             _serviceProvider.GetService<DurablePayloadJsonOptions>(),
             _serviceProvider.GetService<TimeProvider>());
 
-        _transactionState.AddCollectedSources(
-            module.Name,
-            collector.CollectAndStage());
+        IReadOnlyList<IDomainEventSource> sources = collector.CollectAndStage();
+        if (sources.Count == 0)
+        {
+            return;
+        }
+
+        if (context.Features.TryGet(
+                out IModuleTransactionFeature? transactionFeature)
+            && transactionFeature is { ObservesCommit: true })
+        {
+            transactionFeature.OnCommitted(_ =>
+            {
+                foreach (IDomainEventSource source in sources)
+                {
+                    source.ClearPendingDomainEvents();
+                }
+
+                return ValueTask.CompletedTask;
+            });
+        }
     }
 
     private bool ShouldCollect(

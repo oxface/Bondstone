@@ -160,6 +160,19 @@ path. Bondstone does not currently provide module-scoped application behavior
 registration; ordinary DI registration is the supported model until a concrete
 module-scoping requirement proves otherwise.
 
+Command and event subscriber execution contexts also carry a
+`ModulePipelineFeatureCollection`. This is an advanced provider/runtime
+coordination surface, not the normal application extension path. System
+behaviors can push typed features for the current execution and other system
+behaviors can read the nearest active feature without relying on scoped mutable
+state. Features are stored under the exact pushed contract type, so provider
+coordination should use shared interfaces rather than concrete implementation
+types. Feature scopes are per module execution and must be disposed in reverse
+order across the whole collection. Nested module command or event subscriber
+executions create independent execution contexts and do not inherit active
+features from the caller's pipeline; cross-execution feature inheritance is not
+part of the current contract.
+
 ## Optional Capability Runtime
 
 Optional capabilities do not currently have a public capability-step registry,
@@ -171,8 +184,11 @@ provider registration, and DI services.
 Domain event persistence follows that model. The EF Core implementation is
 provider-owned behavior that activates only for EF-backed modules that call
 `UseEntityFrameworkCoreDomainEventPersistence()`. The opt-in is EF-owned
-module metadata, not a broad capability registry. Normal user extension
-remains application pipeline behavior; system behavior is advanced
+module metadata, not a broad capability registry. EF Core transaction behavior
+publishes a provider-neutral transaction feature into the current execution;
+domain event behavior consumes that feature to clear pending domain events only
+after an observed commit. Normal user extension remains application pipeline
+behavior; system behavior and feature participation are advanced
 provider/runtime/capability composition.
 
 ## Execution Context Limits

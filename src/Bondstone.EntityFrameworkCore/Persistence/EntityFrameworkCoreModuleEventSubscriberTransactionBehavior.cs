@@ -26,7 +26,7 @@ internal sealed class EntityFrameworkCoreModuleEventSubscriberTransactionBehavio
         ArgumentNullException.ThrowIfNull(next);
 
         await _transactionRunner.ExecuteAsync(
-            context.ModuleName,
+            context,
             nextCt => next(nextCt),
             ct);
     }

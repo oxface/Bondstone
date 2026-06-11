@@ -158,6 +158,17 @@ active transaction it does not own, Bondstone stages and saves through that
 scope but does not clear pending events because it cannot observe the outer
 commit.
 
+EF module transaction behavior publishes a provider-neutral
+`IModuleTransactionFeature` into the current execution context while the module
+transaction boundary is active. The transaction feature reports whether
+Bondstone observes commit and accepts commit or rollback callbacks. EF domain
+event behavior stages records after handler execution and registers source
+clearing through that transaction feature only when commit is observable. The
+transaction behavior remains generic and does not know about domain events.
+Those callbacks are lightweight runtime cleanup hooks; domain event records
+are already staged before `SaveChangesAsync`, and callback failures can surface
+after the EF transaction has committed.
+
 The EF record shape is `DomainEventRecordEntity`, mapped to
 `domain_event_records` by default. It stores a stable record id, owning module,
 `DomainEventIdentityAttribute` name, payload type name, serialized JSON

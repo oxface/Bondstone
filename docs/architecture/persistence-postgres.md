@@ -57,6 +57,16 @@ The module transaction owns the commit boundary for handler SQL, inbox markers,
 operation state, and outgoing outbox rows. The low-level inbox executor only
 stages receive-side work inside that transaction.
 
+## Domain Events
+
+`Bondstone.Persistence.Postgres` does not currently own module-local domain
+event staging. Non-EF PostgreSQL modules may use `IPostgresModuleSession` to
+persist application-owned domain event records inside their module
+transaction, but Bondstone does not discover pending `IDomainEventSource`
+instances, define a PostgreSQL domain-event staging table, clear pending
+domain events, or map domain events to outbox, inbox, messaging, or transport
+records.
+
 `UsePostgresPersistence(...)` records the module persistence provider name but
 does not record or require a CLR context type. Provider-specific details such
 as schema, data source, session, transaction, and SQL behavior belong to this

@@ -145,7 +145,6 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
         throw new InvalidOperationException(
             $"Module '{module.Name}' uses Entity Framework Core domain event persistence with context "
             + $"'{dbContext.GetType().FullName}', but the DbContext model is missing the Bondstone EF Core "
-            + "domain event mapping. Map domain events with ApplyBondstoneDomainEvents(), or use "
-            + "ApplyBondstonePersistence().");
+            + "domain event mapping. Map domain events explicitly with ApplyBondstoneDomainEvents().");
     }
 }

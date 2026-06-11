@@ -28,14 +28,16 @@ pipeline behaviors for command handlers and event subscribers.
 Transport-backed receive orchestration belongs in direct provider adapters
 that call the provider-neutral module receive pipelines.
 
-`ApplyBondstonePersistence` remains the convenience entrypoint for the full
-generic EF Core mapping shape, while `ApplyBondstoneOutbox`,
-`ApplyBondstoneInbox`, `ApplyBondstoneOperationState`, and
-`ApplyBondstoneDomainEvents` let hosts map only the persistence pieces a
-DbContext needs. The current EF module runtime validates that modules using
-`UseDurableMessaging` with EF persistence have outbox and inbox mappings in
-their DbContext model, and modules that opt into EF domain event persistence
-have the domain event mapping.
+`ApplyBondstonePersistence` remains the convenience entrypoint for the durable
+EF Core mapping bundle: outbox, inbox, and operation state.
+`ApplyBondstoneDomainEvents` is intentionally separate because domain event
+persistence is optional and module-local. The granular
+`ApplyBondstoneOutbox`, `ApplyBondstoneInbox`,
+`ApplyBondstoneOperationState`, and `ApplyBondstoneDomainEvents` helpers let
+hosts map only the persistence pieces a DbContext needs. The current EF module
+runtime validates that modules using `UseDurableMessaging` with EF persistence
+have outbox and inbox mappings in their DbContext model, and modules that opt
+into EF domain event persistence have the explicit domain event mapping.
 
 In the command loop, durable sends resolve outbox and pending operation-state
 writes from the source module persistence context. Durable receives resolve

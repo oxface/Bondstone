@@ -1,3 +1,4 @@
+using Bondstone.EntityFrameworkCore.DomainEvents;
 using Bondstone.EntityFrameworkCore.Inbox;
 using Bondstone.EntityFrameworkCore.Operations;
 using Bondstone.EntityFrameworkCore.Outbox;
@@ -87,6 +88,15 @@ public sealed class BondstoneModelBuilderExtensionsTests
         Assert.Equal(
             OperationStateEntityConfiguration.StatusMaxLength,
             entityType.FindProperty(nameof(OperationStateEntity.Status))!.GetMaxLength());
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ApplyBondstonePersistence_DoesNotConfigureDomainEventEntity()
+    {
+        IMutableModel model = BuildModel();
+
+        Assert.Null(model.FindEntityType(typeof(DomainEventRecordEntity)));
     }
 
     [Fact]

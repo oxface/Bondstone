@@ -1,7 +1,7 @@
 # 0028 Domain Event Persistence Capability
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-10
 
 ## Context
@@ -194,6 +194,24 @@ collection, staging, `SaveChangesAsync`, and transaction commit all succeed.
 Collection, staging, save, or commit failure must leave source pending events
 uncleared by Bondstone.
 
+### 2026-06-11: Explicit EF Mapping And Non-EF PostgreSQL Boundary
+
+EF domain event persistence remains explicit at both runtime and mapping time.
+`UseEntityFrameworkCoreDomainEventPersistence()` opts an EF-backed module into
+collection and staging, and the module DbContext must map the record shape
+with `ApplyBondstoneDomainEvents()`. `ApplyBondstonePersistence()` remains the
+durable EF mapping bundle for outbox, inbox, and operation state only; it must
+not implicitly include domain event records.
+
+DE-04 does not reopen non-EF PostgreSQL staging. `Bondstone.Persistence.Postgres`
+has a module transaction/session boundary but no EF-style change tracker or
+provider-owned pending-domain-event source registry. Library-owned non-EF
+staging would require a new public staging API, explicit application calls, or
+a provider transaction hook, plus provider contracts, schema and migration
+policy, and clear-on-commit semantics. Without a concrete non-EF use case,
+domain event staging in `Bondstone.Persistence.Postgres` remains
+application-owned.
+
 ## Related Decisions
 
 - [0004 Positioning And Service Extraction Path](0004-positioning-and-service-extraction-path.md)
@@ -210,16 +228,22 @@ uncleared by Bondstone.
   contract, `DomainEventIdentityAttribute`, `IDomainEventSource`, and
   `IDomainEventHandler<TDomainEvent>` in core under the
   `Bondstone.DomainEvents` namespace. `IDomainEvent` does not extend the
-  messaging `IMessage` marker. EF Core will be the first provider-backed
+  messaging `IMessage` marker. EF Core is the first provider-backed
   collection and optional persistence implementation, using `ChangeTracker`
-  plus `IDomainEventSource`. EF domain event persistence will activate only
-  for EF-backed modules that explicitly opt into the capability through
-  provider-owned module metadata or options. Domain events stay module-local
-  unless module code explicitly maps selected facts to integration events.
+  plus `IDomainEventSource`. EF domain event persistence activates only for
+  EF-backed modules that explicitly opt into the capability through
+  `UseEntityFrameworkCoreDomainEventPersistence()` and map the record shape
+  with `ApplyBondstoneDomainEvents()`. `ApplyBondstonePersistence()` remains
+  the durable EF mapping bundle for outbox, inbox, and operation state.
+  Non-EF PostgreSQL domain event staging remains application-owned. Domain
+  events stay module-local unless module code explicitly maps selected facts
+  to integration events.
 - Stable docs: Current domain event direction is described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/persistence.md](../architecture/persistence.md), and
   [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md).
+  The non-EF PostgreSQL boundary is described in
+  [docs/architecture/persistence-postgres.md](../architecture/persistence-postgres.md).
   Runtime pipeline and capability planning is tracked in
   [docs/backlog/09-module-pipeline-and-capability-runtime.md](../backlog/09-module-pipeline-and-capability-runtime.md).
   Domain event implementation sequencing is tracked in
@@ -228,13 +252,19 @@ uncleared by Bondstone.
   public API, package-boundary, persistence, provider, durable behavior, or
   module runtime changes.
 - Application evidence: Stable docs and backlog guidance are updated. Core
-  contracts and contract tests are implemented in `Bondstone`.
-- Pending or deferred: EF collection/persistence implementation, the narrow EF
-  module opt-in shape, persisted record contracts, provider mapping, and tests
-  remain pending for DE-03. A separate `Bondstone.DomainEvents` package,
-  non-EF PostgreSQL staging, and integration-event mapping remain deferred.
+  contracts and contract tests are implemented in `Bondstone`. EF collection,
+  explicit EF mapping, persisted record mapping, runtime opt-in behavior, and
+  transaction-clear tests are implemented in `Bondstone.EntityFrameworkCore`.
+- Pending or deferred: A separate `Bondstone.DomainEvents` package, non-EF
+  PostgreSQL staging, and integration-event mapping remain deferred until a
+  later accepted decision narrows or reopens them.
 
 ## Verification
+
+2026-06-11 DE-04 amendment: read back this ADR and affected stable
+docs/backlog entries. Ran `pnpm format:check`, `pnpm backend:build`, and
+`pnpm backend:test:fast`. Did not run `pnpm backend:test:integration` because
+the non-EF PostgreSQL SQL/schema contract did not change.
 
 2026-06-11 amendment: read back this ADR and affected stable docs/backlog
 entries. Ran `pnpm format:check`.

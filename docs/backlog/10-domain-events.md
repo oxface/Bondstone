@@ -216,8 +216,10 @@ Verification:
 Resolved by adding EF-owned domain event persistence in
 `Bondstone.EntityFrameworkCore`. Modules opt in with
 `UseEntityFrameworkCoreDomainEventPersistence()` after declaring EF module
-persistence. DbContexts map records with `ApplyBondstoneDomainEvents()` or the
-full `ApplyBondstonePersistence()` helper. Runtime collection is an EF system
+persistence. DbContexts map records explicitly with
+`ApplyBondstoneDomainEvents()`; the durable `ApplyBondstonePersistence()`
+bundle intentionally remains outbox, inbox, and operation state only. Runtime
+collection is an EF system
 behavior that runs inside command and event subscriber execution after
 application behavior and handler logic while the module execution context is
 active. It stages `DomainEventRecordEntity` rows from tracked
@@ -237,10 +239,21 @@ coverage beyond the provider-neutral EF mapping.
 ### DE-04: Decide Non-EF PostgreSQL Staging
 
 Priority: P2.
+Status: Resolved 2026-06-11
 
 ADR 0028 keeps `Bondstone.Persistence.Postgres` domain event staging
 application-owned for now. Reopen this only when a concrete non-EF use case
 needs library-owned collection or staging APIs.
+
+Resolved by keeping non-EF PostgreSQL staging application-owned. The current
+package has no EF-style change tracker or provider-owned pending-event source
+registry; library-owned staging would require a new public staging API,
+explicit app calls, or a provider transaction hook plus schema and migration
+policy. Those are public API and durable runtime decisions without a concrete
+non-EF use case yet. Applications that need non-EF PostgreSQL domain event
+records can persist their own records through `IPostgresModuleSession` inside
+the module transaction and clear their pending events according to their own
+commit-success policy.
 
 Candidate files:
 

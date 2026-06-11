@@ -86,9 +86,11 @@ mapping diagnostics.
 ## Application Notes
 
 - Current contract: `ApplyBondstonePersistence` remains the convenience helper
-  for the full generic EF Core persistence shape. `ApplyBondstoneOutbox`,
-  `ApplyBondstoneInbox`, and `ApplyBondstoneOperationState` map only their
-  respective provider-neutral EF Core durable persistence tables.
+  for the durable EF Core persistence bundle: outbox, inbox, and operation
+  state. `ApplyBondstoneOutbox`, `ApplyBondstoneInbox`, and
+  `ApplyBondstoneOperationState` map only their respective provider-neutral
+  EF Core durable persistence tables. ADR 0028 keeps optional domain event
+  persistence explicit through `ApplyBondstoneDomainEvents()`.
 - Stable docs: Current mapping behavior is described in
   [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md)
   and [docs/setup.md](../setup.md). Cross-cutting persistence positioning is

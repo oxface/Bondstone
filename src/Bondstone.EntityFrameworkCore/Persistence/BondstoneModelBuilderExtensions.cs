@@ -17,7 +17,6 @@ public static class BondstoneModelBuilderExtensions
         modelBuilder.ApplyBondstoneOutbox(schema);
         modelBuilder.ApplyBondstoneInbox(schema);
         modelBuilder.ApplyBondstoneOperationState(schema);
-        modelBuilder.ApplyBondstoneDomainEvents(schema);
 
         return modelBuilder;
     }

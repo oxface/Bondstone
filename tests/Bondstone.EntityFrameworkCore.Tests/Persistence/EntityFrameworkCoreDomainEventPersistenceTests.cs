@@ -145,6 +145,42 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     [Fact]
     [Trait("Category", "Application")]
+    public async Task ModuleCommands_WhenModuleOptsInButDomainEventMappingIsMissing_FailsWithExplicitMappingMessage()
+    {
+        string databaseName = Guid.NewGuid().ToString("N");
+        var services = new ServiceCollection();
+        services.AddSingleton<DomainEventCapture>();
+        services.AddDbContext<MissingDomainEventMappingDbContext>(options =>
+            UseInMemory(options, databaseName));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseEntityFrameworkCorePersistence<MissingDomainEventMappingDbContext>();
+                module.UseEntityFrameworkCoreDomainEventPersistence();
+                module.Commands.RegisterHandler<
+                    RaiseDomainEventCommand,
+                    MissingMappingRaiseDomainEventCommandHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    new RaiseDomainEventCommand("A-100")));
+
+        Assert.Contains("ApplyBondstoneDomainEvents()", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("ApplyBondstonePersistence()", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
     public async Task ModuleCommands_WhenSaveFails_DoesNotClearPendingDomainEvents()
     {
         string databaseName = Guid.NewGuid().ToString("N");
@@ -359,6 +395,22 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
         }
     }
 
+    public sealed class MissingMappingRaiseDomainEventCommandHandler(
+        MissingDomainEventMappingDbContext context,
+        DomainEventCapture capture)
+        : ICommandHandler<RaiseDomainEventCommand>
+    {
+        public ValueTask HandleAsync(
+            RaiseDomainEventCommand command,
+            CancellationToken ct = default)
+        {
+            DomainEventAggregateEntity source = DomainEventAggregateEntity.Reserve(command.Id);
+            capture.Source = source;
+            context.Aggregates.Add(source);
+            return ValueTask.CompletedTask;
+        }
+    }
+
     public sealed class DomainEventSourceIntegrationEventHandler(
         DomainEventDurableTestDbContext context,
         DomainEventCapture capture)
@@ -475,6 +527,24 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             ConfigureDomainEventModel(modelBuilder);
+        }
+    }
+
+    public sealed class MissingDomainEventMappingDbContext(
+        DbContextOptions<MissingDomainEventMappingDbContext> options)
+        : DbContext(options)
+    {
+        public DbSet<DomainEventAggregateEntity> Aggregates => Set<DomainEventAggregateEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<DomainEventAggregateEntity>(
+                entity =>
+                {
+                    entity.HasKey(source => source.Id);
+                    entity.Ignore(source => source.PendingDomainEvents);
+                    entity.Ignore(source => source.ClearCount);
+                });
         }
     }
 

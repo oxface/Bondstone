@@ -12,9 +12,9 @@ The provider-neutral EF mappings own canonical Bondstone table names, column
 names, constraint names, and shared model limits. Provider packages adapt those
 names to their SQL dialect instead of redefining them.
 
-`ApplyBondstonePersistence` applies the full generic EF Core persistence shape
-to a consumer-owned `ModelBuilder`. It remains the convenience helper for hosts
-that want all current Bondstone EF persistence tables.
+`ApplyBondstonePersistence` applies the durable EF Core persistence bundle to
+a consumer-owned `ModelBuilder`: outbox, inbox, and operation state. Domain
+event persistence is optional and is not included in this bundle.
 
 Hosts that only need selected durable persistence pieces can use the granular
 mapping helpers:
@@ -39,11 +39,10 @@ For modules that use the current `UseDurableMessaging` capability with EF
 persistence, Bondstone validates the module DbContext model during module
 command and event subscriber execution. The model must include outbox and
 inbox mappings, either by calling `ApplyBondstoneOutbox` and
-`ApplyBondstoneInbox`, or by using the full `ApplyBondstonePersistence`
+`ApplyBondstoneInbox`, or by using the durable `ApplyBondstonePersistence`
 helper. Operation-state mapping validation remains tied to operation-state
 store usage. Modules that opt into EF domain event persistence must map domain
-event records with `ApplyBondstoneDomainEvents()` or
-`ApplyBondstonePersistence()`.
+event records explicitly with `ApplyBondstoneDomainEvents()`.
 
 ## Registration And Stores
 

@@ -127,7 +127,8 @@ whose entities implement the
 `Bondstone.Capabilities.DomainEvents.IDomainEventSource` contract. The bridge
 must not require a Bondstone aggregate base class, a custom
 DbContext base class, `SaveChangesAsync` interception, arbitrary method-name
-reflection, or automatic publication from EF interceptors.
+reflection, automatic publication from EF interceptors, or hidden dispatch to
+`IDomainEventHandler<TDomainEvent>`.
 
 EF-backed domain event persistence is bridge-owned runtime behavior. It
 activates only when the bridge package is referenced and modules declare EF
@@ -144,6 +145,8 @@ module integration event subscriber execution. The placement is:
   handler path;
 - while the module execution context is active;
 - after application pipeline behavior and handler logic complete;
+- after opt-in local `IDomainEventHandler<TDomainEvent>` dispatch when the
+  module also calls `UseDomainEventDispatch()`;
 - before the transaction owner calls `SaveChangesAsync`;
 - before the transaction commits.
 
@@ -167,6 +170,17 @@ transaction behavior remains generic and does not know about domain events.
 Those callbacks are lightweight runtime cleanup hooks; domain event records
 are already staged before `SaveChangesAsync`, and callback failures can surface
 after the EF transaction has committed.
+
+The EF bridge is not a hidden domain-event bus. Calling
+`UseEntityFrameworkCoreDomainEventPersistence()` alone does not resolve or
+invoke registered `IDomainEventHandler<TDomainEvent>` services or map domain
+events to integration events. The bridge does expose
+`IDomainEventSourceFeature` from the EF change tracker while its behavior is
+active. If the same module also calls `UseDomainEventDispatch()`, the
+provider-neutral dispatch behavior runs before EF collection and staging, so
+events raised by local domain-event handlers can be persisted in the same
+transaction. Dispatch does not clear sources; EF persistence remains the
+clear-on-observed-commit owner.
 
 The EF record shape is `DomainEventRecordEntity`, mapped to
 `domain_event_records` by default. It stores a stable record id, owning module,

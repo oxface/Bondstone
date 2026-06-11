@@ -64,6 +64,134 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     [Fact]
     [Trait("Category", "Application")]
+    public async Task ModuleCommands_WhenDomainEventHandlerIsRegisteredWithoutDispatchOptIn_DoesNotDispatchAndStagesBeforeSave()
+    {
+        string databaseName = Guid.NewGuid().ToString("N");
+        var services = new ServiceCollection();
+        services.AddSingleton<DomainEventCapture>();
+        services.AddScoped<
+            IModuleCommandPipelineBehavior<RaiseLoggedDomainEventCommand>,
+            LoggedDomainEventCommandBehavior>();
+        services.AddScoped<
+            IDomainEventHandler<InventoryReservedDomainEvent>,
+            RecordingInventoryReservedDomainEventHandler>();
+        services.AddDbContext<DomainEventTestDbContext>(options =>
+            UseInMemory(options, databaseName));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseEntityFrameworkCorePersistence<DomainEventTestDbContext>();
+                module.UseEntityFrameworkCoreDomainEventPersistence();
+                module.Commands.RegisterHandler<
+                    RaiseLoggedDomainEventCommand,
+                    RaiseLoggedDomainEventCommandHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        DomainEventCapture capture = serviceProvider.GetRequiredService<DomainEventCapture>();
+        capture.RecordStagedDomainEventsAtSave = true;
+
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    new RaiseLoggedDomainEventCommand("A-100"));
+        }
+
+        Assert.Equal(
+            [
+                "application-before",
+                "handler",
+                "application-after",
+                "save:domain-events:1",
+                "clear",
+            ],
+            capture.Calls);
+        Assert.DoesNotContain("domain-handler", capture.Calls);
+
+        using IServiceScope verificationScope = serviceProvider.CreateScope();
+        DomainEventTestDbContext context =
+            verificationScope.ServiceProvider.GetRequiredService<DomainEventTestDbContext>();
+        DomainEventRecordEntity record = await context.Set<DomainEventRecordEntity>().SingleAsync();
+
+        Assert.Equal("fulfillment.inventory-reserved.v1", record.DomainEventName);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ModuleCommands_WhenDomainEventDispatchIsOptedIn_DispatchesBeforePersistenceStages()
+    {
+        string databaseName = Guid.NewGuid().ToString("N");
+        var services = new ServiceCollection();
+        services.AddSingleton<DomainEventCapture>();
+        services.AddScoped<
+            IModuleCommandPipelineBehavior<RaiseLoggedDomainEventCommand>,
+            LoggedDomainEventCommandBehavior>();
+        services.AddScoped<
+            IDomainEventHandler<InventoryReservedDomainEvent>,
+            RecordingInventoryReservedDomainEventHandler>();
+        services.AddDbContext<DomainEventTestDbContext>(options =>
+            UseInMemory(options, databaseName));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseEntityFrameworkCorePersistence<DomainEventTestDbContext>();
+                module.UseEntityFrameworkCoreDomainEventPersistence();
+                module.UseDomainEventDispatch();
+                module.Commands.RegisterHandler<
+                    RaiseLoggedDomainEventCommand,
+                    RaiseLoggedDomainEventCommandHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        DomainEventCapture capture = serviceProvider.GetRequiredService<DomainEventCapture>();
+        capture.RecordStagedDomainEventsAtSave = true;
+
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    new RaiseLoggedDomainEventCommand("A-100"));
+        }
+
+        Assert.NotNull(capture.Source);
+        Assert.Empty(capture.Source.PendingDomainEvents);
+        Assert.Equal(1, capture.Source.ClearCount);
+        Assert.Equal(
+            [
+                "application-before",
+                "handler",
+                "application-after",
+                "domain-handler",
+                "save:domain-events:2",
+                "clear",
+            ],
+            capture.Calls);
+
+        using IServiceScope verificationScope = serviceProvider.CreateScope();
+        DomainEventTestDbContext context =
+            verificationScope.ServiceProvider.GetRequiredService<DomainEventTestDbContext>();
+        DomainEventRecordEntity[] records = await context.Set<DomainEventRecordEntity>()
+            .OrderBy(record => record.DomainEventName)
+            .ToArrayAsync();
+
+        Assert.Equal(2, records.Length);
+        Assert.Equal("fulfillment.inventory-reservation-audited.v1", records[0].DomainEventName);
+        Assert.Equal("fulfillment.inventory-reserved.v1", records[1].DomainEventName);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
     public async Task ModuleCommands_WhenEfBackedModuleDoesNotOptIn_DoesNotCollectOrClearDomainEvents()
     {
         string databaseName = Guid.NewGuid().ToString("N");
@@ -383,6 +511,8 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     public sealed record RaiseDomainEventCommand(string Id) : ICommand;
 
+    public sealed record RaiseLoggedDomainEventCommand(string Id) : ICommand;
+
     public sealed record RaiseUnnamedDomainEventCommand(string Id) : ICommand;
 
     [IntegrationEventIdentity("fulfillment.domain-source.v1")]
@@ -402,6 +532,53 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
                 () => capture.Calls.Add("clear"));
             capture.Source = source;
             context.Aggregates.Add(source);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed class RaiseLoggedDomainEventCommandHandler(
+        DomainEventTestDbContext context,
+        DomainEventCapture capture)
+        : ICommandHandler<RaiseLoggedDomainEventCommand>
+    {
+        public ValueTask HandleAsync(
+            RaiseLoggedDomainEventCommand command,
+            CancellationToken ct = default)
+        {
+            capture.Calls.Add("handler");
+            DomainEventAggregateEntity source = DomainEventAggregateEntity.Reserve(
+                command.Id,
+                () => capture.Calls.Add("clear"));
+            capture.Source = source;
+            context.Aggregates.Add(source);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed class LoggedDomainEventCommandBehavior(DomainEventCapture capture)
+        : IModuleCommandPipelineBehavior<RaiseLoggedDomainEventCommand>
+    {
+        public async ValueTask HandleAsync(
+            RaiseLoggedDomainEventCommand command,
+            ModuleCommandExecutionContext context,
+            ModuleCommandPipelineNext next,
+            CancellationToken ct = default)
+        {
+            capture.Calls.Add("application-before");
+            await next(ct);
+            capture.Calls.Add("application-after");
+        }
+    }
+
+    public sealed class RecordingInventoryReservedDomainEventHandler(DomainEventCapture capture)
+        : IDomainEventHandler<InventoryReservedDomainEvent>
+    {
+        public ValueTask HandleAsync(
+            InventoryReservedDomainEvent domainEvent,
+            CancellationToken ct = default)
+        {
+            capture.Calls.Add("domain-handler");
+            capture.Source?.RaiseAudit(domainEvent.InventoryId);
             return ValueTask.CompletedTask;
         }
     }
@@ -481,6 +658,8 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
         public List<string> Calls { get; } = [];
 
         public DomainEventAggregateEntity? Source { get; set; }
+
+        public bool RecordStagedDomainEventsAtSave { get; set; }
     }
 
     public sealed class DomainEventAggregateEntity : IDomainEventSource
@@ -520,6 +699,11 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
             return source;
         }
 
+        public void RaiseAudit(string inventoryId)
+        {
+            _pendingDomainEvents.Add(new InventoryReservationAuditedDomainEvent(inventoryId));
+        }
+
         public void ClearPendingDomainEvents()
         {
             ClearCount++;
@@ -530,6 +714,9 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     [DomainEventIdentity("fulfillment.inventory-reserved.v1")]
     public sealed record InventoryReservedDomainEvent(string InventoryId) : IDomainEvent;
+
+    [DomainEventIdentity("fulfillment.inventory-reservation-audited.v1")]
+    public sealed record InventoryReservationAuditedDomainEvent(string InventoryId) : IDomainEvent;
 
     public sealed record UnnamedDomainEvent(string InventoryId) : IDomainEvent;
 
@@ -545,7 +732,18 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
         public override async Task<int> SaveChangesAsync(
             CancellationToken ct = default)
         {
-            _capture.Calls.Add("save");
+            if (_capture.RecordStagedDomainEventsAtSave)
+            {
+                int stagedDomainEventRecords = ChangeTracker
+                    .Entries<DomainEventRecordEntity>()
+                    .Count(entry => entry.State == EntityState.Added);
+                _capture.Calls.Add($"save:domain-events:{stagedDomainEventRecords}");
+            }
+            else
+            {
+                _capture.Calls.Add("save");
+            }
+
             return await base.SaveChangesAsync(ct);
         }
 

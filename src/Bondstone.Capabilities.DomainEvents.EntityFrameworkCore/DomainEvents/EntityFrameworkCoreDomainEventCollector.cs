@@ -21,19 +21,7 @@ internal sealed class EntityFrameworkCoreDomainEventCollector(
 
     public IReadOnlyList<IDomainEventSource> CollectAndStage()
     {
-        List<IDomainEventSource> sources = [];
-        foreach (IDomainEventSource source in _dbContext.ChangeTracker
-            .Entries()
-            .Select(static entry => entry.Entity)
-            .OfType<IDomainEventSource>())
-        {
-            if (source.PendingDomainEvents.Count > 0
-                && !sources.Contains(source, ReferenceEqualityComparer.Instance))
-            {
-                sources.Add(source);
-            }
-        }
-
+        IReadOnlyList<IDomainEventSource> sources = GetPendingDomainEventSources(_dbContext);
         if (sources.Count == 0)
         {
             return [];
@@ -64,6 +52,26 @@ internal sealed class EntityFrameworkCoreDomainEventCollector(
         }
 
         _dbContext.Set<DomainEventRecordEntity>().AddRange(records);
+
+        return sources;
+    }
+
+    internal static IReadOnlyList<IDomainEventSource> GetPendingDomainEventSources(DbContext dbContext)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        List<IDomainEventSource> sources = [];
+        foreach (IDomainEventSource source in dbContext.ChangeTracker
+            .Entries()
+            .Select(static entry => entry.Entity)
+            .OfType<IDomainEventSource>())
+        {
+            if (source.PendingDomainEvents.Count > 0
+                && !sources.Contains(source, ReferenceEqualityComparer.Instance))
+            {
+                sources.Add(source);
+            }
+        }
 
         return sources;
     }

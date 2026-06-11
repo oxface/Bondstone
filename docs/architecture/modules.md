@@ -181,15 +181,18 @@ Provider and runtime packages contribute system behavior through their setup
 code, and those behaviors self-activate from module registration metadata,
 provider registration, and DI services.
 
-Domain event persistence follows that model. The EF Core implementation is
-provider-owned behavior that activates only for EF-backed modules that call
-`UseEntityFrameworkCoreDomainEventPersistence()`. The opt-in is EF-owned
+Domain event runtime behavior follows that model. Local domain event dispatch
+activates only for modules that call `UseDomainEventDispatch()` and only when
+an active provider or application system behavior exposes
+`IDomainEventSourceFeature` for the current execution. The EF Core persistence
+bridge activates only for EF-backed modules that call
+`UseEntityFrameworkCoreDomainEventPersistence()`. The EF opt-in is EF-owned
 module metadata, not a broad capability registry. EF Core transaction behavior
 publishes a provider-neutral transaction feature into the current execution;
-domain event behavior consumes that feature to clear pending domain events only
-after an observed commit. Normal user extension remains application pipeline
-behavior; system behavior and feature participation are advanced
-provider/runtime/capability composition.
+EF domain event persistence consumes that feature to clear pending domain
+events only after an observed commit. Normal user extension remains
+application pipeline behavior; system behavior and feature participation are
+advanced provider/runtime/capability composition.
 
 ## Execution Context Limits
 
@@ -237,7 +240,8 @@ than a separate public provider-step registry.
 
 EF Core domain event persistence belongs inside the same module command and
 event subscriber transaction boundary. It collects and stages domain events
-after application behavior and handler logic, while the module execution
+after application behavior and handler logic, and after opt-in local domain
+event dispatch when that capability is enabled, while the module execution
 context is still active, and before transaction-owned `SaveChangesAsync` and
 commit. Pending domain events are cleared only after collection, staging,
 save, and commit succeed.

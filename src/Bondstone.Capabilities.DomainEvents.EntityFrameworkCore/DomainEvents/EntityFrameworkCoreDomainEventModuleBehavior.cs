@@ -98,6 +98,9 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
         DbContext dbContext = (DbContext)_serviceProvider.GetRequiredService(dbContextType);
         ValidateDomainEventMappings(module, dbContext);
 
+        using IDisposable sourceFeatureScope = context.Features.Push<IDomainEventSourceFeature>(
+            new EntityFrameworkCoreDomainEventSourceFeature(dbContext));
+
         await next(ct);
 
         var collector = new EntityFrameworkCoreDomainEventCollector(

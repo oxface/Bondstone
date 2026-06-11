@@ -8,14 +8,14 @@ namespace Bondstone.EntityFrameworkCore.DomainEvents;
 
 internal sealed class EntityFrameworkCoreDomainEventModuleCommandBehavior<TCommand>(
     IServiceProvider serviceProvider,
-    IBondstoneModuleRegistry moduleRegistry,
+    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry,
     EntityFrameworkCoreDomainEventTransactionState transactionState)
     : IModuleCommandSystemPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly EntityFrameworkCoreDomainEventModuleBehaviorCore _core = new(
         serviceProvider,
-        moduleRegistry,
+        moduleRuntimeRegistry,
         transactionState);
 
     public int Order => EntityFrameworkCoreDomainEventModuleBehaviorCore.Order;
@@ -39,14 +39,14 @@ internal sealed class EntityFrameworkCoreDomainEventModuleCommandBehavior<TComma
 
 internal sealed class EntityFrameworkCoreDomainEventModuleEventSubscriberBehavior<TEvent>(
     IServiceProvider serviceProvider,
-    IBondstoneModuleRegistry moduleRegistry,
+    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry,
     EntityFrameworkCoreDomainEventTransactionState transactionState)
     : IModuleEventSubscriberSystemPipelineBehavior<TEvent>
     where TEvent : IIntegrationEvent
 {
     private readonly EntityFrameworkCoreDomainEventModuleBehaviorCore _core = new(
         serviceProvider,
-        moduleRegistry,
+        moduleRuntimeRegistry,
         transactionState);
 
     public int Order => EntityFrameworkCoreDomainEventModuleBehaviorCore.Order;
@@ -70,15 +70,15 @@ internal sealed class EntityFrameworkCoreDomainEventModuleEventSubscriberBehavio
 
 internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
     IServiceProvider serviceProvider,
-    IBondstoneModuleRegistry moduleRegistry,
+    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry,
     EntityFrameworkCoreDomainEventTransactionState transactionState)
 {
     public const int Order = ModuleCommandSystemPipelineOrder.ExecutionContext + 10;
 
     private readonly IServiceProvider _serviceProvider =
         serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-    private readonly IBondstoneModuleRegistry _moduleRegistry =
-        moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
+    private readonly EntityFrameworkCoreModuleRuntimeRegistry _moduleRuntimeRegistry =
+        moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
     private readonly EntityFrameworkCoreDomainEventTransactionState _transactionState =
         transactionState ?? throw new ArgumentNullException(nameof(transactionState));
 
@@ -89,12 +89,15 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
     {
         ArgumentNullException.ThrowIfNull(next);
 
-        if (!ShouldCollect(moduleName, out BondstoneModuleRegistration? module))
+        if (!ShouldCollect(
+                moduleName,
+                out EntityFrameworkCoreModuleRuntimeDescriptor? runtime))
         {
             await next(ct);
             return;
         }
 
+        BondstoneModuleRegistration module = runtime.Module;
         Type dbContextType = EntityFrameworkCoreModuleTransactionRunner.GetDbContextType(module);
         DbContext dbContext = (DbContext)_serviceProvider.GetRequiredService(dbContextType);
         ValidateDomainEventMappings(module, dbContext);
@@ -114,23 +117,11 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
 
     private bool ShouldCollect(
         string moduleName,
-        out BondstoneModuleRegistration module)
+        out EntityFrameworkCoreModuleRuntimeDescriptor runtime)
     {
-        module = _moduleRegistry.GetModule(moduleName);
-        if (!module.UsesPersistence
-            || !StringComparer.Ordinal.Equals(
-                module.PersistenceProviderName,
-                Persistence.EntityFrameworkCoreModulePersistence.ProviderName))
-        {
-            return false;
-        }
-
-        string normalizedModuleName = module.Name;
-        return _serviceProvider
-            .GetServices<EntityFrameworkCoreDomainEventPersistenceModule>()
-            .Any(registration => StringComparer.Ordinal.Equals(
-                registration.ModuleName,
-                normalizedModuleName));
+        runtime = _moduleRuntimeRegistry.GetRuntime(moduleName);
+        return runtime.UsesEntityFrameworkCorePersistence
+            && runtime.UsesDomainEventPersistence;
     }
 
     private static void ValidateDomainEventMappings(

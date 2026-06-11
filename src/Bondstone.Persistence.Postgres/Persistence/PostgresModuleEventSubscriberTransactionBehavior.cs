@@ -5,13 +5,13 @@ namespace Bondstone.Persistence.Postgres.Persistence;
 
 internal sealed class PostgresModuleEventSubscriberTransactionBehavior<TEvent>(
     IServiceProvider serviceProvider,
-    IBondstoneModuleRegistry moduleRegistry)
+    PostgresModuleRuntimeRegistry moduleRuntimeRegistry)
     : IModuleEventSubscriberSystemPipelineBehavior<TEvent>
     where TEvent : IIntegrationEvent
 {
     private readonly PostgresModuleTransactionRunner _transactionRunner = new(
         serviceProvider,
-        moduleRegistry);
+        moduleRuntimeRegistry);
 
     public int Order => ModuleEventSubscriberSystemPipelineOrder.Transaction;
 

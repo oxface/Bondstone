@@ -104,6 +104,52 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     [Fact]
     [Trait("Category", "Application")]
+    public async Task ModuleCommands_WhenAnotherEfBackedModuleOptsIn_DoesNotCollectOrClearDomainEvents()
+    {
+        string databaseName = Guid.NewGuid().ToString("N");
+        var services = new ServiceCollection();
+        services.AddSingleton<DomainEventCapture>();
+        services.AddDbContext<DomainEventTestDbContext>(options =>
+            UseInMemory(options, databaseName));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.UseEntityFrameworkCorePersistence<DomainEventTestDbContext>();
+                module.UseEntityFrameworkCoreDomainEventPersistence();
+            });
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseEntityFrameworkCorePersistence<DomainEventTestDbContext>();
+                module.Commands.RegisterHandler<RaiseDomainEventCommand, RaiseDomainEventCommandHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    new RaiseDomainEventCommand("A-100"));
+        }
+
+        DomainEventCapture capture = serviceProvider.GetRequiredService<DomainEventCapture>();
+        Assert.NotNull(capture.Source);
+        Assert.Single(capture.Source.PendingDomainEvents);
+        Assert.Equal(0, capture.Source.ClearCount);
+        Assert.Equal(["save"], capture.Calls);
+
+        using IServiceScope verificationScope = serviceProvider.CreateScope();
+        DomainEventTestDbContext context =
+            verificationScope.ServiceProvider.GetRequiredService<DomainEventTestDbContext>();
+        Assert.Empty(await context.Set<DomainEventRecordEntity>().ToArrayAsync());
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
     public async Task ModuleCommands_WhenModuleOptsInButIsNotEfBacked_DoesNotCollectOrClearDomainEvents()
     {
         string databaseName = Guid.NewGuid().ToString("N");

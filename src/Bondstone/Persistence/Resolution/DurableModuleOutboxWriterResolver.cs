@@ -1,20 +1,22 @@
-using Bondstone.Utility;
 using Bondstone.Modules;
+using Bondstone.Utility;
 
 namespace Bondstone.Persistence;
 
-internal sealed class DurableModuleOutboxWriterResolver(
-    IEnumerable<IDurableModuleOutboxWriter> moduleWriters,
-    IDurableOutboxWriter? fallbackWriter,
-    IBondstoneModuleRegistry moduleRegistry)
+internal sealed class DurableModuleOutboxWriterResolver
 {
-    private readonly IDurableModuleOutboxWriter[] _moduleWriters =
-        DurableModulePersistenceRegistrationValidator.ToValidatedArray(
-            moduleWriters,
-            static writer => writer.ModuleName,
-            "durable module outbox writer");
-    private readonly IBondstoneModuleRegistry _moduleRegistry =
-        moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
+    private readonly IDurableOutboxWriter? _fallbackWriter;
+    private readonly ModuleRuntimeRegistry _moduleRuntimeRegistry;
+
+    public DurableModuleOutboxWriterResolver(
+        IDurableOutboxWriter? fallbackWriter,
+        ModuleRuntimeRegistry moduleRuntimeRegistry)
+    {
+        _fallbackWriter = fallbackWriter;
+        _moduleRuntimeRegistry =
+            moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
+        _moduleRuntimeRegistry.ValidateDurableOutboxWriters();
+    }
 
     public IDurableOutboxWriter Resolve(string moduleName)
     {
@@ -22,27 +24,33 @@ internal sealed class DurableModuleOutboxWriterResolver(
             nameof(moduleName),
             "Module name");
 
-        IDurableModuleOutboxWriter? moduleWriter = _moduleWriters
-            .SingleOrDefault(writer => StringComparer.Ordinal.Equals(
-                writer.ModuleName.NormalizeRequired(
-                    nameof(IDurableModuleOutboxWriter.ModuleName),
-                    "Module name"),
-                normalizedModuleName));
-
-        if (moduleWriter is not null)
+        if (!_moduleRuntimeRegistry.HasDurableOutboxWriters && _fallbackWriter is not null)
         {
-            return moduleWriter;
+            return _fallbackWriter;
         }
 
-        if (_moduleWriters.Length == 0 && fallbackWriter is not null)
+        if (!_moduleRuntimeRegistry.TryGetRuntime(
+                normalizedModuleName,
+                out ModuleRuntimeDescriptor? runtime)
+            || runtime is null)
         {
-            return fallbackWriter;
+            throw new InvalidOperationException(
+                DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
+                    _moduleRuntimeRegistry,
+                    normalizedModuleName,
+                    "durable module outbox writer"));
+        }
+
+        if (runtime.TryGetDurableOutboxWriter(out IDurableOutboxWriter? writer)
+            && writer is not null)
+        {
+            return writer;
         }
 
         throw new InvalidOperationException(
             DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
-                _moduleRegistry,
-                normalizedModuleName,
+                _moduleRuntimeRegistry,
+                runtime.ModuleName,
                 "durable module outbox writer"));
     }
 }

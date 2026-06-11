@@ -5,13 +5,13 @@ namespace Bondstone.EntityFrameworkCore.Persistence;
 
 internal sealed class EntityFrameworkCoreModuleTransactionBehavior<TCommand>(
     IServiceProvider serviceProvider,
-    IBondstoneModuleRegistry moduleRegistry)
+    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry)
     : IModuleCommandSystemPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly EntityFrameworkCoreModuleTransactionRunner _transactionRunner = new(
         serviceProvider,
-        moduleRegistry);
+        moduleRuntimeRegistry);
 
     public int Order => ModuleCommandSystemPipelineOrder.Transaction;
 

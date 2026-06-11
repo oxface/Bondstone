@@ -126,6 +126,36 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task CommandSender_WhenOnlyAnotherModuleOutboxWriterExists_DoesNotLeakIt()
+    {
+        var fallbackWriter = new CapturingOutboxWriter();
+        var fulfillmentWriter = new CapturingModuleOutboxWriter("fulfillment");
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableOutboxWriter>(fallbackWriter);
+        services.AddSingleton<IDurableModuleOutboxWriter>(fulfillmentWriter);
+        services.AddBondstone(bondstone =>
+        {
+            RegisterSalesSendingCommand(bondstone);
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "sales",
+                    new TestSendingCommand()));
+
+        Assert.Contains("durable module outbox writer", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(fallbackWriter.Envelopes);
+        Assert.Empty(fulfillmentWriter.Envelopes);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task CommandReceive_WhenModuleInboxExecutorIsMissing_ThrowsProviderSpecificError()
     {
         var services = new ServiceCollection();
@@ -155,6 +185,44 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task CommandReceive_WhenOnlyAnotherModuleInboxExecutorExists_DoesNotLeakIt()
+    {
+        var fallbackExecutor = new CapturingInboxHandlerExecutor();
+        var billingExecutor = new CapturingModuleInboxHandlerExecutor("billing");
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableInboxHandlerExecutor>(fallbackExecutor);
+        services.AddSingleton<IDurableModuleInboxHandlerExecutor>(billingExecutor);
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
+            });
+            bondstone.Module("billing", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandReceivePipeline>()
+                .HandleOnceAsync(CreateTestCommandEnvelope()));
+
+        Assert.Contains("durable module inbox handler executor", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, fallbackExecutor.HandleCalls);
+        Assert.Equal(0, billingExecutor.HandleCalls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task CommandSender_WhenModuleOperationStoreIsMissing_ThrowsProviderSpecificError()
     {
         var services = new ServiceCollection();
@@ -180,6 +248,41 @@ public sealed class DurableModulePersistenceRegistrationTests
         Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
         Assert.Contains("test persistence", exception.Message, StringComparison.Ordinal);
         Assert.Contains("module persistence services", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task CommandSender_WhenOnlyAnotherModuleOperationStoreExists_DoesNotLeakIt()
+    {
+        var salesWriter = new CapturingModuleOutboxWriter("sales");
+        var fallbackStore = new CapturingOperationStateStore();
+        var fulfillmentStore = new CapturingModuleOperationStateStore("fulfillment");
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableModuleOutboxWriter>(salesWriter);
+        services.AddSingleton<IDurableOperationStateStore>(fallbackStore);
+        services.AddSingleton<IDurableModuleOperationStateStore>(fulfillmentStore);
+        services.AddBondstone(bondstone =>
+        {
+            RegisterSalesSendingCommand(bondstone);
+        });
+        Guid durableOperationId = Guid.Parse("6916cddc-c0bc-47f3-9d33-0d92719d2f6b");
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "sales",
+                    new TestTrackedSendingCommand(durableOperationId)));
+
+        Assert.Contains(nameof(IDurableOperationStateStore), exception.Message, StringComparison.Ordinal);
+        Assert.Contains("durable module operation-state store", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(salesWriter.Envelopes);
+        Assert.Empty(fallbackStore.SavedStates);
+        Assert.Empty(fulfillmentStore.SavedStates);
     }
 
     private static void RegisterSalesSendingCommand(
@@ -271,6 +374,35 @@ public sealed class DurableModulePersistenceRegistrationTests
         }
     }
 
+    private sealed class CapturingOutboxWriter : IDurableOutboxWriter
+    {
+        public List<DurableMessageEnvelope> Envelopes { get; } = [];
+
+        public ValueTask WriteAsync(
+            DurableMessageEnvelope envelope,
+            CancellationToken ct = default)
+        {
+            Envelopes.Add(envelope);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CapturingModuleOutboxWriter(string moduleName)
+        : IDurableModuleOutboxWriter
+    {
+        public string ModuleName { get; } = moduleName;
+
+        public List<DurableMessageEnvelope> Envelopes { get; } = [];
+
+        public ValueTask WriteAsync(
+            DurableMessageEnvelope envelope,
+            CancellationToken ct = default)
+        {
+            Envelopes.Add(envelope);
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private sealed class TestModuleOutboxWriter(string moduleName)
         : IDurableModuleOutboxWriter
     {
@@ -299,6 +431,43 @@ public sealed class DurableModulePersistenceRegistrationTests
         }
     }
 
+    private sealed class CapturingInboxHandlerExecutor : IDurableInboxHandlerExecutor
+    {
+        public int HandleCalls { get; private set; }
+
+        public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
+            DurableInboxRecord record,
+            Func<CancellationToken, ValueTask> handler,
+            CancellationToken ct = default)
+        {
+            HandleCalls++;
+            await handler(ct);
+            return new DurableInboxHandleResult(
+                DurableInboxHandleStatus.Handled,
+                record.MarkProcessed(DateTimeOffset.UtcNow));
+        }
+    }
+
+    private sealed class CapturingModuleInboxHandlerExecutor(string moduleName)
+        : IDurableModuleInboxHandlerExecutor
+    {
+        public string ModuleName { get; } = moduleName;
+
+        public int HandleCalls { get; private set; }
+
+        public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
+            DurableInboxRecord record,
+            Func<CancellationToken, ValueTask> handler,
+            CancellationToken ct = default)
+        {
+            HandleCalls++;
+            await handler(ct);
+            return new DurableInboxHandleResult(
+                DurableInboxHandleStatus.Handled,
+                record.MarkProcessed(DateTimeOffset.UtcNow));
+        }
+    }
+
     private sealed class TestModuleInboxHandlerExecutor(string moduleName)
         : IDurableModuleInboxHandlerExecutor
     {
@@ -310,6 +479,49 @@ public sealed class DurableModulePersistenceRegistrationTests
             CancellationToken ct = default)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class CapturingOperationStateStore : IDurableOperationStateStore
+    {
+        public List<DurableOperationState> SavedStates { get; } = [];
+
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult<DurableOperationState?>(null);
+        }
+
+        public ValueTask SaveAsync(
+            DurableOperationState state,
+            CancellationToken ct = default)
+        {
+            SavedStates.Add(state);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CapturingModuleOperationStateStore(string moduleName)
+        : IDurableModuleOperationStateStore
+    {
+        public string ModuleName { get; } = moduleName;
+
+        public List<DurableOperationState> SavedStates { get; } = [];
+
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult<DurableOperationState?>(null);
+        }
+
+        public ValueTask SaveAsync(
+            DurableOperationState state,
+            CancellationToken ct = default)
+        {
+            SavedStates.Add(state);
+            return ValueTask.CompletedTask;
         }
     }
 

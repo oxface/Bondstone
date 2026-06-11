@@ -1,20 +1,22 @@
-using Bondstone.Utility;
 using Bondstone.Modules;
+using Bondstone.Utility;
 
 namespace Bondstone.Persistence;
 
-internal sealed class DurableModuleInboxHandlerExecutorResolver(
-    IEnumerable<IDurableModuleInboxHandlerExecutor> moduleExecutors,
-    IDurableInboxHandlerExecutor? fallbackExecutor,
-    IBondstoneModuleRegistry moduleRegistry)
+internal sealed class DurableModuleInboxHandlerExecutorResolver
 {
-    private readonly IDurableModuleInboxHandlerExecutor[] _moduleExecutors =
-        DurableModulePersistenceRegistrationValidator.ToValidatedArray(
-            moduleExecutors,
-            static executor => executor.ModuleName,
-            "durable module inbox handler executor");
-    private readonly IBondstoneModuleRegistry _moduleRegistry =
-        moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
+    private readonly IDurableInboxHandlerExecutor? _fallbackExecutor;
+    private readonly ModuleRuntimeRegistry _moduleRuntimeRegistry;
+
+    public DurableModuleInboxHandlerExecutorResolver(
+        IDurableInboxHandlerExecutor? fallbackExecutor,
+        ModuleRuntimeRegistry moduleRuntimeRegistry)
+    {
+        _fallbackExecutor = fallbackExecutor;
+        _moduleRuntimeRegistry =
+            moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
+        _moduleRuntimeRegistry.ValidateDurableInboxHandlerExecutors();
+    }
 
     public IDurableInboxHandlerExecutor Resolve(string moduleName)
     {
@@ -22,27 +24,35 @@ internal sealed class DurableModuleInboxHandlerExecutorResolver(
             nameof(moduleName),
             "Module name");
 
-        IDurableModuleInboxHandlerExecutor? moduleExecutor = _moduleExecutors
-            .SingleOrDefault(executor => StringComparer.Ordinal.Equals(
-                executor.ModuleName.NormalizeRequired(
-                    nameof(IDurableModuleInboxHandlerExecutor.ModuleName),
-                    "Module name"),
-                normalizedModuleName));
-
-        if (moduleExecutor is not null)
+        if (!_moduleRuntimeRegistry.HasDurableInboxHandlerExecutors
+            && _fallbackExecutor is not null)
         {
-            return moduleExecutor;
+            return _fallbackExecutor;
         }
 
-        if (_moduleExecutors.Length == 0 && fallbackExecutor is not null)
+        if (!_moduleRuntimeRegistry.TryGetRuntime(
+                normalizedModuleName,
+                out ModuleRuntimeDescriptor? runtime)
+            || runtime is null)
         {
-            return fallbackExecutor;
+            throw new InvalidOperationException(
+                DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
+                    _moduleRuntimeRegistry,
+                    normalizedModuleName,
+                    "durable module inbox handler executor"));
+        }
+
+        if (runtime.TryGetDurableInboxHandlerExecutor(
+                out IDurableInboxHandlerExecutor? executor)
+            && executor is not null)
+        {
+            return executor;
         }
 
         throw new InvalidOperationException(
             DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
-                _moduleRegistry,
-                normalizedModuleName,
+                _moduleRuntimeRegistry,
+                runtime.ModuleName,
                 "durable module inbox handler executor"));
     }
 }

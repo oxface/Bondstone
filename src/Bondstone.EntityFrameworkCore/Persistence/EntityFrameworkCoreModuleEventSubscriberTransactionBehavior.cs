@@ -5,13 +5,13 @@ namespace Bondstone.EntityFrameworkCore.Persistence;
 
 internal sealed class EntityFrameworkCoreModuleEventSubscriberTransactionBehavior<TEvent>(
     IServiceProvider serviceProvider,
-    IBondstoneModuleRegistry moduleRegistry)
+    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry)
     : IModuleEventSubscriberSystemPipelineBehavior<TEvent>
     where TEvent : IIntegrationEvent
 {
     private readonly EntityFrameworkCoreModuleTransactionRunner _transactionRunner = new(
         serviceProvider,
-        moduleRegistry);
+        moduleRuntimeRegistry);
 
     public int Order => ModuleEventSubscriberSystemPipelineOrder.Transaction;
 

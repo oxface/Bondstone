@@ -1,20 +1,22 @@
-using Bondstone.Utility;
 using Bondstone.Modules;
+using Bondstone.Utility;
 
 namespace Bondstone.Persistence;
 
-internal sealed class DurableModuleOperationStateStoreResolver(
-    IEnumerable<IDurableModuleOperationStateStore> moduleStores,
-    IDurableOperationStateStore? fallbackStore,
-    IBondstoneModuleRegistry moduleRegistry)
+internal sealed class DurableModuleOperationStateStoreResolver
 {
-    private readonly IDurableModuleOperationStateStore[] _moduleStores =
-        DurableModulePersistenceRegistrationValidator.ToValidatedArray(
-            moduleStores,
-            static store => store.ModuleName,
-            "durable module operation-state store");
-    private readonly IBondstoneModuleRegistry _moduleRegistry =
-        moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
+    private readonly IDurableOperationStateStore? _fallbackStore;
+    private readonly ModuleRuntimeRegistry _moduleRuntimeRegistry;
+
+    public DurableModuleOperationStateStoreResolver(
+        IDurableOperationStateStore? fallbackStore,
+        ModuleRuntimeRegistry moduleRuntimeRegistry)
+    {
+        _fallbackStore = fallbackStore;
+        _moduleRuntimeRegistry =
+            moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
+        _moduleRuntimeRegistry.ValidateDurableOperationStateStores();
+    }
 
     public IDurableOperationStateStore Resolve(
         string moduleName,
@@ -24,26 +26,35 @@ internal sealed class DurableModuleOperationStateStoreResolver(
             nameof(moduleName),
             "Module name");
 
-        IDurableModuleOperationStateStore? moduleStore = _moduleStores
-            .SingleOrDefault(store => StringComparer.Ordinal.Equals(
-                store.ModuleName.NormalizeRequired(
-                    nameof(IDurableModuleOperationStateStore.ModuleName),
-                    "Module name"),
-                normalizedModuleName));
-
-        if (moduleStore is not null)
+        if (!_moduleRuntimeRegistry.HasDurableOperationStateStores && _fallbackStore is not null)
         {
-            return moduleStore;
+            return _fallbackStore;
         }
 
-        if (_moduleStores.Length == 0 && fallbackStore is not null)
+        if (!_moduleRuntimeRegistry.TryGetRuntime(
+                normalizedModuleName,
+                out ModuleRuntimeDescriptor? runtime)
+            || runtime is null)
         {
-            return fallbackStore;
+            string missingModuleMessage =
+                DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
+                    _moduleRuntimeRegistry,
+                    normalizedModuleName,
+                    "durable module operation-state store");
+            throw new InvalidOperationException(
+                $"Durable operation id '{durableOperationId}' requires {nameof(IDurableOperationStateStore)}. {missingModuleMessage}");
+        }
+
+        if (runtime.TryGetDurableOperationStateStore(
+                out IDurableOperationStateStore? store)
+            && store is not null)
+        {
+            return store;
         }
 
         string message = DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
-            _moduleRegistry,
-            normalizedModuleName,
+            _moduleRuntimeRegistry,
+            runtime.ModuleName,
             "durable module operation-state store");
         throw new InvalidOperationException(
             $"Durable operation id '{durableOperationId}' requires {nameof(IDurableOperationStateStore)}. {message}");

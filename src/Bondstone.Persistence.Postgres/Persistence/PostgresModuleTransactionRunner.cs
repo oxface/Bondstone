@@ -5,12 +5,12 @@ namespace Bondstone.Persistence.Postgres.Persistence;
 
 internal sealed class PostgresModuleTransactionRunner(
     IServiceProvider serviceProvider,
-    IBondstoneModuleRegistry moduleRegistry)
+    PostgresModuleRuntimeRegistry moduleRuntimeRegistry)
 {
     private readonly IServiceProvider _serviceProvider =
         serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-    private readonly IBondstoneModuleRegistry _moduleRegistry =
-        moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
+    private readonly PostgresModuleRuntimeRegistry _moduleRuntimeRegistry =
+        moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
 
     public async ValueTask ExecuteAsync(
         string moduleName,
@@ -19,11 +19,9 @@ internal sealed class PostgresModuleTransactionRunner(
     {
         ArgumentNullException.ThrowIfNull(next);
 
-        BondstoneModuleRegistration module = _moduleRegistry.GetModule(moduleName);
-        if (!module.UsesPersistence
-            || !StringComparer.Ordinal.Equals(
-                module.PersistenceProviderName,
-                PostgresModulePersistence.ProviderName))
+        PostgresModuleRuntimeDescriptor runtime =
+            _moduleRuntimeRegistry.GetRuntime(moduleName);
+        if (!runtime.UsesPostgresPersistence)
         {
             await next(ct);
             return;

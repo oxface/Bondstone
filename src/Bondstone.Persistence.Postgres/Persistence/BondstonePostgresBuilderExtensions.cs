@@ -41,6 +41,9 @@ public static class BondstonePostgresBuilderExtensions
     private static void TryAddPostgresModuleTransactionSystemBehaviors(
         this IServiceCollection services)
     {
+        services.TryAddScoped(serviceProvider =>
+            new PostgresModuleRuntimeRegistry(
+                serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
         services.TryAddEnumerable(ServiceDescriptor.Scoped(
             typeof(IModuleCommandSystemPipelineBehavior<>),
             typeof(PostgresModuleTransactionBehavior<>)));

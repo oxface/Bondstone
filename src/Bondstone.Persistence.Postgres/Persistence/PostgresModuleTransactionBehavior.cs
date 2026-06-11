@@ -5,13 +5,13 @@ namespace Bondstone.Persistence.Postgres.Persistence;
 
 internal sealed class PostgresModuleTransactionBehavior<TCommand>(
     IServiceProvider serviceProvider,
-    IBondstoneModuleRegistry moduleRegistry)
+    PostgresModuleRuntimeRegistry moduleRuntimeRegistry)
     : IModuleCommandSystemPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly PostgresModuleTransactionRunner _transactionRunner = new(
         serviceProvider,
-        moduleRegistry);
+        moduleRuntimeRegistry);
 
     public int Order => ModuleCommandSystemPipelineOrder.Transaction;
 

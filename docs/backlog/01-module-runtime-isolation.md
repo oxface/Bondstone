@@ -35,11 +35,43 @@ only the provider/capability state owned by that module.
 - Keep public API unchanged unless a concrete provider/runtime contract needs
   ADR review.
 
+## Completed Slice
+
+2026-06-11:
+
+- Added a core internal scoped module runtime registry and descriptor built
+  from `IBondstoneModuleRegistry` plus existing module-owned durable
+  persistence registrations.
+- Moved core durable outbox writer, inbox handler executor, operation-state
+  store, and operation reader resolution behind the runtime registry while
+  preserving existing single-root fallback behavior and duplicate/missing
+  registration diagnostics.
+- Tightened the core runtime descriptor so it carries lazy module-owned
+  persistence state instead of routing resolver calls back through
+  module-name keyed lookups.
+- Added provider-local EF Core and non-EF PostgreSQL runtime descriptors for
+  transaction activation. EF domain event persistence activation now uses the
+  EF provider runtime descriptor instead of scanning EF opt-in registrations
+  ad hoc from behavior code.
+- Added focused unit coverage proving that a module does not use another
+  module's outbox writer, inbox executor, or operation-state store when both
+  modules share the same DI scope. Added EF domain event coverage proving one
+  EF module's domain event opt-in does not activate collection for another EF
+  module in the same host.
+- Did not add public APIs, provider contracts, child containers, or
+  module-specific `IServiceProvider` instances.
+
+No ADR amendment was needed for this slice because the change is internal and
+does not alter durable behavior, provider contracts, package boundaries, or
+public API. Provider-specific runtime descriptors remain package-local bridges
+because exposing the core runtime descriptor across package boundaries would
+require compatibility review.
+
 ## Questions
 
-- Which existing resolvers should move behind the runtime first:
-  outbox writer, inbox executor, operation-state store, operation reader,
-  transaction behavior, domain event persistence activation, or all of them?
+- Which provider package path should move behind the runtime next:
+  EF transaction completion state, additional provider-owned capability
+  metadata, or outbound dispatcher ownership?
 - Should command routes and event subscriber registrations hold or resolve a
   module runtime descriptor at execution time?
 - How should provider packages contribute module-owned runtime state without

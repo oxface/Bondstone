@@ -9,15 +9,15 @@ namespace Bondstone.EntityFrameworkCore.Persistence;
 
 internal sealed class EntityFrameworkCoreModuleTransactionRunner(
     IServiceProvider serviceProvider,
-    IBondstoneModuleRegistry moduleRegistry)
+    EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry)
 {
     private static readonly ConcurrentDictionary<Type, ObjectFactory> ScopeFactories = new();
     private static readonly object[] EmptyArguments = [];
 
     private readonly IServiceProvider _serviceProvider =
         serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-    private readonly IBondstoneModuleRegistry _moduleRegistry =
-        moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
+    private readonly EntityFrameworkCoreModuleRuntimeRegistry _moduleRuntimeRegistry =
+        moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
 
     public async ValueTask ExecuteAsync(
         string moduleName,
@@ -26,16 +26,15 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
     {
         ArgumentNullException.ThrowIfNull(next);
 
-        BondstoneModuleRegistration module = _moduleRegistry.GetModule(moduleName);
-        if (!module.UsesPersistence
-            || !StringComparer.Ordinal.Equals(
-                module.PersistenceProviderName,
-                EntityFrameworkCoreModulePersistence.ProviderName))
+        EntityFrameworkCoreModuleRuntimeDescriptor runtime =
+            _moduleRuntimeRegistry.GetRuntime(moduleName);
+        if (!runtime.UsesEntityFrameworkCorePersistence)
         {
             await next(ct);
             return;
         }
 
+        BondstoneModuleRegistration module = runtime.Module;
         Type dbContextType = GetDbContextType(module);
         DbContext dbContext = (DbContext)_serviceProvider.GetRequiredService(dbContextType);
         ValidateDurableMessagingMappings(module, dbContext);

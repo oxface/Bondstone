@@ -1,17 +1,17 @@
 using Bondstone.Messaging;
+using Bondstone.Modules;
 
 namespace Bondstone.Persistence;
 
 internal sealed class DurableModuleOperationReader(
-    IEnumerable<IDurableModuleOperationStateStore> moduleStores,
+    ModuleRuntimeRegistry moduleRuntimeRegistry,
     IDurableOperationReader? fallbackReader)
     : IDurableOperationReader
 {
     private readonly IDurableModuleOperationStateStore[] _moduleStores =
-        DurableModulePersistenceRegistrationValidator.ToValidatedArray(
-            moduleStores,
-            static store => store.ModuleName,
-            "durable module operation-state store");
+        (moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry)))
+        .DurableOperationStateStores
+        .ToArray();
 
     public async ValueTask<DurableOperationState?> GetStateAsync(
         Guid durableOperationId,

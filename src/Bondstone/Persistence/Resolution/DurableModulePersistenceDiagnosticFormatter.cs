@@ -6,24 +6,25 @@ namespace Bondstone.Persistence;
 internal static class DurableModulePersistenceDiagnosticFormatter
 {
     public static string MissingModuleRegistration(
-        IBondstoneModuleRegistry moduleRegistry,
+        ModuleRuntimeRegistry moduleRuntimeRegistry,
         string moduleName,
         string registrationDescription)
     {
-        ArgumentNullException.ThrowIfNull(moduleRegistry);
+        ArgumentNullException.ThrowIfNull(moduleRuntimeRegistry);
 
         string normalizedModuleName = moduleName.NormalizeRequired(
             nameof(moduleName),
             "Module name");
 
-        if (!moduleRegistry.TryGetModule(
+        if (!moduleRuntimeRegistry.TryGetRuntime(
                 normalizedModuleName,
-                out BondstoneModuleRegistration? module)
-            || module is null)
+                out ModuleRuntimeDescriptor? runtime)
+            || runtime is null)
         {
             return $"No {registrationDescription} is registered for module '{normalizedModuleName}', and the module is not registered in Bondstone.";
         }
 
+        BondstoneModuleRegistration module = runtime.Module;
         if (!module.UsesPersistence)
         {
             return $"No {registrationDescription} is registered for module '{normalizedModuleName}', and the module does not declare persistence.";

@@ -11,7 +11,24 @@ internal static class EntityFrameworkCoreDomainEventServiceCollectionExtensions
     {
         services.TryAddScoped<EntityFrameworkCoreDomainEventTransactionState>();
 
-        services.AddScoped<IEntityFrameworkCoreModuleTransactionCompletion>(serviceProvider =>
-            serviceProvider.GetRequiredService<EntityFrameworkCoreDomainEventTransactionState>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IEntityFrameworkCoreModuleTransactionCompletion,
+            EntityFrameworkCoreDomainEventTransactionCompletion>());
+    }
+
+    private sealed class EntityFrameworkCoreDomainEventTransactionCompletion(
+        EntityFrameworkCoreDomainEventTransactionState transactionState)
+        : IEntityFrameworkCoreModuleTransactionCompletion
+    {
+        private readonly EntityFrameworkCoreDomainEventTransactionState _transactionState =
+            transactionState ?? throw new ArgumentNullException(nameof(transactionState));
+
+        public ValueTask OnCommittedAsync(
+            string moduleName,
+            CancellationToken ct)
+        {
+            _transactionState.ClearCollectedSources(moduleName);
+            return ValueTask.CompletedTask;
+        }
     }
 }

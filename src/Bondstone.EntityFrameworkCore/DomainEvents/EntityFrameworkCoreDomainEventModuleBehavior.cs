@@ -107,7 +107,9 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
             _serviceProvider.GetService<DurablePayloadJsonOptions>(),
             _serviceProvider.GetService<TimeProvider>());
 
-        _transactionState.AddCollectedSources(collector.CollectAndStage());
+        _transactionState.AddCollectedSources(
+            module.Name,
+            collector.CollectAndStage());
     }
 
     private bool ShouldCollect(

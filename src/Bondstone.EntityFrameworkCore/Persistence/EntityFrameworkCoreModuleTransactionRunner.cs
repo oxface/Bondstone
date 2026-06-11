@@ -56,7 +56,7 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
             foreach (IEntityFrameworkCoreModuleTransactionCompletion completion in _serviceProvider
                 .GetServices<IEntityFrameworkCoreModuleTransactionCompletion>())
             {
-                await completion.OnCommittedAsync(ct);
+                await completion.OnCommittedAsync(module.Name, ct);
             }
         }
     }

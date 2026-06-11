@@ -1,39 +1,48 @@
 using Bondstone.DomainEvents;
-using Bondstone.EntityFrameworkCore.Persistence;
 
 namespace Bondstone.EntityFrameworkCore.DomainEvents;
 
 internal sealed class EntityFrameworkCoreDomainEventTransactionState
-    : IEntityFrameworkCoreModuleTransactionCompletion
 {
-    private readonly List<IDomainEventSource> _sources = [];
+    private readonly List<CollectedSource> _sources = [];
 
-    public void AddCollectedSources(IEnumerable<IDomainEventSource> sources)
+    public void AddCollectedSources(
+        string moduleName,
+        IEnumerable<IDomainEventSource> sources)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(moduleName);
         ArgumentNullException.ThrowIfNull(sources);
 
+        string normalizedModuleName = moduleName.Trim();
         foreach (IDomainEventSource source in sources)
         {
-            if (!_sources.Contains(source, ReferenceEqualityComparer.Instance))
+            if (!_sources.Any(existing =>
+                StringComparer.Ordinal.Equals(existing.ModuleName, normalizedModuleName)
+                && ReferenceEquals(existing.Source, source)))
             {
-                _sources.Add(source);
+                _sources.Add(new CollectedSource(normalizedModuleName, source));
             }
         }
     }
 
-    public void ClearCollectedSources()
+    public void ClearCollectedSources(string moduleName)
     {
-        foreach (IDomainEventSource source in _sources)
+        ArgumentException.ThrowIfNullOrWhiteSpace(moduleName);
+
+        string normalizedModuleName = moduleName.Trim();
+        CollectedSource[] sources = _sources
+            .Where(source => StringComparer.Ordinal.Equals(source.ModuleName, normalizedModuleName))
+            .ToArray();
+
+        foreach (CollectedSource source in sources)
         {
-            source.ClearPendingDomainEvents();
+            source.Source.ClearPendingDomainEvents();
         }
 
-        _sources.Clear();
+        _sources.RemoveAll(source => StringComparer.Ordinal.Equals(source.ModuleName, normalizedModuleName));
     }
 
-    public ValueTask OnCommittedAsync(CancellationToken ct)
-    {
-        ClearCollectedSources();
-        return ValueTask.CompletedTask;
-    }
+    private sealed record CollectedSource(
+        string ModuleName,
+        IDomainEventSource Source);
 }

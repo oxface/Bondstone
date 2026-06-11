@@ -1,3 +1,4 @@
+using Bondstone.EntityFrameworkCore.DomainEvents;
 using Bondstone.EntityFrameworkCore.Inbox;
 using Bondstone.EntityFrameworkCore.Operations;
 using Bondstone.EntityFrameworkCore.Outbox;
@@ -16,6 +17,7 @@ public static class BondstoneModelBuilderExtensions
         modelBuilder.ApplyBondstoneOutbox(schema);
         modelBuilder.ApplyBondstoneInbox(schema);
         modelBuilder.ApplyBondstoneOperationState(schema);
+        modelBuilder.ApplyBondstoneDomainEvents(schema);
 
         return modelBuilder;
     }
@@ -49,6 +51,17 @@ public static class BondstoneModelBuilderExtensions
         ArgumentNullException.ThrowIfNull(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new OperationStateEntityConfiguration(schema));
+
+        return modelBuilder;
+    }
+
+    public static ModelBuilder ApplyBondstoneDomainEvents(
+        this ModelBuilder modelBuilder,
+        string? schema = null)
+    {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+
+        modelBuilder.ApplyConfiguration(new DomainEventRecordEntityConfiguration(schema));
 
         return modelBuilder;
     }

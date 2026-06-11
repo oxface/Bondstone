@@ -39,6 +39,7 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
         Type dbContextType = GetDbContextType(module);
         DbContext dbContext = (DbContext)_serviceProvider.GetRequiredService(dbContextType);
         ValidateDurableMessagingMappings(module, dbContext);
+        bool transactionAlreadyActive = dbContext.Database.CurrentTransaction is not null;
 
         IEntityFrameworkCorePersistenceScope persistenceScope = CreatePersistenceScope(dbContextType);
 
@@ -49,9 +50,18 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
                 await scope.SaveChangesAsync(scopeCt);
             },
             ct);
+
+        if (!transactionAlreadyActive)
+        {
+            foreach (IEntityFrameworkCoreModuleTransactionCompletion completion in _serviceProvider
+                .GetServices<IEntityFrameworkCoreModuleTransactionCompletion>())
+            {
+                await completion.OnCommittedAsync(ct);
+            }
+        }
     }
 
-    private static Type GetDbContextType(BondstoneModuleRegistration module)
+    internal static Type GetDbContextType(BondstoneModuleRegistration module)
     {
         Type? contextType = module.PersistenceContextType;
         if (contextType is null)
@@ -69,7 +79,7 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
         return contextType;
     }
 
-    private static void ValidateDurableMessagingMappings(
+    internal static void ValidateDurableMessagingMappings(
         BondstoneModuleRegistration module,
         DbContext dbContext)
     {

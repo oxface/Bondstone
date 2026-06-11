@@ -186,6 +186,42 @@ and ordering requirement is accepted. This amendment does not introduce a new
 public capability pipeline API, named step-slot enum, module-scoped
 application behavior registration API, or package-boundary split.
 
+## Amendment 2026-06-11: Capability Contribution Without A Public Registry
+
+Optional Bondstone capabilities should not introduce a public capability-step
+registry, public named pipeline slots, or a generalized provider contribution
+API before a second concrete capability proves the need.
+
+The current contribution model remains the small system behavior model:
+provider and runtime packages may register system pipeline behaviors through
+their setup code, and those behaviors must self-activate from module metadata,
+provider registration, and DI services. Normal applications continue to use
+application pipeline behaviors for handler concerns.
+
+Domain event persistence is the first pressure test. EF Core domain event
+collection and staging should be provider-owned EF runtime behavior that
+activates only when all of these are true:
+
+- the executing module is registered;
+- the module declares EF Core persistence;
+- the module explicitly opts into domain event persistence;
+- the required EF domain event persistence services and mappings are
+  registered.
+
+That opt-in may be represented by the smallest provider-owned module metadata
+or options needed by the EF implementation. It should not become a public
+general capability registry in this slice.
+
+The future EF domain event behavior has a precise logical placement. The EF
+transaction system behavior remains the outer save and commit owner. Within
+that transaction, operation-state, receive-inbox, execution-context, normal
+application behaviors, and the handler run in the existing order. EF domain
+event collection and staging must run after application behavior and handler
+logic, while the module execution context is still active, and before the
+transaction-owned `SaveChangesAsync` and commit. Clearing pending domain
+events remains transaction-owned success behavior: sources are cleared only
+after staging, save, and commit all succeed.
+
 ## Consequences
 
 The durable command pipeline becomes reusable across local module execution,
@@ -279,12 +315,16 @@ additional ADR review or amendments.
   unit coverage.
 - Pending or deferred: A new public provider-step or capability-step
   contribution API, named system step slots, module-scoped application
-  behavior registration, Domain Events runtime behavior, richer
-  operation-state transition policy, receive retry state, stale receive
-  recovery, and additional service-extraction examples remain separate future
-  decisions.
+  behavior registration, richer operation-state transition policy, receive
+  retry state, stale receive recovery, and additional service-extraction
+  examples remain separate future decisions. Domain Events runtime behavior is
+  narrowed to EF provider-owned behavior with a module opt-in; implementation
+  remains pending in the Domain Events backlog.
 
 ## Verification
+
+2026-06-11 amendment: read back this ADR and affected stable docs/backlog
+entries. Ran `pnpm format:check`.
 
 Read back affected architecture docs and ran:
 

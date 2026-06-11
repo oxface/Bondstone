@@ -61,6 +61,14 @@ library. Reusable hosted worker composition belongs in `Bondstone.Hosting`.
 Core domain, command, messaging, and module abstractions stay in `Bondstone`.
 Changing that package split requires ADR review.
 
+Module-local domain event contracts currently stay in `Bondstone` under the
+`Bondstone.DomainEvents` namespace. There is no separate
+`Bondstone.DomainEvents` package in the current package set. EF Core domain
+event collection and persistence belongs in `Bondstone.EntityFrameworkCore`
+as provider-owned runtime behavior. A separate domain-events package should be
+reconsidered only when a concrete dependency, versioning, or adoption problem
+appears.
+
 `Bondstone` owns the lightweight `AddBondstone` service-composition builder.
 Provider, transport, and hosting packages add extension methods to that
 builder while preserving the dependency direction above. The builder is a

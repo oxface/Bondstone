@@ -14,7 +14,7 @@ names to their SQL dialect instead of redefining them.
 
 `ApplyBondstonePersistence` applies the full generic EF Core persistence shape
 to a consumer-owned `ModelBuilder`. It remains the convenience helper for hosts
-that want all current Bondstone durable persistence tables.
+that want all current Bondstone EF persistence tables.
 
 Hosts that only need selected durable persistence pieces can use the granular
 mapping helpers:
@@ -23,12 +23,15 @@ mapping helpers:
 modelBuilder.ApplyBondstoneOutbox();
 modelBuilder.ApplyBondstoneInbox();
 modelBuilder.ApplyBondstoneOperationState();
+modelBuilder.ApplyBondstoneDomainEvents();
 ```
 
 `ApplyBondstoneOutbox` maps outbox messages, `ApplyBondstoneInbox` maps inbox
-messages, and `ApplyBondstoneOperationState` maps durable operation state.
-Modules that only need module-owned EF transactions do not need to map durable
-messaging tables unless their chosen durable capabilities use those stores.
+messages, `ApplyBondstoneOperationState` maps durable operation state, and
+`ApplyBondstoneDomainEvents` maps module-local domain event records. Modules
+that only need module-owned EF transactions do not need to map durable
+messaging or domain event tables unless their chosen capabilities use those
+stores.
 Consumers own migrations. Bondstone does not ship migrations or
 provider-specific migration conventions in the generic EF Core package.
 
@@ -38,7 +41,9 @@ command and event subscriber execution. The model must include outbox and
 inbox mappings, either by calling `ApplyBondstoneOutbox` and
 `ApplyBondstoneInbox`, or by using the full `ApplyBondstonePersistence`
 helper. Operation-state mapping validation remains tied to operation-state
-store usage.
+store usage. Modules that opt into EF domain event persistence must map domain
+event records with `ApplyBondstoneDomainEvents()` or
+`ApplyBondstonePersistence()`.
 
 ## Registration And Stores
 
@@ -49,7 +54,9 @@ provider-neutral EF Core implementations for:
 - `IDurableInboxStore`;
 - `IDurableOperationStateStore`;
 - `IDurableOperationReader`;
-- `IEntityFrameworkCorePersistenceScope`.
+- `IEntityFrameworkCorePersistenceScope`;
+- EF domain event transaction coordination used by opted-in module
+  transaction behavior.
 
 The registration uses the consumer-owned DbContext type and stays
 provider-neutral. It does not configure a database provider, migrations, hosted
@@ -112,11 +119,9 @@ The store requires the operation-state entity mapping and fails with a clear
 `ApplyBondstoneOperationState()` mapping error if it is used with a DbContext
 that does not map operation state.
 
-ADR 0028 accepts EF Core as the first provider for optional module-local domain
-event collection and persistence. The implementation is pending and tracked in
-[../backlog/10-domain-events.md](../backlog/10-domain-events.md), after the
-runtime pipeline and capability planning tracked in
-[../backlog/09-module-pipeline-and-capability-runtime.md](../backlog/09-module-pipeline-and-capability-runtime.md).
+ADR 0028 accepts EF Core as the first provider for optional module-local
+domain event collection and persistence. The implementation is EF-owned and
+module-scoped.
 
 The accepted EF collection mechanism is narrow: the module transaction
 behavior collects domain events through `DbContext.ChangeTracker` entries
@@ -125,14 +130,42 @@ contract. EF Core must not require a Bondstone aggregate base class, a custom
 DbContext base class, `SaveChangesAsync` interception, arbitrary method-name
 reflection, or automatic publication from EF interceptors.
 
+EF-backed domain event persistence is provider-owned runtime behavior. It
+activates only for modules that declare EF Core persistence and explicitly opt
+into domain event persistence with
+`UseEntityFrameworkCoreDomainEventPersistence()`. The opt-in is narrow
+EF-owned module metadata; Bondstone does not provide a public capability-step
+registry or public named pipeline slots.
+
 EF-backed domain event collection belongs inside module command execution and
-module integration event subscriber execution. After application handlers and
-application pipeline behaviors complete, the EF behavior collects pending
-domain events, stages configured module-local domain event records in the same
-`DbContext` transaction, saves them with handler state, inbox markers,
-operation-state updates where applicable, and outgoing outbox rows, then
-clears the source pending events only after successful staging, save, and
-transaction commit.
+module integration event subscriber execution. The placement is:
+
+- inside the EF module transaction;
+- after operation-state and receive-inbox behavior have opened the inner
+  handler path;
+- while the module execution context is active;
+- after application pipeline behavior and handler logic complete;
+- before the transaction owner calls `SaveChangesAsync`;
+- before the transaction commits.
+
+The EF behavior stages configured module-local domain event records in the
+same `DbContext` transaction as handler state, inbox markers, operation-state
+updates where applicable, and outgoing outbox rows. It clears source pending
+events only after collection, staging, `SaveChangesAsync`, and transaction
+commit all succeed. Collection, staging, save, or commit failure must leave
+pending events uncleared by Bondstone. When the EF scope joins an already
+active transaction it does not own, Bondstone stages and saves through that
+scope but does not clear pending events because it cannot observe the outer
+commit.
+
+The EF record shape is `DomainEventRecordEntity`, mapped to
+`domain_event_records` by default. It stores a stable record id, owning module,
+`DomainEventIdentityAttribute` name, payload type name, serialized JSON
+payload, optional payload metadata, occurred/captured timestamps, and optional
+trace or causation metadata. Domain event JSON uses Bondstone's configured
+durable payload JSON options, but domain events are not serialized through
+`IDurablePayloadSerializer` because `IDomainEvent` does not implement
+`IMessage`.
 
 Persisted domain event records remain module-local. They are not outgoing
 outbox records and are not transport events. Mapping selected domain events to

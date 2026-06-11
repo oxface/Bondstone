@@ -108,11 +108,19 @@ in-module dispatch, or explicit mapping to integration events, but it remains
 private to the owning module unless module code publishes a separate
 integration event.
 
-Runtime pipeline behavior, EF Core collection, persisted record mapping, and
-integration-event mapping are still pending. Runtime pipeline and capability
-planning is tracked in
-[../backlog/09-module-pipeline-and-capability-runtime.md](../backlog/09-module-pipeline-and-capability-runtime.md);
-domain event implementation work is tracked in
+Runtime pipeline behavior for domain event persistence is provider-owned, not
+a public domain event bus. EF Core is the first runtime provider. It activates
+only for EF-backed modules that call
+`UseEntityFrameworkCoreDomainEventPersistence()` and map the EF domain event
+record shape with `ApplyBondstoneDomainEvents()` or
+`ApplyBondstonePersistence()`. Bondstone does not have a public
+capability-step registry, public named pipeline slots, or a separate
+`Bondstone.DomainEvents` package.
+
+EF Core collection persists module-local domain event records and clears
+sources only after the EF module transaction saves and commits successfully.
+Integration-event mapping remains pending and must stay explicit module code.
+Domain event follow-up work is tracked in
 [../backlog/10-domain-events.md](../backlog/10-domain-events.md).
 
 ## Module Execution Context

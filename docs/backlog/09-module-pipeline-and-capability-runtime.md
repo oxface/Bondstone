@@ -94,9 +94,12 @@ composition until the cleanup track decides whether they remain public.
 
 Deferred: named system slots, a public provider-step or capability-step
 registration API, module-scoped application behavior registration, plan
-descriptor caching, and Domain Events runtime behavior. Domain Events can now
-continue with core contracts, but EF collection/persistence still needs the
-deferred capability-step decision before adding transaction-scoped behavior.
+descriptor caching, and a generalized capability registry. Domain Events can
+continue without a new public registry or package split: EF
+collection/persistence should be provider-owned behavior that self-activates
+only for EF-backed modules that explicitly opt into domain event persistence.
+The EF runtime implementation remains part of
+[10-domain-events.md](10-domain-events.md) DE-03.
 
 ## Implementation Backlog
 
@@ -206,6 +209,7 @@ extension model.
 ### MPC-05: Capability Contribution Model
 
 Priority: P1 before Domain Events implementation.
+Status: Resolved 2026-06-11
 
 Define how optional capabilities contribute system pipeline steps and how
 those steps are activated by module registration. Use Domain Events as the
@@ -223,9 +227,21 @@ Verification:
 - `pnpm format:check`
 - `pnpm backend:test:fast` if code changes.
 
+Resolved by the 2026-06-11 amendments to
+[ADR 0025](../adr/0025-module-command-execution-boundary.md) and
+[ADR 0028](../adr/0028-domain-event-persistence-capability.md). Optional
+capabilities do not get a public capability-step registry, public named slots,
+or generalized provider metadata in this slice. Provider/runtime packages may
+register system behavior through setup and self-activate from module metadata,
+provider registration, and DI. Domain event persistence is narrowed to
+EF-owned runtime behavior for EF-backed modules that explicitly opt in. DE-03
+will add the smallest EF-specific opt-in metadata or options needed by the
+implementation.
+
 ### MPC-06: Capability Package Boundary Decision
 
 Priority: P1.
+Status: Resolved 2026-06-11
 
 Decide whether Domain Events should live in core, a
 `Bondstone.DomainEvents` capability package, provider-specific integration
@@ -236,6 +252,14 @@ Verification:
 
 - `pnpm format:check`
 - `pnpm backend:pack` if package files change.
+
+Resolved by the 2026-06-11 amendment to
+[ADR 0028](../adr/0028-domain-event-persistence-capability.md). Domain event
+contracts remain in the `Bondstone` core package under
+`Bondstone.DomainEvents`; no separate `Bondstone.DomainEvents` package is
+created now. EF runtime behavior belongs in `Bondstone.EntityFrameworkCore`.
+A separate domain-events package is deferred until a concrete dependency,
+versioning, or adoption problem appears. No package files changed.
 
 ## Verification
 

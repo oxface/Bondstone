@@ -158,6 +158,42 @@ events must use the domain event contracts directly instead of routing them
 through durable message identity, registry, envelope, topology, inbox, outbox,
 or transport abstractions.
 
+### 2026-06-11: EF Capability Activation And Package Boundary
+
+Domain event contracts remain in the existing `Bondstone` core package under
+the `Bondstone.DomainEvents` namespace. Do not create a new
+`Bondstone.DomainEvents` package in this slice. A separate package can be
+reconsidered only when there is a concrete dependency, versioning, or adoption
+problem that cannot be solved by the current core contracts plus
+provider-owned runtime behavior.
+
+EF Core remains the first provider-owned runtime implementation. Domain event
+persistence should activate through a small combination of module opt-in,
+provider registration, and DI:
+
+- the module declares EF Core persistence;
+- the module explicitly opts into domain event persistence;
+- the EF package registers the provider-owned runtime behavior and services;
+- the behavior no-ops for modules that are not EF-backed or not opted in.
+
+This does not introduce a public capability-step registry, public named
+pipeline slots, a generic domain event runtime package, or a generalized
+provider metadata registry. The DE-03 implementation may add the smallest
+module-scoped EF opt-in metadata or options needed to make activation
+observable and testable, but that metadata should remain specific to EF domain
+event persistence unless a broader API decision is accepted.
+
+The EF runtime placement is fixed for DE-03. Collection and staging happen
+inside module command execution and module integration event subscriber
+execution, inside the EF transaction, after application pipeline behavior and
+handler logic, while the module execution context is still active, and before
+the EF transaction owner calls `SaveChangesAsync` and commits. Receive inbox
+handling and operation-state updates stay in the same transaction boundary.
+Pending events are cleared from `IDomainEventSource` instances only after
+collection, staging, `SaveChangesAsync`, and transaction commit all succeed.
+Collection, staging, save, or commit failure must leave source pending events
+uncleared by Bondstone.
+
 ## Related Decisions
 
 - [0004 Positioning And Service Extraction Path](0004-positioning-and-service-extraction-path.md)
@@ -176,8 +212,10 @@ or transport abstractions.
   `Bondstone.DomainEvents` namespace. `IDomainEvent` does not extend the
   messaging `IMessage` marker. EF Core will be the first provider-backed
   collection and optional persistence implementation, using `ChangeTracker`
-  plus `IDomainEventSource`. Domain events stay module-local unless module
-  code explicitly maps selected facts to integration events.
+  plus `IDomainEventSource`. EF domain event persistence will activate only
+  for EF-backed modules that explicitly opt into the capability through
+  provider-owned module metadata or options. Domain events stay module-local
+  unless module code explicitly maps selected facts to integration events.
 - Stable docs: Current domain event direction is described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/persistence.md](../architecture/persistence.md), and
@@ -191,11 +229,14 @@ or transport abstractions.
   module runtime changes.
 - Application evidence: Stable docs and backlog guidance are updated. Core
   contracts and contract tests are implemented in `Bondstone`.
-- Pending or deferred: EF collection/persistence implementation, module
-  opt-in, persisted record contracts, provider mapping, and tests remain
-  pending. Non-EF PostgreSQL staging and integration-event mapping remain
-  deferred.
+- Pending or deferred: EF collection/persistence implementation, the narrow EF
+  module opt-in shape, persisted record contracts, provider mapping, and tests
+  remain pending for DE-03. A separate `Bondstone.DomainEvents` package,
+  non-EF PostgreSQL staging, and integration-event mapping remain deferred.
 
 ## Verification
+
+2026-06-11 amendment: read back this ADR and affected stable docs/backlog
+entries. Ran `pnpm format:check`.
 
 Read back the accepted ADR and related stable docs. Ran `pnpm format:check`.

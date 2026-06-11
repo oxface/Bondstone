@@ -30,10 +30,12 @@ that call the provider-neutral module receive pipelines.
 
 `ApplyBondstonePersistence` remains the convenience entrypoint for the full
 generic EF Core mapping shape, while `ApplyBondstoneOutbox`,
-`ApplyBondstoneInbox`, and `ApplyBondstoneOperationState` let hosts map only
-the durable persistence pieces a DbContext needs. The current EF module
-runtime validates that modules using `UseDurableMessaging` with EF persistence
-have outbox and inbox mappings in their DbContext model.
+`ApplyBondstoneInbox`, `ApplyBondstoneOperationState`, and
+`ApplyBondstoneDomainEvents` let hosts map only the persistence pieces a
+DbContext needs. The current EF module runtime validates that modules using
+`UseDurableMessaging` with EF persistence have outbox and inbox mappings in
+their DbContext model, and modules that opt into EF domain event persistence
+have the domain event mapping.
 
 In the command loop, durable sends resolve outbox and pending operation-state
 writes from the source module persistence context. Durable receives resolve
@@ -67,11 +69,10 @@ the preferred module-boundary setup.
 
 ## Domain Event Persistence
 
-ADR 0028 accepts optional module-local domain event persistence as the next
-implementation boundary. Domain event persistence records private module facts
-inside the owning module persistence boundary; it does not write outgoing
-outbox messages, create inbox records, publish transport events, or expose
-domain events as integration contracts.
+ADR 0028 accepts optional module-local domain event persistence. Domain event
+persistence records private module facts inside the owning module persistence
+boundary; it does not write outgoing outbox messages, create inbox records,
+publish transport events, or expose domain events as integration contracts.
 
 The core shape is intentionally small and lives under
 `Bondstone.DomainEvents`: module domain objects may implement
@@ -86,6 +87,20 @@ EF Core is the first accepted provider implementation. Non-EF PostgreSQL
 domain event staging remains application-owned until a later decision accepts
 a concrete provider contract.
 
+Domain event persistence activation stays narrow. There is no public
+capability-step registry, public named pipeline-slot API, generic provider
+metadata registry, or separate `Bondstone.DomainEvents` package in the current
+package set. EF domain event persistence activates from a module's EF
+persistence declaration, an explicit
+`UseEntityFrameworkCoreDomainEventPersistence()` module opt-in, and
+provider-owned EF services.
+
+The EF runtime behavior belongs inside module command and integration event
+subscriber execution. It collects and stages pending domain events after
+application behavior and handler logic, while the module execution context is
+still active, and before the EF transaction owner saves and commits. Pending
+events are cleared only after collection, staging, save, and commit succeed.
+
 Provider packages own provider-specific SQL, locking, conflict detection,
 schema targeting, and integration tests. Provider-owned SQL should reuse table,
 column, and constraint names from provider-neutral mappings when those mappings
@@ -98,10 +113,7 @@ directly and owns its connection/session and transaction boundary without
 depending on EF entity mappings, `DbContext`, or
 `IEntityFrameworkCorePersistenceScope`.
 
-Runtime pipeline and capability planning for domain event placement is tracked
-in
-[../backlog/09-module-pipeline-and-capability-runtime.md](../backlog/09-module-pipeline-and-capability-runtime.md).
-Domain event implementation follow-up work is tracked in
+Domain event follow-up work is tracked in
 [../backlog/10-domain-events.md](../backlog/10-domain-events.md).
 Other persistence ideas outside the current contract are tracked in
 [../backlog/15-future-work.md](../backlog/15-future-work.md).

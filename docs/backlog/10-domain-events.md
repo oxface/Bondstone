@@ -5,7 +5,7 @@ Priority: High
 Goal: add explicit module-local domain event behavior before validating
 Bondstone on a real project.
 
-Dependency: implement or intentionally narrow
+Dependency: resolved by intentionally narrowing
 [09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
 before DE-03 adds runtime pipeline behavior.
 
@@ -50,17 +50,16 @@ transient module-local facts, and provider packages may optionally persist
 module-local domain event records. Domain events are not integration events,
 outbox messages, transport events, or public topology subjects.
 
-The first module pipeline cleanup slice is resolved. DE-02 can add core
-contracts without runtime behavior. DE-03 still needs the deferred
-capability-step decision from
-[09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
-before EF Core collection/persistence behavior is added to the transaction
-pipeline:
+The module pipeline and capability contribution decisions are resolved. DE-02
+added core contracts without runtime behavior. DE-03 can add EF Core
+collection/persistence behavior without introducing a public capability-step
+registry or new package boundary:
 
 - DE-02 adds core `IDomainEvent`, `DomainEventIdentityAttribute`, explicit
   source/accessor, and local handler contracts.
-- DE-03 adds EF Core `ChangeTracker` collection and optional module-local
-  persistence records through the module transaction pipeline.
+- DE-03 adds a narrow EF module opt-in plus EF Core `ChangeTracker`
+  collection and optional module-local persistence records through
+  provider-owned module transaction behavior.
 
 Non-EF PostgreSQL staging stays application-owned for now. Mapping selected
 domain events to integration events remains an explicit later slice and must
@@ -167,9 +166,10 @@ integration-event mapping behavior was added in this slice.
 ### DE-03: Add EF Core Collection And Clearing
 
 Priority: P0 if DE-01 accepts EF-backed collection.
+Status: Resolved 2026-06-11
 Dependency: [09-module-pipeline-and-capability-runtime.md](09-module-pipeline-and-capability-runtime.md)
-MPC-05 for the capability contribution model and transaction-scoped runtime
-placement.
+MPC-05 and MPC-06 are resolved; keep the implementation inside the accepted
+provider-owned capability model.
 
 Collect domain events through EF Core module persistence in the same handler
 transaction, then clear them after successful staging, save, and transaction
@@ -180,12 +180,20 @@ Accepted guidance:
 
 - collect through `DbContext.ChangeTracker` entries whose entities implement
   the explicit domain event source/accessor contract;
+- add only the smallest EF-owned module opt-in metadata or options needed to
+  activate domain event persistence for selected EF-backed modules;
+- do not add a public capability-step registry, public named pipeline slots,
+  generalized provider metadata registry, or separate
+  `Bondstone.DomainEvents` package;
 - stage immutable module-local domain event records in the same module
   `DbContext` transaction as handler state, inbox markers, operation-state
   updates where applicable, and outgoing outbox rows;
 - include stable record id, owning module, `DomainEventIdentityAttribute`
   name, timestamps, serialized payload, payload metadata, and trace or
   causation metadata when available;
+- place collection/staging inside the EF transaction, after application
+  behavior and handler logic, while the module execution context is active,
+  and before transaction-owned `SaveChangesAsync` and commit;
 - clear source pending events only after successful collection, staging, save,
   and transaction commit;
 - do not intercept `SaveChangesAsync`, require a custom DbContext base class,
@@ -204,6 +212,27 @@ Verification:
 
 - `pnpm backend:test:fast`
 - `pnpm backend:test:integration` if provider-backed SQL behavior changes.
+
+Resolved by adding EF-owned domain event persistence in
+`Bondstone.EntityFrameworkCore`. Modules opt in with
+`UseEntityFrameworkCoreDomainEventPersistence()` after declaring EF module
+persistence. DbContexts map records with `ApplyBondstoneDomainEvents()` or the
+full `ApplyBondstonePersistence()` helper. Runtime collection is an EF system
+behavior that runs inside command and event subscriber execution after
+application behavior and handler logic while the module execution context is
+active. It stages `DomainEventRecordEntity` rows from tracked
+`IDomainEventSource` entities before the EF transaction runner saves and
+commits, then clears sources only after the transaction scope succeeds.
+
+Tests cover EF-backed opt-in activation, no-op behavior for modules that are
+not opted in or not EF-backed, collection from `IDomainEventSource`, clearing
+after successful save/transaction completion, no clear on collection or save
+failure, and both command and event subscriber paths.
+
+Deferred from this slice: automatic integration-event mapping/publication,
+local domain-event handler dispatch, non-EF PostgreSQL staging, broad
+capability pipeline APIs, and provider-backed SQL migration or concurrency
+coverage beyond the provider-neutral EF mapping.
 
 ### DE-04: Decide Non-EF PostgreSQL Staging
 

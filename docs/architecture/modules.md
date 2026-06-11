@@ -160,6 +160,21 @@ path. Bondstone does not currently provide module-scoped application behavior
 registration; ordinary DI registration is the supported model until a concrete
 module-scoping requirement proves otherwise.
 
+## Optional Capability Runtime
+
+Optional capabilities do not currently have a public capability-step registry,
+public named pipeline slots, or a generalized provider contribution API.
+Provider and runtime packages contribute system behavior through their setup
+code, and those behaviors self-activate from module registration metadata,
+provider registration, and DI services.
+
+Domain event persistence follows that model. The EF Core implementation is
+provider-owned behavior that activates only for EF-backed modules that call
+`UseEntityFrameworkCoreDomainEventPersistence()`. The opt-in is EF-owned
+module metadata, not a broad capability registry. Normal user extension
+remains application pipeline behavior; system behavior is advanced
+provider/runtime/capability composition.
+
 ## Execution Context Limits
 
 The module execution context is ambient and handler-flow scoped. It flows
@@ -203,6 +218,13 @@ Provider transaction behaviors are registered through provider setup and
 activate only for modules that declare that provider's persistence capability.
 Current provider packages use this self-filtering system behavior model rather
 than a separate public provider-step registry.
+
+EF Core domain event persistence belongs inside the same module command and
+event subscriber transaction boundary. It collects and stages domain events
+after application behavior and handler logic, while the module execution
+context is still active, and before transaction-owned `SaveChangesAsync` and
+commit. Pending domain events are cleared only after collection, staging,
+save, and commit succeed.
 
 Module-owned persistence is the preferred durable messaging path. Root-level
 non-module persistence services remain available for advanced single-store

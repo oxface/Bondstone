@@ -31,6 +31,8 @@ internal sealed class ModuleRuntimePipelineConfigurationValidator(
 
     private void ValidateCommandContributions(BondstoneModuleRegistration module)
     {
+        ValidateModuleCommandContributionsApply(module);
+
         ModuleCommandPipelineContribution[] selectedContributions =
             _pipelineContributionRegistry
                 .GetCommandContributions(module)
@@ -69,6 +71,8 @@ internal sealed class ModuleRuntimePipelineConfigurationValidator(
 
     private void ValidateEventSubscriberContributions(BondstoneModuleRegistration module)
     {
+        ValidateModuleEventSubscriberContributionsApply(module);
+
         ModuleEventSubscriberPipelineContribution[] selectedContributions =
             _pipelineContributionRegistry
                 .GetEventSubscriberContributions(module)
@@ -103,5 +107,41 @@ internal sealed class ModuleRuntimePipelineConfigurationValidator(
 
         throw new InvalidOperationException(
             $"Module '{module.Name}' has multiple event subscriber runtime pipeline contributions with the same order: '{string.Join("', '", ambiguousOrderContributions.Select(static contribution => contribution.Name))}'. Runtime contribution order must be explicit and unambiguous.");
+    }
+
+    private void ValidateModuleCommandContributionsApply(BondstoneModuleRegistration module)
+    {
+        ModuleCommandPipelineContribution[] nonApplicableContributions =
+            _pipelineContributionRegistry
+                .GetModuleCommandContributions(module)
+                .Where(contribution => !contribution.AppliesTo(module))
+                .OrderBy(static contribution => contribution.Name, StringComparer.Ordinal)
+                .ToArray();
+
+        if (nonApplicableContributions.Length == 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Module '{module.Name}' has command runtime pipeline contribution(s) that do not apply to the module's current metadata: '{string.Join("', '", nonApplicableContributions.Select(static contribution => contribution.Name))}'. Check the module's provider or capability opt-in order and required persistence declaration.");
+    }
+
+    private void ValidateModuleEventSubscriberContributionsApply(BondstoneModuleRegistration module)
+    {
+        ModuleEventSubscriberPipelineContribution[] nonApplicableContributions =
+            _pipelineContributionRegistry
+                .GetModuleEventSubscriberContributions(module)
+                .Where(contribution => !contribution.AppliesTo(module))
+                .OrderBy(static contribution => contribution.Name, StringComparer.Ordinal)
+                .ToArray();
+
+        if (nonApplicableContributions.Length == 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Module '{module.Name}' has event subscriber runtime pipeline contribution(s) that do not apply to the module's current metadata: '{string.Join("', '", nonApplicableContributions.Select(static contribution => contribution.Name))}'. Check the module's provider or capability opt-in order and required persistence declaration.");
     }
 }

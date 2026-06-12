@@ -1,12 +1,15 @@
 using Bondstone.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 
 namespace Bondstone.Modules;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class ModuleEventSubscriberPipelineContribution
 {
     private readonly Func<BondstoneModuleRegistration, bool> _appliesToModule;
     private readonly Func<IServiceProvider, Type, object> _createBehavior;
+    private Type? _behaviorType;
 
     public ModuleEventSubscriberPipelineContribution(
         string name,
@@ -25,6 +28,7 @@ public sealed class ModuleEventSubscriberPipelineContribution
                 eventType))
     {
         ValidateBehaviorType(behaviorType);
+        _behaviorType = behaviorType;
     }
 
     public ModuleEventSubscriberPipelineContribution(
@@ -64,6 +68,17 @@ public sealed class ModuleEventSubscriberPipelineContribution
         ArgumentNullException.ThrowIfNull(module);
 
         return _appliesToModule(module);
+    }
+
+    internal bool IsEquivalentTo(ModuleEventSubscriberPipelineContribution other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+
+        return StringComparer.Ordinal.Equals(Name, other.Name)
+            && Kind == other.Kind
+            && Order == other.Order
+            && _behaviorType is not null
+            && _behaviorType == other._behaviorType;
     }
 
     internal IModuleEventSubscriberPipelineBehavior<TEvent> CreateBehavior<TEvent>(

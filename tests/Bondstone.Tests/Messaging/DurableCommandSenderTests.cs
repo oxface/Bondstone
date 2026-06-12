@@ -255,6 +255,16 @@ public sealed class DurableCommandSenderTests
         RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
             billingWriter.ModuleName,
             _ => billingWriter));
+        RegisterInboxHandlerExecutor(services, "sales");
+        RegisterInboxHandlerExecutor(services, "billing");
+        RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
+            "sales",
+            _ => new NoOpOperationStateStore()));
+        RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
+            "billing",
+            _ => new NoOpOperationStateStore()));
+        RegisterOutboxDispatcher(services, "sales");
+        RegisterOutboxDispatcher(services, "billing");
 
         services.AddBondstone(bondstone =>
         {
@@ -300,12 +310,19 @@ public sealed class DurableCommandSenderTests
         RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
             salesWriter.ModuleName,
             _ => salesWriter));
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
+            "billing",
+            _ => new CapturingModuleOutboxWriter("billing")));
+        RegisterInboxHandlerExecutor(services, "sales");
+        RegisterInboxHandlerExecutor(services, "billing");
         RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
             salesStore.ModuleName,
             _ => salesStore));
         RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
             billingStore.ModuleName,
             _ => billingStore));
+        RegisterOutboxDispatcher(services, "sales");
+        RegisterOutboxDispatcher(services, "billing");
 
         services.AddBondstone(bondstone =>
         {
@@ -485,6 +502,26 @@ public sealed class DurableCommandSenderTests
             .AddOperationStateStore(registration);
     }
 
+    private static void RegisterInboxHandlerExecutor(
+        IServiceCollection services,
+        string moduleName)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddInboxHandlerExecutor(new DurableModuleInboxHandlerExecutorRegistration(
+                moduleName,
+                _ => new NoOpInboxHandlerExecutor()));
+    }
+
+    private static void RegisterOutboxDispatcher(
+        IServiceCollection services,
+        string moduleName)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxDispatcher(new DurableModuleOutboxDispatcherRegistration(
+                moduleName,
+                _ => new NoOpOutboxDispatcher()));
+    }
+
     private sealed class CapturingOperationStateStore : IDurableOperationStateStore
     {
         public DurableOperationState? State { get; set; }
@@ -537,6 +574,50 @@ public sealed class DurableCommandSenderTests
             State = state;
             SavedStates.Add(state);
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class NoOpOperationStateStore : IDurableOperationStateStore
+    {
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult<DurableOperationState?>(null);
+        }
+
+        public ValueTask SaveAsync(
+            DurableOperationState state,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class NoOpInboxHandlerExecutor : IDurableInboxHandlerExecutor
+    {
+        public ValueTask<DurableInboxHandleResult> HandleOnceAsync(
+            DurableInboxRecord record,
+            Func<CancellationToken, ValueTask> handler,
+            CancellationToken ct = default)
+        {
+            return new ValueTask<DurableInboxHandleResult>(
+                new DurableInboxHandleResult(
+                    DurableInboxHandleStatus.Handled,
+                    record));
+        }
+    }
+
+    private sealed class NoOpOutboxDispatcher : IDurableOutboxDispatcher
+    {
+        public ValueTask<DurableOutboxDispatchResult> DispatchAsync(
+            string claimedBy,
+            TimeSpan leaseDuration,
+            int maxCount = 100,
+            CancellationToken ct = default)
+        {
+            return new ValueTask<DurableOutboxDispatchResult>(
+                new DurableOutboxDispatchResult(0, 0, 0, 0, 0));
         }
     }
 

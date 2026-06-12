@@ -91,6 +91,19 @@ internal sealed class ModulePipelineContributionRegistry
         }
     }
 
+    public IReadOnlyList<ModuleCommandPipelineContribution> GetModuleCommandContributions(
+        BondstoneModuleRegistration module)
+    {
+        ArgumentNullException.ThrowIfNull(module);
+
+        lock (_syncRoot)
+        {
+            return GetModuleContributions(
+                _moduleCommandContributions,
+                module);
+        }
+    }
+
     public IReadOnlyList<ModuleEventSubscriberPipelineContribution> GetEventSubscriberContributions(
         BondstoneModuleRegistration module)
     {
@@ -100,6 +113,19 @@ internal sealed class ModulePipelineContributionRegistry
         {
             return GetContributions(
                 _globalEventSubscriberContributions,
+                _moduleEventSubscriberContributions,
+                module);
+        }
+    }
+
+    public IReadOnlyList<ModuleEventSubscriberPipelineContribution>
+        GetModuleEventSubscriberContributions(BondstoneModuleRegistration module)
+    {
+        ArgumentNullException.ThrowIfNull(module);
+
+        lock (_syncRoot)
+        {
+            return GetModuleContributions(
                 _moduleEventSubscriberContributions,
                 module);
         }
@@ -122,6 +148,22 @@ internal sealed class ModulePipelineContributionRegistry
         return globalContributions
             .Concat(moduleSpecificContributions)
             .ToArray();
+    }
+
+    private static IReadOnlyList<TContribution> GetModuleContributions<TContribution>(
+        IReadOnlyDictionary<string, List<TContribution>> moduleContributions,
+        BondstoneModuleRegistration module)
+        where TContribution : class
+    {
+        string moduleName = NormalizeModuleName(module.Name);
+        if (!moduleContributions.TryGetValue(
+                moduleName,
+                out List<TContribution>? moduleSpecificContributions))
+        {
+            return [];
+        }
+
+        return moduleSpecificContributions.ToArray();
     }
 
     private static void AddContribution<TContribution>(
@@ -153,7 +195,9 @@ internal sealed class ModulePipelineContributionRegistry
             GetContributionSlot(existingContribution);
         (ModulePipelineStepKind contributionKind, int contributionOrder) =
             GetContributionSlot(contribution);
-        if (existingKind == contributionKind && existingOrder == contributionOrder)
+        if (existingKind == contributionKind
+            && existingOrder == contributionOrder
+            && ContributionsAreEquivalent(existingContribution, contribution))
         {
             return;
         }
@@ -162,6 +206,23 @@ internal sealed class ModulePipelineContributionRegistry
             $"Pipeline contribution '{contributionName}' is already registered with kind "
             + $"'{existingKind}' and order '{existingOrder}', and cannot also use kind "
             + $"'{contributionKind}' and order '{contributionOrder}'.");
+    }
+
+    private static bool ContributionsAreEquivalent<TContribution>(
+        TContribution existingContribution,
+        TContribution contribution)
+        where TContribution : class
+    {
+        return (existingContribution, contribution) switch
+        {
+            (ModuleCommandPipelineContribution existingCommand,
+                ModuleCommandPipelineContribution command) =>
+                existingCommand.IsEquivalentTo(command),
+            (ModuleEventSubscriberPipelineContribution existingEventSubscriber,
+                ModuleEventSubscriberPipelineContribution eventSubscriber) =>
+                existingEventSubscriber.IsEquivalentTo(eventSubscriber),
+            _ => false,
+        };
     }
 
     private static string GetContributionName<TContribution>(TContribution contribution)

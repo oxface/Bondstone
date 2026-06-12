@@ -284,6 +284,18 @@ public sealed class PostgresModuleRuntimeTests
             .AddOutboxWriter(new DurableModuleOutboxWriterRegistration(
                 "fulfillment",
                 _ => writer));
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddInboxHandlerExecutor(new DurableModuleInboxHandlerExecutorRegistration(
+                "fulfillment",
+                _ => new NoOpInboxHandlerExecutor()));
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOperationStateStore(new DurableModuleOperationStateStoreRegistration(
+                "fulfillment",
+                _ => new NoOpOperationStateStore()));
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxDispatcher(new DurableModuleOutboxDispatcherRegistration(
+                "fulfillment",
+                _ => new NoOpOutboxDispatcher()));
         RegisterThrowingPostgresModuleSession(services);
         services.AddBondstone(bondstone =>
         {
@@ -415,6 +427,50 @@ public sealed class PostgresModuleRuntimeTests
         {
             Envelopes.Add(envelope);
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class NoOpInboxHandlerExecutor : IDurableInboxHandlerExecutor
+    {
+        public ValueTask<DurableInboxHandleResult> HandleOnceAsync(
+            DurableInboxRecord record,
+            Func<CancellationToken, ValueTask> handler,
+            CancellationToken ct = default)
+        {
+            return new ValueTask<DurableInboxHandleResult>(
+                new DurableInboxHandleResult(
+                    DurableInboxHandleStatus.Handled,
+                    record));
+        }
+    }
+
+    private sealed class NoOpOperationStateStore : IDurableOperationStateStore
+    {
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult<DurableOperationState?>(null);
+        }
+
+        public ValueTask SaveAsync(
+            DurableOperationState state,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class NoOpOutboxDispatcher : IDurableOutboxDispatcher
+    {
+        public ValueTask<DurableOutboxDispatchResult> DispatchAsync(
+            string claimedBy,
+            TimeSpan leaseDuration,
+            int maxCount = 100,
+            CancellationToken ct = default)
+        {
+            return new ValueTask<DurableOutboxDispatchResult>(
+                new DurableOutboxDispatchResult(0, 0, 0, 0, 0));
         }
     }
 

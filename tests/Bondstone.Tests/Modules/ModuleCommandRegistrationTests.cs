@@ -369,6 +369,38 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void ModuleCommands_WhenRuntimeContributionsHaveSameNameAndOrderButDifferentBehavior_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    module.AddCommandPipelineContribution(
+                        new ModuleCommandPipelineContribution(
+                            "test.command.same-slot",
+                            ModulePipelineStepKind.System,
+                            777,
+                            typeof(EarlyCommandSystemBehavior)));
+                    module.AddCommandPipelineContribution(
+                        new ModuleCommandPipelineContribution(
+                            "test.command.same-slot",
+                            ModulePipelineStepKind.System,
+                            777,
+                            typeof(LateCommandSystemBehavior)));
+                    module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
+                });
+            }));
+
+        Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test.command.same-slot", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void ModuleCommandPipelineContribution_WhenBehaviorTypeIsInvalid_Throws()
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(

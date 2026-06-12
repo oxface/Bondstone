@@ -1,7 +1,9 @@
 using Bondstone.Utility;
+using System.ComponentModel;
 
 namespace Bondstone.Persistence;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class DurableModuleOperationStateStoreRegistration
 {
     private readonly Func<IServiceProvider, IDurableOperationStateStore> _createStore;

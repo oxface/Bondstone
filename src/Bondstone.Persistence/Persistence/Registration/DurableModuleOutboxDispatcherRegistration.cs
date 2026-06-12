@@ -1,7 +1,9 @@
 using Bondstone.Utility;
+using System.ComponentModel;
 
 namespace Bondstone.Persistence;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class DurableModuleOutboxDispatcherRegistration
 {
     private readonly Func<IServiceProvider, IDurableOutboxDispatcher> _createDispatcher;
@@ -20,6 +22,8 @@ public sealed class DurableModuleOutboxDispatcherRegistration
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
-        return _createDispatcher(serviceProvider);
+        return _createDispatcher(serviceProvider)
+            ?? throw new InvalidOperationException(
+                $"Durable module outbox dispatcher factory for module '{ModuleName}' returned null.");
     }
 }

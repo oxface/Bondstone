@@ -1,7 +1,9 @@
 using Bondstone.Utility;
+using System.ComponentModel;
 
 namespace Bondstone.Persistence;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class DurableModulePersistenceRegistrationRegistry
 {
     private readonly object _syncRoot = new();

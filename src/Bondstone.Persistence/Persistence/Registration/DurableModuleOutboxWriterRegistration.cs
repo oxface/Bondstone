@@ -1,7 +1,9 @@
 using Bondstone.Utility;
+using System.ComponentModel;
 
 namespace Bondstone.Persistence;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class DurableModuleOutboxWriterRegistration
 {
     private readonly Func<IServiceProvider, IDurableOutboxWriter> _createWriter;

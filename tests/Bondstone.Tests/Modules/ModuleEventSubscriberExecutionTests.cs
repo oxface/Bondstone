@@ -262,6 +262,40 @@ public sealed class ModuleEventSubscriberExecutionTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void ExecuteAsync_WhenRuntimeContributionsHaveSameNameAndOrderButDifferentBehavior_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.same-slot",
+                            ModulePipelineStepKind.System,
+                            777,
+                            typeof(EarlyEventSubscriberSystemBehavior)));
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.same-slot",
+                            ModulePipelineStepKind.System,
+                            777,
+                            typeof(LateEventSubscriberSystemBehavior)));
+                    module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                        "fulfillment.order-projection.v1");
+                });
+            }));
+
+        Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test.event-subscriber.same-slot", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void ModuleEventSubscriberPipelineContribution_WhenBehaviorTypeIsInvalid_Throws()
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(

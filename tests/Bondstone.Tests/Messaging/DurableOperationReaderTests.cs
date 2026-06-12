@@ -1,5 +1,6 @@
 using Bondstone.Configuration;
 using Bondstone.Messaging;
+using Bondstone.Modules;
 using Bondstone.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -109,15 +110,72 @@ public sealed class DurableOperationReaderTests
         Assert.Equal(0, fallbackStore.ReadCount);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetStateAsync_WhenRootReaderWasRegisteredBeforeBondstoneAndModuleStoresExist_UsesModuleStores()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var moduleStore = new CapturingModuleOperationStateStore("sales")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+        };
+        var fallbackReader = new CapturingOperationReader
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            moduleStore,
+            fallbackReader);
+
+        DurableOperationState? state = await serviceProvider
+            .GetRequiredService<IDurableOperationReader>()
+            .GetStateAsync(durableOperationId);
+
+        Assert.NotNull(state);
+        Assert.Equal(DurableOperationStatus.Pending, state.Status);
+        Assert.Equal(0, fallbackReader.ReadCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetStateAsync_WhenOnlyRootReaderWasRegisteredBeforeBondstone_UsesFallbackReader()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var fallbackReader = new CapturingOperationReader
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(fallbackReader);
+
+        DurableOperationState? state = await serviceProvider
+            .GetRequiredService<IDurableOperationReader>()
+            .GetStateAsync(durableOperationId);
+
+        Assert.NotNull(state);
+        Assert.Equal(DurableOperationStatus.Completed, state.Status);
+        Assert.Equal(1, fallbackReader.ReadCount);
+    }
+
     private static ServiceProvider CreateServiceProvider(
         params object[] storesOrReaders)
     {
         var services = new ServiceCollection();
+        var moduleNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (object storeOrReader in storesOrReaders)
         {
             switch (storeOrReader)
             {
                 case CapturingModuleOperationStateStore moduleStore:
+                    moduleNames.Add(moduleStore.ModuleName);
                     services.GetOrAddDurableModulePersistenceRegistrationRegistry()
                         .AddOperationStateStore(new DurableModuleOperationStateStoreRegistration(
                             moduleStore.ModuleName,
@@ -136,7 +194,13 @@ public sealed class DurableOperationReaderTests
             }
         }
 
-        services.AddBondstone(_ => { });
+        services.AddBondstone(bondstone =>
+        {
+            foreach (string moduleName in moduleNames)
+            {
+                bondstone.Module(moduleName, _ => { });
+            }
+        });
         return services.BuildServiceProvider();
     }
 
@@ -181,6 +245,21 @@ public sealed class DurableOperationReaderTests
             CancellationToken ct = default)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class CapturingOperationReader : IDurableOperationReader
+    {
+        public DurableOperationState? State { get; init; }
+
+        public int ReadCount { get; private set; }
+
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            ReadCount++;
+            return ValueTask.FromResult(State);
         }
     }
 }

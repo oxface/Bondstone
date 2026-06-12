@@ -211,7 +211,7 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task ModuleCommands_WhenModuleOptsInButIsNotEfBacked_DoesNotCollectOrClearDomainEvents()
+    public void ModuleCommands_WhenModuleOptsInButIsNotEfBacked_FailsAtStartup()
     {
         string databaseName = Guid.NewGuid().ToString("N");
         var services = new ServiceCollection();
@@ -219,35 +219,22 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
         services.AddDbContext<DomainEventTestDbContext>(options =>
             UseInMemory(options, databaseName));
 
-        services.AddBondstone(bondstone =>
-        {
-            bondstone.Module("fulfillment", module =>
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
             {
-                module.UseEntityFrameworkCoreDomainEventPersistence();
-                module.Commands.RegisterHandler<RaiseDomainEventCommand, RaiseDomainEventCommandHandler>();
-            });
-        });
+                bondstone.Module("fulfillment", module =>
+                {
+                    module.UseEntityFrameworkCoreDomainEventPersistence();
+                    module.Commands.RegisterHandler<RaiseDomainEventCommand, RaiseDomainEventCommandHandler>();
+                });
+            }));
 
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        using (IServiceScope scope = serviceProvider.CreateScope())
-        {
-            await scope.ServiceProvider
-                .GetRequiredService<IModuleCommandExecutor>()
-                .ExecuteAsync(
-                    "fulfillment",
-                    new RaiseDomainEventCommand("A-100"));
-        }
-
-        DomainEventCapture capture = serviceProvider.GetRequiredService<DomainEventCapture>();
-        Assert.NotNull(capture.Source);
-        Assert.Single(capture.Source.PendingDomainEvents);
-        Assert.Equal(0, capture.Source.ClearCount);
-        Assert.Empty(capture.Calls);
-
-        using IServiceScope verificationScope = serviceProvider.CreateScope();
-        DomainEventTestDbContext context =
-            verificationScope.ServiceProvider.GetRequiredService<DomainEventTestDbContext>();
-        Assert.Empty(await context.Set<DomainEventRecordEntity>().ToArrayAsync());
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            "Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Command",
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.Contains("required persistence declaration", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -34,6 +34,12 @@ public sealed class ModuleEventSubscriberPipelineContribution
         _behaviorType = behaviorType;
     }
 
+    /// <remarks>
+    /// Factory-based contributions are considered equivalent only when the
+    /// behavior factory and applicability delegates compare equal. Provider
+    /// packages should prefer the behavior-type constructor when a contribution
+    /// has a stable concrete behavior type.
+    /// </remarks>
     public ModuleEventSubscriberPipelineContribution(
         string name,
         ModulePipelineStepKind kind,

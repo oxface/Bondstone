@@ -80,7 +80,7 @@ public sealed class DurableOperationReaderTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task GetStateAsync_WhenModuleStoresAreRegistered_DoesNotUseFallbackReader()
+    public async Task GetStateAsync_WhenModuleStoresAreRegistered_DoesNotUseRootOperationStateStore()
     {
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
         var moduleStore = new CapturingModuleOperationStateStore("sales")
@@ -90,7 +90,7 @@ public sealed class DurableOperationReaderTests
                 DurableOperationStatus.Pending,
                 DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
         };
-        var fallbackStore = new CapturingOperationStateStore
+        var rootStore = new CapturingOperationStateStore
         {
             State = new DurableOperationState(
                 durableOperationId,
@@ -99,7 +99,7 @@ public sealed class DurableOperationReaderTests
         };
         await using ServiceProvider serviceProvider = CreateServiceProvider(
             moduleStore,
-            fallbackStore);
+            rootStore);
 
         DurableOperationState? state = await serviceProvider
             .GetRequiredService<IDurableOperationReader>()
@@ -107,7 +107,7 @@ public sealed class DurableOperationReaderTests
 
         Assert.NotNull(state);
         Assert.Equal(DurableOperationStatus.Pending, state.Status);
-        Assert.Equal(0, fallbackStore.ReadCount);
+        Assert.Equal(0, rootStore.ReadCount);
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public sealed class DurableOperationReaderTests
                 DurableOperationStatus.Pending,
                 DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
         };
-        var fallbackReader = new CapturingOperationReader
+        var rootReader = new CapturingOperationReader
         {
             State = new DurableOperationState(
                 durableOperationId,
@@ -131,7 +131,7 @@ public sealed class DurableOperationReaderTests
         };
         await using ServiceProvider serviceProvider = CreateServiceProvider(
             moduleStore,
-            fallbackReader);
+            rootReader);
 
         DurableOperationState? state = await serviceProvider
             .GetRequiredService<IDurableOperationReader>()
@@ -139,168 +139,78 @@ public sealed class DurableOperationReaderTests
 
         Assert.NotNull(state);
         Assert.Equal(DurableOperationStatus.Pending, state.Status);
-        Assert.Equal(0, fallbackReader.ReadCount);
+        Assert.Equal(0, rootReader.ReadCount);
     }
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task GetStateAsync_WhenOnlyRootReaderWasRegisteredBeforeBondstone_UsesFallbackReader()
+    public async Task GetStateAsync_WhenOnlyRootReaderWasRegisteredBeforeBondstone_ReturnsNull()
     {
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
-        var fallbackReader = new CapturingOperationReader
+        var rootReader = new CapturingOperationReader
         {
             State = new DurableOperationState(
                 durableOperationId,
                 DurableOperationStatus.Completed,
                 DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")),
         };
-        await using ServiceProvider serviceProvider = CreateServiceProvider(fallbackReader);
+        await using ServiceProvider serviceProvider = CreateServiceProvider(rootReader);
 
         DurableOperationState? state = await serviceProvider
             .GetRequiredService<IDurableOperationReader>()
             .GetStateAsync(durableOperationId);
 
-        Assert.NotNull(state);
-        Assert.Equal(DurableOperationStatus.Completed, state.Status);
-        Assert.Equal(1, fallbackReader.ReadCount);
+        Assert.Null(state);
+        Assert.Equal(0, rootReader.ReadCount);
     }
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task GetStateAsync_WhenScopedRootReaderWasRegisteredBeforeBondstone_DisposesFallbackWithScope()
+    public async Task GetStateAsync_WhenOnlyRootOperationStateStoreIsRegistered_ReturnsNull()
     {
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
-        var capture = new DisposableReaderCapture();
-        var services = new ServiceCollection();
-        services.AddScoped<IDurableOperationReader>(_ => capture.Create());
-        services.AddBondstone(_ => { });
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-
-        DisposableOperationReader fallbackReader;
-        using (IServiceScope scope = serviceProvider.CreateScope())
+        var rootStore = new CapturingOperationStateStore
         {
-            DurableOperationState? state = await scope.ServiceProvider
-                .GetRequiredService<IDurableOperationReader>()
-                .GetStateAsync(durableOperationId);
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(rootStore);
 
-            Assert.NotNull(state);
-            Assert.Equal(DurableOperationStatus.Completed, state.Status);
-            fallbackReader = Assert.Single(capture.Readers);
-            Assert.Equal(1, fallbackReader.ReadCount);
-            Assert.False(fallbackReader.Disposed);
-        }
-
-        Assert.True(fallbackReader.Disposed);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task GetStateAsync_WhenTransientRootReaderWasRegisteredBeforeBondstone_CreatesFallbackPerReadAndDisposesWithScope()
-    {
-        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
-        var capture = new DisposableReaderCapture();
-        var services = new ServiceCollection();
-        services.AddTransient<IDurableOperationReader>(_ => capture.Create());
-        services.AddBondstone(_ => { });
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-
-        using (IServiceScope scope = serviceProvider.CreateScope())
-        {
-            IDurableOperationReader reader = scope.ServiceProvider
-                .GetRequiredService<IDurableOperationReader>();
-
-            await reader.GetStateAsync(durableOperationId);
-            await reader.GetStateAsync(durableOperationId);
-
-            Assert.Equal(2, capture.Readers.Count);
-            Assert.All(capture.Readers, fallbackReader =>
-            {
-                Assert.Equal(1, fallbackReader.ReadCount);
-                Assert.False(fallbackReader.Disposed);
-            });
-        }
-
-        Assert.All(capture.Readers, fallbackReader => Assert.True(fallbackReader.Disposed));
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task GetStateAsync_WhenSingletonInstanceRootReaderWasRegisteredBeforeBondstone_DoesNotDisposeExternalInstance()
-    {
-        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
-        var fallbackReader = new DisposableOperationReader();
-        var services = new ServiceCollection();
-        services.AddSingleton<IDurableOperationReader>(fallbackReader);
-        services.AddBondstone(_ => { });
-        ServiceProvider serviceProvider = services.BuildServiceProvider();
-
-        using (IServiceScope scope = serviceProvider.CreateScope())
-        {
-            DurableOperationState? state = await scope.ServiceProvider
-                .GetRequiredService<IDurableOperationReader>()
-                .GetStateAsync(durableOperationId);
-
-            Assert.NotNull(state);
-            Assert.Equal(DurableOperationStatus.Completed, state.Status);
-        }
-
-        await serviceProvider.DisposeAsync();
-
-        Assert.Equal(1, fallbackReader.ReadCount);
-        Assert.False(fallbackReader.Disposed);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task GetStateAsync_WhenAsyncDisposableRootReaderWasRegisteredBeforeBondstone_DisposesFallbackWithAsyncScope()
-    {
-        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
-        var capture = new AsyncDisposableReaderCapture();
-        var services = new ServiceCollection();
-        services.AddScoped<IDurableOperationReader>(_ => capture.Create());
-        services.AddBondstone(_ => { });
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-
-        AsyncDisposableOperationReader fallbackReader;
-        await using (AsyncServiceScope scope = serviceProvider.CreateAsyncScope())
-        {
-            DurableOperationState? state = await scope.ServiceProvider
-                .GetRequiredService<IDurableOperationReader>()
-                .GetStateAsync(durableOperationId);
-
-            Assert.NotNull(state);
-            Assert.Equal(DurableOperationStatus.Completed, state.Status);
-            fallbackReader = Assert.Single(capture.Readers);
-            Assert.Equal(1, fallbackReader.ReadCount);
-            Assert.False(fallbackReader.DisposedAsync);
-        }
-
-        Assert.True(fallbackReader.DisposedAsync);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task GetStateAsync_WhenAsyncDisposableRootReaderWasRegisteredBeforeBondstone_RequiresAsyncScopeDisposal()
-    {
-        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
-        var capture = new AsyncDisposableReaderCapture();
-        var services = new ServiceCollection();
-        services.AddScoped<IDurableOperationReader>(_ => capture.Create());
-        services.AddBondstone(_ => { });
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        IServiceScope scope = serviceProvider.CreateScope();
-
-        await scope.ServiceProvider
+        DurableOperationState? state = await serviceProvider
             .GetRequiredService<IDurableOperationReader>()
             .GetStateAsync(durableOperationId);
 
-        AsyncDisposableOperationReader fallbackReader = Assert.Single(capture.Readers);
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            scope.Dispose);
+        Assert.Null(state);
+        Assert.Equal(0, rootStore.ReadCount);
+    }
 
-        Assert.Contains(nameof(IAsyncDisposable), exception.Message, StringComparison.Ordinal);
-        Assert.Contains("asynchronously", exception.Message, StringComparison.Ordinal);
-        Assert.False(fallbackReader.DisposedAsync);
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetStateAsync_WhenRootReaderIsRegisteredInsideBondstoneConfiguration_ReturnsNull()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var rootReader = new CapturingOperationReader
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")),
+        };
+        var services = new ServiceCollection();
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Services.AddSingleton<IDurableOperationReader>(rootReader);
+        });
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        DurableOperationState? state = await serviceProvider
+            .GetRequiredService<IDurableOperationReader>()
+            .GetStateAsync(durableOperationId);
+
+        Assert.Null(state);
+        Assert.Equal(0, rootReader.ReadCount);
     }
 
     private static ServiceProvider CreateServiceProvider(
@@ -401,76 +311,4 @@ public sealed class DurableOperationReaderTests
         }
     }
 
-    private sealed class DisposableReaderCapture
-    {
-        public List<DisposableOperationReader> Readers { get; } = [];
-
-        public DisposableOperationReader Create()
-        {
-            var reader = new DisposableOperationReader();
-            Readers.Add(reader);
-            return reader;
-        }
-    }
-
-    private sealed class AsyncDisposableReaderCapture
-    {
-        public List<AsyncDisposableOperationReader> Readers { get; } = [];
-
-        public AsyncDisposableOperationReader Create()
-        {
-            var reader = new AsyncDisposableOperationReader();
-            Readers.Add(reader);
-            return reader;
-        }
-    }
-
-    private sealed class AsyncDisposableOperationReader : IDurableOperationReader, IAsyncDisposable
-    {
-        public int ReadCount { get; private set; }
-
-        public bool DisposedAsync { get; private set; }
-
-        public ValueTask<DurableOperationState?> GetStateAsync(
-            Guid durableOperationId,
-            CancellationToken ct = default)
-        {
-            ReadCount++;
-            return ValueTask.FromResult<DurableOperationState?>(
-                new DurableOperationState(
-                    durableOperationId,
-                    DurableOperationStatus.Completed,
-                    DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")));
-        }
-
-        public ValueTask DisposeAsync()
-        {
-            DisposedAsync = true;
-            return ValueTask.CompletedTask;
-        }
-    }
-
-    private sealed class DisposableOperationReader : IDurableOperationReader, IDisposable
-    {
-        public int ReadCount { get; private set; }
-
-        public bool Disposed { get; private set; }
-
-        public ValueTask<DurableOperationState?> GetStateAsync(
-            Guid durableOperationId,
-            CancellationToken ct = default)
-        {
-            ReadCount++;
-            return ValueTask.FromResult<DurableOperationState?>(
-                new DurableOperationState(
-                    durableOperationId,
-                    DurableOperationStatus.Completed,
-                    DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")));
-        }
-
-        public void Dispose()
-        {
-            Disposed = true;
-        }
-    }
 }

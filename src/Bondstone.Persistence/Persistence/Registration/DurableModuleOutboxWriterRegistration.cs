@@ -8,6 +8,11 @@ public sealed class DurableModuleOutboxWriterRegistration
 {
     private readonly Func<IServiceProvider, IDurableOutboxWriter> _createWriter;
 
+    /// <remarks>
+    /// The factory runs inside the current DI scope for the selected module.
+    /// It should return a lightweight wrapper over DI-owned scoped services and
+    /// should not create owned disposable resources outside DI ownership.
+    /// </remarks>
     public DurableModuleOutboxWriterRegistration(
         string moduleName,
         Func<IServiceProvider, IDurableOutboxWriter> createWriter)

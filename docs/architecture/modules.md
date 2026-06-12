@@ -173,6 +173,11 @@ by module metadata before creating behavior instances, so DI remains the
 object factory rather than the contribution store or module/provider selector.
 Selected runtime contributions for a module pipeline must use unique names
 and unique numeric order values across system and capability steps.
+When a provider uses a factory-based contribution instead of a concrete
+behavior type, duplicate registration equivalence is based on delegate identity
+for the behavior factory and applicability predicate. Provider packages should
+prefer the behavior-type contribution constructor when the behavior has a
+stable concrete type.
 Bondstone does not currently provide module-scoped application
 behavior registration; ordinary DI registration is the supported model until a
 concrete module-scoping requirement proves otherwise.
@@ -198,6 +203,13 @@ ordered system or capability pipeline records through Bondstone setup and
 module registration, not by adding executable behavior implementations to DI.
 Those records are passive metadata plus factories; the runtime planner selects
 them from module registration metadata before executable behavior is created.
+Module-specific contribution applicability is validated at startup for every
+module that carries the contribution, even when the module has no command
+handler or event subscriber yet. Capability opt-ins that need executable
+pipeline behavior should therefore only attach contributions after the module
+metadata required by the contribution is present. Future handlerless or purely
+declarative capability markers should use separate metadata rather than
+non-applicable executable pipeline contributions.
 
 Domain event runtime behavior follows that model. The EF Core persistence
 bridge activates only for EF-backed modules that call

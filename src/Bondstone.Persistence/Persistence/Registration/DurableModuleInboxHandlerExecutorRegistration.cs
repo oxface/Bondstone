@@ -8,6 +8,11 @@ public sealed class DurableModuleInboxHandlerExecutorRegistration
 {
     private readonly Func<IServiceProvider, IDurableInboxHandlerExecutor> _createExecutor;
 
+    /// <remarks>
+    /// The factory runs inside the current DI scope for the selected module.
+    /// It should return a lightweight wrapper over DI-owned scoped services and
+    /// should not create owned disposable resources outside DI ownership.
+    /// </remarks>
     public DurableModuleInboxHandlerExecutorRegistration(
         string moduleName,
         Func<IServiceProvider, IDurableInboxHandlerExecutor> createExecutor)

@@ -238,11 +238,11 @@ idempotency and processed markers.
 The current command loop records operation state only for caller-supplied
 operation ids. Sending a command with an operation id stages `Pending` if the
 operation is unknown. Successful module command receive stages `Completed` in
-the target module persistence boundary. When a host has module-owned operation
-stores, `IDurableOperationReader` reads across the configured module stores
-and returns the highest-precedence state: terminal statuses outrank
-`Running`, which outranks `Pending`; states with equal precedence use the
-newer update timestamp.
+the target module persistence boundary. `IDurableOperationReader` reads across
+the configured module-owned operation stores and returns the highest-precedence
+state: terminal statuses outrank `Running`, which outranks `Pending`; states
+with equal precedence use the newer update timestamp. If no module-owned
+operation stores are configured, the default reader returns no state.
 
 The command loop writes `Pending` and `Completed`. `Running`, `Failed`, and
 `Cancelled` remain storage/read-model values for application-owned operation

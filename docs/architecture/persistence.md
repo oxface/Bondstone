@@ -69,13 +69,18 @@ registering executable module services directly in DI. Those registrations
 carry the module name plus factories for command and receive execution
 services: outbox writer, inbox executor, and operation-state store. The
 factory for a selected module runs inside the current DI scope only when that
-module needs the service. Fallback non-module persistence services are
-intentionally supported advanced composition for now. When no module-owned
-durable runtime registrations are registered, core resolvers may use
-root-level outbox writer, inbox handler executor, operation-state store, and
-operation reader services. This is useful for low-level single-store
-composition and compatibility tests, but it is not the preferred
-module-boundary setup.
+module needs the service. Provider factories should return lightweight wrappers
+around services owned by the current DI scope, not owned disposable resources
+that the scope cannot dispose.
+
+Fallback non-module persistence services are intentionally supported advanced
+composition for the remaining low-level paths that use them. When no
+module-owned durable runtime registrations are registered, core resolvers may
+use root-level outbox writer, inbox handler executor, and operation-state store
+services. This is useful for low-level single-store composition and
+compatibility tests, but it is not the preferred module-boundary setup.
+`IDurableOperationReader` does not use root-level fallback readers or stores;
+it reads only from configured module-owned operation-state stores.
 
 ## Domain Event Persistence
 

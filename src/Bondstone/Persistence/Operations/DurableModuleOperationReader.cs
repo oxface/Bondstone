@@ -6,16 +6,11 @@ namespace Bondstone.Persistence;
 internal sealed class DurableModuleOperationReader : IDurableOperationReader
 {
     private readonly ModuleRuntimeRegistry _moduleRuntimeRegistry;
-    private readonly Func<IDurableOperationReader?> _fallbackReaderFactory;
 
-    public DurableModuleOperationReader(
-        ModuleRuntimeRegistry moduleRuntimeRegistry,
-        Func<IDurableOperationReader?> fallbackReaderFactory)
+    public DurableModuleOperationReader(ModuleRuntimeRegistry moduleRuntimeRegistry)
     {
         _moduleRuntimeRegistry =
             moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
-        _fallbackReaderFactory = fallbackReaderFactory
-            ?? throw new ArgumentNullException(nameof(fallbackReaderFactory));
         _moduleRuntimeRegistry.ValidateDurableOperationStateStores();
     }
 
@@ -25,13 +20,7 @@ internal sealed class DurableModuleOperationReader : IDurableOperationReader
     {
         if (!_moduleRuntimeRegistry.HasDurableModulePersistenceRegistrations)
         {
-            IDurableOperationReader? fallbackReader = _fallbackReaderFactory();
-            if (fallbackReader is null)
-            {
-                return null;
-            }
-
-            return await fallbackReader.GetStateAsync(durableOperationId, ct);
+            return null;
         }
 
         DurableOperationState? bestState = null;

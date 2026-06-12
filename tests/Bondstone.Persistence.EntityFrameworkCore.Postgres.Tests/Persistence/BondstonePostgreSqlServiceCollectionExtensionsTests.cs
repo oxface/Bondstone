@@ -60,7 +60,6 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         AssertContainsScopedFactory<IDurableOutboxDispatchRecorder>(services);
         AssertContainsScoped<IDurableInboxStore>(services);
         AssertContainsScoped<IDurableOperationStateStore>(services);
-        AssertContainsScopedFactory<IDurableOperationReader>(services);
     }
 
     [Fact]

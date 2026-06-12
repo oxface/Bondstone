@@ -128,12 +128,18 @@ Callback failures can surface after the underlying transaction has already
 committed or rolled back.
 
 If no module-owned runtime registrations are registered at all, core can fall
-back to root-level non-module persistence services such as
-`IDurableOutboxWriter`, `IDurableInboxHandlerExecutor`,
-`IDurableOperationStateStore`, and `IDurableOperationReader`. That fallback is
-supported advanced single-store composition and compatibility behavior. It
-does not replace the preferred module-owned durable messaging path, and
-fallback removal would be a compatibility/API decision.
+back to root-level non-module persistence services for low-level send and
+receive paths such as `IDurableOutboxWriter`,
+`IDurableInboxHandlerExecutor`, and `IDurableOperationStateStore`. That
+fallback is supported advanced single-store composition and compatibility
+behavior for those lower-level paths. It does not replace the preferred
+module-owned durable messaging path.
+
+`IDurableOperationReader` is intentionally different: Bondstone's default
+operation reader aggregates configured module-owned operation-state store
+runtime registrations only. It does not preserve or delegate to root-level
+operation reader registrations, and it does not use a root-level
+`IDurableOperationStateStore` as a read fallback.
 
 ## Inbox
 
@@ -197,10 +203,11 @@ stages `Completed` inside module command execution. Failure states, running
 states, retry state, stale receive recovery, cancellation, and result payloads
 remain later policy.
 
-When module-owned operation stores are configured, operation reads can
-aggregate across local module stores. This global read has no module identity,
-so it intentionally creates each configured module operation-state store from
-its runtime registration and queries all of them. Terminal states
+Operation reads aggregate across local module stores. This global read has no
+module identity, so it intentionally creates each configured module
+operation-state store from its runtime registration and queries all of them.
+If no module-owned operation stores are configured, the default operation
+reader returns no state. Terminal states
 (`Completed`, `Failed`, and `Cancelled`) take precedence over `Running`, and
 `Running` takes precedence over `Pending`. When statuses have the same
 precedence, the newest `UpdatedAtUtc` wins. The default command loop currently

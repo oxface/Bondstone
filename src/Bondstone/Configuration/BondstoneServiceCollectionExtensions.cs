@@ -68,7 +68,6 @@ public static class BondstoneServiceCollectionExtensions
             new DurableModuleOperationStateStoreResolver(
                 () => serviceProvider.GetService<IDurableOperationStateStore>(),
                 serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
-        ConfigureDurableOperationReader(services);
         services.TryAddScoped<IDurableCommandSender>(serviceProvider =>
             new DurableCommandSender(
                 serviceProvider.GetRequiredService<DurableModuleOutboxWriterResolver>(),
@@ -137,6 +136,7 @@ public static class BondstoneServiceCollectionExtensions
             new DurableModulePersistenceConfigurationValidator(
                 persistenceRegistrationRegistry));
         configure(builder);
+        ConfigureDurableOperationReader(services);
         builder.Validate();
 
         return services;
@@ -257,62 +257,15 @@ public static class BondstoneServiceCollectionExtensions
         ServiceDescriptor[] existingReaderDescriptors = services
             .Where(static descriptor => descriptor.ServiceType == typeof(IDurableOperationReader))
             .ToArray();
-        bool fallbackAlreadyConfigured = services.Any(static descriptor =>
-            descriptor.ServiceType == typeof(DurableOperationReaderFallback));
-        ServiceDescriptor? fallbackReaderDescriptor = fallbackAlreadyConfigured
-            ? null
-            : existingReaderDescriptors.LastOrDefault();
 
         foreach (ServiceDescriptor descriptor in existingReaderDescriptors)
         {
             services.Remove(descriptor);
         }
 
-        if (!fallbackAlreadyConfigured)
-        {
-            services.Add(new ServiceDescriptor(
-                typeof(DurableOperationReaderFallback),
-                serviceProvider => new DurableOperationReaderFallback(
-                    () => fallbackReaderDescriptor is null
-                        ? null
-                        : CreateFallbackOperationReader(
-                            serviceProvider,
-                            fallbackReaderDescriptor),
-                    fallbackReaderDescriptor?.ImplementationInstance is null),
-                fallbackReaderDescriptor?.Lifetime ?? ServiceLifetime.Scoped));
-        }
-
         services.AddScoped<IDurableOperationReader>(serviceProvider =>
-        {
-            return new DurableModuleOperationReader(
-                serviceProvider.GetRequiredService<ModuleRuntimeRegistry>(),
-                () => serviceProvider.GetService<DurableOperationReaderFallback>()?.Reader
-                    ?? serviceProvider.GetService<IDurableOperationStateStore>());
-        });
-    }
-
-    private static IDurableOperationReader? CreateFallbackOperationReader(
-        IServiceProvider serviceProvider,
-        ServiceDescriptor descriptor)
-    {
-        if (descriptor.ImplementationInstance is IDurableOperationReader instance)
-        {
-            return instance;
-        }
-
-        if (descriptor.ImplementationFactory is not null)
-        {
-            return (IDurableOperationReader?)descriptor.ImplementationFactory(serviceProvider);
-        }
-
-        if (descriptor.ImplementationType is not null)
-        {
-            return (IDurableOperationReader)ActivatorUtilities.CreateInstance(
-                serviceProvider,
-                descriptor.ImplementationType);
-        }
-
-        return null;
+            new DurableModuleOperationReader(
+                serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
     }
 
 }

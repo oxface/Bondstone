@@ -133,6 +133,26 @@ dispatch surface. It may be the aggregate dispatcher for module-owned
 persistence or a custom host dispatcher. Individual provider dispatchers are
 created from registry factories and implement the normal dispatcher contract.
 
+## Amendment 2026-06-12: Operation Reads Use Module-Owned Stores Only
+
+Narrow the fallback decision for operation reads. The app-facing
+`IDurableOperationReader` remains public, but Bondstone's default registration
+is now the module operation reader that aggregates configured module-owned
+`IDurableOperationStateStore` runtime registrations. It no longer preserves or
+delegates to root-level `IDurableOperationReader` registrations, and it no
+longer treats a root-level `IDurableOperationStateStore` as a read fallback.
+
+This removes the special descriptor-reconstruction and fallback-disposal
+behavior for `IDurableOperationReader`. Root-level low-level stores can still be
+useful for provider primitives and existing send/receive fallback paths, but
+operation status queries are tied to module-owned operation stores so reads
+match the durable module runtime model.
+
+If a host has no module-owned operation-state store registrations, the default
+operation reader returns no state. Custom operation-read models should be
+registered outside Bondstone's default reader contract rather than relying on a
+hidden root reader fallback.
+
 ## Consequences
 
 The current public module registration shape remains stable for existing
@@ -146,8 +166,10 @@ Resolver duplication remains acceptable until a later public API policy or
 provider metadata ADR accepts a migration path.
 
 Fallback non-module persistence remains available for advanced single-store
-composition and tests, but stable docs should steer normal modular-monolith
-durable messaging toward module-owned provider helpers.
+composition and tests where the remaining low-level resolvers support it, but
+operation reads no longer use root-level fallback readers or stores. Stable
+docs should steer normal modular-monolith durable messaging toward module-owned
+provider helpers.
 
 ## Related Decisions
 
@@ -168,8 +190,10 @@ durable messaging toward module-owned provider helpers.
   contribute passive durable module runtime registrations into
   `DurableModulePersistenceRegistrationRegistry` with module names and scoped
   factories for executable writer, inbox executor, operation-state store, and
-  module outbox dispatcher services. Non-EF provider details stay
-  provider-owned.
+  module outbox dispatcher services. `IDurableOperationReader` aggregates those
+  module-owned operation-state stores only and does not delegate to root-level
+  operation readers or root-level operation-state stores. Non-EF provider
+  details stay provider-owned.
 - Stable docs: applied to module architecture, persistence architecture, core
   persistence, EF Core persistence, PostgreSQL EF persistence, non-EF
   PostgreSQL persistence, and setup guidance.
@@ -183,13 +207,15 @@ durable messaging toward module-owned provider helpers.
   module outbox dispatcher selection. PostgreSQL EF integration tests prove the
   supported single-root fallback path for command send outbox/operation-state
   writes and command receive inbox/handler/operation-state writes when no
-  module-owned runtime registrations are present. Runtime tests prove unrelated
-  EF DbContext and non-EF PostgreSQL session dependencies are not resolved
-  while another module executes.
+  module-owned runtime registrations are present. Operation-reader tests prove
+  reads aggregate module-owned operation-state stores and ignore root operation
+  reader/store registrations. Runtime tests prove unrelated EF DbContext and
+  non-EF PostgreSQL session dependencies are not resolved while another module
+  executes.
 - Pending or deferred: a broader provider-owned metadata registry, resolver
-  consolidation, keyed DI model, or fallback-service retirement remains future
-  compatibility/API work and should be handled with ADR 0046 or a later
-  focused ADR.
+  consolidation, keyed DI model, or retirement of the remaining fallback
+  resolver paths remains future compatibility/API work and should be handled
+  with ADR 0046 or a later focused ADR.
 
 ## Verification
 
@@ -206,3 +232,13 @@ Verified decision application with:
 - `pnpm backend:build`
 - `pnpm backend:test:fast`
 - `dotnet test tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~SingleRootEntityFrameworkCorePersistence"`
+
+The 2026-06-12 operation-read amendment was verified with:
+
+- `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --filter "FullyQualifiedName~DurableOperationReaderTests"`
+- `dotnet test tests/Bondstone.Persistence.EntityFrameworkCore.Tests/Bondstone.Persistence.EntityFrameworkCore.Tests.csproj --configuration Release --filter "FullyQualifiedName~BondstoneEntityFrameworkCoreServiceCollectionExtensionsTests"`
+- `dotnet test tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --filter "FullyQualifiedName~BondstonePostgreSqlServiceCollectionExtensionsTests"`
+- `dotnet build Bondstone.slnx --configuration Release --no-restore`
+- `pnpm backend:test`
+- `pnpm format:check`
+- `pnpm check`

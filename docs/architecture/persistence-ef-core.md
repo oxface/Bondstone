@@ -51,18 +51,17 @@ provider-neutral EF Core implementations for:
 - `IDurableOutboxWriter`;
 - `IDurableInboxStore`;
 - `IDurableOperationStateStore`;
-- `IDurableOperationReader`;
 - `IEntityFrameworkCorePersistenceScope`.
 
 The registration uses the consumer-owned DbContext type and stays
 provider-neutral. It does not configure a database provider, migrations, hosted
 dispatchers, locks, or retries.
 
-Those root-level services can also serve the advanced non-module fallback path
-when no module-owned durable runtime registrations are registered. Normal
-durable module-boundary setup should prefer provider-specific module helpers so
-source-module sends and target-module receives use the owning module
-persistence boundary.
+Those root-level services can also serve advanced non-module fallback write and
+receive paths when no module-owned durable runtime registrations are
+registered. Normal durable module-boundary setup should prefer
+provider-specific module helpers so source-module sends, target-module
+receives, and operation reads use the owning module persistence boundary.
 
 Service registration and model mapping remain separate. Registering the EF
 Core durable stores does not force every DbContext model to map every
@@ -92,9 +91,9 @@ Source-module sends stage outgoing outbox rows and caller-supplied `Pending`
 operation state through the source module `DbContext`. Target-module receives
 stage inbox markers, handler state, successful `Completed` operation state,
 and any outgoing outbox rows through the target module `DbContext`.
-`IDurableOperationReader` can aggregate operation states across configured
-module stores and returns completed state ahead of pending state for the same
-operation id.
+`IDurableOperationReader` aggregates operation states across configured module
+stores and returns completed state ahead of pending state for the same
+operation id. It does not use root-level EF operation stores as a read fallback.
 
 `EntityFrameworkCoreDurableOutboxWriter<TDbContext>` stages outgoing outbox
 messages in the current EF Core `DbContext`. It does not call

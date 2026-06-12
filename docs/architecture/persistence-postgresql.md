@@ -45,9 +45,11 @@ already-received unprocessed rows.
 consumer-owned DbContext and composes the provider-neutral EF registrations,
 including the EF persistence scope and neutral inbox handler executor.
 
-Those root-level services may be used for advanced single-store fallback
-composition when no module-owned durable persistence services are registered,
-but they are not the preferred module-boundary path.
+Those root-level services may be used for advanced single-store fallback write
+and receive composition when no module-owned durable persistence services are
+registered, but they are not the preferred module-boundary path. Operation
+reads use module-owned operation-state stores and do not fall back to root EF
+operation readers or stores.
 
 For module-owned durable persistence,
 `module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: ...)`
@@ -98,8 +100,8 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
 - schema-aware provider registration and composition with the EF persistence
   scope.
 - single-root EF fallback composition where root PostgreSQL EF services handle
-  outbox, inbox, and operation-state persistence when modules declare EF
-  persistence but no module-owned durable persistence services are registered.
+  outbox, inbox, and operation-state writes when modules declare EF persistence
+  but no module-owned durable persistence services are registered.
 
 Follow-up PostgreSQL ideas that are outside the current contract are tracked
 in [../backlog/00-plans.md](../backlog/00-plans.md).

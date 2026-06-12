@@ -8,6 +8,11 @@ public sealed class DurableModuleOutboxDispatcherRegistration
 {
     private readonly Func<IServiceProvider, IDurableOutboxDispatcher> _createDispatcher;
 
+    /// <remarks>
+    /// The factory runs inside the current DI scope for the selected module.
+    /// It should return a lightweight wrapper over DI-owned scoped services and
+    /// should not create owned disposable resources outside DI ownership.
+    /// </remarks>
     public DurableModuleOutboxDispatcherRegistration(
         string moduleName,
         Func<IServiceProvider, IDurableOutboxDispatcher> createDispatcher)

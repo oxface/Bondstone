@@ -2,7 +2,6 @@ using Bondstone.Persistence.EntityFrameworkCore.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
-using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -37,7 +36,6 @@ public sealed class BondstoneEntityFrameworkCoreServiceCollectionExtensionsTests
         AssertContainsScoped<
             IDurableOperationStateStore,
             EntityFrameworkCoreDurableOperationStateStore<EntityFrameworkCoreTestDbContext>>(services);
-        AssertContainsScopedFactory<IDurableOperationReader>(services);
         AssertContainsScoped<
             IEntityFrameworkCorePersistenceScope,
             EntityFrameworkCorePersistenceScope<EntityFrameworkCoreTestDbContext>>(services);

@@ -26,16 +26,28 @@ internal sealed class DurableOperationReaderFallback : IDisposable, IAsyncDispos
             return;
         }
 
-        _disposed = true;
         if (!_ownsReader || !_reader.IsValueCreated)
         {
+            _disposed = true;
             return;
         }
 
-        if (_reader.Value is IDisposable disposable)
+        IDurableOperationReader? reader = _reader.Value;
+        if (reader is IDisposable disposable)
         {
             disposable.Dispose();
+            _disposed = true;
+            return;
         }
+
+        if (reader is IAsyncDisposable)
+        {
+            throw new InvalidOperationException(
+                $"Fallback durable operation reader type '{reader.GetType().FullName}' only implements "
+                + $"{nameof(IAsyncDisposable)}. Dispose the scope or service provider asynchronously.");
+        }
+
+        _disposed = true;
     }
 
     public async ValueTask DisposeAsync()
@@ -51,13 +63,14 @@ internal sealed class DurableOperationReaderFallback : IDisposable, IAsyncDispos
             return;
         }
 
-        if (_reader.Value is IAsyncDisposable asyncDisposable)
+        IDurableOperationReader? reader = _reader.Value;
+        if (reader is IAsyncDisposable asyncDisposable)
         {
             await asyncDisposable.DisposeAsync();
             return;
         }
 
-        if (_reader.Value is IDisposable disposable)
+        if (reader is IDisposable disposable)
         {
             disposable.Dispose();
         }

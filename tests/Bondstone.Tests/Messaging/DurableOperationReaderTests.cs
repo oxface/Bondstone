@@ -250,6 +250,59 @@ public sealed class DurableOperationReaderTests
         Assert.False(fallbackReader.Disposed);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetStateAsync_WhenAsyncDisposableRootReaderWasRegisteredBeforeBondstone_DisposesFallbackWithAsyncScope()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var capture = new AsyncDisposableReaderCapture();
+        var services = new ServiceCollection();
+        services.AddScoped<IDurableOperationReader>(_ => capture.Create());
+        services.AddBondstone(_ => { });
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        AsyncDisposableOperationReader fallbackReader;
+        await using (AsyncServiceScope scope = serviceProvider.CreateAsyncScope())
+        {
+            DurableOperationState? state = await scope.ServiceProvider
+                .GetRequiredService<IDurableOperationReader>()
+                .GetStateAsync(durableOperationId);
+
+            Assert.NotNull(state);
+            Assert.Equal(DurableOperationStatus.Completed, state.Status);
+            fallbackReader = Assert.Single(capture.Readers);
+            Assert.Equal(1, fallbackReader.ReadCount);
+            Assert.False(fallbackReader.DisposedAsync);
+        }
+
+        Assert.True(fallbackReader.DisposedAsync);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetStateAsync_WhenAsyncDisposableRootReaderWasRegisteredBeforeBondstone_RequiresAsyncScopeDisposal()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var capture = new AsyncDisposableReaderCapture();
+        var services = new ServiceCollection();
+        services.AddScoped<IDurableOperationReader>(_ => capture.Create());
+        services.AddBondstone(_ => { });
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IDurableOperationReader>()
+            .GetStateAsync(durableOperationId);
+
+        AsyncDisposableOperationReader fallbackReader = Assert.Single(capture.Readers);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            scope.Dispose);
+
+        Assert.Contains(nameof(IAsyncDisposable), exception.Message, StringComparison.Ordinal);
+        Assert.Contains("asynchronously", exception.Message, StringComparison.Ordinal);
+        Assert.False(fallbackReader.DisposedAsync);
+    }
+
     private static ServiceProvider CreateServiceProvider(
         params object[] storesOrReaders)
     {
@@ -357,6 +410,43 @@ public sealed class DurableOperationReaderTests
             var reader = new DisposableOperationReader();
             Readers.Add(reader);
             return reader;
+        }
+    }
+
+    private sealed class AsyncDisposableReaderCapture
+    {
+        public List<AsyncDisposableOperationReader> Readers { get; } = [];
+
+        public AsyncDisposableOperationReader Create()
+        {
+            var reader = new AsyncDisposableOperationReader();
+            Readers.Add(reader);
+            return reader;
+        }
+    }
+
+    private sealed class AsyncDisposableOperationReader : IDurableOperationReader, IAsyncDisposable
+    {
+        public int ReadCount { get; private set; }
+
+        public bool DisposedAsync { get; private set; }
+
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            ReadCount++;
+            return ValueTask.FromResult<DurableOperationState?>(
+                new DurableOperationState(
+                    durableOperationId,
+                    DurableOperationStatus.Completed,
+                    DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")));
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            DisposedAsync = true;
+            return ValueTask.CompletedTask;
         }
     }
 

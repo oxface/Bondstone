@@ -90,6 +90,49 @@ new owned disposable resources that the DI scope cannot dispose. A broader
 provider capability registry, keyed DI model, or fallback retirement remains
 future compatibility/API work.
 
+## Amendment 2026-06-11: Durable Runtime Registrations Use A Registry
+
+This amendment narrows the storage detail of the runtime factory registration
+decision above without replacing it. Provider module helpers still contribute
+passive runtime registrations with module names and factories, but those
+registrations are stored in a provider-neutral
+`DurableModulePersistenceRegistrationRegistry` rather than as individual
+service descriptors.
+
+`IServiceProvider` remains the factory input for creating the selected
+module-owned writer, inbox executor, operation-state store, or outbox
+dispatcher in the current execution scope. DI is not the metadata store for
+individual module-owned durable runtime registrations.
+
+Provider packages use Bondstone's advanced service-collection helper to get or
+create the shared durable module persistence registration registry. This keeps
+registry ownership, default-instance validation, and module outbox dispatcher
+aggregation as Bondstone-owned composition rules rather than provider-local
+copies.
+
+The registry rejects duplicate registrations for the same module durable role
+when provider setup adds them. Runtime map validation remains defensive, but
+provider composition errors should fail as close to registration as possible.
+
+## Amendment 2026-06-12: Module Outbox Dispatchers Use Registry Factories
+
+Module outbox dispatchers are module-owned durable runtime services and use
+the same passive registration pattern as module outbox writers, inbox handler
+executors, and operation-state stores.
+
+Provider module persistence setup contributes a
+`DurableModuleOutboxDispatcherRegistration` with module name and factory to
+`DurableModulePersistenceRegistrationRegistry`. The aggregate outbox
+dispatcher reads those registrations and creates dispatchers from the current
+scope only when dispatching. Bondstone no longer stores individual module
+outbox dispatcher executable services in host DI or selects them through
+`IEnumerable<T>`.
+
+The process-level `IDurableOutboxDispatcher` service remains the public
+dispatch surface. It may be the aggregate dispatcher for module-owned
+persistence or a custom host dispatcher. Individual provider dispatchers are
+created from registry factories and implement the normal dispatcher contract.
+
 ## Consequences
 
 The current public module registration shape remains stable for existing
@@ -122,9 +165,11 @@ durable messaging toward module-owned provider helpers.
   `UsePersistence(...)` or provider-specific module helpers. The provider name
   is the active module persistence marker. EF Core module persistence also
   records the module `DbContext` type. Provider-specific module helpers
-  contribute passive durable module runtime registrations with module names and
-  scoped factories for executable writer, inbox executor, and operation-state
-  store services. Non-EF provider details stay provider-owned.
+  contribute passive durable module runtime registrations into
+  `DurableModulePersistenceRegistrationRegistry` with module names and scoped
+  factories for executable writer, inbox executor, operation-state store, and
+  module outbox dispatcher services. Non-EF provider details stay
+  provider-owned.
 - Stable docs: applied to module architecture, persistence architecture, core
   persistence, EF Core persistence, PostgreSQL EF persistence, non-EF
   PostgreSQL persistence, and setup guidance.
@@ -133,10 +178,9 @@ durable messaging toward module-owned provider helpers.
   composition additions are documented in this ADR and stable persistence docs.
 - Application evidence: current code stores provider name and optional context
   type in `BondstoneModuleRegistration`; uses passive durable module runtime
-  registrations for command/event execution writer, inbox executor, and
-  operation-state store selection; and keeps module outbox dispatchers as
-  executable services because dispatch aggregation intentionally enumerates
-  local module dispatchers. PostgreSQL EF integration tests prove the
+  registrations stored in `DurableModulePersistenceRegistrationRegistry` for
+  command/event execution writer, inbox executor, operation-state store, and
+  module outbox dispatcher selection. PostgreSQL EF integration tests prove the
   supported single-root fallback path for command send outbox/operation-state
   writes and command receive inbox/handler/operation-state writes when no
   module-owned runtime registrations are present. Runtime tests prove unrelated

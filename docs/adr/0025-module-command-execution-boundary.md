@@ -173,6 +173,13 @@ extension should continue to use `IModuleCommandPipelineBehavior<TCommand>`
 and `IModuleEventSubscriberPipelineBehavior<TEvent>` for validation, logging,
 authorization, auditing, and similar handler concerns.
 
+2026-06-11 supersession note: the passive runtime pipeline contribution
+amendment below replaces this compatibility posture for pre-stable provider
+runtime composition. The dedicated system behavior interfaces were removed,
+and provider/runtime behavior now contributes passive pipeline records while
+executable behavior implements the ordinary command or event subscriber
+pipeline behavior contracts.
+
 Provider packages continue to contribute transaction and persistence-related
 system behavior through their provider setup. Current EF Core and direct
 PostgreSQL transaction behaviors remain globally registered generic system
@@ -221,6 +228,77 @@ logic, while the module execution context is still active, and before the
 transaction-owned `SaveChangesAsync` and commit. Clearing pending domain
 events remains transaction-owned success behavior: sources are cleared only
 after staging, save, and commit all succeed.
+
+## Amendment 2026-06-11: Passive Runtime Pipeline Contributions
+
+This amendment supersedes the runtime composition parts of the same-day
+capability contribution amendment without rewriting the historical text above.
+Bondstone module command and event subscriber runtime behavior is now assembled
+from passive pipeline contribution records rather than by resolving
+`IEnumerable<T>` of executable system or capability behavior implementations.
+
+Core runtime, provider packages, and optional capability bridge packages
+contribute named command and event subscriber pipeline records into Bondstone's
+module/runtime registration metadata. A contribution declares:
+
+- whether it is a system or capability step;
+- its framework/provider-owned order;
+- the module metadata it applies to;
+- how to create the executable behavior after the planner selects it.
+
+The planner loads the executing module registration, reads that module's
+runtime contributions plus core framework contributions, filters passive
+contributions by module metadata such as persistence provider or capability
+opt-in, orders selected runtime steps, and only then creates the executable
+behavior through the contribution factory. `IServiceProvider` remains the
+object factory, but it is not the contribution store or module/provider
+selector.
+
+Selected runtime contributions for a module pipeline must have unique names
+and unique numeric order values. System and capability steps share the same
+runtime order space so execution never falls back to DI or registration order
+for ties.
+
+Normal application extension remains ordinary DI registration of
+`IModuleCommandPipelineBehavior<TCommand>` and
+`IModuleEventSubscriberPipelineBehavior<TEvent>`. Application behavior runs
+after selected runtime contributions and in DI registration order. Module
+scoped or per-command user behavior registration remains deferred until a
+concrete application need proves it.
+
+Provider transaction behavior is contributed from module provider opt-in
+rather than global self-filtering behavior implementations. EF Core
+transaction behavior is attached by EF Core module persistence setup and
+selected only for modules that declare EF Core persistence; direct PostgreSQL
+transaction behavior follows the same pattern for modules that declare the
+direct PostgreSQL provider. Optional EF domain event persistence contributes
+capability runtime steps only for modules that explicitly opt into that bridge
+and declare EF Core persistence.
+
+## Amendment 2026-06-12: Module-Scoped Command Validators
+
+Command validator registration is module-owned runtime metadata, not global DI
+selection by command CLR type.
+
+The public `module.Commands.RegisterValidator<TCommand, TValidator>()` API and
+command assembly scanning hang off module setup. That shape implies the
+validator belongs to the configured module. Bondstone therefore records
+validators by module name and command type during module registration. During
+command execution, the built-in validation step reads the executing route's
+module and creates only validators registered for that module and command
+type.
+
+DI remains the construction mechanism for validator implementation types, but
+it is not the selector. Bondstone should not resolve
+`IEnumerable<ICommandValidator<TCommand>>` from the host container because two
+modules may intentionally use the same command CLR type with different
+module-local validators.
+
+Command validation is now a Bondstone system contribution in the command
+runtime plan. Normal user application behaviors remain ordinary
+`IModuleCommandPipelineBehavior<TCommand>` registrations in DI and run after
+selected runtime contributions. Module-scoped user application behavior
+registration remains deferred.
 
 ## Consequences
 
@@ -271,17 +349,18 @@ additional ADR review or amendments.
   scoped module command executor, module durable-messaging capability metadata,
   module durable sending execution context, module persistence capability
   metadata, source-module scoped durable command sending, ordered system
-  pipeline behavior for Bondstone-owned runtime concerns, internal runtime
-  pipeline planners that assemble command and event subscriber system steps
-  before application steps, explicit receive inbox records on module command
-  execution, execution results carrying inbox outcomes, receive-side inbox
-  system behavior, and a validation pipeline behavior.
+  pipeline contribution records stored in Bondstone runtime metadata for
+  Bondstone-owned runtime concerns, internal runtime pipeline planners that
+  select system and capability contributions by module metadata before
+  application steps, explicit receive inbox records on
+  module command execution, execution results carrying inbox outcomes,
+  receive-side inbox runtime behavior, and a validation pipeline behavior.
   `Bondstone.EntityFrameworkCore` now adds module-owned EF persistence opt-in
-  and an EF transaction system pipeline behavior for modules that declare EF
+  and EF transaction pipeline contributions for modules that declare EF
   persistence. `Bondstone.Persistence.Postgres` contributes equivalent
-  transaction system behavior for modules that declare direct PostgreSQL
-  persistence. Rebus-specific transport application has been superseded by
-  ADR 0036; current command receive dispatch is exposed through
+  transaction pipeline contributions for modules that declare direct PostgreSQL
+  persistence. Rebus-specific transport application has been superseded by ADR
+  0036; current command receive dispatch is exposed through
   provider-neutral receive pipelines and the direct Local, RabbitMQ, and Azure
   Service Bus adapters.
 - Stable docs: Current module command direction is described in
@@ -299,9 +378,9 @@ additional ADR review or amendments.
   registration, module-provided registration, assembly scanning, validation,
   regular command execution, durable command execution, route lookup, stable
   handler identity defaulting, module execution context, source-module scoped
-  durable command sending, ordered system pipeline behavior, module
-  execution results, explicit receive inbox records, receive-side inbox system
-  behavior, module persistence metadata, EF module persistence opt-in, EF
+  durable command sending, ordered runtime pipeline contributions, module
+  execution results, explicit receive inbox records, receive-side inbox
+  runtime behavior, module persistence metadata, EF module persistence opt-in, EF
   command transaction/save behavior, and provider-neutral module command
   receive dispatch. Local, RabbitMQ, and Service Bus transports bind
   provider-native receive topology to the neutral command receive pipeline
@@ -312,19 +391,30 @@ additional ADR review or amendments.
   `UseDurableMessaging` capability state, and module persistence capability
   state through `IBondstoneModuleRegistry`. Internal command and event
   subscriber pipeline planners preserve existing behavior ordering with fast
-  unit coverage.
-- Pending or deferred: A new public provider-step or capability-step
-  contribution API, named system step slots, module-scoped application
-  behavior registration, richer operation-state transition policy, receive
-  retry state, stale receive recovery, and additional service-extraction
+  unit coverage. Core, EF Core persistence, direct PostgreSQL persistence, and
+  EF domain-event persistence now register passive pipeline contributions in
+  Bondstone runtime/module metadata rather than globally enumerable executable
+  runtime behavior.
+- Pending or deferred: Public named system step slots, module-scoped
+  application behavior registration, richer operation-state transition policy,
+  receive retry state, stale receive recovery, and additional service-extraction
   examples remain separate future decisions. Domain Events runtime behavior is
-  narrowed to EF provider-owned behavior with a module opt-in; implementation
-  remains pending in the Domain Events backlog.
+  narrowed to EF provider-owned persistence behavior with a module opt-in;
+  local domain-event handler dispatch remains deferred.
 
 ## Verification
 
 2026-06-11 amendment: read back this ADR and affected stable docs/backlog
 entries. Ran `pnpm format:check`.
+
+2026-06-11 passive runtime contribution amendment: read back this ADR and
+affected stable docs. Updated module command and event subscriber planners,
+core runtime registrations, EF Core persistence, direct PostgreSQL
+persistence, and EF domain event persistence to use passive pipeline
+contributions stored in Bondstone runtime metadata. Added tests proving
+runtime ordering and non-applicable contributions are not instantiated. Ran `pnpm backend:build` during
+implementation and final verification with `pnpm format:check`,
+`pnpm backend:build`, and `pnpm backend:test:fast`.
 
 Read back affected architecture docs and ran:
 

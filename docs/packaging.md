@@ -46,8 +46,9 @@ bus, a durable messaging package, or a provider runtime package.
 
 `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` is the first
 provider bridge for that capability. It owns EF Core change-tracker
-collection, EF domain event record mapping, and the system pipeline behavior
-that stages and clears domain events around observed EF module transactions.
+collection, EF domain event record mapping, and the capability pipeline
+contribution that stages and clears domain events around observed EF module
+transactions.
 
 `Bondstone.Persistence` contains provider-neutral durable persistence
 contracts and records: durable envelopes, trace context, operation state,
@@ -116,11 +117,11 @@ contracts, receive pipeline contracts, result types, options, and documented
 diagnostic shapes.
 
 Some public low-level persistence, transport, receive, dispatcher, resolver,
-and concrete provider types remain available for advanced composition, tests,
-custom schedulers, and app-owned provider consumers. Their visibility does not
-automatically make them the preferred setup path or an open-ended extension
-point. Stable docs should steer normal users to the builder and module-owned
-helpers first.
+module pipeline contribution, module pipeline behavior, and concrete provider
+types remain available for advanced composition, tests, custom schedulers, and
+app-owned provider consumers. Their visibility does not automatically make
+them the preferred setup path or an open-ended extension point. Stable docs
+should steer normal users to the builder and module-owned helpers first.
 
 After publication, broad public type removal, visibility reduction, renaming,
 or parameter-name churn is compatibility-sensitive. Do not perform that work

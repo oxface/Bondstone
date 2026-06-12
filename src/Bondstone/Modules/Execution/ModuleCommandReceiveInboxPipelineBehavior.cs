@@ -5,13 +5,11 @@ namespace Bondstone.Modules;
 
 internal sealed class ModuleCommandReceiveInboxPipelineBehavior<TCommand>(
     DurableModuleInboxHandlerExecutorResolver inboxHandlerExecutorResolver)
-    : IModuleCommandSystemPipelineBehavior<TCommand>
+    : IModuleCommandPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly DurableModuleInboxHandlerExecutorResolver _inboxHandlerExecutorResolver =
         inboxHandlerExecutorResolver ?? throw new ArgumentNullException(nameof(inboxHandlerExecutorResolver));
-
-    public int Order => ModuleCommandSystemPipelineOrder.ReceiveInbox;
 
     public async ValueTask HandleAsync(
         TCommand command,

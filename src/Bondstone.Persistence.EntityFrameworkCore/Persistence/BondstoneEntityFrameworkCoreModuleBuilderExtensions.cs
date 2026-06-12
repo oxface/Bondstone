@@ -17,22 +17,38 @@ public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
             EntityFrameworkCoreModulePersistence.ProviderName,
             typeof(TDbContext));
         module.Services.AddBondstoneEntityFrameworkCorePersistence<TDbContext>();
-        module.Services.TryAddEntityFrameworkCoreModuleTransactionSystemBehaviors();
+        module.TryAddEntityFrameworkCoreModuleTransactionSystemBehaviors();
 
         return module;
     }
 
     private static void TryAddEntityFrameworkCoreModuleTransactionSystemBehaviors(
-        this IServiceCollection services)
+        this BondstoneModuleBuilder module)
     {
-        services.TryAddScoped(serviceProvider =>
+        module.Services.TryAddScoped(serviceProvider =>
             new EntityFrameworkCoreModuleRuntimeRegistry(
                 serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleCommandSystemPipelineBehavior<>),
-            typeof(EntityFrameworkCoreModuleTransactionBehavior<>)));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleEventSubscriberSystemPipelineBehavior<>),
-            typeof(EntityFrameworkCoreModuleEventSubscriberTransactionBehavior<>)));
+        module.AddCommandPipelineContribution(
+            new ModuleCommandPipelineContribution(
+                "Bondstone.Persistence.EntityFrameworkCore.Command.Transaction",
+                ModulePipelineStepKind.System,
+                ModuleCommandSystemPipelineOrder.Transaction,
+                typeof(EntityFrameworkCoreModuleTransactionBehavior<>),
+                UsesEntityFrameworkCorePersistence));
+        module.AddEventSubscriberPipelineContribution(
+            new ModuleEventSubscriberPipelineContribution(
+                "Bondstone.Persistence.EntityFrameworkCore.EventSubscriber.Transaction",
+                ModulePipelineStepKind.System,
+                ModuleEventSubscriberSystemPipelineOrder.Transaction,
+                typeof(EntityFrameworkCoreModuleEventSubscriberTransactionBehavior<>),
+                UsesEntityFrameworkCorePersistence));
+    }
+
+    private static bool UsesEntityFrameworkCorePersistence(BondstoneModuleRegistration module)
+    {
+        return module.UsesPersistence
+            && StringComparer.Ordinal.Equals(
+                module.PersistenceProviderName,
+                EntityFrameworkCoreModulePersistence.ProviderName);
     }
 }

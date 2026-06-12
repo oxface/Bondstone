@@ -12,7 +12,7 @@ public sealed class PostgresModuleDurableOutboxDispatcher(
     IDurableOutboxFailurePolicy failurePolicy,
     TimeProvider? timeProvider = null,
     string? schema = null)
-    : IDurableModuleOutboxDispatcher
+    : IDurableOutboxDispatcher
 {
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 

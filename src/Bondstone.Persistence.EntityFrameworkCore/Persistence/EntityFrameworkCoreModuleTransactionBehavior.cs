@@ -6,14 +6,12 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Persistence;
 internal sealed class EntityFrameworkCoreModuleTransactionBehavior<TCommand>(
     IServiceProvider serviceProvider,
     EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry)
-    : IModuleCommandSystemPipelineBehavior<TCommand>
+    : IModuleCommandPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly EntityFrameworkCoreModuleTransactionRunner _transactionRunner = new(
         serviceProvider,
         moduleRuntimeRegistry);
-
-    public int Order => ModuleCommandSystemPipelineOrder.Transaction;
 
     public async ValueTask HandleAsync(
         TCommand command,

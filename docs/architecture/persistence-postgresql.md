@@ -54,22 +54,24 @@ For module-owned durable persistence,
 is the preferred setup shape. It records EF module persistence metadata and
 binds PostgreSQL durable components for that module's EF context. Root-level
 `UsePostgreSqlPersistence<TDbContext>(moduleName, connectionString, schema:
-...)` remains available for compatibility and advanced composition. Those
+...)` delegates to the same module-level setup for the named module. Those
 module bindings provide source-module outbox writing, target-module inbox
-handling, target-module operation-state persistence, and per-module outbox
-dispatch. The app-facing dispatcher can aggregate dispatch results across
-configured local module outboxes while each underlying claim, lease, and
-dispatch-record update remains scoped to one module's PostgreSQL tables. The
-aggregate worker topology does not change PostgreSQL ownership: module
-dispatchers still perform provider-specific claim, lease renewal, and outcome
-recording for their module, while the aggregate dispatcher only chooses the
-sequential call order and shared batch budget.
+handling, target-module operation-state persistence, transaction pipeline
+participation, and per-module outbox dispatch. The app-facing dispatcher can
+aggregate dispatch results across configured local module outboxes while each
+underlying claim, lease, and dispatch-record update remains scoped to one
+module's PostgreSQL tables. The aggregate worker topology does not change
+PostgreSQL ownership: module dispatchers still perform provider-specific
+claim, lease renewal, and outcome recording for their module, while the
+aggregate dispatcher only chooses the sequential call order and shared batch
+budget.
 
 Command and receive execution use passive durable module runtime registrations
-for the module writer, inbox executor, and operation-state store. Those
-registrations carry the module name and create EF-backed executable services
-only for the selected module inside the current DI scope, so resolving another
-module's runtime metadata does not construct this module's `DbContext`.
+for the module writer, inbox executor, and operation-state store stored in
+`DurableModulePersistenceRegistrationRegistry`. Those registrations carry the
+module name and create EF-backed executable services only for the selected
+module inside the current DI scope, so resolving another module's runtime
+metadata does not construct this module's `DbContext`.
 
 Application code should prefer this module-aware setup helper over directly
 registering provider-facing durable module runtime registrations.

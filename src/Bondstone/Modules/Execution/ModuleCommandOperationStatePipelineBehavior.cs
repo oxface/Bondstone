@@ -7,15 +7,13 @@ namespace Bondstone.Modules;
 internal sealed class ModuleCommandOperationStatePipelineBehavior<TCommand>(
     IServiceProvider serviceProvider,
     DurableModuleOperationStateStoreResolver operationStateStoreResolver)
-    : IModuleCommandSystemPipelineBehavior<TCommand>
+    : IModuleCommandPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly IServiceProvider _serviceProvider =
         serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     private readonly DurableModuleOperationStateStoreResolver _operationStateStoreResolver =
         operationStateStoreResolver ?? throw new ArgumentNullException(nameof(operationStateStoreResolver));
-
-    public int Order => ModuleCommandSystemPipelineOrder.OperationState;
 
     public async ValueTask HandleAsync(
         TCommand command,

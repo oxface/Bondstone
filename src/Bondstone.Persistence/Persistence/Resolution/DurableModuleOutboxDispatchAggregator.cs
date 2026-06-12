@@ -3,14 +3,15 @@ using Bondstone.Utility;
 namespace Bondstone.Persistence;
 
 public sealed class DurableModuleOutboxDispatchAggregator(
-    IEnumerable<IDurableModuleOutboxDispatcher> moduleDispatchers)
+    IServiceProvider serviceProvider,
+    DurableModulePersistenceRegistrationRegistry persistenceRegistrationRegistry)
     : IDurableOutboxDispatcher
 {
-    private readonly IDurableModuleOutboxDispatcher[] _moduleDispatchers =
-        DurableModulePersistenceRegistrationValidator.ToValidatedArray(
-            moduleDispatchers,
-            static dispatcher => dispatcher.ModuleName,
-            "durable module outbox dispatcher");
+    private readonly IServiceProvider _serviceProvider =
+        serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+    private readonly DurableModuleOutboxDispatcherRegistration[] _dispatcherRegistrations =
+        persistenceRegistrationRegistry?.OutboxDispatcherRegistrations.ToArray()
+        ?? throw new ArgumentNullException(nameof(persistenceRegistrationRegistry));
 
     public async ValueTask<DurableOutboxDispatchResult> DispatchAsync(
         string claimedBy,
@@ -36,7 +37,7 @@ public sealed class DurableModuleOutboxDispatchAggregator(
                 "Maximum dispatch count must be positive.");
         }
 
-        if (_moduleDispatchers.Length == 0)
+        if (_dispatcherRegistrations.Length == 0)
         {
             throw new InvalidOperationException("No module durable outbox dispatchers are registered.");
         }
@@ -47,7 +48,7 @@ public sealed class DurableModuleOutboxDispatchAggregator(
         var terminalFailedCount = 0;
         var staleCount = 0;
 
-        foreach (IDurableModuleOutboxDispatcher dispatcher in _moduleDispatchers)
+        foreach (DurableModuleOutboxDispatcherRegistration registration in _dispatcherRegistrations)
         {
             int remainingCount = maxCount - claimedCount;
             if (remainingCount <= 0)
@@ -55,6 +56,7 @@ public sealed class DurableModuleOutboxDispatchAggregator(
                 break;
             }
 
+            IDurableOutboxDispatcher dispatcher = registration.CreateDispatcher(_serviceProvider);
             DurableOutboxDispatchResult result = await dispatcher.DispatchAsync(
                 normalizedClaimedBy,
                 leaseDuration,

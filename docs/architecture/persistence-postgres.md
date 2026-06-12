@@ -50,6 +50,9 @@ module.UseDurableMessaging();
 module.UsePostgresPersistence(connectionString, schema: "billing");
 ```
 
+The builder-level `UsePostgresPersistence(moduleName, connectionString, ...)`
+overload delegates to the same module-level setup for the named module.
+
 Handlers that need application SQL can take `IPostgresModuleSession` and
 execute commands through the current connection and transaction.
 
@@ -58,10 +61,11 @@ operation state, and outgoing outbox rows. The low-level inbox executor only
 stages receive-side work inside that transaction.
 
 The provider contributes passive durable module runtime registrations for the
-module writer, inbox executor, and operation-state store. Those registrations
-carry the module name and create PostgreSQL executable services only for the
-selected module inside the current DI scope, so resolving another module's
-runtime metadata does not open or resolve this provider's
+module writer, inbox executor, and operation-state store into
+`DurableModulePersistenceRegistrationRegistry`. Those registrations carry the
+module name and create PostgreSQL executable services only for the selected
+module inside the current DI scope, so resolving another module's runtime
+metadata does not open or resolve this provider's
 `IPostgresModuleSession`.
 
 ## Domain Events

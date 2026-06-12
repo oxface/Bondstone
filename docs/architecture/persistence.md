@@ -25,7 +25,7 @@ EF Core components stage data and expose transaction/save boundaries, but they
 do not own transport acknowledgement, retry policy, or a generic mediator.
 Module command execution and module event subscriber execution own handler
 registration; modules that opt into EF persistence get EF transaction
-pipeline behaviors for command handlers and event subscribers.
+runtime pipeline contributions for command handlers and event subscribers.
 Transport-backed receive orchestration belongs in direct provider adapters
 that call the provider-neutral module receive pipelines.
 
@@ -64,14 +64,16 @@ such as schema, session, connection, and SQL configuration in provider-owned
 services.
 
 Provider module helpers contribute passive durable module runtime
-registrations for command and receive execution. Those registrations carry the
-module name plus factories for executable outbox writer, inbox executor, and
-operation-state store services, and the factories run only for the selected
-module inside the current DI scope. Fallback non-module persistence services
-are intentionally supported advanced composition for now. When no
-module-owned durable runtime registrations are registered, core resolvers may
-use root-level outbox writer, inbox handler executor, operation-state store,
-and operation reader services. This is useful for low-level single-store
+registrations into `DurableModulePersistenceRegistrationRegistry` rather than
+registering executable module services directly in DI. Those registrations
+carry the module name plus factories for command and receive execution
+services: outbox writer, inbox executor, and operation-state store. The
+factory for a selected module runs inside the current DI scope only when that
+module needs the service. Fallback non-module persistence services are
+intentionally supported advanced composition for now. When no module-owned
+durable runtime registrations are registered, core resolvers may use
+root-level outbox writer, inbox handler executor, operation-state store, and
+operation reader services. This is useful for low-level single-store
 composition and compatibility tests, but it is not the preferred
 module-boundary setup.
 
@@ -105,8 +107,9 @@ decision accepts a concrete provider bridge contract.
 
 Domain event persistence activation stays narrow. There is no public
 capability-step registry, public named pipeline-slot API, or generic provider
-metadata registry. The `Bondstone.Capabilities.DomainEvents` package contains
-the shared contracts; the
+metadata registry. Capability bridge packages can contribute ordered
+capability pipeline records through their setup APIs. The
+`Bondstone.Capabilities.DomainEvents` package contains the shared contracts; the
 `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` bridge activates
 from a module's EF persistence declaration, an explicit
 `UseEntityFrameworkCoreDomainEventPersistence()` module opt-in, and

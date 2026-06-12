@@ -194,12 +194,49 @@ observed EF commit succeeds. Mapping persisted or pending domain events to
 public integration events remains explicit module code and is deferred from
 this runtime slice.
 
+### 2026-06-11: Capability Pipeline Step Kind
+
+Capability bridge packages now contribute ordered module pipeline behavior
+through capability behavior interfaces rather than registering as core system
+behavior. The planner keeps capability steps distinct from Bondstone system
+steps for diagnostics and future runtime composition, while still ordering
+system and capability steps together by numeric `Order` before normal
+application behavior.
+
+This remains narrower than a broad capability registry or public named pipeline
+slot model. Capability bridge setup APIs still own activation and module
+metadata, and normal user extension remains application pipeline behavior in DI
+registration order.
+
+### 2026-06-11: Capability Runtime Uses Passive Pipeline Contributions
+
+This amendment supersedes the capability behavior interface detail in the
+same-day amendment above without rewriting the historical text. Capability
+bridge packages now contribute passive module pipeline contribution records,
+not executable behavior implementations discovered from global DI enumerable
+resolution. Those records are stored in Bondstone module/runtime registration
+metadata.
+
+The EF domain event bridge registers command and event subscriber capability
+contributions for each opted-in module. The contribution applies only when the
+executing module is the opted-in module and declares EF Core persistence. The
+planner selects that passive contribution before creating the executable EF
+domain event behavior. This keeps capability activation module-scoped without
+adding a broad public capability registry or relying on behavior
+self-filtering as the primary boundary.
+
+Normal user extension remains application pipeline behavior in DI registration
+order. Module-scoped or per-command user behavior registration remains
+deferred to the broader pipeline contribution model accepted in ADR 0025.
+
 ## Related Decisions
 
 - Amends [0051 Package Boundary Split](0051-package-boundary-split.md).
 - Amends [0028 Domain Event Persistence Capability](0028-domain-event-persistence-capability.md).
 - Relates to
   [0050 Module Pipeline Feature Context](0050-module-pipeline-feature-context.md).
+- Relates to
+  [0025 Module Command Execution Boundary](0025-module-command-execution-boundary.md).
 - Relates to
   [0046 Public API Surface Policy](0046-public-api-surface-policy.md).
 
@@ -211,7 +248,7 @@ this runtime slice.
   boundaries are documented in [tests/README.md](../../tests/README.md).
   `IDomainEventHandler<TDomainEvent>` remains a public, future-facing local
   handler contract, but Bondstone does not dispatch it automatically.
-- Stable docs: Domain event capability behavior is described in
+- Stable docs: Domain event capability runtime is described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/persistence.md](../architecture/persistence.md), and
   [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md).
@@ -221,7 +258,9 @@ this runtime slice.
 - Application evidence: Source projects, solution entries, tests, namespaces,
   project references, and stable docs have been updated for
   `Bondstone.Capabilities.DomainEvents` and
-  `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`.
+  `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`. The EF bridge
+  registers module-specific passive capability pipeline contributions through
+  `UseEntityFrameworkCoreDomainEventPersistence()`.
 - Pending or deferred: Broad capability registries, named public pipeline
   slots, non-EF provider bridges, integration-event mapping, old-package
   compatibility shims, automatic local domain-event handler dispatch,
@@ -249,5 +288,11 @@ this runtime slice.
   updated stable architecture docs and package READMEs. Ran focused domain
   event tests, `pnpm format:check`, `pnpm backend:build`, and
   `pnpm backend:test:fast`.
+- 2026-06-11 passive pipeline contribution amendment: updated the EF bridge to
+  register module-specific capability pipeline contributions instead of global
+  executable behavior interfaces. A follow-up tightened the implementation so
+  those contributions live in Bondstone module/runtime metadata rather than
+  the service collection. Updated stable docs and ran `pnpm format:check`,
+  `pnpm backend:build`, and `pnpm backend:test:fast`.
 - `dotnet restore Bondstone.slnx`
 - `dotnet build Bondstone.slnx --configuration Release --no-restore`

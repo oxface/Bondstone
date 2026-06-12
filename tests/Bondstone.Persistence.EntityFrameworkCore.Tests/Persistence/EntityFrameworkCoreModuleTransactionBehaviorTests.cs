@@ -395,7 +395,7 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void UseEntityFrameworkCorePersistence_WhenCalled_RegistersTransactionBehaviorAsSystemBehavior()
+    public void UseEntityFrameworkCorePersistence_WhenCalled_RegistersTransactionBehaviorContributions()
     {
         var services = new ServiceCollection();
 
@@ -407,43 +407,16 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
             });
         });
 
-        Type[] commandSystemBehaviorTypes = services
-            .Where(static descriptor =>
-                descriptor.ServiceType == typeof(IModuleCommandSystemPipelineBehavior<>))
-            .Select(static descriptor => descriptor.ImplementationType!)
-            .ToArray();
-        Type[] eventSystemBehaviorTypes = services
-            .Where(static descriptor =>
-                descriptor.ServiceType == typeof(IModuleEventSubscriberSystemPipelineBehavior<>))
-            .Select(static descriptor => descriptor.ImplementationType!)
-            .ToArray();
-        Type[] applicationBehaviorTypes = services
-            .Where(static descriptor =>
-                descriptor.ServiceType == typeof(IModuleCommandPipelineBehavior<>))
-            .Select(static descriptor => descriptor.ImplementationType!)
-            .ToArray();
-
-        Assert.Contains(
-            commandSystemBehaviorTypes,
-            type => type.FullName == "Bondstone.Persistence.EntityFrameworkCore.Persistence.EntityFrameworkCoreModuleTransactionBehavior`1");
-        Assert.Contains(
-            commandSystemBehaviorTypes,
-            type => type.FullName == "Bondstone.Modules.ModuleExecutionContextPipelineBehavior`1");
-        Assert.Contains(
-            eventSystemBehaviorTypes,
-            type => type.FullName == "Bondstone.Persistence.EntityFrameworkCore.Persistence.EntityFrameworkCoreModuleEventSubscriberTransactionBehavior`1");
-        Assert.Contains(
-            eventSystemBehaviorTypes,
-            type => type.FullName == "Bondstone.Modules.ModuleEventSubscriberExecutionContextPipelineBehavior`1");
-        Assert.Contains(
-            applicationBehaviorTypes,
-            type => type.FullName == "Bondstone.Modules.ValidationModuleCommandPipelineBehavior`1");
         Assert.DoesNotContain(
-            applicationBehaviorTypes,
-            type => type.FullName == "Bondstone.Persistence.EntityFrameworkCore.Persistence.EntityFrameworkCoreModuleTransactionBehavior`1");
+            services,
+            static descriptor => descriptor.ServiceType == typeof(ModuleCommandPipelineContribution));
         Assert.DoesNotContain(
-            applicationBehaviorTypes,
-            type => type.FullName == "Bondstone.Modules.ModuleExecutionContextPipelineBehavior`1");
+            services,
+            static descriptor => descriptor.ServiceType == typeof(ModuleEventSubscriberPipelineContribution));
+        Assert.DoesNotContain(
+            services,
+            static descriptor => descriptor.ServiceType == typeof(IModuleCommandPipelineBehavior<>)
+                && descriptor.ImplementationType?.FullName == "Bondstone.Modules.ValidationModuleCommandPipelineBehavior`1");
     }
 
     [Fact]
@@ -452,14 +425,24 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<CommandCallLog>();
-        services.AddScoped<IModuleCommandSystemPipelineBehavior<StoreHandledCommand>, LateSystemBehavior>();
-        services.AddScoped<IModuleCommandSystemPipelineBehavior<StoreHandledCommand>, EarlySystemBehavior>();
         services.AddScoped<IModuleCommandPipelineBehavior<StoreHandledCommand>, ApplicationBehavior>();
 
         services.AddBondstone(bondstone =>
         {
             bondstone.Module("fulfillment", module =>
             {
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "test.ef.system-late",
+                        ModulePipelineStepKind.System,
+                        10,
+                        typeof(LateSystemBehavior)));
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "test.ef.system-early",
+                        ModulePipelineStepKind.System,
+                        -10,
+                        typeof(EarlySystemBehavior)));
                 module.Commands.RegisterHandler<StoreHandledCommand, LoggingCommandHandler>();
             });
         });
@@ -489,10 +472,8 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
     }
 
     public sealed class EarlySystemBehavior(CommandCallLog log)
-        : IModuleCommandSystemPipelineBehavior<StoreHandledCommand>
+        : IModuleCommandPipelineBehavior<StoreHandledCommand>
     {
-        public int Order => -10;
-
         public async ValueTask HandleAsync(
             StoreHandledCommand command,
             ModuleCommandExecutionContext context,
@@ -506,10 +487,8 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
     }
 
     public sealed class LateSystemBehavior(CommandCallLog log)
-        : IModuleCommandSystemPipelineBehavior<StoreHandledCommand>
+        : IModuleCommandPipelineBehavior<StoreHandledCommand>
     {
-        public int Order => 10;
-
         public async ValueTask HandleAsync(
             StoreHandledCommand command,
             ModuleCommandExecutionContext context,

@@ -17,7 +17,7 @@ public static class BondstonePostgresBuilderExtensions
         module.UsePersistence(PostgresModulePersistence.ProviderName);
         module.Services.AddBondstonePostgresPersistence(connectionString);
         module.Services.AddBondstonePostgresModulePersistence(module.Name, schema);
-        module.Services.TryAddPostgresModuleTransactionSystemBehaviors();
+        module.TryAddPostgresModuleTransactionSystemBehaviors();
         module.UseOutboxPersistenceProvider(PostgresModulePersistence.ProviderName);
 
         return module;
@@ -31,24 +31,40 @@ public static class BondstonePostgresBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        builder.Services.AddBondstonePostgresPersistence(connectionString);
-        builder.Services.AddBondstonePostgresModulePersistence(moduleName, schema);
-        builder.Outbox.MarkPersistenceProvider(PostgresModulePersistence.ProviderName);
-
-        return builder;
+        return builder.Module(
+            moduleName,
+            module => module.UsePostgresPersistence(
+                connectionString,
+                schema));
     }
 
     private static void TryAddPostgresModuleTransactionSystemBehaviors(
-        this IServiceCollection services)
+        this BondstoneModuleBuilder module)
     {
-        services.TryAddScoped(serviceProvider =>
+        module.Services.TryAddScoped(serviceProvider =>
             new PostgresModuleRuntimeRegistry(
                 serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleCommandSystemPipelineBehavior<>),
-            typeof(PostgresModuleTransactionBehavior<>)));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleEventSubscriberSystemPipelineBehavior<>),
-            typeof(PostgresModuleEventSubscriberTransactionBehavior<>)));
+        module.AddCommandPipelineContribution(
+            new ModuleCommandPipelineContribution(
+                "Bondstone.Persistence.Postgres.Command.Transaction",
+                ModulePipelineStepKind.System,
+                ModuleCommandSystemPipelineOrder.Transaction,
+                typeof(PostgresModuleTransactionBehavior<>),
+                UsesPostgresPersistence));
+        module.AddEventSubscriberPipelineContribution(
+            new ModuleEventSubscriberPipelineContribution(
+                "Bondstone.Persistence.Postgres.EventSubscriber.Transaction",
+                ModulePipelineStepKind.System,
+                ModuleEventSubscriberSystemPipelineOrder.Transaction,
+                typeof(PostgresModuleEventSubscriberTransactionBehavior<>),
+                UsesPostgresPersistence));
+    }
+
+    private static bool UsesPostgresPersistence(BondstoneModuleRegistration module)
+    {
+        return module.UsesPersistence
+            && StringComparer.Ordinal.Equals(
+                module.PersistenceProviderName,
+                PostgresModulePersistence.ProviderName);
     }
 }

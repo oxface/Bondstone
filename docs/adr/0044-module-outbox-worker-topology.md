@@ -25,8 +25,8 @@ supported worker topology.
 
 The public worker registration continues to run `DurableOutboxWorker` over the
 app-facing `IDurableOutboxDispatcher`. For module-owned persistence, provider
-registrations can contribute one `IDurableModuleOutboxDispatcher` per module,
-and the app-facing dispatcher can be
+registrations can contribute one module outbox dispatcher registration per
+module, and the app-facing dispatcher can be
 `DurableModuleOutboxDispatchAggregator`.
 
 The aggregate dispatcher contract is intentionally simple:

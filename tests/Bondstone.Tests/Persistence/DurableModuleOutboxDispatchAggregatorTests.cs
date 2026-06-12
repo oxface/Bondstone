@@ -1,4 +1,6 @@
+using Bondstone.Configuration;
 using Bondstone.Persistence;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Bondstone.Tests.Persistence;
@@ -15,8 +17,9 @@ public sealed class DurableModuleOutboxDispatchAggregatorTests
         var fulfillment = new RecordingModuleOutboxDispatcher(
             "fulfillment",
             new DurableOutboxDispatchResult(2, 1, 0, 1, 0));
-        var aggregator = new DurableModuleOutboxDispatchAggregator(
-            [sales, fulfillment]);
+        DurableModuleOutboxDispatchAggregator aggregator = CreateAggregator(
+            sales,
+            fulfillment);
 
         DurableOutboxDispatchResult result = await aggregator.DispatchAsync(
             " worker-1 ",
@@ -50,8 +53,9 @@ public sealed class DurableModuleOutboxDispatchAggregatorTests
         var fulfillment = new RecordingModuleOutboxDispatcher(
             "fulfillment",
             new DurableOutboxDispatchResult(1, 1, 0, 0, 0));
-        var aggregator = new DurableModuleOutboxDispatchAggregator(
-            [sales, fulfillment]);
+        DurableModuleOutboxDispatchAggregator aggregator = CreateAggregator(
+            sales,
+            fulfillment);
 
         DurableOutboxDispatchResult result = await aggregator.DispatchAsync(
             "worker-1",
@@ -76,8 +80,10 @@ public sealed class DurableModuleOutboxDispatchAggregatorTests
         var shipping = new RecordingModuleOutboxDispatcher(
             "shipping",
             new DurableOutboxDispatchResult(1, 1, 0, 0, 0));
-        var aggregator = new DurableModuleOutboxDispatchAggregator(
-            [sales, fulfillment, shipping]);
+        DurableModuleOutboxDispatchAggregator aggregator = CreateAggregator(
+            sales,
+            fulfillment,
+            shipping);
 
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await aggregator.DispatchAsync(
@@ -91,10 +97,29 @@ public sealed class DurableModuleOutboxDispatchAggregatorTests
         Assert.Empty(shipping.Calls);
     }
 
+    private static DurableModuleOutboxDispatchAggregator CreateAggregator(
+        params RecordingModuleOutboxDispatcher[] dispatchers)
+    {
+        var services = new ServiceCollection();
+        DurableModulePersistenceRegistrationRegistry registry =
+            services.GetOrAddDurableModulePersistenceRegistrationRegistry();
+
+        foreach (RecordingModuleOutboxDispatcher dispatcher in dispatchers)
+        {
+            registry.AddOutboxDispatcher(new DurableModuleOutboxDispatcherRegistration(
+                dispatcher.ModuleName,
+                _ => dispatcher));
+        }
+
+        ServiceProvider serviceProvider = services.BuildServiceProvider();
+        return ActivatorUtilities.CreateInstance<DurableModuleOutboxDispatchAggregator>(
+            serviceProvider);
+    }
+
     private sealed class RecordingModuleOutboxDispatcher(
         string moduleName,
         object outcome)
-        : IDurableModuleOutboxDispatcher
+        : IDurableOutboxDispatcher
     {
         public string ModuleName { get; } = moduleName;
 

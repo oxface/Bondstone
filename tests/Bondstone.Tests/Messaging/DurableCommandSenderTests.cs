@@ -249,10 +249,10 @@ public sealed class DurableCommandSenderTests
         var salesWriter = new CapturingModuleOutboxWriter("sales");
         var billingWriter = new CapturingModuleOutboxWriter("billing");
         var services = new ServiceCollection();
-        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
             salesWriter.ModuleName,
             _ => salesWriter));
-        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
             billingWriter.ModuleName,
             _ => billingWriter));
 
@@ -297,13 +297,13 @@ public sealed class DurableCommandSenderTests
         var billingStore = new CapturingModuleOperationStateStore("billing");
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
         var services = new ServiceCollection();
-        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
             salesWriter.ModuleName,
             _ => salesWriter));
-        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+        RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
             salesStore.ModuleName,
             _ => salesStore));
-        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+        RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
             billingStore.ModuleName,
             _ => billingStore));
 
@@ -467,6 +467,22 @@ public sealed class DurableCommandSenderTests
             Envelopes.Add(envelope);
             return ValueTask.CompletedTask;
         }
+    }
+
+    private static void RegisterOutboxWriter(
+        IServiceCollection services,
+        DurableModuleOutboxWriterRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxWriter(registration);
+    }
+
+    private static void RegisterOperationStateStore(
+        IServiceCollection services,
+        DurableModuleOperationStateStoreRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOperationStateStore(registration);
     }
 
     private sealed class CapturingOperationStateStore : IDurableOperationStateStore

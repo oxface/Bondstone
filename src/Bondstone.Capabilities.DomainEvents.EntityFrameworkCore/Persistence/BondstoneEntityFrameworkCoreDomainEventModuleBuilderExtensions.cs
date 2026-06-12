@@ -1,5 +1,6 @@
 using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
 using Bondstone.Modules;
+using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -12,24 +13,38 @@ public static class BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensio
     {
         ArgumentNullException.ThrowIfNull(module);
 
-        module.Services.AddSingleton(new EntityFrameworkCoreDomainEventPersistenceModule(module.Name));
-        module.Services.TryAddEntityFrameworkCoreDomainEventSystemBehaviors();
+        module.TryAddEntityFrameworkCoreDomainEventSystemBehaviors();
 
         return module;
     }
 
     private static void TryAddEntityFrameworkCoreDomainEventSystemBehaviors(
-        this IServiceCollection services)
+        this BondstoneModuleBuilder module)
     {
-        services.TryAddScoped(serviceProvider =>
+        module.Services.TryAddScoped(serviceProvider =>
             new EntityFrameworkCoreDomainEventModuleRuntimeRegistry(
-                serviceProvider.GetRequiredService<IBondstoneModuleRegistry>(),
-                serviceProvider.GetServices<EntityFrameworkCoreDomainEventPersistenceModule>()));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleCommandSystemPipelineBehavior<>),
-            typeof(EntityFrameworkCoreDomainEventModuleCommandBehavior<>)));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleEventSubscriberSystemPipelineBehavior<>),
-            typeof(EntityFrameworkCoreDomainEventModuleEventSubscriberBehavior<>)));
+                serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
+        module.AddCommandPipelineContribution(
+            new ModuleCommandPipelineContribution(
+                "Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Command",
+                ModulePipelineStepKind.Capability,
+                EntityFrameworkCoreDomainEventModulePipelineOrder.Command,
+                typeof(EntityFrameworkCoreDomainEventModuleCommandBehavior<>),
+                AppliesToModule));
+        module.AddEventSubscriberPipelineContribution(
+            new ModuleEventSubscriberPipelineContribution(
+                "Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.EventSubscriber",
+                ModulePipelineStepKind.Capability,
+                EntityFrameworkCoreDomainEventModulePipelineOrder.EventSubscriber,
+                typeof(EntityFrameworkCoreDomainEventModuleEventSubscriberBehavior<>),
+                AppliesToModule));
+    }
+
+    private static bool AppliesToModule(BondstoneModuleRegistration module)
+    {
+        return module.UsesPersistence
+            && StringComparer.Ordinal.Equals(
+                module.PersistenceProviderName,
+                EntityFrameworkCoreModulePersistence.ProviderName);
     }
 }

@@ -4,12 +4,15 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bondstone.Modules;
 
 internal sealed class ValidationModuleCommandPipelineBehavior<TCommand>(
-    IServiceProvider serviceProvider)
+    IServiceProvider serviceProvider,
+    ModuleCommandValidatorRegistry validatorRegistry)
     : IModuleCommandPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly IServiceProvider _serviceProvider =
         serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+    private readonly ModuleCommandValidatorRegistry _validatorRegistry =
+        validatorRegistry ?? throw new ArgumentNullException(nameof(validatorRegistry));
 
     public async ValueTask HandleAsync(
         TCommand command,
@@ -21,8 +24,12 @@ internal sealed class ValidationModuleCommandPipelineBehavior<TCommand>(
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(next);
 
-        foreach (ICommandValidator<TCommand> validator in _serviceProvider.GetServices<ICommandValidator<TCommand>>())
+        foreach (ModuleCommandValidatorRegistration registration in _validatorRegistry.GetValidators(
+            context.ModuleName,
+            typeof(TCommand)))
         {
+            ICommandValidator<TCommand> validator = registration.CreateValidator<TCommand>(
+                _serviceProvider);
             await validator.ValidateAsync(command, ct);
         }
 

@@ -31,6 +31,10 @@ behavior into stable docs, and return any remaining ideas here.
   application-owned until a concrete use case justifies a public provider API;
   consider explicit domain-event-to-integration-event mapping only after
   module-local behavior is proven in real use.
+- User pipeline scoping: normal application behavior remains global DI
+  registration for now. Consider module-scoped, per-command, or per-subscriber
+  behavior registration only after a concrete application concern needs a more
+  explicit setup API.
 - Package compatibility: consider an automated public API baseline before
   stronger compatibility promises or broad public-surface cleanup.
 - Provider storage: consider migration helpers, PostgreSQL payload storage

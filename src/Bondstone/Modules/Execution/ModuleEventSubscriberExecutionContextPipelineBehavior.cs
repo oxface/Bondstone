@@ -4,13 +4,11 @@ namespace Bondstone.Modules;
 
 internal sealed class ModuleEventSubscriberExecutionContextPipelineBehavior<TEvent>(
     ModuleExecutionContextAccessor executionContextAccessor)
-    : IModuleEventSubscriberSystemPipelineBehavior<TEvent>
+    : IModuleEventSubscriberPipelineBehavior<TEvent>
     where TEvent : IIntegrationEvent
 {
     private readonly ModuleExecutionContextAccessor _executionContextAccessor =
         executionContextAccessor ?? throw new ArgumentNullException(nameof(executionContextAccessor));
-
-    public int Order => ModuleEventSubscriberSystemPipelineOrder.ExecutionContext;
 
     public async ValueTask HandleAsync(
         TEvent integrationEvent,

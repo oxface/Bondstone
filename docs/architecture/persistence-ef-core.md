@@ -72,10 +72,11 @@ Bondstone table; callers choose the full or granular mappings in
 Modules opt into EF-backed command and event subscriber transactions with
 `UseEntityFrameworkCorePersistence<TDbContext>` on `BondstoneModuleBuilder`.
 That module-owned registration records EF persistence metadata, reuses the
-provider-neutral EF durable store registrations, and attaches EF system
-pipeline behaviors for modules that declare that capability. System behaviors
-are ordered by the module command and event subscriber runtimes, so the EF
-transaction boundary wraps normal application pipeline behaviors. The host
+provider-neutral EF durable store registrations, and attaches EF runtime
+pipeline contributions for modules that declare that capability. Selected
+runtime behaviors are ordered by the module command and event subscriber
+runtimes, so the EF transaction boundary wraps normal application pipeline
+behaviors. The host
 still owns the environment-specific DbContext provider configuration,
 connection strings, schema policy, and operational topology.
 
@@ -86,7 +87,7 @@ persistence providers.
 
 For modular-monolith durable messaging, the command loop resolves durable EF
 stores by module name when module-specific provider runtime registrations are
-present.
+present in `DurableModulePersistenceRegistrationRegistry`.
 Source-module sends stage outgoing outbox rows and caller-supplied `Pending`
 operation state through the source module `DbContext`. Target-module receives
 stage inbox markers, handler state, successful `Completed` operation state,
@@ -135,7 +136,8 @@ activates only when the bridge package is referenced and modules declare EF
 Core persistence and explicitly opt into domain event persistence with
 `UseEntityFrameworkCoreDomainEventPersistence()`. The opt-in is narrow
 bridge-owned module metadata; Bondstone does not provide a public capability-step
-registry or public named pipeline slots.
+registry or public named pipeline slots. The bridge contributes ordered
+capability pipeline records through its setup API.
 
 EF-backed domain event collection belongs inside module command execution and
 module integration event subscriber execution. The placement is:

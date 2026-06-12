@@ -35,10 +35,13 @@ does not expose a public source-module override.
 Module command execution is registered through module command routes and
 executed through `IModuleCommandExecutor`. The executor runs typed
 `ICommandHandler<TCommand>` handlers through an internal runtime plan:
-ordered system behavior steps, application behavior steps in DI registration
-order, then the handler. System behaviors currently cover source-module
-execution context, receive-side inbox handling, durable operation completion,
-and module-owned persistence behavior supplied by provider packages.
+ordered system and capability contributions selected for the executing module,
+application behavior steps in DI registration order, then the handler. System
+contributions currently cover source-module execution context, receive-side
+inbox handling, durable operation completion, and module-owned persistence
+behavior supplied by provider packages. Provider and capability setup adds
+runtime contribution records to Bondstone module metadata, not executable
+behavior implementations to DI.
 
 ## Integration Events
 
@@ -67,9 +70,10 @@ not be derived from handler CLR names.
 Core subscriber execution uses `IModuleEventSubscriberExecutor`. It resolves a
 subscriber by module, stable event identity, and stable subscriber identity,
 then executes the typed handler through an internal runtime plan: ordered
-system behavior steps, application behavior steps in DI registration order,
-then the handler. System behaviors provide per-subscriber inbox handling and
-set the module execution context for the subscriber module.
+system and capability contributions selected for the subscriber module,
+application behavior steps in DI registration order, then the handler. System
+contributions provide per-subscriber inbox handling and set the module
+execution context for the subscriber module.
 
 Event-driven orchestration composes commands and events rather than erasing
 their distinction. A subscriber, saga, process manager, or orchestrator can
@@ -120,7 +124,9 @@ bridge, provided by
 for EF-backed modules that call
 `UseEntityFrameworkCoreDomainEventPersistence()` and map the EF domain event
 record shape explicitly with `ApplyBondstoneDomainEvents()`. Bondstone does not
-have a public capability-step registry or public named pipeline slots.
+have a public capability-step registry or public named pipeline slots; bridge
+packages contribute ordered capability pipeline records through their setup
+APIs.
 
 EF Core collection persists module-local domain event records and clears
 sources only after the EF module transaction saves and commits successfully.
@@ -135,8 +141,8 @@ explicit module code. Domain event follow-up ideas are tracked in
 Module command execution and module event subscriber execution establish the
 current source module through Bondstone's module execution context. The
 current implementation uses an ambient `AsyncLocal` accessor owned by
-`AddBondstone`; command and event subscriber system pipeline behaviors push
-the executing module before application handlers run and restore the previous
+`AddBondstone`; command and event subscriber runtime contributions push the
+executing module before application handlers run and restore the previous
 context when the pipeline completes.
 
 Durable command sending and integration event publishing require that current

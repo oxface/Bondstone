@@ -11,7 +11,7 @@ public sealed class PostgreSqlModuleDurableOutboxDispatcher<TDbContext>(
     IDurableOutboxFailurePolicy failurePolicy,
     TimeProvider? timeProvider = null,
     string? schema = null)
-    : IDurableModuleOutboxDispatcher
+    : IDurableOutboxDispatcher
     where TDbContext : DbContext
 {
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;

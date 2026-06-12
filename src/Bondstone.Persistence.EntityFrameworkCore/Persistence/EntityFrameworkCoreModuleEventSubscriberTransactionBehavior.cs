@@ -6,14 +6,12 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Persistence;
 internal sealed class EntityFrameworkCoreModuleEventSubscriberTransactionBehavior<TEvent>(
     IServiceProvider serviceProvider,
     EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry)
-    : IModuleEventSubscriberSystemPipelineBehavior<TEvent>
+    : IModuleEventSubscriberPipelineBehavior<TEvent>
     where TEvent : IIntegrationEvent
 {
     private readonly EntityFrameworkCoreModuleTransactionRunner _transactionRunner = new(
         serviceProvider,
         moduleRuntimeRegistry);
-
-    public int Order => ModuleEventSubscriberSystemPipelineOrder.Transaction;
 
     public async ValueTask HandleAsync(
         TEvent integrationEvent,

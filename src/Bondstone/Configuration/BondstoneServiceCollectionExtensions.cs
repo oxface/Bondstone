@@ -32,6 +32,15 @@ public static class BondstoneServiceCollectionExtensions
             GetOrAddOwnedSingleton<IBondstoneModuleRegistry, BondstoneModuleRegistry>(
                 services,
                 "Module registration");
+        ModulePipelineContributionRegistry pipelineContributionRegistry =
+            GetOrAddOwnedSingleton<ModulePipelineContributionRegistry>(
+                services,
+                "Module pipeline contribution registration");
+        ModuleCommandValidatorRegistry commandValidatorRegistry =
+            GetOrAddOwnedSingleton<ModuleCommandValidatorRegistry>(
+                services,
+                "Module command validator registration");
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry();
         GetOrAddModuleExecutionContextAccessor(services);
         services.AddBondstoneDurablePayloadSerialization();
 
@@ -45,9 +54,7 @@ public static class BondstoneServiceCollectionExtensions
             new ModuleRuntimeRegistry(
                 serviceProvider,
                 serviceProvider.GetRequiredService<IBondstoneModuleRegistry>(),
-                serviceProvider.GetServices<DurableModuleOutboxWriterRegistration>(),
-                serviceProvider.GetServices<DurableModuleInboxHandlerExecutorRegistration>(),
-                serviceProvider.GetServices<DurableModuleOperationStateStoreRegistration>()));
+                serviceProvider.GetRequiredService<DurableModulePersistenceRegistrationRegistry>()));
         services.TryAddScoped(serviceProvider =>
             new DurableModuleOutboxWriterResolver(
                 () => serviceProvider.GetService<IDurableOutboxWriter>(),
@@ -80,24 +87,42 @@ public static class BondstoneServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
                 serviceProvider.GetRequiredService<IDurablePayloadSerializer>(),
                 serviceProvider.GetService<TimeProvider>()));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleCommandSystemPipelineBehavior<>),
-            typeof(ModuleCommandReceiveInboxPipelineBehavior<>)));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleCommandSystemPipelineBehavior<>),
-            typeof(ModuleCommandOperationStatePipelineBehavior<>)));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleCommandSystemPipelineBehavior<>),
-            typeof(ModuleExecutionContextPipelineBehavior<>)));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleCommandPipelineBehavior<>),
-            typeof(ValidationModuleCommandPipelineBehavior<>)));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleEventSubscriberSystemPipelineBehavior<>),
-            typeof(ModuleEventSubscriberReceiveInboxPipelineBehavior<>)));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped(
-            typeof(IModuleEventSubscriberSystemPipelineBehavior<>),
-            typeof(ModuleEventSubscriberExecutionContextPipelineBehavior<>)));
+        pipelineContributionRegistry.AddGlobalCommandContribution(
+            new ModuleCommandPipelineContribution(
+                "Bondstone.Command.ReceiveInbox",
+                ModulePipelineStepKind.System,
+                ModuleCommandSystemPipelineOrder.ReceiveInbox,
+                typeof(ModuleCommandReceiveInboxPipelineBehavior<>)));
+        pipelineContributionRegistry.AddGlobalCommandContribution(
+            new ModuleCommandPipelineContribution(
+                "Bondstone.Command.OperationState",
+                ModulePipelineStepKind.System,
+                ModuleCommandSystemPipelineOrder.OperationState,
+                typeof(ModuleCommandOperationStatePipelineBehavior<>)));
+        pipelineContributionRegistry.AddGlobalCommandContribution(
+            new ModuleCommandPipelineContribution(
+                "Bondstone.Command.ExecutionContext",
+                ModulePipelineStepKind.System,
+                ModuleCommandSystemPipelineOrder.ExecutionContext,
+                typeof(ModuleExecutionContextPipelineBehavior<>)));
+        pipelineContributionRegistry.AddGlobalCommandContribution(
+            new ModuleCommandPipelineContribution(
+                "Bondstone.Command.Validation",
+                ModulePipelineStepKind.System,
+                ModuleCommandSystemPipelineOrder.Validation,
+                typeof(ValidationModuleCommandPipelineBehavior<>)));
+        pipelineContributionRegistry.AddGlobalEventSubscriberContribution(
+            new ModuleEventSubscriberPipelineContribution(
+                "Bondstone.EventSubscriber.ReceiveInbox",
+                ModulePipelineStepKind.System,
+                ModuleEventSubscriberSystemPipelineOrder.ReceiveInbox,
+                typeof(ModuleEventSubscriberReceiveInboxPipelineBehavior<>)));
+        pipelineContributionRegistry.AddGlobalEventSubscriberContribution(
+            new ModuleEventSubscriberPipelineContribution(
+                "Bondstone.EventSubscriber.ExecutionContext",
+                ModulePipelineStepKind.System,
+                ModuleEventSubscriberSystemPipelineOrder.ExecutionContext,
+                typeof(ModuleEventSubscriberExecutionContextPipelineBehavior<>)));
 
         var builder = new BondstoneBuilder(
             services,
@@ -105,7 +130,9 @@ public static class BondstoneServiceCollectionExtensions
             commandRouteRegistry,
             publishedEventRegistry,
             eventSubscriberRegistry,
-            moduleRegistry);
+            moduleRegistry,
+            pipelineContributionRegistry,
+            commandValidatorRegistry);
         configure(builder);
         builder.Validate();
 
@@ -164,6 +191,30 @@ public static class BondstoneServiceCollectionExtensions
 
         var defaultImplementation = new TImplementation();
         services.AddSingleton<TService>(defaultImplementation);
+        return defaultImplementation;
+    }
+
+    private static TImplementation GetOrAddOwnedSingleton<TImplementation>(
+        IServiceCollection services,
+        string ownerDescription)
+        where TImplementation : class, new()
+    {
+        ServiceDescriptor? descriptor = services.LastOrDefault(
+            service => service.ServiceType == typeof(TImplementation));
+
+        if (descriptor?.ImplementationInstance is TImplementation implementation)
+        {
+            return implementation;
+        }
+
+        if (descriptor is not null)
+        {
+            throw new InvalidOperationException(
+                $"{ownerDescription} requires {typeof(TImplementation).Name} to use the default singleton instance managed by {nameof(AddBondstone)}.");
+        }
+
+        var defaultImplementation = new TImplementation();
+        services.AddSingleton(defaultImplementation);
         return defaultImplementation;
     }
 

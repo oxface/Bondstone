@@ -4,13 +4,11 @@ namespace Bondstone.Modules;
 
 internal sealed class ModuleExecutionContextPipelineBehavior<TCommand>(
     ModuleExecutionContextAccessor executionContextAccessor)
-    : IModuleCommandSystemPipelineBehavior<TCommand>
+    : IModuleCommandPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly ModuleExecutionContextAccessor _executionContextAccessor =
         executionContextAccessor ?? throw new ArgumentNullException(nameof(executionContextAccessor));
-
-    public int Order => ModuleCommandSystemPipelineOrder.ExecutionContext;
 
     public async ValueTask HandleAsync(
         TCommand command,

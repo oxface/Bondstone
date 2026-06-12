@@ -9,4 +9,6 @@ public static class ModuleCommandSystemPipelineOrder
     public const int ReceiveInbox = 50;
 
     public const int ExecutionContext = 100;
+
+    public const int Validation = 200;
 }

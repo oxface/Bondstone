@@ -47,6 +47,46 @@ public sealed class PostgresModuleRuntimeTests
 
     [Fact]
     [Trait("Category", "Application")]
+    public async Task ModuleCommand_WhenPostgresPersistenceIsBoundThroughBuilder_RunsInsidePostgresTransaction()
+    {
+        var log = new CommandCallLog();
+        var session = new RecordingPostgresModuleSession(log);
+        var services = new ServiceCollection();
+        services.AddSingleton(log);
+        services.AddScoped<IPostgresModuleSession>(_ => session);
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("billing", module =>
+            {
+                module.Commands.RegisterHandler<StoreCommand, StoreCommandHandler>();
+            });
+            bondstone.UsePostgresPersistence(
+                "billing",
+                "Host=localhost;Database=bondstone_tests");
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "billing",
+                new StoreCommand("A-100"));
+
+        Assert.Equal(
+            ["postgres:begin", "handler:A-100", "postgres:commit"],
+            log.Calls);
+        Assert.Equal(1, session.TransactionCalls);
+
+        BondstoneModuleRegistration module = serviceProvider
+            .GetRequiredService<IBondstoneModuleRegistry>()
+            .GetModule("billing");
+        Assert.Equal("PostgreSQL", module.PersistenceProviderName);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
     public async Task ModuleCommand_WhenModuleDeclaresEntityFrameworkCoreProviderWithPostgresInHost_DoesNotResolvePostgresSession()
     {
         var log = new CommandCallLog();
@@ -154,9 +194,10 @@ public sealed class PostgresModuleRuntimeTests
         var writer = new CapturingOutboxWriter();
         var services = new ServiceCollection();
         services.AddSingleton(log);
-        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
-            "fulfillment",
-            _ => writer));
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxWriter(new DurableModuleOutboxWriterRegistration(
+                "fulfillment",
+                _ => writer));
         RegisterThrowingPostgresModuleSession(services);
         services.AddBondstone(bondstone =>
         {

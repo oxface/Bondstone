@@ -36,16 +36,12 @@ public static class BondstonePostgreSqlBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        builder.Services.AddBondstonePostgreSqlPersistence<TDbContext>(
-            connectionString,
-            configureNpgsql,
-            schema);
-        builder.Services.AddBondstonePostgreSqlModulePersistence<TDbContext>(
+        return builder.Module(
             moduleName,
-            schema);
-        builder.Outbox.MarkPersistenceProvider("PostgreSQL");
-
-        return builder;
+            module => module.UsePostgreSqlPersistence<TDbContext>(
+                connectionString,
+                configureNpgsql,
+                schema));
     }
 
     public static BondstoneModuleBuilder UsePostgreSqlPersistence<TDbContext>(

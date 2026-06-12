@@ -4,8 +4,8 @@ Entity Framework Core bridge for optional Bondstone module-local domain event
 persistence.
 
 This package owns EF change-tracker collection, EF record mapping, and the
-system pipeline behavior that stages domain event records inside an observed
-EF module transaction.
+capability pipeline contribution that stages domain event records inside an
+observed EF module transaction.
 
 The EF bridge does not dispatch local `IDomainEventHandler<TDomainEvent>`
 handlers or map domain events to integration events. It persists module-local

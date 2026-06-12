@@ -12,10 +12,11 @@ compatibility-first public API policy, but its application is still partial.
 
 The module runtime isolation slice made one provider-facing surface sharper:
 module-owned command and receive persistence now uses passive durable module
-runtime registrations, while executable writer, inbox executor, and
-operation-state services use ordinary role contracts. That change is a useful
-pattern, but it also makes the remaining public surface worth reviewing before
-real project readiness work.
+runtime registrations stored in `DurableModulePersistenceRegistrationRegistry`,
+while executable writer, inbox executor, and operation-state services use
+ordinary role contracts. That change is a useful pattern, but it also makes
+the remaining public surface worth reviewing before real project readiness
+work.
 
 ## Direction To Explore
 

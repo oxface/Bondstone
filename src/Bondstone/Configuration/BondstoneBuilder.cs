@@ -13,8 +13,13 @@ public sealed class BondstoneBuilder
         ModuleCommandRouteRegistry commandRouteRegistry,
         ModulePublishedEventRegistry publishedEventRegistry,
         ModuleEventSubscriberRegistry eventSubscriberRegistry,
-        BondstoneModuleRegistry moduleRegistry)
+        BondstoneModuleRegistry moduleRegistry,
+        ModulePipelineContributionRegistry pipelineContributionRegistry,
+        ModuleCommandValidatorRegistry commandValidatorRegistry)
     {
+        ArgumentNullException.ThrowIfNull(pipelineContributionRegistry);
+        ArgumentNullException.ThrowIfNull(commandValidatorRegistry);
+
         Services = services;
         Outbox = new BondstoneOutboxBuilder(services);
         _messageTypeRegistry = messageTypeRegistry;
@@ -22,6 +27,8 @@ public sealed class BondstoneBuilder
         _publishedEventRegistry = publishedEventRegistry;
         _eventSubscriberRegistry = eventSubscriberRegistry;
         _moduleRegistry = moduleRegistry;
+        _pipelineContributionRegistry = pipelineContributionRegistry;
+        _commandValidatorRegistry = commandValidatorRegistry;
         _transportTopologyDiagnosticSources = [];
         _configurationValidators =
         [
@@ -36,6 +43,8 @@ public sealed class BondstoneBuilder
     private readonly ModulePublishedEventRegistry _publishedEventRegistry;
     private readonly ModuleEventSubscriberRegistry _eventSubscriberRegistry;
     private readonly BondstoneModuleRegistry _moduleRegistry;
+    private readonly ModulePipelineContributionRegistry _pipelineContributionRegistry;
+    private readonly ModuleCommandValidatorRegistry _commandValidatorRegistry;
     private readonly List<IDurableTransportTopologyDiagnosticSource> _transportTopologyDiagnosticSources;
     private readonly List<IBondstoneConfigurationValidator> _configurationValidators;
 
@@ -53,7 +62,9 @@ public sealed class BondstoneBuilder
             _commandRouteRegistry,
             _publishedEventRegistry,
             _eventSubscriberRegistry,
-            _moduleRegistry);
+            _moduleRegistry,
+            _pipelineContributionRegistry,
+            _commandValidatorRegistry);
     }
 
     internal void Validate()

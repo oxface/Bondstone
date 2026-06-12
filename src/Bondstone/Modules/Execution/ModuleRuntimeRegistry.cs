@@ -17,32 +17,28 @@ internal sealed class ModuleRuntimeRegistry
     public ModuleRuntimeRegistry(
         IServiceProvider serviceProvider,
         IBondstoneModuleRegistry moduleRegistry,
-        IEnumerable<DurableModuleOutboxWriterRegistration> outboxWriterRegistrations,
-        IEnumerable<DurableModuleInboxHandlerExecutorRegistration> inboxHandlerExecutorRegistrations,
-        IEnumerable<DurableModuleOperationStateStoreRegistration> operationStateStoreRegistrations)
+        DurableModulePersistenceRegistrationRegistry persistenceRegistrationRegistry)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _moduleRegistry = moduleRegistry ?? throw new ArgumentNullException(nameof(moduleRegistry));
-        ArgumentNullException.ThrowIfNull(outboxWriterRegistrations);
-        ArgumentNullException.ThrowIfNull(inboxHandlerExecutorRegistrations);
-        ArgumentNullException.ThrowIfNull(operationStateStoreRegistrations);
+        ArgumentNullException.ThrowIfNull(persistenceRegistrationRegistry);
 
         _outboxWriterRegistrations =
             new Lazy<IReadOnlyDictionary<string, DurableModuleOutboxWriterRegistration>>(
             () => ToModuleMap(
-                outboxWriterRegistrations,
+                persistenceRegistrationRegistry.OutboxWriterRegistrations,
                 static registration => registration.ModuleName,
                 "durable module outbox writer"));
         _inboxHandlerExecutorRegistrations =
             new Lazy<IReadOnlyDictionary<string, DurableModuleInboxHandlerExecutorRegistration>>(
                 () => ToModuleMap(
-                    inboxHandlerExecutorRegistrations,
+                    persistenceRegistrationRegistry.InboxHandlerExecutorRegistrations,
                     static registration => registration.ModuleName,
                     "durable module inbox handler executor"));
         _operationStateStoreRegistrations =
             new Lazy<IReadOnlyDictionary<string, DurableModuleOperationStateStoreRegistration>>(
                 () => ToModuleMap(
-                    operationStateStoreRegistrations,
+                    persistenceRegistrationRegistry.OperationStateStoreRegistrations,
                     static registration => registration.ModuleName,
                     "durable module operation-state store"));
     }

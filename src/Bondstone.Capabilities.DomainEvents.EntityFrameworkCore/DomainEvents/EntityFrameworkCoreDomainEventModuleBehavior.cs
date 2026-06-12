@@ -11,14 +11,12 @@ namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
 internal sealed class EntityFrameworkCoreDomainEventModuleCommandBehavior<TCommand>(
     IServiceProvider serviceProvider,
     EntityFrameworkCoreDomainEventModuleRuntimeRegistry moduleRuntimeRegistry)
-    : IModuleCommandSystemPipelineBehavior<TCommand>
+    : IModuleCommandPipelineBehavior<TCommand>
     where TCommand : ICommand
 {
     private readonly EntityFrameworkCoreDomainEventModuleBehaviorCore _core = new(
         serviceProvider,
         moduleRuntimeRegistry);
-
-    public int Order => EntityFrameworkCoreDomainEventModuleBehaviorCore.Order;
 
     public async ValueTask HandleAsync(
         TCommand command,
@@ -40,14 +38,12 @@ internal sealed class EntityFrameworkCoreDomainEventModuleCommandBehavior<TComma
 internal sealed class EntityFrameworkCoreDomainEventModuleEventSubscriberBehavior<TEvent>(
     IServiceProvider serviceProvider,
     EntityFrameworkCoreDomainEventModuleRuntimeRegistry moduleRuntimeRegistry)
-    : IModuleEventSubscriberSystemPipelineBehavior<TEvent>
+    : IModuleEventSubscriberPipelineBehavior<TEvent>
     where TEvent : IIntegrationEvent
 {
     private readonly EntityFrameworkCoreDomainEventModuleBehaviorCore _core = new(
         serviceProvider,
         moduleRuntimeRegistry);
-
-    public int Order => EntityFrameworkCoreDomainEventModuleBehaviorCore.Order;
 
     public async ValueTask HandleAsync(
         TEvent integrationEvent,
@@ -70,8 +66,6 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
     IServiceProvider serviceProvider,
     EntityFrameworkCoreDomainEventModuleRuntimeRegistry moduleRuntimeRegistry)
 {
-    public const int Order = ModuleCommandSystemPipelineOrder.ExecutionContext + 10;
-
     private readonly IServiceProvider _serviceProvider =
         serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     private readonly EntityFrameworkCoreDomainEventModuleRuntimeRegistry _moduleRuntimeRegistry =
@@ -133,8 +127,7 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
         out EntityFrameworkCoreDomainEventModuleRuntimeDescriptor runtime)
     {
         runtime = _moduleRuntimeRegistry.GetRuntime(moduleName);
-        return runtime.UsesEntityFrameworkCorePersistence
-            && runtime.UsesDomainEventPersistence;
+        return runtime.UsesEntityFrameworkCorePersistence;
     }
 
     private static void ValidateDomainEventMappings(

@@ -14,18 +14,14 @@ public sealed class DurableModulePersistenceRegistrationTests
     public void CommandSender_WhenDuplicateModuleOutboxWritersAreRegistered_ThrowsClearError()
     {
         var services = new ServiceCollection();
-        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
             "sales",
             _ => new TestModuleOutboxWriter("sales")));
-        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
-            " sales ",
-            _ => new TestModuleOutboxWriter(" sales ")));
-        services.AddBondstone(_ => { });
-
-        using ServiceProvider serviceProvider = services.BuildServiceProvider();
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => serviceProvider.GetRequiredService<IDurableCommandSender>());
+            () => RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
+                " sales ",
+                _ => new TestModuleOutboxWriter(" sales "))));
 
         Assert.Contains("durable module outbox writer", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
@@ -37,28 +33,14 @@ public sealed class DurableModulePersistenceRegistrationTests
     public void CommandPipelineBehavior_WhenDuplicateModuleInboxExecutorsAreRegistered_ThrowsClearError()
     {
         var services = new ServiceCollection();
-        services.AddSingleton(new DurableModuleInboxHandlerExecutorRegistration(
+        RegisterInboxHandlerExecutor(services, new DurableModuleInboxHandlerExecutorRegistration(
             "fulfillment",
             _ => new TestModuleInboxHandlerExecutor("fulfillment")));
-        services.AddSingleton(new DurableModuleInboxHandlerExecutorRegistration(
-            " fulfillment ",
-            _ => new TestModuleInboxHandlerExecutor(" fulfillment ")));
-        services.AddBondstone(bondstone =>
-        {
-            bondstone.Module("fulfillment", module =>
-            {
-                module.UseDurableMessaging();
-                module.UsePersistence("test persistence");
-                module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
-            });
-        });
-
-        using ServiceProvider serviceProvider = services.BuildServiceProvider();
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => serviceProvider
-                .GetServices<IModuleCommandSystemPipelineBehavior<TestCommand>>()
-                .ToArray());
+            () => RegisterInboxHandlerExecutor(services, new DurableModuleInboxHandlerExecutorRegistration(
+                " fulfillment ",
+                _ => new TestModuleInboxHandlerExecutor(" fulfillment "))));
 
         Assert.Contains("durable module inbox handler executor", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
@@ -70,18 +52,14 @@ public sealed class DurableModulePersistenceRegistrationTests
     public void OperationReader_WhenDuplicateModuleOperationStoresAreRegistered_ThrowsClearError()
     {
         var services = new ServiceCollection();
-        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+        RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
             "sales",
             _ => new TestModuleOperationStateStore("sales")));
-        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
-            " sales ",
-            _ => new TestModuleOperationStateStore(" sales ")));
-        services.AddBondstone(_ => { });
-
-        using ServiceProvider serviceProvider = services.BuildServiceProvider();
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => serviceProvider.GetRequiredService<IDurableOperationReader>());
+            () => RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
+                " sales ",
+                _ => new TestModuleOperationStateStore(" sales "))));
 
         Assert.Contains("durable module operation-state store", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
@@ -92,12 +70,15 @@ public sealed class DurableModulePersistenceRegistrationTests
     [Trait("Category", "Unit")]
     public void OutboxDispatchAggregator_WhenDuplicateModuleDispatchersAreRegistered_ThrowsClearError()
     {
+        var services = new ServiceCollection();
+        RegisterOutboxDispatcher(services, new DurableModuleOutboxDispatcherRegistration(
+            "sales",
+            _ => new TestModuleOutboxDispatcher()));
+
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => new DurableModuleOutboxDispatchAggregator(
-            [
-                new TestModuleOutboxDispatcher("sales"),
-                new TestModuleOutboxDispatcher(" sales "),
-            ]));
+            () => RegisterOutboxDispatcher(services, new DurableModuleOutboxDispatcherRegistration(
+                " sales ",
+                _ => new TestModuleOutboxDispatcher())));
 
         Assert.Contains("durable module outbox dispatcher", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
@@ -138,7 +119,7 @@ public sealed class DurableModulePersistenceRegistrationTests
         var fulfillmentWriter = new CapturingModuleOutboxWriter("fulfillment");
         var services = new ServiceCollection();
         services.AddSingleton<IDurableOutboxWriter>(fallbackWriter);
-        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
             fulfillmentWriter.ModuleName,
             _ => fulfillmentWriter));
         services.AddBondstone(bondstone =>
@@ -199,7 +180,7 @@ public sealed class DurableModulePersistenceRegistrationTests
         var billingExecutor = new CapturingModuleInboxHandlerExecutor("billing");
         var services = new ServiceCollection();
         services.AddSingleton<IDurableInboxHandlerExecutor>(fallbackExecutor);
-        services.AddSingleton(new DurableModuleInboxHandlerExecutorRegistration(
+        RegisterInboxHandlerExecutor(services, new DurableModuleInboxHandlerExecutorRegistration(
             billingExecutor.ModuleName,
             _ => billingExecutor));
         services.AddBondstone(bondstone =>
@@ -268,11 +249,11 @@ public sealed class DurableModulePersistenceRegistrationTests
         var fallbackStore = new CapturingOperationStateStore();
         var fulfillmentStore = new CapturingModuleOperationStateStore("fulfillment");
         var services = new ServiceCollection();
-        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
             salesWriter.ModuleName,
             _ => salesWriter));
         services.AddSingleton<IDurableOperationStateStore>(fallbackStore);
-        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+        RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
             fulfillmentStore.ModuleName,
             _ => fulfillmentStore));
         services.AddBondstone(bondstone =>
@@ -315,6 +296,38 @@ public sealed class DurableModulePersistenceRegistrationTests
             module.UsePersistence("test persistence");
             module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
         });
+    }
+
+    private static void RegisterOutboxWriter(
+        IServiceCollection services,
+        DurableModuleOutboxWriterRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxWriter(registration);
+    }
+
+    private static void RegisterInboxHandlerExecutor(
+        IServiceCollection services,
+        DurableModuleInboxHandlerExecutorRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddInboxHandlerExecutor(registration);
+    }
+
+    private static void RegisterOutboxDispatcher(
+        IServiceCollection services,
+        DurableModuleOutboxDispatcherRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxDispatcher(registration);
+    }
+
+    private static void RegisterOperationStateStore(
+        IServiceCollection services,
+        DurableModuleOperationStateStoreRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOperationStateStore(registration);
     }
 
     private static DurableMessageEnvelope CreateTestCommandEnvelope()
@@ -430,11 +443,9 @@ public sealed class DurableModulePersistenceRegistrationTests
         }
     }
 
-    private sealed class TestModuleOutboxDispatcher(string moduleName)
-        : IDurableModuleOutboxDispatcher
+    private sealed class TestModuleOutboxDispatcher
+        : IDurableOutboxDispatcher
     {
-        public string ModuleName { get; } = moduleName;
-
         public ValueTask<DurableOutboxDispatchResult> DispatchAsync(
             string claimedBy,
             TimeSpan leaseDuration,

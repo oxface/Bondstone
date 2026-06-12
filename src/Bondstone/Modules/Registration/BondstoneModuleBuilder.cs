@@ -2,6 +2,7 @@ using Bondstone.Messaging;
 using Bondstone.Configuration;
 using Bondstone.Utility;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 
 namespace Bondstone.Modules;
 
@@ -15,7 +16,9 @@ public sealed class BondstoneModuleBuilder
         ModuleCommandRouteRegistry commandRouteRegistry,
         ModulePublishedEventRegistry publishedEventRegistry,
         ModuleEventSubscriberRegistry eventSubscriberRegistry,
-        BondstoneModuleRegistry moduleRegistry)
+        BondstoneModuleRegistry moduleRegistry,
+        ModulePipelineContributionRegistry pipelineContributionRegistry,
+        ModuleCommandValidatorRegistry commandValidatorRegistry)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(outbox);
@@ -24,17 +27,21 @@ public sealed class BondstoneModuleBuilder
         ArgumentNullException.ThrowIfNull(publishedEventRegistry);
         ArgumentNullException.ThrowIfNull(eventSubscriberRegistry);
         ArgumentNullException.ThrowIfNull(moduleRegistry);
+        ArgumentNullException.ThrowIfNull(pipelineContributionRegistry);
+        ArgumentNullException.ThrowIfNull(commandValidatorRegistry);
 
         Services = services;
         _outbox = outbox;
         Name = name.NormalizeRequired(nameof(name), "Module name");
         _moduleRegistry = moduleRegistry;
+        _pipelineContributionRegistry = pipelineContributionRegistry;
         _moduleRegistry.RegisterModule(Name);
         Commands = new BondstoneModuleCommandBuilder(
             services,
             Name,
             messageTypeRegistry,
-            commandRouteRegistry);
+            commandRouteRegistry,
+            commandValidatorRegistry);
         Events = new BondstoneModuleEventBuilder(
             services,
             Name,
@@ -44,6 +51,7 @@ public sealed class BondstoneModuleBuilder
     }
 
     private readonly BondstoneModuleRegistry _moduleRegistry;
+    private readonly ModulePipelineContributionRegistry _pipelineContributionRegistry;
     private readonly BondstoneOutboxBuilder _outbox;
 
     public IServiceCollection Services { get; }
@@ -71,6 +79,30 @@ public sealed class BondstoneModuleBuilder
     public BondstoneModuleBuilder UseOutboxPersistenceProvider(string providerName)
     {
         _outbox.MarkPersistenceProvider(providerName);
+        return this;
+    }
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public BondstoneModuleBuilder AddCommandPipelineContribution(
+        ModuleCommandPipelineContribution contribution)
+    {
+        ArgumentNullException.ThrowIfNull(contribution);
+
+        _pipelineContributionRegistry.AddModuleCommandContribution(
+            Name,
+            contribution);
+        return this;
+    }
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public BondstoneModuleBuilder AddEventSubscriberPipelineContribution(
+        ModuleEventSubscriberPipelineContribution contribution)
+    {
+        ArgumentNullException.ThrowIfNull(contribution);
+
+        _pipelineContributionRegistry.AddModuleEventSubscriberContribution(
+            Name,
+            contribution);
         return this;
     }
 }

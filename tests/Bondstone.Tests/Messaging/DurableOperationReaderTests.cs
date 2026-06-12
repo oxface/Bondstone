@@ -118,9 +118,10 @@ public sealed class DurableOperationReaderTests
             switch (storeOrReader)
             {
                 case CapturingModuleOperationStateStore moduleStore:
-                    services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
-                        moduleStore.ModuleName,
-                        _ => moduleStore));
+                    services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+                        .AddOperationStateStore(new DurableModuleOperationStateStoreRegistration(
+                            moduleStore.ModuleName,
+                            _ => moduleStore));
                     break;
                 case IDurableOperationStateStore operationStateStore:
                     services.AddSingleton(operationStateStore);

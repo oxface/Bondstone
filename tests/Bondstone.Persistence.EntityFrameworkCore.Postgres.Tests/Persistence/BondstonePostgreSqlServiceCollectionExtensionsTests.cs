@@ -96,7 +96,6 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
             builder.Module("fulfillment", module =>
             {
                 module.UseDurableMessaging();
-                module.UseEntityFrameworkCorePersistence<PostgreSqlTestDbContext>();
                 module.Commands.RegisterHandler<TestDurableCommand, TestDurableCommandHandler>();
             });
 
@@ -109,11 +108,16 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         });
 
         Assert.True(persistenceWasMarked);
-        AssertContainsSingletonInstance<DurableModuleOutboxWriterRegistration>(services);
-        AssertContainsSingletonInstance<DurableModuleInboxHandlerExecutorRegistration>(services);
-        AssertContainsSingletonInstance<DurableModuleOperationStateStoreRegistration>(services);
-        AssertContainsScopedFactory<IDurableModuleOutboxDispatcher>(services);
+        AssertContainsModulePersistenceRegistrations(services, "fulfillment");
         AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        BondstoneModuleRegistration module = serviceProvider
+            .GetRequiredService<IBondstoneModuleRegistry>()
+            .GetModule("fulfillment");
+        Assert.True(module.UsesDurableMessaging);
+        Assert.Equal("EntityFrameworkCore", module.PersistenceProviderName);
+        Assert.Equal(typeof(PostgreSqlTestDbContext), module.PersistenceContextType);
     }
 
     [Fact]
@@ -138,10 +142,7 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         });
 
         Assert.True(persistenceWasMarked);
-        AssertContainsSingletonInstance<DurableModuleOutboxWriterRegistration>(services);
-        AssertContainsSingletonInstance<DurableModuleInboxHandlerExecutorRegistration>(services);
-        AssertContainsSingletonInstance<DurableModuleOperationStateStoreRegistration>(services);
-        AssertContainsScopedFactory<IDurableModuleOutboxDispatcher>(services);
+        AssertContainsModulePersistenceRegistrations(services, "fulfillment");
         AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -202,9 +203,10 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
     {
         var writer = new CapturingOutboxWriter();
         var services = new ServiceCollection();
-        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
-            "fulfillment",
-            _ => writer));
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxWriter(new DurableModuleOutboxWriterRegistration(
+                "fulfillment",
+                _ => writer));
         services.AddBondstone(builder =>
         {
             builder.Module("billing", module =>
@@ -260,15 +262,25 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
                 && descriptor.Lifetime == ServiceLifetime.Scoped);
     }
 
-    private static void AssertContainsSingletonInstance<TService>(
-        IServiceCollection services)
+    private static void AssertContainsModulePersistenceRegistrations(
+        IServiceCollection services,
+        string moduleName)
     {
+        DurableModulePersistenceRegistrationRegistry registry =
+            services.GetOrAddDurableModulePersistenceRegistrationRegistry();
+
         Assert.Contains(
-            services,
-            static descriptor =>
-                descriptor.ServiceType == typeof(TService)
-                && descriptor.ImplementationInstance is TService
-                && descriptor.Lifetime == ServiceLifetime.Singleton);
+            registry.OutboxWriterRegistrations,
+            registration => registration.ModuleName == moduleName);
+        Assert.Contains(
+            registry.InboxHandlerExecutorRegistrations,
+            registration => registration.ModuleName == moduleName);
+        Assert.Contains(
+            registry.OperationStateStoreRegistrations,
+            registration => registration.ModuleName == moduleName);
+        Assert.Contains(
+            registry.OutboxDispatcherRegistrations,
+            registration => registration.ModuleName == moduleName);
     }
 
     private static void AssertContainsTransient<TImplementation>(

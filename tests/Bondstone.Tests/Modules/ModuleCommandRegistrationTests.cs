@@ -138,6 +138,42 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task ModuleCommands_WhenSameCommandTypeHasValidatorsInDifferentModules_RunsOnlyExecutingModuleValidator()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.Commands.RegisterHandler<SharedCommand, SharedCommandHandler>();
+                module.Commands.RegisterValidator<SharedCommand, SalesSharedCommandValidator>();
+            });
+            bondstone.Module("fulfillment", module =>
+            {
+                module.Commands.RegisterHandler<SharedCommand, SharedCommandHandler>();
+                module.Commands.RegisterValidator<SharedCommand, FulfillmentSharedCommandValidator>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new SharedCommand("shared-123"));
+
+        CommandCallLog log = serviceProvider.GetRequiredService<CommandCallLog>();
+        Assert.Equal(
+            ["sales-validate:shared-123", "handle-shared:shared-123"],
+            log.Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task ModuleCommands_WhenExecuting_SetsModuleExecutionContext()
     {
         var services = new ServiceCollection();
@@ -173,16 +209,10 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task ModuleCommands_WhenSystemAndApplicationBehaviorsAreRegistered_RunsSystemByOrderFirst()
+    public async Task ModuleCommands_WhenRuntimeAndApplicationBehaviorsAreRegistered_RunsRuntimeByOrderFirst()
     {
         var services = new ServiceCollection();
         services.AddSingleton<CommandCallLog>();
-        services.AddScoped<
-            IModuleCommandSystemPipelineBehavior<PipelineOrderCommand>,
-            LateCommandSystemBehavior>();
-        services.AddScoped<
-            IModuleCommandSystemPipelineBehavior<PipelineOrderCommand>,
-            EarlyCommandSystemBehavior>();
         services.AddScoped<
             IModuleCommandPipelineBehavior<PipelineOrderCommand>,
             CommandApplicationBehavior>();
@@ -191,6 +221,24 @@ public sealed class ModuleCommandRegistrationTests
         {
             bondstone.Module("sales", module =>
             {
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "test.command.system-late",
+                        ModulePipelineStepKind.System,
+                        150,
+                        typeof(LateCommandSystemBehavior)));
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "test.command.system-early",
+                        ModulePipelineStepKind.System,
+                        125,
+                        typeof(EarlyCommandSystemBehavior)));
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "test.command.capability",
+                        ModulePipelineStepKind.Capability,
+                        140,
+                        typeof(CommandCapabilityBehavior)));
                 module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
             });
         });
@@ -207,14 +255,153 @@ public sealed class ModuleCommandRegistrationTests
         Assert.Equal(
             [
                 "system-early:before",
+                "capability:before",
                 "system-late:before",
                 "application:before:sales",
                 "handle:order-123",
                 "application:after:sales",
                 "system-late:after",
+                "capability:after",
                 "system-early:after",
             ],
             serviceProvider.GetRequiredService<CommandCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ModuleCommands_WhenRuntimeContributionDoesNotApply_DoesNotCreateBehavior()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "test.command.non-selected",
+                        ModulePipelineStepKind.System,
+                        10,
+                        null,
+                        (_, _) => throw new InvalidOperationException(
+                            "Should not create non-selected behavior.")));
+            });
+
+            bondstone.Module("sales", module =>
+            {
+                module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new PipelineOrderCommand("order-123"));
+
+        Assert.Equal(
+            ["handle:order-123"],
+            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ModuleCommands_WhenRuntimeContributionsHaveSameOrder_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "test.command.duplicate-a",
+                        ModulePipelineStepKind.System,
+                        777,
+                        typeof(EarlyCommandSystemBehavior)));
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "test.command.duplicate-b",
+                        ModulePipelineStepKind.Capability,
+                        777,
+                        typeof(LateCommandSystemBehavior)));
+                module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "sales",
+                    new PipelineOrderCommand("order-123"))
+                .AsTask());
+
+        Assert.Contains("same order", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test.command.duplicate-a", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test.command.duplicate-b", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ModuleCommands_WhenRuntimeContributionsHaveSameName_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "Bondstone.Command.ExecutionContext",
+                        ModulePipelineStepKind.Capability,
+                        999,
+                        typeof(EarlyCommandSystemBehavior)));
+                module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "sales",
+                    new PipelineOrderCommand("order-123"))
+                .AsTask());
+
+        Assert.Contains("same name", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Bondstone.Command.ExecutionContext", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ModuleCommandPipelineContribution_WhenBehaviorTypeIsInvalid_Throws()
+    {
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            () => new ModuleCommandPipelineContribution(
+                "test.command.invalid",
+                ModulePipelineStepKind.System,
+                999,
+                typeof(string)));
+
+        Assert.Contains(
+            nameof(IModuleCommandPipelineBehavior<PipelineOrderCommand>),
+            exception.Message,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -371,6 +558,44 @@ public sealed class ModuleCommandRegistrationTests
         }
     }
 
+    public sealed record SharedCommand(string Id) : ICommand;
+
+    public sealed class SharedCommandHandler(CommandCallLog log)
+        : ICommandHandler<SharedCommand>
+    {
+        public ValueTask HandleAsync(
+            SharedCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"handle-shared:{command.Id}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed class SalesSharedCommandValidator(CommandCallLog log)
+        : ICommandValidator<SharedCommand>
+    {
+        public ValueTask ValidateAsync(
+            SharedCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"sales-validate:{command.Id}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed class FulfillmentSharedCommandValidator(CommandCallLog log)
+        : ICommandValidator<SharedCommand>
+    {
+        public ValueTask ValidateAsync(
+            SharedCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"fulfillment-validate:{command.Id}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
     public sealed record InspectContextCommand : ICommand;
 
     public sealed class InspectContextHandler(
@@ -390,10 +615,8 @@ public sealed class ModuleCommandRegistrationTests
     public sealed record PipelineOrderCommand(string OrderId) : ICommand;
 
     public sealed class EarlyCommandSystemBehavior(CommandCallLog log)
-        : IModuleCommandSystemPipelineBehavior<PipelineOrderCommand>
+        : IModuleCommandPipelineBehavior<PipelineOrderCommand>
     {
-        public int Order => 125;
-
         public async ValueTask HandleAsync(
             PipelineOrderCommand command,
             ModuleCommandExecutionContext context,
@@ -407,10 +630,8 @@ public sealed class ModuleCommandRegistrationTests
     }
 
     public sealed class LateCommandSystemBehavior(CommandCallLog log)
-        : IModuleCommandSystemPipelineBehavior<PipelineOrderCommand>
+        : IModuleCommandPipelineBehavior<PipelineOrderCommand>
     {
-        public int Order => 150;
-
         public async ValueTask HandleAsync(
             PipelineOrderCommand command,
             ModuleCommandExecutionContext context,
@@ -420,6 +641,21 @@ public sealed class ModuleCommandRegistrationTests
             log.Calls.Add("system-late:before");
             await next(ct);
             log.Calls.Add("system-late:after");
+        }
+    }
+
+    public sealed class CommandCapabilityBehavior(CommandCallLog log)
+        : IModuleCommandPipelineBehavior<PipelineOrderCommand>
+    {
+        public async ValueTask HandleAsync(
+            PipelineOrderCommand command,
+            ModuleCommandExecutionContext context,
+            ModuleCommandPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add("capability:before");
+            await next(ct);
+            log.Calls.Add("capability:after");
         }
     }
 

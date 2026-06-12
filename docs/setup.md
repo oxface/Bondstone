@@ -152,8 +152,8 @@ EF-backed module `DbContext` models must map the durable tables they use with
 
 Provider-specific module helpers are the preferred setup path because they
 record module persistence metadata and register the module-owned runtime
-factories, transaction behavior, and dispatch services used by durable
-messaging.
+factories in Bondstone runtime registries, plus transaction behavior and
+dispatch services used by durable messaging.
 
 Modules that do not use EF Core can use `Bondstone.Persistence.Postgres`:
 
@@ -192,12 +192,13 @@ builder.Services.AddScoped<
     OrderPlacedAuditBehavior>();
 ```
 
-These behaviors run after Bondstone/provider system behavior and inside the
-module execution context when command or subscriber execution establishes one.
-The public system behavior interfaces are advanced provider/runtime
-composition contracts, not the normal application extension path. Module-scoped
-behavior registration is not currently required; prefer DI registration unless
-a later accepted design adds a more specific API.
+These behaviors run after selected Bondstone/provider runtime contributions
+and inside the module execution context when command or subscriber execution
+establishes one. Passive pipeline contribution records are advanced
+provider/runtime composition contracts stored in Bondstone runtime metadata,
+not the normal application extension path. Module-scoped behavior registration
+is not currently required; prefer DI registration unless a later accepted
+design adds a more specific API.
 
 ## Sending Commands
 

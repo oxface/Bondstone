@@ -5,13 +5,11 @@ namespace Bondstone.Modules;
 
 internal sealed class ModuleEventSubscriberReceiveInboxPipelineBehavior<TEvent>(
     DurableModuleInboxHandlerExecutorResolver inboxHandlerExecutorResolver)
-    : IModuleEventSubscriberSystemPipelineBehavior<TEvent>
+    : IModuleEventSubscriberPipelineBehavior<TEvent>
     where TEvent : IIntegrationEvent
 {
     private readonly DurableModuleInboxHandlerExecutorResolver _inboxHandlerExecutorResolver =
         inboxHandlerExecutorResolver ?? throw new ArgumentNullException(nameof(inboxHandlerExecutorResolver));
-
-    public int Order => ModuleEventSubscriberSystemPipelineOrder.ReceiveInbox;
 
     public async ValueTask HandleAsync(
         TEvent integrationEvent,

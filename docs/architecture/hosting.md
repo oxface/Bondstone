@@ -27,7 +27,8 @@ skip-locked or equivalent semantics.
 The public worker registration creates one aggregate worker over the configured
 app-facing `IDurableOutboxDispatcher`. For module-owned persistence, that
 dispatcher can be `DurableModuleOutboxDispatchAggregator`, which calls local
-module outbox dispatchers sequentially in registration order. The aggregate
+module outbox dispatchers from module persistence registrations sequentially
+in registration order. The aggregate
 batch uses one shared `BatchSize` budget; each module dispatcher receives only
 the remaining budget, and later modules are skipped after the shared budget is
 exhausted.

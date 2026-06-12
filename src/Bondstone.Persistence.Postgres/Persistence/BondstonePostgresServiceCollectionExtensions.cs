@@ -1,3 +1,4 @@
+using Bondstone.Configuration;
 using Bondstone.Persistence.Postgres.Inbox;
 using Bondstone.Persistence.Postgres.Operations;
 using Bondstone.Persistence.Postgres.Outbox;
@@ -65,52 +66,40 @@ public static class BondstonePostgresServiceCollectionExtensions
             throw new ArgumentException("Module name is required.", nameof(moduleName));
         }
 
-        ReplaceDefaultDispatcherWithModuleAggregator(services);
-        services.AddSingleton(new DurableModuleOutboxWriterRegistration(
+        services.UseDurableModuleOutboxDispatchAggregator();
+        DurableModulePersistenceRegistrationRegistry registry =
+            services.GetOrAddDurableModulePersistenceRegistrationRegistry();
+        registry.AddOutboxWriter(new DurableModuleOutboxWriterRegistration(
             moduleName,
             serviceProvider => new PostgresModuleDurableOutboxWriter(
                 moduleName,
                 serviceProvider.GetRequiredService<IPostgresModuleSession>(),
                 serviceProvider.GetService<TimeProvider>(),
                 schema)));
-        services.AddSingleton(new DurableModuleInboxHandlerExecutorRegistration(
+        registry.AddInboxHandlerExecutor(new DurableModuleInboxHandlerExecutorRegistration(
             moduleName,
             serviceProvider => new PostgresModuleDurableInboxHandlerExecutor(
                 moduleName,
                 serviceProvider.GetRequiredService<IPostgresModuleSession>(),
                 serviceProvider.GetService<TimeProvider>(),
                 schema)));
-        services.AddSingleton(new DurableModuleOperationStateStoreRegistration(
+        registry.AddOperationStateStore(new DurableModuleOperationStateStoreRegistration(
             moduleName,
             serviceProvider => new PostgresModuleDurableOperationStateStore(
                 moduleName,
                 serviceProvider.GetRequiredService<IPostgresModuleSession>(),
                 schema)));
-        services.AddScoped<IDurableModuleOutboxDispatcher>(serviceProvider =>
-            new PostgresModuleDurableOutboxDispatcher(
-                moduleName,
-                serviceProvider.GetRequiredService<NpgsqlDataSource>(),
-                serviceProvider.GetRequiredService<IDurableOutboxTransport>(),
-                serviceProvider.GetRequiredService<IDurableOutboxFailurePolicy>(),
-                serviceProvider.GetService<TimeProvider>(),
-                schema));
+        registry.AddOutboxDispatcher(new DurableModuleOutboxDispatcherRegistration(
+            moduleName,
+            serviceProvider => new PostgresModuleDurableOutboxDispatcher(
+                    moduleName,
+                    serviceProvider.GetRequiredService<NpgsqlDataSource>(),
+                    serviceProvider.GetRequiredService<IDurableOutboxTransport>(),
+                    serviceProvider.GetRequiredService<IDurableOutboxFailurePolicy>(),
+                    serviceProvider.GetService<TimeProvider>(),
+                    schema)));
 
         return services;
     }
 
-    private static void ReplaceDefaultDispatcherWithModuleAggregator(IServiceCollection services)
-    {
-        ServiceDescriptor[] defaultDispatcherDescriptors = services
-            .Where(descriptor =>
-                descriptor.ServiceType == typeof(IDurableOutboxDispatcher)
-                && descriptor.ImplementationType == typeof(DurableOutboxDispatcher))
-            .ToArray();
-
-        foreach (ServiceDescriptor descriptor in defaultDispatcherDescriptors)
-        {
-            services.Remove(descriptor);
-        }
-
-        services.TryAddTransient<IDurableOutboxDispatcher, DurableModuleOutboxDispatchAggregator>();
-    }
 }

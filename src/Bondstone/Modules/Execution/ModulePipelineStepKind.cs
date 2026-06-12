@@ -1,7 +1,8 @@
 namespace Bondstone.Modules;
 
-internal enum ModulePipelineStepKind
+public enum ModulePipelineStepKind
 {
     System,
+    Capability,
     Application,
 }

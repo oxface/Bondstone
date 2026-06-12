@@ -12,20 +12,24 @@ public sealed class BondstoneModuleCommandBuilder
         IServiceCollection services,
         string moduleName,
         IMessageTypeRegistry messageTypeRegistry,
-        ModuleCommandRouteRegistry commandRouteRegistry)
+        ModuleCommandRouteRegistry commandRouteRegistry,
+        ModuleCommandValidatorRegistry commandValidatorRegistry)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(messageTypeRegistry);
         ArgumentNullException.ThrowIfNull(commandRouteRegistry);
+        ArgumentNullException.ThrowIfNull(commandValidatorRegistry);
 
         Services = services;
         ModuleName = moduleName.NormalizeRequired(nameof(moduleName), "Module name");
         _messageTypeRegistry = messageTypeRegistry;
         _commandRouteRegistry = commandRouteRegistry;
+        _commandValidatorRegistry = commandValidatorRegistry;
     }
 
     private readonly IMessageTypeRegistry _messageTypeRegistry;
     private readonly ModuleCommandRouteRegistry _commandRouteRegistry;
+    private readonly ModuleCommandValidatorRegistry _commandValidatorRegistry;
 
     public IServiceCollection Services { get; }
 
@@ -61,7 +65,11 @@ public sealed class BondstoneModuleCommandBuilder
         where TCommand : ICommand
         where TValidator : class, ICommandValidator<TCommand>
     {
-        Services.TryAddEnumerable(ServiceDescriptor.Scoped<ICommandValidator<TCommand>, TValidator>());
+        Services.TryAddScoped<TValidator>();
+        _commandValidatorRegistry.Add(new ModuleCommandValidatorRegistration(
+            ModuleName,
+            typeof(TCommand),
+            typeof(TValidator)));
         return this;
     }
 
@@ -153,8 +161,11 @@ public sealed class BondstoneModuleCommandBuilder
             typeof(ICommandValidator<>)))
         {
             Type commandType = validatorInterface.GetGenericArguments()[0];
-            Type serviceType = typeof(ICommandValidator<>).MakeGenericType(commandType);
-            Services.TryAddEnumerable(ServiceDescriptor.Scoped(serviceType, validatorType));
+            Services.TryAddScoped(validatorType);
+            _commandValidatorRegistry.Add(new ModuleCommandValidatorRegistration(
+                ModuleName,
+                commandType,
+                validatorType));
         }
     }
 
@@ -166,6 +177,7 @@ public sealed class BondstoneModuleCommandBuilder
             .GetInterfaces()
             .Where(type => type.IsGenericType
                 && type.GetGenericTypeDefinition() == openGenericType)
+            .Distinct()
             .ToArray();
     }
 }

@@ -1,7 +1,7 @@
 namespace Bondstone.Persistence;
 
 /// <summary>
-/// Coordinates optional system behavior with the current module transaction.
+/// Coordinates optional runtime behavior with the current module transaction.
 /// </summary>
 /// <remarks>
 /// This is an advanced provider/runtime contract. Callbacks are intended for

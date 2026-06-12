@@ -23,7 +23,7 @@ internal sealed class DurableModuleOperationReader : IDurableOperationReader
         Guid durableOperationId,
         CancellationToken ct = default)
     {
-        if (!_moduleRuntimeRegistry.HasDurableOperationStateStores)
+        if (!_moduleRuntimeRegistry.HasDurableModulePersistenceRegistrations)
         {
             IDurableOperationReader? fallbackReader = _fallbackReaderFactory();
             if (fallbackReader is null)

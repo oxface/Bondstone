@@ -50,6 +50,7 @@ public static class BondstonePostgresServiceCollectionExtensions
                 .GetRequiredService<PostgresPersistenceOptions>()
                 .ConnectionString));
         services.TryAddScoped<IPostgresModuleSession, PostgresModuleSession>();
+        services.TryAddScoped<PostgresModuleTransactionGuard>();
 
         return services;
     }

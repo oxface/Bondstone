@@ -40,7 +40,8 @@ public static class BondstoneServiceCollectionExtensions
             GetOrAddOwnedSingleton<ModuleCommandValidatorRegistry>(
                 services,
                 "Module command validator registration");
-        services.GetOrAddDurableModulePersistenceRegistrationRegistry();
+        DurableModulePersistenceRegistrationRegistry persistenceRegistrationRegistry =
+            services.GetOrAddDurableModulePersistenceRegistrationRegistry();
         GetOrAddModuleExecutionContextAccessor(services);
         services.AddBondstoneDurablePayloadSerialization();
 
@@ -133,6 +134,11 @@ public static class BondstoneServiceCollectionExtensions
             moduleRegistry,
             pipelineContributionRegistry,
             commandValidatorRegistry);
+        builder.AddConfigurationValidator(
+            new ModuleRuntimePipelineConfigurationValidator(pipelineContributionRegistry));
+        builder.AddConfigurationValidator(
+            new DurableModulePersistenceConfigurationValidator(
+                persistenceRegistrationRegistry));
         configure(builder);
         builder.Validate();
 

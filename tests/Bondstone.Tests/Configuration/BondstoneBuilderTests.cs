@@ -1,6 +1,7 @@
 using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Modules;
+using Bondstone.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -244,6 +245,49 @@ public sealed class BondstoneBuilderTests
         Assert.Contains("fulfillment.test-event.v1", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenDurableModulePersistenceRolesArePartial_ThrowsAtStartup()
+    {
+        var services = new ServiceCollection();
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxWriter(new DurableModuleOutboxWriterRegistration(
+                "sales",
+                _ => new CapturingOutboxWriter()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                    module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
+                });
+            }));
+
+        Assert.Contains("missing durable module persistence role registrations", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("outbox dispatcher", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenDurablePersistenceRegistrationTargetsUnknownModule_ThrowsAtStartup()
+    {
+        var services = new ServiceCollection();
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxDispatcher(new DurableModuleOutboxDispatcherRegistration(
+                "unknown",
+                _ => new NoOpOutboxDispatcher()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(_ => { }));
+
+        Assert.Contains("unknown module", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unknown", exception.Message, StringComparison.Ordinal);
+    }
+
     [DurableCommandIdentity("sales.test.command.v1")]
     public sealed record TestCommand : IDurableCommand;
 
@@ -267,6 +311,28 @@ public sealed class BondstoneBuilderTests
             CancellationToken ct = default)
         {
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CapturingOutboxWriter : IDurableOutboxWriter
+    {
+        public ValueTask WriteAsync(
+            DurableMessageEnvelope envelope,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class NoOpOutboxDispatcher : IDurableOutboxDispatcher
+    {
+        public ValueTask<DurableOutboxDispatchResult> DispatchAsync(
+            string claimedBy,
+            TimeSpan leaseDuration,
+            int maxCount = 100,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult(new DurableOutboxDispatchResult(0, 0, 0, 0, 0));
         }
     }
 

@@ -144,6 +144,15 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         Assert.True(persistenceWasMarked);
         AssertContainsModulePersistenceRegistrations(services, "fulfillment");
         AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
+        Assert.False(
+            services.Any(static descriptor => descriptor.ServiceType == typeof(IDurableOutboxWriter)),
+            "Module-only PostgreSQL EF setup should not register a root IDurableOutboxWriter service.");
+        Assert.False(
+            services.Any(static descriptor => descriptor.ServiceType == typeof(IDurableInboxHandlerExecutor)),
+            "Module-only PostgreSQL EF setup should not register a root IDurableInboxHandlerExecutor service.");
+        Assert.False(
+            services.Any(static descriptor => descriptor.ServiceType == typeof(IDurableOperationStateStore)),
+            "Module-only PostgreSQL EF setup should not register a root IDurableOperationStateStore service.");
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         BondstoneModuleRegistration module = serviceProvider
@@ -203,10 +212,20 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
     {
         var writer = new CapturingOutboxWriter();
         var services = new ServiceCollection();
-        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
-            .AddOutboxWriter(new DurableModuleOutboxWriterRegistration(
-                "fulfillment",
-                _ => writer));
+        DurableModulePersistenceRegistrationRegistry registry =
+            services.GetOrAddDurableModulePersistenceRegistrationRegistry();
+        registry.AddOutboxWriter(new DurableModuleOutboxWriterRegistration(
+            "fulfillment",
+            _ => writer));
+        registry.AddInboxHandlerExecutor(new DurableModuleInboxHandlerExecutorRegistration(
+            "fulfillment",
+            _ => new NoOpInboxHandlerExecutor()));
+        registry.AddOperationStateStore(new DurableModuleOperationStateStoreRegistration(
+            "fulfillment",
+            _ => new NoOpOperationStateStore()));
+        registry.AddOutboxDispatcher(new DurableModuleOutboxDispatcherRegistration(
+            "fulfillment",
+            _ => new CustomDispatcher()));
         services.AddBondstone(builder =>
         {
             builder.Module("billing", module =>
@@ -332,6 +351,36 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
             CancellationToken ct = default)
         {
             Envelopes.Add(envelope);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class NoOpInboxHandlerExecutor : IDurableInboxHandlerExecutor
+    {
+        public ValueTask<DurableInboxHandleResult> HandleOnceAsync(
+            DurableInboxRecord record,
+            Func<CancellationToken, ValueTask> handler,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult(new DurableInboxHandleResult(
+                DurableInboxHandleStatus.AlreadyProcessed,
+                record));
+        }
+    }
+
+    private sealed class NoOpOperationStateStore : IDurableOperationStateStore
+    {
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult<DurableOperationState?>(null);
+        }
+
+        public ValueTask SaveAsync(
+            DurableOperationState state,
+            CancellationToken ct = default)
+        {
             return ValueTask.CompletedTask;
         }
     }

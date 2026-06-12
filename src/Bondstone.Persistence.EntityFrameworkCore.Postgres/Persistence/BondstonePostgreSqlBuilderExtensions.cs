@@ -53,11 +53,10 @@ public static class BondstonePostgreSqlBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(module);
 
-        module.UseEntityFrameworkCorePersistence<TDbContext>();
-        module.Services.AddBondstonePostgreSqlPersistence<TDbContext>(
+        module.UseEntityFrameworkCoreModulePersistence<TDbContext>();
+        module.Services.AddBondstonePostgreSqlModuleInfrastructure<TDbContext>(
             connectionString,
-            configureNpgsql,
-            schema);
+            configureNpgsql);
         module.Services.AddBondstonePostgreSqlModulePersistence<TDbContext>(
             module.Name,
             schema);

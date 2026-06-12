@@ -23,13 +23,10 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new ArgumentException("Connection string is required.", nameof(connectionString));
-        }
-
-        services.AddDbContext<TDbContext>(optionsBuilder =>
-            optionsBuilder.UseNpgsql(connectionString, configureNpgsql));
+        AddPostgreSqlDbContext<TDbContext>(
+            services,
+            connectionString,
+            configureNpgsql);
         services.AddBondstoneEntityFrameworkCorePersistence<TDbContext>();
         services.TryAddScoped<IDurableInboxRegistrar>(serviceProvider =>
             new PostgreSqlDurableInboxRegistrar<TDbContext>(
@@ -54,6 +51,22 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
             new PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>(),
                 schema));
+
+        return services;
+    }
+
+    public static IServiceCollection AddBondstonePostgreSqlModuleInfrastructure<TDbContext>(
+        this IServiceCollection services,
+        string connectionString,
+        Action<NpgsqlDbContextOptionsBuilder>? configureNpgsql = null)
+        where TDbContext : DbContext
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        AddPostgreSqlDbContext<TDbContext>(
+            services,
+            connectionString,
+            configureNpgsql);
 
         return services;
     }
@@ -105,4 +118,18 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
         return services;
     }
 
+    private static void AddPostgreSqlDbContext<TDbContext>(
+        IServiceCollection services,
+        string connectionString,
+        Action<NpgsqlDbContextOptionsBuilder>? configureNpgsql)
+        where TDbContext : DbContext
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new ArgumentException("Connection string is required.", nameof(connectionString));
+        }
+
+        services.AddDbContext<TDbContext>(optionsBuilder =>
+            optionsBuilder.UseNpgsql(connectionString, configureNpgsql));
+    }
 }

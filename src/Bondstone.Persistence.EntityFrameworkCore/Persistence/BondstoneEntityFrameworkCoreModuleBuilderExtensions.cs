@@ -13,10 +13,21 @@ public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(module);
 
+        module.UseEntityFrameworkCoreModulePersistence<TDbContext>();
+        module.Services.AddBondstoneEntityFrameworkCorePersistence<TDbContext>();
+
+        return module;
+    }
+
+    public static BondstoneModuleBuilder UseEntityFrameworkCoreModulePersistence<TDbContext>(
+        this BondstoneModuleBuilder module)
+        where TDbContext : DbContext
+    {
+        ArgumentNullException.ThrowIfNull(module);
+
         module.UsePersistence(
             EntityFrameworkCoreModulePersistence.ProviderName,
             typeof(TDbContext));
-        module.Services.AddBondstoneEntityFrameworkCorePersistence<TDbContext>();
         module.TryAddEntityFrameworkCoreModuleTransactionSystemBehaviors();
 
         return module;

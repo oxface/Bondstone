@@ -113,7 +113,7 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task CommandSender_WhenOnlyAnotherModuleOutboxWriterExists_DoesNotLeakIt()
+    public void CommandSender_WhenOnlyAnotherModuleOutboxWriterExists_FailsAtStartup()
     {
         var fallbackWriter = new CapturingOutboxWriter();
         var fulfillmentWriter = new CapturingModuleOutboxWriter("fulfillment");
@@ -122,25 +122,41 @@ public sealed class DurableModulePersistenceRegistrationTests
         RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
             fulfillmentWriter.ModuleName,
             _ => fulfillmentWriter));
-        services.AddBondstone(bondstone =>
-        {
-            RegisterSalesSendingCommand(bondstone);
-        });
 
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        using IServiceScope scope = serviceProvider.CreateScope();
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                RegisterSalesSendingCommand(bondstone);
+            }));
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await scope.ServiceProvider
-                .GetRequiredService<IModuleCommandExecutor>()
-                .ExecuteAsync(
-                    "sales",
-                    new TestSendingCommand()));
-
-        Assert.Contains("durable module outbox writer", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("missing durable module persistence role registrations", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
         Assert.Empty(fallbackWriter.Envelopes);
         Assert.Empty(fulfillmentWriter.Envelopes);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void CommandSender_WhenRootWriterExistsButModuleRuntimeIsPartial_FailsAtStartup()
+    {
+        var fallbackWriter = new CapturingOutboxWriter();
+        var salesInboxExecutor = new CapturingModuleInboxHandlerExecutor("sales");
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableOutboxWriter>(fallbackWriter);
+        RegisterInboxHandlerExecutor(services, new DurableModuleInboxHandlerExecutorRegistration(
+            salesInboxExecutor.ModuleName,
+            _ => salesInboxExecutor));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                RegisterSalesSendingCommand(bondstone);
+            }));
+
+        Assert.Contains("missing durable module persistence role registrations", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(fallbackWriter.Envelopes);
+        Assert.Equal(0, salesInboxExecutor.HandleCalls);
     }
 
     [Fact]
@@ -174,7 +190,7 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task CommandReceive_WhenOnlyAnotherModuleInboxExecutorExists_DoesNotLeakIt()
+    public void CommandReceive_WhenOnlyAnotherModuleInboxExecutorExists_FailsAtStartup()
     {
         var fallbackExecutor = new CapturingInboxHandlerExecutor();
         var billingExecutor = new CapturingModuleInboxHandlerExecutor("billing");
@@ -183,33 +199,56 @@ public sealed class DurableModulePersistenceRegistrationTests
         RegisterInboxHandlerExecutor(services, new DurableModuleInboxHandlerExecutorRegistration(
             billingExecutor.ModuleName,
             _ => billingExecutor));
-        services.AddBondstone(bondstone =>
-        {
-            bondstone.Module("fulfillment", module =>
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
             {
-                module.UseDurableMessaging();
-                module.UsePersistence("test persistence");
-                module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
-            });
-            bondstone.Module("billing", module =>
-            {
-                module.UseDurableMessaging();
-                module.UsePersistence("test persistence");
-            });
-        });
+                bondstone.Module("fulfillment", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                    module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
+                });
+                bondstone.Module("billing", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                });
+            }));
 
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        using IServiceScope scope = serviceProvider.CreateScope();
-
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await scope.ServiceProvider
-                .GetRequiredService<IModuleCommandReceivePipeline>()
-                .HandleOnceAsync(CreateTestCommandEnvelope()));
-
-        Assert.Contains("durable module inbox handler executor", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("missing durable module persistence role registrations", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
         Assert.Equal(0, fallbackExecutor.HandleCalls);
         Assert.Equal(0, billingExecutor.HandleCalls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void CommandReceive_WhenRootInboxExecutorExistsButModuleRuntimeIsPartial_FailsAtStartup()
+    {
+        var fallbackExecutor = new CapturingInboxHandlerExecutor();
+        var fulfillmentWriter = new CapturingModuleOutboxWriter("fulfillment");
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableInboxHandlerExecutor>(fallbackExecutor);
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
+            fulfillmentWriter.ModuleName,
+            _ => fulfillmentWriter));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                    module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
+                });
+            }));
+
+        Assert.Contains("missing durable module persistence role registrations", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, fallbackExecutor.HandleCalls);
+        Assert.Empty(fulfillmentWriter.Envelopes);
     }
 
     [Fact]
@@ -243,7 +282,7 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task CommandSender_WhenOnlyAnotherModuleOperationStoreExists_DoesNotLeakIt()
+    public void CommandSender_WhenOnlyAnotherModuleOperationStoreExists_FailsAtStartup()
     {
         var salesWriter = new CapturingModuleOutboxWriter("sales");
         var fallbackStore = new CapturingOperationStateStore();
@@ -256,28 +295,42 @@ public sealed class DurableModulePersistenceRegistrationTests
         RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
             fulfillmentStore.ModuleName,
             _ => fulfillmentStore));
-        services.AddBondstone(bondstone =>
-        {
-            RegisterSalesSendingCommand(bondstone);
-        });
-        Guid durableOperationId = Guid.Parse("6916cddc-c0bc-47f3-9d33-0d92719d2f6b");
 
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        using IServiceScope scope = serviceProvider.CreateScope();
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                RegisterSalesSendingCommand(bondstone);
+            }));
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await scope.ServiceProvider
-                .GetRequiredService<IModuleCommandExecutor>()
-                .ExecuteAsync(
-                    "sales",
-                    new TestTrackedSendingCommand(durableOperationId)));
-
-        Assert.Contains(nameof(IDurableOperationStateStore), exception.Message, StringComparison.Ordinal);
-        Assert.Contains("durable module operation-state store", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("missing durable module persistence role registrations", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
         Assert.Empty(salesWriter.Envelopes);
         Assert.Empty(fallbackStore.SavedStates);
         Assert.Empty(fulfillmentStore.SavedStates);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void CommandSender_WhenRootOperationStoreExistsButModuleRuntimeIsPartial_FailsAtStartup()
+    {
+        var salesWriter = new CapturingModuleOutboxWriter("sales");
+        var fallbackStore = new CapturingOperationStateStore();
+        var services = new ServiceCollection();
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
+            salesWriter.ModuleName,
+            _ => salesWriter));
+        services.AddSingleton<IDurableOperationStateStore>(fallbackStore);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                RegisterSalesSendingCommand(bondstone);
+            }));
+
+        Assert.Contains("missing durable module persistence role registrations", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(salesWriter.Envelopes);
+        Assert.Empty(fallbackStore.SavedStates);
     }
 
     private static void RegisterSalesSendingCommand(

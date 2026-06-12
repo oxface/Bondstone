@@ -60,6 +60,13 @@ The module transaction owns the commit boundary for handler SQL, inbox markers,
 operation state, and outgoing outbox rows. The low-level inbox executor only
 stages receive-side work inside that transaction.
 
+Because the provider uses one scoped `IPostgresModuleSession`, nested execution
+of a different direct-PostgreSQL module in the same service scope is rejected.
+Otherwise the nested module would share the active session transaction instead
+of owning an independent module boundary. Use durable messaging or a separate
+service scope for cross-module follow-up work that needs its own PostgreSQL
+transaction.
+
 The provider contributes passive durable module runtime registrations for the
 module writer, inbox executor, and operation-state store into
 `DurableModulePersistenceRegistrationRegistry`. Those registrations carry the

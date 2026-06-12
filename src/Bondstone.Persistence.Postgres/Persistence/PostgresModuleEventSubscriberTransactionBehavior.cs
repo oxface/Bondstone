@@ -24,7 +24,7 @@ internal sealed class PostgresModuleEventSubscriberTransactionBehavior<TEvent>(
         ArgumentNullException.ThrowIfNull(next);
 
         await _transactionRunner.ExecuteAsync(
-            context.ModuleName,
+            context,
             nextCt => next(nextCt),
             ct);
     }

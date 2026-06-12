@@ -1,4 +1,5 @@
 using Bondstone.Modules;
+using Bondstone.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bondstone.Persistence.Postgres.Persistence;
@@ -13,14 +14,15 @@ internal sealed class PostgresModuleTransactionRunner(
         moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
 
     public async ValueTask ExecuteAsync(
-        string moduleName,
+        IModulePipelineExecutionContext context,
         Func<CancellationToken, ValueTask> next,
         CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(next);
 
         PostgresModuleRuntimeDescriptor runtime =
-            _moduleRuntimeRegistry.GetRuntime(moduleName);
+            _moduleRuntimeRegistry.GetRuntime(context.ModuleName);
         if (!runtime.UsesPostgresPersistence)
         {
             await next(ct);
@@ -29,7 +31,34 @@ internal sealed class PostgresModuleTransactionRunner(
 
         IPostgresModuleSession session = _serviceProvider
             .GetRequiredService<IPostgresModuleSession>();
+        PostgresModuleTransactionGuard transactionGuard = _serviceProvider
+            .GetRequiredService<PostgresModuleTransactionGuard>();
 
-        await session.ExecuteInTransactionAsync(next, ct);
+        using IDisposable transactionScope = transactionGuard.Enter(context.ModuleName);
+
+        bool transactionAlreadyActive = session.Transaction is not null;
+        var transactionFeature = new PostgresModuleTransactionFeature(
+            observesCommit: !transactionAlreadyActive);
+        using IDisposable transactionFeatureScope = context.Features.Push<IModuleTransactionFeature>(
+            transactionFeature);
+
+        try
+        {
+            await session.ExecuteInTransactionAsync(next, ct);
+        }
+        catch
+        {
+            if (!transactionAlreadyActive)
+            {
+                await transactionFeature.RolledBackAsync(ct);
+            }
+
+            throw;
+        }
+
+        if (!transactionAlreadyActive)
+        {
+            await transactionFeature.CommittedAsync(ct);
+        }
     }
 }

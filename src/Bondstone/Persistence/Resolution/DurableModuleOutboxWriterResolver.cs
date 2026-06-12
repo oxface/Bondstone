@@ -25,7 +25,7 @@ internal sealed class DurableModuleOutboxWriterResolver
             nameof(moduleName),
             "Module name");
 
-        if (!_moduleRuntimeRegistry.HasDurableOutboxWriters)
+        if (!_moduleRuntimeRegistry.HasDurableModulePersistenceRegistrations)
         {
             IDurableOutboxWriter? fallbackWriter = _fallbackWriterFactory();
             if (fallbackWriter is not null)

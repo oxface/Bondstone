@@ -51,6 +51,11 @@ internal sealed class ModuleRuntimeRegistry
     public bool HasDurableOperationStateStores =>
         _operationStateStoreRegistrations.Value.Count > 0;
 
+    public bool HasDurableModulePersistenceRegistrations =>
+        HasDurableOutboxWriters
+        || HasDurableInboxHandlerExecutors
+        || HasDurableOperationStateStores;
+
     public void ValidateDurableOutboxWriters()
     {
         _ = _outboxWriterRegistrations.Value;

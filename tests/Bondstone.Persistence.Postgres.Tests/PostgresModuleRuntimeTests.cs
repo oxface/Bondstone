@@ -87,6 +87,92 @@ public sealed class PostgresModuleRuntimeTests
 
     [Fact]
     [Trait("Category", "Application")]
+    public async Task ModuleCommand_WhenNestedPostgresExecutionTargetsAnotherModule_ThrowsBeforeSharingTransaction()
+    {
+        var log = new CommandCallLog();
+        var session = new RecordingPostgresModuleSession(log);
+        var services = new ServiceCollection();
+        services.AddSingleton(log);
+        services.AddScoped<IPostgresModuleSession>(_ => session);
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("billing", module =>
+            {
+                module.UsePostgresPersistence(
+                    "Host=localhost;Database=bondstone_tests");
+                module.Commands.RegisterHandler<NestedStoreCommand, NestedStoreCommandHandler>();
+            });
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UsePostgresPersistence(
+                    "Host=localhost;Database=bondstone_tests");
+                module.Commands.RegisterHandler<StoreCommand, StoreCommandHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "billing",
+                    new NestedStoreCommand("A-100")));
+
+        Assert.Contains("billing", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("same PostgreSQL session transaction", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(
+            ["postgres:begin", "nested-send:A-100", "postgres:rollback"],
+            log.Calls);
+        Assert.Equal(1, session.TransactionCalls);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ModuleCommand_WhenNestedPostgresExecutionTargetsSameModule_CanJoinTransaction()
+    {
+        var log = new CommandCallLog();
+        var session = new RecordingPostgresModuleSession(log);
+        var services = new ServiceCollection();
+        services.AddSingleton(log);
+        services.AddScoped<IPostgresModuleSession>(_ => session);
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("billing", module =>
+            {
+                module.UsePostgresPersistence(
+                    "Host=localhost;Database=bondstone_tests");
+                module.Commands.RegisterHandler<NestedSameModuleStoreCommand, NestedSameModuleStoreCommandHandler>();
+                module.Commands.RegisterHandler<StoreCommand, StoreCommandHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "billing",
+                new NestedSameModuleStoreCommand("A-100"));
+
+        Assert.Equal(
+            [
+                "postgres:begin",
+                "nested-same-module-send:A-100",
+                "postgres:begin",
+                "handler:A-100",
+                "postgres:commit",
+                "postgres:commit",
+            ],
+            log.Calls);
+        Assert.Equal(2, session.TransactionCalls);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
     public async Task ModuleCommand_WhenModuleDeclaresEntityFrameworkCoreProviderWithPostgresInHost_DoesNotResolvePostgresSession()
     {
         var log = new CommandCallLog();
@@ -234,6 +320,10 @@ public sealed class PostgresModuleRuntimeTests
 
     public sealed record SendStoreCommand(string Id) : ICommand;
 
+    public sealed record NestedStoreCommand(string Id) : ICommand;
+
+    public sealed record NestedSameModuleStoreCommand(string Id) : ICommand;
+
     [DurableCommandIdentity("fulfillment.store.v1")]
     public sealed record StoreDurableCommand(string Id) : IDurableCommand;
 
@@ -262,6 +352,40 @@ public sealed class PostgresModuleRuntimeTests
             await sender.SendAsync(
                 new StoreDurableCommand(command.Id),
                 "fulfillment",
+                ct);
+        }
+    }
+
+    public sealed class NestedStoreCommandHandler(
+        IModuleCommandExecutor commandExecutor,
+        CommandCallLog log)
+        : ICommandHandler<NestedStoreCommand>
+    {
+        public async ValueTask HandleAsync(
+            NestedStoreCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"nested-send:{command.Id}");
+            await commandExecutor.ExecuteAsync(
+                "fulfillment",
+                new StoreCommand(command.Id),
+                ct);
+        }
+    }
+
+    public sealed class NestedSameModuleStoreCommandHandler(
+        IModuleCommandExecutor commandExecutor,
+        CommandCallLog log)
+        : ICommandHandler<NestedSameModuleStoreCommand>
+    {
+        public async ValueTask HandleAsync(
+            NestedSameModuleStoreCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"nested-same-module-send:{command.Id}");
+            await commandExecutor.ExecuteAsync(
+                "billing",
+                new StoreCommand(command.Id),
                 ct);
         }
     }
@@ -323,7 +447,16 @@ public sealed class PostgresModuleRuntimeTests
 
             TransactionCalls++;
             log.Calls.Add("postgres:begin");
-            await operation(ct);
+            try
+            {
+                await operation(ct);
+            }
+            catch
+            {
+                log.Calls.Add("postgres:rollback");
+                throw;
+            }
+
             log.Calls.Add("postgres:commit");
         }
     }

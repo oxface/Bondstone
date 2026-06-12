@@ -199,45 +199,33 @@ public sealed class ModuleEventSubscriberExecutionTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task ExecuteAsync_WhenRuntimeContributionsHaveSameOrder_ThrowsClearError()
+    public void ExecuteAsync_WhenRuntimeContributionsHaveSameOrder_ThrowsClearError()
     {
         var services = new ServiceCollection();
         services.AddSingleton<EventCallLog>();
 
-        services.AddBondstone(bondstone =>
-        {
-            bondstone.Module("fulfillment", module =>
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
             {
-                ConfigureDurableMessaging(module);
-                module.AddEventSubscriberPipelineContribution(
-                    new ModuleEventSubscriberPipelineContribution(
-                        "test.event-subscriber.duplicate-a",
-                        ModulePipelineStepKind.System,
-                        777,
-                        typeof(EarlyEventSubscriberSystemBehavior)));
-                module.AddEventSubscriberPipelineContribution(
-                    new ModuleEventSubscriberPipelineContribution(
-                        "test.event-subscriber.duplicate-b",
-                        ModulePipelineStepKind.Capability,
-                        777,
-                        typeof(LateEventSubscriberSystemBehavior)));
-                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
-                    "fulfillment.order-projection.v1");
-            });
-        });
-
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        using IServiceScope scope = serviceProvider.CreateScope();
-
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => scope.ServiceProvider
-                .GetRequiredService<IModuleEventSubscriberExecutor>()
-                .ExecuteAsync(
-                    "fulfillment",
-                    "sales.order.ready-for-projection.v1",
-                    "fulfillment.order-projection.v1",
-                    new OrderSubmittedEvent("order-123"))
-                .AsTask());
+                bondstone.Module("fulfillment", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.duplicate-a",
+                            ModulePipelineStepKind.System,
+                            777,
+                            typeof(EarlyEventSubscriberSystemBehavior)));
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.duplicate-b",
+                            ModulePipelineStepKind.Capability,
+                            777,
+                            typeof(LateEventSubscriberSystemBehavior)));
+                    module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                        "fulfillment.order-projection.v1");
+                });
+            }));
 
         Assert.Contains("same order", exception.Message, StringComparison.Ordinal);
         Assert.Contains("test.event-subscriber.duplicate-a", exception.Message, StringComparison.Ordinal);
@@ -246,39 +234,27 @@ public sealed class ModuleEventSubscriberExecutionTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task ExecuteAsync_WhenRuntimeContributionsHaveSameName_ThrowsClearError()
+    public void ExecuteAsync_WhenRuntimeContributionsHaveSameName_ThrowsClearError()
     {
         var services = new ServiceCollection();
         services.AddSingleton<EventCallLog>();
 
-        services.AddBondstone(bondstone =>
-        {
-            bondstone.Module("fulfillment", module =>
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
             {
-                ConfigureDurableMessaging(module);
-                module.AddEventSubscriberPipelineContribution(
-                    new ModuleEventSubscriberPipelineContribution(
-                        "Bondstone.EventSubscriber.ExecutionContext",
-                        ModulePipelineStepKind.Capability,
-                        999,
-                        typeof(EarlyEventSubscriberSystemBehavior)));
-                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
-                    "fulfillment.order-projection.v1");
-            });
-        });
-
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        using IServiceScope scope = serviceProvider.CreateScope();
-
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => scope.ServiceProvider
-                .GetRequiredService<IModuleEventSubscriberExecutor>()
-                .ExecuteAsync(
-                    "fulfillment",
-                    "sales.order.ready-for-projection.v1",
-                    "fulfillment.order-projection.v1",
-                    new OrderSubmittedEvent("order-123"))
-                .AsTask());
+                bondstone.Module("fulfillment", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "Bondstone.EventSubscriber.ExecutionContext",
+                            ModulePipelineStepKind.Capability,
+                            999,
+                            typeof(EarlyEventSubscriberSystemBehavior)));
+                    module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                        "fulfillment.order-projection.v1");
+                });
+            }));
 
         Assert.Contains("same name", exception.Message, StringComparison.Ordinal);
         Assert.Contains("Bondstone.EventSubscriber.ExecutionContext", exception.Message, StringComparison.Ordinal);

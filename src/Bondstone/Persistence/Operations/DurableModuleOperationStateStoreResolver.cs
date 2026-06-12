@@ -27,7 +27,7 @@ internal sealed class DurableModuleOperationStateStoreResolver
             nameof(moduleName),
             "Module name");
 
-        if (!_moduleRuntimeRegistry.HasDurableOperationStateStores
+        if (!_moduleRuntimeRegistry.HasDurableModulePersistenceRegistrations
             && _fallbackStoreFactory() is IDurableOperationStateStore fallbackStore)
         {
             return fallbackStore;

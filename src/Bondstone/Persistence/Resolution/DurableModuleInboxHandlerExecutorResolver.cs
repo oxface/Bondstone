@@ -25,7 +25,7 @@ internal sealed class DurableModuleInboxHandlerExecutorResolver
             nameof(moduleName),
             "Module name");
 
-        if (!_moduleRuntimeRegistry.HasDurableInboxHandlerExecutors
+        if (!_moduleRuntimeRegistry.HasDurableModulePersistenceRegistrations
             && _fallbackExecutorFactory() is IDurableInboxHandlerExecutor fallbackExecutor)
         {
             return fallbackExecutor;

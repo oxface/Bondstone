@@ -15,6 +15,8 @@ duplicating durable rules.
   active issue extraction.
 - [packaging.md](packaging.md) records current package IDs, target framework,
   and package dependency direction.
+- [public-api.md](public-api.md) records the current public API surface
+  classification used by ADR 0046 cleanup work.
 - [repository.md](repository.md) records current repository layout and tooling
   direction.
 - [samples.md](samples.md) records current sample application direction.
@@ -47,6 +49,7 @@ files with the local context each audience needs.
 - `setup.md` is the only stable doc for library-user code examples.
 - `packaging.md` owns package IDs, dependency direction, target framework,
   versioning, and publishing policy.
+- `public-api.md` owns current package public API classification notes.
 - `repository.md` owns repository layout, local tooling, CI, and code
   conventions, but should reference `packaging.md` for package inventory.
 - `testing.md` owns test policy, categories, and command entrypoints.

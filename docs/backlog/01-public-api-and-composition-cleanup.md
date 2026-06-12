@@ -56,6 +56,16 @@ work.
 - Small code cleanup only where the inventory finds an obviously obsolete or
   misleading public surface and ADR 0046 compatibility expectations are met.
 
+## Progress
+
+- First-pass stable inventory for `Bondstone`, `Bondstone.Persistence`,
+  `Bondstone.Persistence.EntityFrameworkCore`,
+  `Bondstone.Persistence.EntityFrameworkCore.Postgres`, and
+  `Bondstone.Persistence.Postgres` now lives in
+  [../public-api.md](../public-api.md).
+- Remaining inventory work should classify hosting, transport, and optional
+  capability packages before proposing visibility, naming, or contract changes.
+
 ## Verification
 
 - `pnpm format:check`

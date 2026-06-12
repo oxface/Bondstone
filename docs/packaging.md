@@ -122,6 +122,8 @@ types remain available for advanced composition, tests, custom schedulers, and
 app-owned provider consumers. Their visibility does not automatically make
 them the preferred setup path or an open-ended extension point. Stable docs
 should steer normal users to the builder and module-owned helpers first.
+The package-by-package classification inventory lives in
+[public-api.md](public-api.md).
 
 After publication, broad public type removal, visibility reduction, renaming,
 or parameter-name churn is compatibility-sensitive. Do not perform that work

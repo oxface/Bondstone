@@ -7,6 +7,9 @@ namespace Bondstone.Modules;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class ModuleEventSubscriberPipelineContribution
 {
+    private static readonly Func<BondstoneModuleRegistration, bool> AppliesToAllModules =
+        static _ => true;
+
     private readonly Func<BondstoneModuleRegistration, bool> _appliesToModule;
     private readonly Func<IServiceProvider, Type, object> _createBehavior;
     private Type? _behaviorType;
@@ -53,7 +56,7 @@ public sealed class ModuleEventSubscriberPipelineContribution
         Name = name.Trim();
         Kind = kind;
         Order = order;
-        _appliesToModule = appliesToModule ?? (_ => true);
+        _appliesToModule = appliesToModule ?? AppliesToAllModules;
         _createBehavior = createBehavior ?? throw new ArgumentNullException(nameof(createBehavior));
     }
 
@@ -77,8 +80,8 @@ public sealed class ModuleEventSubscriberPipelineContribution
         return StringComparer.Ordinal.Equals(Name, other.Name)
             && Kind == other.Kind
             && Order == other.Order
-            && _behaviorType is not null
-            && _behaviorType == other._behaviorType;
+            && BehaviorsAreEquivalent(other)
+            && DelegatesAreEquivalent(_appliesToModule, other._appliesToModule);
     }
 
     internal IModuleEventSubscriberPipelineBehavior<TEvent> CreateBehavior<TEvent>(
@@ -114,6 +117,21 @@ public sealed class ModuleEventSubscriberPipelineContribution
         return ActivatorUtilities.CreateInstance(
             serviceProvider,
             implementationType);
+    }
+
+    private bool BehaviorsAreEquivalent(ModuleEventSubscriberPipelineContribution other)
+    {
+        if (_behaviorType is not null || other._behaviorType is not null)
+        {
+            return _behaviorType == other._behaviorType;
+        }
+
+        return DelegatesAreEquivalent(_createBehavior, other._createBehavior);
+    }
+
+    private static bool DelegatesAreEquivalent(Delegate left, Delegate right)
+    {
+        return left == right || left.Equals(right);
     }
 
     private static void ValidateBehaviorType(Type behaviorType)

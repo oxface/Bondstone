@@ -165,6 +165,91 @@ public sealed class DurableOperationReaderTests
         Assert.Equal(1, fallbackReader.ReadCount);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetStateAsync_WhenScopedRootReaderWasRegisteredBeforeBondstone_DisposesFallbackWithScope()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var capture = new DisposableReaderCapture();
+        var services = new ServiceCollection();
+        services.AddScoped<IDurableOperationReader>(_ => capture.Create());
+        services.AddBondstone(_ => { });
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        DisposableOperationReader fallbackReader;
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            DurableOperationState? state = await scope.ServiceProvider
+                .GetRequiredService<IDurableOperationReader>()
+                .GetStateAsync(durableOperationId);
+
+            Assert.NotNull(state);
+            Assert.Equal(DurableOperationStatus.Completed, state.Status);
+            fallbackReader = Assert.Single(capture.Readers);
+            Assert.Equal(1, fallbackReader.ReadCount);
+            Assert.False(fallbackReader.Disposed);
+        }
+
+        Assert.True(fallbackReader.Disposed);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetStateAsync_WhenTransientRootReaderWasRegisteredBeforeBondstone_CreatesFallbackPerReadAndDisposesWithScope()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var capture = new DisposableReaderCapture();
+        var services = new ServiceCollection();
+        services.AddTransient<IDurableOperationReader>(_ => capture.Create());
+        services.AddBondstone(_ => { });
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            IDurableOperationReader reader = scope.ServiceProvider
+                .GetRequiredService<IDurableOperationReader>();
+
+            await reader.GetStateAsync(durableOperationId);
+            await reader.GetStateAsync(durableOperationId);
+
+            Assert.Equal(2, capture.Readers.Count);
+            Assert.All(capture.Readers, fallbackReader =>
+            {
+                Assert.Equal(1, fallbackReader.ReadCount);
+                Assert.False(fallbackReader.Disposed);
+            });
+        }
+
+        Assert.All(capture.Readers, fallbackReader => Assert.True(fallbackReader.Disposed));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetStateAsync_WhenSingletonInstanceRootReaderWasRegisteredBeforeBondstone_DoesNotDisposeExternalInstance()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var fallbackReader = new DisposableOperationReader();
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableOperationReader>(fallbackReader);
+        services.AddBondstone(_ => { });
+        ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            DurableOperationState? state = await scope.ServiceProvider
+                .GetRequiredService<IDurableOperationReader>()
+                .GetStateAsync(durableOperationId);
+
+            Assert.NotNull(state);
+            Assert.Equal(DurableOperationStatus.Completed, state.Status);
+        }
+
+        await serviceProvider.DisposeAsync();
+
+        Assert.Equal(1, fallbackReader.ReadCount);
+        Assert.False(fallbackReader.Disposed);
+    }
+
     private static ServiceProvider CreateServiceProvider(
         params object[] storesOrReaders)
     {
@@ -260,6 +345,42 @@ public sealed class DurableOperationReaderTests
         {
             ReadCount++;
             return ValueTask.FromResult(State);
+        }
+    }
+
+    private sealed class DisposableReaderCapture
+    {
+        public List<DisposableOperationReader> Readers { get; } = [];
+
+        public DisposableOperationReader Create()
+        {
+            var reader = new DisposableOperationReader();
+            Readers.Add(reader);
+            return reader;
+        }
+    }
+
+    private sealed class DisposableOperationReader : IDurableOperationReader, IDisposable
+    {
+        public int ReadCount { get; private set; }
+
+        public bool Disposed { get; private set; }
+
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            ReadCount++;
+            return ValueTask.FromResult<DurableOperationState?>(
+                new DurableOperationState(
+                    durableOperationId,
+                    DurableOperationStatus.Completed,
+                    DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")));
+        }
+
+        public void Dispose()
+        {
+            Disposed = true;
         }
     }
 }

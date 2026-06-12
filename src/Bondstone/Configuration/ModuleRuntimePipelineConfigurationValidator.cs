@@ -15,6 +15,9 @@ internal sealed class ModuleRuntimePipelineConfigurationValidator(
 
         foreach (BondstoneModuleRegistration module in context.Modules)
         {
+            ValidateModuleCommandContributionsApply(module);
+            ValidateModuleEventSubscriberContributionsApply(module);
+
             if (context.CommandRoutes.Any(route =>
                     StringComparer.Ordinal.Equals(route.ModuleName, module.Name)))
             {
@@ -31,8 +34,6 @@ internal sealed class ModuleRuntimePipelineConfigurationValidator(
 
     private void ValidateCommandContributions(BondstoneModuleRegistration module)
     {
-        ValidateModuleCommandContributionsApply(module);
-
         ModuleCommandPipelineContribution[] selectedContributions =
             _pipelineContributionRegistry
                 .GetCommandContributions(module)
@@ -71,8 +72,6 @@ internal sealed class ModuleRuntimePipelineConfigurationValidator(
 
     private void ValidateEventSubscriberContributions(BondstoneModuleRegistration module)
     {
-        ValidateModuleEventSubscriberContributionsApply(module);
-
         ModuleEventSubscriberPipelineContribution[] selectedContributions =
             _pipelineContributionRegistry
                 .GetEventSubscriberContributions(module)

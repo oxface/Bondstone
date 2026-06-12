@@ -239,6 +239,29 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     [Fact]
     [Trait("Category", "Application")]
+    public void ModuleCommands_WhenHandlerlessModuleOptsInButIsNotEfBacked_FailsAtStartup()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    module.UseEntityFrameworkCoreDomainEventPersistence();
+                });
+            }));
+
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            "Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Command",
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.Contains("required persistence declaration", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
     public async Task ModuleCommands_WhenModuleOptsInButDomainEventMappingIsMissing_FailsWithExplicitMappingMessage()
     {
         string databaseName = Guid.NewGuid().ToString("N");

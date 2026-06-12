@@ -277,17 +277,16 @@ public static class BondstoneServiceCollectionExtensions
                         ? null
                         : CreateFallbackOperationReader(
                             serviceProvider,
-                            fallbackReaderDescriptor)),
+                            fallbackReaderDescriptor),
+                    fallbackReaderDescriptor?.ImplementationInstance is null),
                 fallbackReaderDescriptor?.Lifetime ?? ServiceLifetime.Scoped));
         }
 
         services.AddScoped<IDurableOperationReader>(serviceProvider =>
         {
-            DurableOperationReaderFallback? fallback =
-                serviceProvider.GetService<DurableOperationReaderFallback>();
             return new DurableModuleOperationReader(
                 serviceProvider.GetRequiredService<ModuleRuntimeRegistry>(),
-                () => fallback?.Reader
+                () => serviceProvider.GetService<DurableOperationReaderFallback>()?.Reader
                     ?? serviceProvider.GetService<IDurableOperationStateStore>());
         });
     }

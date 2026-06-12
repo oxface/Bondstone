@@ -296,6 +296,93 @@ public sealed class ModuleEventSubscriberExecutionTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenSameFactoryRuntimeContributionIsRegisteredTwice_DeduplicatesContribution()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.AddEventSubscriberPipelineContribution(
+                    new ModuleEventSubscriberPipelineContribution(
+                        "test.event-subscriber.factory",
+                        ModulePipelineStepKind.System,
+                        777,
+                        null,
+                        CreateEarlyEventSubscriberBehavior));
+                module.AddEventSubscriberPipelineContribution(
+                    new ModuleEventSubscriberPipelineContribution(
+                        "test.event-subscriber.factory",
+                        ModulePipelineStepKind.System,
+                        777,
+                        null,
+                        CreateEarlyEventSubscriberBehavior));
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleEventSubscriberExecutor>()
+            .ExecuteAsync(
+                "fulfillment",
+                "sales.order.ready-for-projection.v1",
+                "fulfillment.order-projection.v1",
+                new OrderSubmittedEvent("order-123"));
+
+        Assert.Equal(
+            [
+                "system-early:before",
+                "handle-ordering:order-123",
+                "system-early:after",
+            ],
+            serviceProvider.GetRequiredService<EventCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ExecuteAsync_WhenFactoryRuntimeContributionsHaveSameSlotButDifferentFactories_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.factory",
+                            ModulePipelineStepKind.System,
+                            777,
+                            null,
+                            CreateEarlyEventSubscriberBehavior));
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.factory",
+                            ModulePipelineStepKind.System,
+                            777,
+                            null,
+                            CreateLateEventSubscriberBehavior));
+                    module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                        "fulfillment.order-projection.v1");
+                });
+            }));
+
+        Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test.event-subscriber.factory", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void ModuleEventSubscriberPipelineContribution_WhenBehaviorTypeIsInvalid_Throws()
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(
@@ -476,6 +563,22 @@ public sealed class ModuleEventSubscriberExecutionTests
     {
         module.UseDurableMessaging();
         module.UsePersistence("test persistence");
+    }
+
+    private static object CreateEarlyEventSubscriberBehavior(
+        IServiceProvider serviceProvider,
+        Type eventType)
+    {
+        return ActivatorUtilities.CreateInstance<EarlyEventSubscriberSystemBehavior>(
+            serviceProvider);
+    }
+
+    private static object CreateLateEventSubscriberBehavior(
+        IServiceProvider serviceProvider,
+        Type eventType)
+    {
+        return ActivatorUtilities.CreateInstance<LateEventSubscriberSystemBehavior>(
+            serviceProvider);
     }
 
     public sealed class EventCallLog

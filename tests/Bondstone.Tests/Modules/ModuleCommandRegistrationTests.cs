@@ -401,6 +401,87 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task ModuleCommands_WhenSameFactoryRuntimeContributionIsRegisteredTwice_DeduplicatesContribution()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "test.command.factory",
+                        ModulePipelineStepKind.System,
+                        777,
+                        null,
+                        CreateEarlyCommandBehavior));
+                module.AddCommandPipelineContribution(
+                    new ModuleCommandPipelineContribution(
+                        "test.command.factory",
+                        ModulePipelineStepKind.System,
+                        777,
+                        null,
+                        CreateEarlyCommandBehavior));
+                module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new PipelineOrderCommand("order-123"));
+
+        Assert.Equal(
+            [
+                "system-early:before",
+                "handle:order-123",
+                "system-early:after",
+            ],
+            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ModuleCommands_WhenFactoryRuntimeContributionsHaveSameSlotButDifferentFactories_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    module.AddCommandPipelineContribution(
+                        new ModuleCommandPipelineContribution(
+                            "test.command.factory",
+                            ModulePipelineStepKind.System,
+                            777,
+                            null,
+                            CreateEarlyCommandBehavior));
+                    module.AddCommandPipelineContribution(
+                        new ModuleCommandPipelineContribution(
+                            "test.command.factory",
+                            ModulePipelineStepKind.System,
+                            777,
+                            null,
+                            CreateLateCommandBehavior));
+                    module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
+                });
+            }));
+
+        Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test.command.factory", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void ModuleCommandPipelineContribution_WhenBehaviorTypeIsInvalid_Throws()
     {
         ArgumentException exception = Assert.Throws<ArgumentException>(
@@ -483,6 +564,22 @@ public sealed class ModuleCommandRegistrationTests
     {
         module.UseDurableMessaging();
         module.UsePersistence("test persistence");
+    }
+
+    private static object CreateEarlyCommandBehavior(
+        IServiceProvider serviceProvider,
+        Type commandType)
+    {
+        return ActivatorUtilities.CreateInstance<EarlyCommandSystemBehavior>(
+            serviceProvider);
+    }
+
+    private static object CreateLateCommandBehavior(
+        IServiceProvider serviceProvider,
+        Type commandType)
+    {
+        return ActivatorUtilities.CreateInstance<LateCommandSystemBehavior>(
+            serviceProvider);
     }
 
     public sealed class CommandCallLog

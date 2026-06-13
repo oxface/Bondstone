@@ -24,6 +24,9 @@ Ship one NuGet package per package project. Package IDs match project names:
 - `Bondstone.Transport.ServiceBus`
 - `Bondstone.Transport.RabbitMq`
 
+For a consumer-facing capability and namespace matrix, see
+[package-discovery.md](package-discovery.md).
+
 `Bondstone.Transport.ServiceBus` and `Bondstone.Transport.RabbitMq` are the
 production-oriented direct transport adapters. They include outgoing durable
 outbox dispatch, provider-native receive topology, opt-in hosted receive

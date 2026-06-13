@@ -93,7 +93,9 @@ Contracts projects that define durable commands or integration events need
 the EF Core and PostgreSQL packages. Host projects that configure local
 transport and the hosted worker need `Bondstone.Transport.Local` and
 `Bondstone.Hosting`. See [packaging.md](packaging.md) for the full package
-matrix and dependency direction.
+matrix and dependency direction, and
+[package-discovery.md](package-discovery.md) for package and namespace
+discovery by capability.
 
 Common namespaces for this path are:
 

@@ -9,16 +9,16 @@ duplicating durable rules.
 
 - [adr/README.md](adr/README.md) defines the ADR workflow, statuses, and how
   ADR decisions are applied into stable docs and agent instructions.
-- [architecture.md](architecture.md) records current runtime positioning and
-  durable module-boundary architecture.
-- [extraction.md](extraction.md) records the slow layered extraction strategy.
-- [handover.md](handover.md) contains a continuation prompt for future
-  Bondstone workspace sessions.
+- [architecture/README.md](architecture/README.md) records current runtime
+  positioning and durable module-boundary architecture.
 - [packaging.md](packaging.md) records current package IDs, target framework,
   and package dependency direction.
+- [public-api.md](public-api.md) records the current public API surface
+  classification used by ADR 0046 cleanup work.
 - [repository.md](repository.md) records current repository layout and tooling
   direction.
 - [samples.md](samples.md) records current sample application direction.
+- [setup.md](setup.md) is the single user-facing library setup example.
 - [testing.md](testing.md) records current testing direction.
 
 ## Documentation Model
@@ -26,6 +26,8 @@ duplicating durable rules.
 - Stable docs describe the current operating contract.
 - ADRs preserve the decision trail and explain why a durable technical decision
   exists.
+- GitHub Issues and GitHub Projects track backlog work, real-project findings,
+  cleanup tasks, and prioritization.
 - README files orient human maintainers to a folder or workflow.
 - AGENTS files orient agents to the relevant docs, local constraints, and
   verification expectations for a folder or workflow.
@@ -37,6 +39,17 @@ duplicating durable rules.
 Prefer references over duplication. If a rule matters to both humans and
 agents, record it in stable docs, then reference it from README and AGENTS
 files with the local context each audience needs.
+
+## Document Ownership
+
+- `setup.md` is the only stable doc for library-user code examples.
+- `packaging.md` owns package IDs, dependency direction, target framework,
+  versioning, and publishing policy.
+- `public-api.md` owns current package public API classification notes.
+- `repository.md` owns repository layout, local tooling, CI, and code
+  conventions, but should reference `packaging.md` for package inventory.
+- `testing.md` owns test policy, categories, and command entrypoints.
+- `architecture/` owns runtime contracts and durable boundary principles.
 
 ## Expanding Docs
 

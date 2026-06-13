@@ -10,16 +10,22 @@ Tests should protect behavior that matters to consumers:
 - package boundaries;
 - durable persistence behavior;
 - transport behavior;
-- tracing and correlation behavior;
+- tracing and causation behavior;
 - module and service extraction assumptions.
 
 Use unit tests for relevant logic and behavior that can be verified without
 external infrastructure.
 
+The public API baseline test is a `Unit` test under
+`tests/Bondstone.PublicApi.Tests`. It reflects packable package assemblies and
+compares their public/protected surface to checked-in baselines. Refresh those
+baselines intentionally with `BONDSTONE_UPDATE_PUBLIC_API_BASELINE=1` only
+after reviewing the compatibility impact of the API change.
+
 Avoid tests whose only meaningful assertion is that a method called another
 method. Interaction assertions are acceptable when the interaction itself is
 the observable contract, but tests should generally assert outcomes, persisted
-state, emitted messages, error behavior, trace/correlation data, or documented
+state, emitted messages, error behavior, trace/causation data, or documented
 side effects.
 
 Use test doubles for simple collaborators when they keep the test focused.
@@ -52,12 +58,49 @@ Integration tests that require external infrastructure should use
 Testcontainers or an equivalent explicit test dependency instead of ambient
 developer machine state.
 
+EF Core InMemory tests are allowed only for fast package-local checks of
+entity mapping, change-tracker behavior, and "does not call SaveChanges"
+boundaries. They are not persistence-semantics tests. Anything that depends on
+real database behavior, including PostgreSQL behavior, unique constraints,
+transactions, savepoints, locking, indexing, SQL generation, migration
+compatibility, inbox deduplication races, outbox claiming, or
+retry/terminal-failure state transitions, must be an `Integration` test backed
+by Testcontainers or an equivalent real provider fixture.
+
 Keep tests grouped by package or integration boundary so they reveal package
 ownership and extraction seams.
 
+For transport adapters, prefer a layered shape: use fast in-process transport
+tests for the broad behavior matrix, and keep a small number of
+Testcontainers-backed transport tests for the real provider handoff contract:
+acknowledgement/completion after success, negative acknowledgement or abandon
+after failure, and broker-owned dead-letter behavior where the adapter promises
+that handoff.
+
+Receive retry-policy tests should assert Bondstone's provider boundary rather
+than expecting Bondstone to own broker retry policy. Fast tests should cover
+native mapping, dispatch, and settlement ordering. Provider-backed integration
+tests should prove the native handoff that Bondstone performs: RabbitMQ
+negative acknowledgement with the configured `requeue` value and Service Bus
+abandon/complete behavior. Broker retry schedules, max delivery count, and
+dead-letter topology are app/provider configuration and should be tested only
+where the adapter explicitly promises that handoff.
+
+For first-class events, keep the same split. Unit and application tests should
+cover event route/topic resolution, publish dispatch, subscriber registration,
+subscriber inbox-key identity, and diagnostics. Provider-backed delivery,
+acknowledgement, retry, dead-letter, or subscription-storage behavior belongs
+in explicit `Integration` tests.
+
+Transport topology validation is fast startup behavior. Cover missing command
+routes, missing published-event destinations, ambiguous multi-transport route
+ownership, missing subscriber bindings, invalid receive bindings, and
+queue-destination event fan-out mismatches with `Unit` or `Application` tests
+unless the assertion depends on a real broker handoff.
+
 ## Verification Surface
 
-Repository verification will need a clear split between fast default checks and
+Repository verification is split between fast default checks and
 infrastructure-backed integration checks.
 
 The current default verification commands are:
@@ -76,11 +119,12 @@ Additional test entrypoints are:
 
 `pnpm verify` is kept as an alias for `pnpm check`.
 
-Samples may become end-to-end and smoke-test targets when the sample
-application exists.
+The modular monolith adoption-proof sample has an explicit `Integration`
+smoke test under `tests/Bondstone.Samples.Tests`. It is covered by
+`pnpm backend:test:integration` and intentionally stays out of the default
+fast test filter because it starts Testcontainers PostgreSQL.
 
-## Application State
-
-This testing strategy is accepted and documented. Initial empty test projects,
-category-filtered commands, and CI wiring exist. Real tests, neutral fixtures,
-and infrastructure-backed checks remain future application work.
+The PostgreSQL non-EF persistence package has explicit `Integration` tests under
+`tests/Bondstone.Persistence.Postgres.Tests` because the package depends
+on real PostgreSQL schema, transaction, inbox, outbox, and operation-state
+behavior.

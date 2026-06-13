@@ -1,14 +1,40 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Bondstone.EntityFrameworkCore.Postgres/Bondstone.EntityFrameworkCore.Postgres.csproj" />
-    <Project Path="src/Bondstone.EntityFrameworkCore/Bondstone.EntityFrameworkCore.csproj" />
-    <Project Path="src/Bondstone.Transport.Rebus/Bondstone.Transport.Rebus.csproj" />
+    <Project Path="src/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.csproj" />
+    <Project Path="src/Bondstone.Capabilities.DomainEvents/Bondstone.Capabilities.DomainEvents.csproj" />
+    <Project Path="src/Bondstone.Persistence/Bondstone.Persistence.csproj" />
+    <Project Path="src/Bondstone.Persistence.EntityFrameworkCore.Postgres/Bondstone.Persistence.EntityFrameworkCore.Postgres.csproj" />
+    <Project Path="src/Bondstone.Persistence.EntityFrameworkCore/Bondstone.Persistence.EntityFrameworkCore.csproj" />
+    <Project Path="src/Bondstone.Hosting/Bondstone.Hosting.csproj" />
+    <Project Path="src/Bondstone.Persistence.Postgres/Bondstone.Persistence.Postgres.csproj" />
+    <Project Path="src/Bondstone.Transport/Bondstone.Transport.csproj" />
+    <Project Path="src/Bondstone.Transport.Local/Bondstone.Transport.Local.csproj" />
+    <Project Path="src/Bondstone.Transport.RabbitMq/Bondstone.Transport.RabbitMq.csproj" />
+    <Project Path="src/Bondstone.Transport.ServiceBus/Bondstone.Transport.ServiceBus.csproj" />
     <Project Path="src/Bondstone/Bondstone.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/ModularMonolith.Billing/Bondstone.Samples.ModularMonolith.Billing.csproj" />
+    <Project Path="samples/ModularMonolith.Fulfillment.Contracts/Bondstone.Samples.ModularMonolith.Fulfillment.Contracts.csproj" />
+    <Project Path="samples/ModularMonolith.Fulfillment/Bondstone.Samples.ModularMonolith.Fulfillment.csproj" />
+    <Project Path="samples/ModularMonolith.Ordering.Contracts/Bondstone.Samples.ModularMonolith.Ordering.Contracts.csproj" />
+    <Project Path="samples/ModularMonolith.Ordering/Bondstone.Samples.ModularMonolith.Ordering.csproj" />
+    <Project Path="samples/ModularMonolith/Bondstone.Samples.ModularMonolith.csproj" />
+  </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj" />
-    <Project Path="tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="tests/Bondstone.Capabilities.DomainEvents.Tests/Bondstone.Capabilities.DomainEvents.Tests.csproj" />
+    <Project Path="tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Postgres.Tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Postgres.Tests.csproj" />
+    <Project Path="tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="tests/Bondstone.Composition.Tests/Bondstone.Composition.Tests.csproj" />
+    <Project Path="tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.csproj" />
+    <Project Path="tests/Bondstone.Persistence.EntityFrameworkCore.Tests/Bondstone.Persistence.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="tests/Bondstone.Hosting.Tests/Bondstone.Hosting.Tests.csproj" />
+    <Project Path="tests/Bondstone.Persistence.Postgres.Tests/Bondstone.Persistence.Postgres.Tests.csproj" />
+    <Project Path="tests/Bondstone.PublicApi.Tests/Bondstone.PublicApi.Tests.csproj" />
+    <Project Path="tests/Bondstone.Transport.Local.Tests/Bondstone.Transport.Local.Tests.csproj" />
+    <Project Path="tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj" />
+    <Project Path="tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj" />
+    <Project Path="tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj" />
     <Project Path="tests/Bondstone.Tests/Bondstone.Tests.csproj" />
-    <Project Path="tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj" />
   </Folder>
 </Solution>

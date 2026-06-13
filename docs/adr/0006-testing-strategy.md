@@ -1,14 +1,14 @@
 # 0006 Testing Strategy
 
 Status: Amended
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-04
 
 ## Context
 
 Bondstone is a reusable infrastructure library. Its tests need to protect
 behavior that matters to consumers: public contracts, package boundaries,
-durable persistence behavior, transport behavior, tracing/correlation behavior,
+durable persistence behavior, transport behavior, tracing/causation behavior,
 and module/service extraction assumptions.
 
 Some parts of the library are pure logic and should be tested with fast unit
@@ -35,7 +35,7 @@ ambient developer machine state.
 Avoid tests whose only meaningful assertion is that a method called another
 method. Interaction assertions are allowed when the interaction itself is the
 observable contract, but tests should generally assert outcomes, persisted
-state, emitted messages, error behavior, trace/correlation data, or documented
+state, emitted messages, error behavior, trace/causation data, or documented
 side effects.
 
 Use test doubles for simple collaborators when they keep the test focused.
@@ -60,6 +60,21 @@ The default repository quality gate runs `Unit` and `Application` tests.
 `Integration` tests must have explicit commands because they can require Docker
 or another container runtime.
 
+## Amendments
+
+### 2026-06-04: EF Core InMemory Is Not Persistence Verification
+
+EF Core InMemory tests are acceptable only for fast package-local checks of
+entity mapping, change tracking, and boundaries such as "does not call
+SaveChanges". They must not be treated as proof of relational persistence
+semantics.
+
+Tests for database behavior, including PostgreSQL behavior, unique
+constraints, transactions, savepoints, locking, indexing, SQL generation,
+migration compatibility, inbox deduplication races, outbox claiming, or
+retry/dead-letter transitions, must be `Integration` tests backed by
+Testcontainers or an equivalent real provider fixture.
+
 ## Consequences
 
 The test suite may be heavier than a pure unit-test suite, especially around
@@ -74,27 +89,30 @@ protect implementation wiring or depend on consumer-specific modules.
 Repository verification has a clear split between fast default checks and
 infrastructure-backed integration checks.
 
-## Applied To
+## Application Notes
 
-- Code:
-  - [tests/Bondstone.Tests/Bondstone.Tests.csproj](../../tests/Bondstone.Tests/Bondstone.Tests.csproj)
-  - [tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj](../../tests/Bondstone.EntityFrameworkCore.Tests/Bondstone.EntityFrameworkCore.Tests.csproj)
-  - [tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj](../../tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj)
-  - [tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj](../../tests/Bondstone.Transport.Rebus.Tests/Bondstone.Transport.Rebus.Tests.csproj)
-  - [package.json](../../package.json)
-  - [.github/workflows/verify.yml](../../.github/workflows/verify.yml)
-  - [AGENTS.md](../../AGENTS.md)
-- Stable docs:
-  - [docs/testing.md](../testing.md)
-  - [docs/README.md](../README.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-- Skills: Not applicable.
+- Current contract: Tests protect consumer-facing behavior, use `Unit`,
+  `Application`, and `Integration` categories, and keep infrastructure-backed
+  checks outside the default fast gate.
+- Stable docs: Current test categories, verification entrypoints, and
+  integration-test guidance are described in [docs/testing.md](../testing.md).
+- Agent guidance: Root [AGENTS.md](../../AGENTS.md) lists the repository
+  package-script verification entrypoints.
+- Application evidence: Test projects, category-filtered package scripts, CI
+  wiring, neutral unit/application coverage, Testcontainers-backed PostgreSQL,
+  RabbitMQ, Service Bus, persistence, and sample integration tests are present.
+  Stable docs describe the split between default fast gates and explicit
+  infrastructure-backed checks.
+- Pending or deferred: None for the testing policy. Additional coverage for
+  future behavior belongs with the ADR or implementation slice that introduces
+  that behavior.
 
 ## Verification
 
 Read back [docs/testing.md](../testing.md),
 [docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Ran
-`pnpm verify`; the empty test projects build and execute through `dotnet test`.
-Real tests, neutral fixtures, and infrastructure-backed integration checks
-remain pending.
+`pnpm check`; formatting, restore, build, fast `Unit`/`Application` tests, and
+packaging pass. Targeted PostgreSQL `Integration` tests pass for the provider
+schema, primary-key constraint, transaction, duplicate-conflict,
+inbox processed-state, operation-state, registration, outbox claim lease
+columns, savepoint rollback, and `FOR UPDATE SKIP LOCKED` slices.

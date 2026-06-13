@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageDescription>Optional module-local domain event capability contracts for Bondstone.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bondstone\Bondstone.csproj" />
+  </ItemGroup>
+</Project>

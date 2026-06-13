@@ -1,8 +1,8 @@
 # Agent Index
 
 This repository is the maintenance home for Bondstone, a .NET library for
-durable module boundaries, in-process command handling, EF Core backed
-inbox/outbox persistence, and transport adapters.
+durable module boundaries, durable command sending, EF Core backed inbox/outbox
+persistence, and transport adapters.
 
 Start with:
 
@@ -12,13 +12,18 @@ Start with:
   architecture documentation.
 - [docs/adr/README.md](docs/adr/README.md) when it exists before creating,
   updating, superseding, or archiving ADRs.
-- [docs/extraction.md](docs/extraction.md) before moving or rewriting
-  Bondstone source from an existing repository.
+- [docs/architecture/README.md](docs/architecture/README.md) before changing
+  runtime architecture, durable messaging, persistence, hosting, or transport
+  behavior.
 - [docs/testing.md](docs/testing.md) before moving or writing tests.
 - [docs/samples.md](docs/samples.md) before adding or changing sample
   applications.
 - [.agents/skills/AGENTS.md](.agents/skills/AGENTS.md) before adding or
   changing repository agent skills.
+
+For scoped work, prefer the nearest folder `AGENTS.md` as the local index and
+follow its references. The repository context-index convention is documented in
+[docs/repository.md](docs/repository.md).
 
 ## Operating Rules
 
@@ -33,37 +38,36 @@ Start with:
 - Keep generated artifacts, packed packages, temporary sample outputs, coverage,
   and build artifacts out of committed source unless the user explicitly asks to
   preserve them.
+- Do not use `InternalsVisibleTo` for production package collaboration. Reserve
+  friend assemblies for tests; runtime packages should collaborate through
+  explicit contracts or package-local implementation.
+- Treat public API cleanup as compatibility-sensitive. Normal setup APIs,
+  documented advanced composition APIs, and public implementation types exposed
+  for now must be inventoried before broad hiding, renaming, or removal.
 
 ## Repository Direction
 
-- Target .NET 10 unless an accepted ADR changes the target framework policy.
-- NuGet package IDs should match project names unless an accepted ADR records a
-  different packaging decision.
-- Use coordinated package versioning and NuGet release automation according to
-  [docs/packaging.md](docs/packaging.md).
-- Extract source slowly according to [docs/extraction.md](docs/extraction.md).
-  Do not bulk-copy Bondstone code or preserve the current consumer repository
-  as a compatibility constraint.
-- Source, tests, docs, repository automation, and samples should be arranged
-  for library maintenance, while avoiding validation and frontend/browser
-  tooling that Bondstone does not need.
-- Product behavior, domain examples, sample services, and runtime integration
-  scenarios belong in samples or tests, not in core library packages.
+Repository layout, local tooling, context-index structure, and C# conventions
+are documented in [docs/repository.md](docs/repository.md). Package IDs,
+target framework, dependency direction, versioning, and publishing are
+documented in [docs/packaging.md](docs/packaging.md).
 
 ## Architecture Direction
 
-- Bondstone should support modular monoliths first, including a low-friction
-  path for splitting modules into services when a module needs independent
-  deployment or scalability.
-- Bondstone should also be usable in microservice setups that need internal
-  durability, inbox/outbox processing, stable message identities, and
-  provider-owned transport adapters.
-- Durable behavior, public API shape, package boundaries, provider support,
-  transport support, migration strategy, and compatibility policy require ADRs
-  before broad implementation.
-- Durable decisions recorded in ADRs must be applied into stable developer docs
-  and agent instructions. ADRs are the decision trail; stable docs are the
-  current operating contract.
+Runtime architecture is indexed from
+[docs/architecture/README.md](docs/architecture/README.md). Use that index and
+the nearest scoped `AGENTS.md` before changing messaging, modules,
+persistence, hosting, or transport behavior.
+
+Durable behavior, public API shape, package boundaries, provider or transport
+support, migration strategy, compatibility policy, release/publishing, sample
+architecture, repository workflow, and agent harness behavior require ADR
+review before broad implementation.
+
+Stable docs describe current behavior only. ADRs preserve the decision trail.
+Track backlog work, real-project findings, cleanup tasks, and prioritization in
+GitHub Issues or GitHub Projects. Move durable decisions into ADRs and current
+behavior into stable docs.
 
 ## ADR And Planning Rules
 
@@ -76,6 +80,10 @@ Start with:
 - Use ADRs for durable technical decisions. Prefer small ADRs with a clear
   status, application state, context, decision, consequences, and links to
   applied docs.
+- Treat accepted ADR decision content as append-only. Do not rewrite accepted
+  `Context`, `Decision`, or `Consequences` except for mechanical fixes; add a
+  dated amendment for compatible clarification, or supersede when the decision
+  changes.
 - Updating, superseding, archiving, or removing an ADR must preserve the
   decision trail and update the stable docs and agent instructions that depend
   on it.

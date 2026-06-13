@@ -25,7 +25,8 @@ ADR should replace it.
 3. Mark the old ADR status as `Superseded`.
 4. Set the old ADR application state to `Not Applicable` unless it still
    describes residual applied state that must be migrated.
-5. Add a link from the old ADR to the new ADR.
+5. Add a link from the old ADR to the new ADR without rewriting the old
+   accepted `Context`, `Decision`, or `Consequences` sections.
 6. Set the new ADR application state to match reality: `Applied`, `Pending`,
    `In Progress`, `Partially Applied`, or `Deferred`.
 7. Identify affected durable docs, AGENTS files, and skills using the mapping
@@ -34,7 +35,7 @@ ADR should replace it.
    application has begun or completed. If no suitable doc exists, create the
    smallest useful doc or record the missing doc in [docs/README.md](../../../docs/README.md).
 9. Update affected AGENTS files and skills so agents follow the new rule.
-10. Update `Applied To` and `Verification` in the new ADR.
+10. Update `Application Notes` and `Verification` in the new ADR.
 
 ## Output
 

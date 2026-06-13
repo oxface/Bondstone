@@ -1,0 +1,730 @@
+using Bondstone.Configuration;
+using Bondstone.Messaging;
+using Bondstone.Modules;
+using Bondstone.Persistence;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+
+namespace Bondstone.Tests.Modules;
+
+public sealed class ModuleEventSubscriberExecutionTests
+{
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenSubscriberIsRegistered_InvokesHandlerInsideModuleContext()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderProjectionHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IModuleExecutionContextAccessor accessor =
+            serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>();
+
+        Assert.Null(accessor.Current);
+
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            await scope.ServiceProvider
+                .GetRequiredService<IModuleEventSubscriberExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    "sales.order.ready-for-projection.v1",
+                    "fulfillment.order-projection.v1",
+                    new OrderSubmittedEvent("order-123"));
+        }
+
+        EventCallLog log = serviceProvider.GetRequiredService<EventCallLog>();
+        Assert.Equal(["handle:order-123:fulfillment"], log.Calls);
+        Assert.Null(accessor.Current);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenApplicationPipelineBehaviorIsRegistered_RunsThroughSubscriberPipeline()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+        services.AddScoped<
+            IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>,
+            CapturingEventSubscriberBehavior>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderProjectionHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleEventSubscriberExecutor>()
+            .ExecuteAsync(
+                "fulfillment",
+                "sales.order.ready-for-projection.v1",
+                "fulfillment.order-projection.v1",
+                new OrderSubmittedEvent("order-123"));
+
+        EventCallLog log = serviceProvider.GetRequiredService<EventCallLog>();
+        Assert.Equal(
+            [
+                "behavior-before:fulfillment:fulfillment.order-projection.v1:fulfillment",
+                "handle:order-123:fulfillment",
+                "behavior-after:fulfillment:fulfillment.order-projection.v1:fulfillment",
+            ],
+            log.Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenRuntimeAndApplicationBehaviorsAreRegistered_RunsRuntimeByOrderFirst()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+        services.AddScoped<
+            IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>,
+            OrderingEventSubscriberApplicationBehavior>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.AddEventSubscriberPipelineContribution(
+                    new ModuleEventSubscriberPipelineContribution(
+                        "test.event-subscriber.system-late",
+                        ModulePipelineStepKind.System,
+                        150,
+                        typeof(LateEventSubscriberSystemBehavior)));
+                module.AddEventSubscriberPipelineContribution(
+                    new ModuleEventSubscriberPipelineContribution(
+                        "test.event-subscriber.system-early",
+                        ModulePipelineStepKind.System,
+                        125,
+                        typeof(EarlyEventSubscriberSystemBehavior)));
+                module.AddEventSubscriberPipelineContribution(
+                    new ModuleEventSubscriberPipelineContribution(
+                        "test.event-subscriber.capability",
+                        ModulePipelineStepKind.Capability,
+                        140,
+                        typeof(EventSubscriberCapabilityBehavior)));
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleEventSubscriberExecutor>()
+            .ExecuteAsync(
+                "fulfillment",
+                "sales.order.ready-for-projection.v1",
+                "fulfillment.order-projection.v1",
+                new OrderSubmittedEvent("order-123"));
+
+        Assert.Equal(
+            [
+                "system-early:before",
+                "capability:before",
+                "system-late:before",
+                "application:before:fulfillment",
+                "handle-ordering:order-123",
+                "application:after:fulfillment",
+                "system-late:after",
+                "capability:after",
+                "system-early:after",
+            ],
+            serviceProvider.GetRequiredService<EventCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenRuntimeContributionDoesNotApply_DoesNotCreateBehavior()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.AddEventSubscriberPipelineContribution(
+                    new ModuleEventSubscriberPipelineContribution(
+                        "test.event-subscriber.non-selected",
+                        ModulePipelineStepKind.System,
+                        10,
+                        null,
+                        (_, _) => throw new InvalidOperationException(
+                            "Should not create non-selected behavior.")));
+            });
+
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleEventSubscriberExecutor>()
+            .ExecuteAsync(
+                "fulfillment",
+                "sales.order.ready-for-projection.v1",
+                "fulfillment.order-projection.v1",
+                new OrderSubmittedEvent("order-123"));
+
+        Assert.Equal(
+            ["handle-ordering:order-123"],
+            serviceProvider.GetRequiredService<EventCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ExecuteAsync_WhenRuntimeContributionsHaveSameOrder_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.duplicate-a",
+                            ModulePipelineStepKind.System,
+                            777,
+                            typeof(EarlyEventSubscriberSystemBehavior)));
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.duplicate-b",
+                            ModulePipelineStepKind.Capability,
+                            777,
+                            typeof(LateEventSubscriberSystemBehavior)));
+                    module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                        "fulfillment.order-projection.v1");
+                });
+            }));
+
+        Assert.Contains("same order", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test.event-subscriber.duplicate-a", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test.event-subscriber.duplicate-b", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ExecuteAsync_WhenRuntimeContributionsHaveSameName_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "Bondstone.EventSubscriber.ExecutionContext",
+                            ModulePipelineStepKind.Capability,
+                            999,
+                            typeof(EarlyEventSubscriberSystemBehavior)));
+                    module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                        "fulfillment.order-projection.v1");
+                });
+            }));
+
+        Assert.Contains("same name", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Bondstone.EventSubscriber.ExecutionContext", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ExecuteAsync_WhenRuntimeContributionsHaveSameNameAndOrderButDifferentBehavior_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.same-slot",
+                            ModulePipelineStepKind.System,
+                            777,
+                            typeof(EarlyEventSubscriberSystemBehavior)));
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.same-slot",
+                            ModulePipelineStepKind.System,
+                            777,
+                            typeof(LateEventSubscriberSystemBehavior)));
+                    module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                        "fulfillment.order-projection.v1");
+                });
+            }));
+
+        Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test.event-subscriber.same-slot", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenSameFactoryRuntimeContributionIsRegisteredTwice_DeduplicatesContribution()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.AddEventSubscriberPipelineContribution(
+                    new ModuleEventSubscriberPipelineContribution(
+                        "test.event-subscriber.factory",
+                        ModulePipelineStepKind.System,
+                        777,
+                        null,
+                        CreateEarlyEventSubscriberBehavior));
+                module.AddEventSubscriberPipelineContribution(
+                    new ModuleEventSubscriberPipelineContribution(
+                        "test.event-subscriber.factory",
+                        ModulePipelineStepKind.System,
+                        777,
+                        null,
+                        CreateEarlyEventSubscriberBehavior));
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleEventSubscriberExecutor>()
+            .ExecuteAsync(
+                "fulfillment",
+                "sales.order.ready-for-projection.v1",
+                "fulfillment.order-projection.v1",
+                new OrderSubmittedEvent("order-123"));
+
+        Assert.Equal(
+            [
+                "system-early:before",
+                "handle-ordering:order-123",
+                "system-early:after",
+            ],
+            serviceProvider.GetRequiredService<EventCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ExecuteAsync_WhenFactoryRuntimeContributionsHaveSameSlotButDifferentFactories_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.factory",
+                            ModulePipelineStepKind.System,
+                            777,
+                            null,
+                            CreateEarlyEventSubscriberBehavior));
+                    module.AddEventSubscriberPipelineContribution(
+                        new ModuleEventSubscriberPipelineContribution(
+                            "test.event-subscriber.factory",
+                            ModulePipelineStepKind.System,
+                            777,
+                            null,
+                            CreateLateEventSubscriberBehavior));
+                    module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderingEventSubscriberHandler>(
+                        "fulfillment.order-projection.v1");
+                });
+            }));
+
+        Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test.event-subscriber.factory", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ModuleEventSubscriberPipelineContribution_WhenBehaviorTypeIsInvalid_Throws()
+    {
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            () => new ModuleEventSubscriberPipelineContribution(
+                "test.event-subscriber.invalid",
+                ModulePipelineStepKind.System,
+                999,
+                typeof(string)));
+
+        Assert.Contains(
+            nameof(IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>),
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenReceiveContextExists_UsesPerSubscriberInboxRecord()
+    {
+        var inboxExecutor = new CapturingInboxHandlerExecutor();
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+        services.AddSingleton<IDurableInboxHandlerExecutor>(inboxExecutor);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderProjectionHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        DurableInboxRecord inboxRecord = CreateEventInboxRecord();
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        ModuleEventSubscriberExecutionResult result = await scope.ServiceProvider
+            .GetRequiredService<IModuleEventSubscriberExecutor>()
+            .ExecuteAsync(
+                "fulfillment",
+                "sales.order.ready-for-projection.v1",
+                "fulfillment.order-projection.v1",
+                new OrderSubmittedEvent("order-123"),
+                new ModuleEventSubscriberReceiveContext(inboxRecord));
+
+        Assert.NotNull(result.ReceiveInboxResult);
+        Assert.Equal(DurableInboxHandleStatus.Handled, result.ReceiveInboxResult.Status);
+        Assert.Equal(inboxRecord.Key, inboxExecutor.Record?.Key);
+        Assert.Equal("fulfillment", inboxExecutor.Record?.Key.ModuleName);
+        Assert.Equal("fulfillment.order-projection.v1", inboxExecutor.Record?.Key.HandlerIdentity);
+
+        EventCallLog log = serviceProvider.GetRequiredService<EventCallLog>();
+        Assert.Equal(["handle:order-123:fulfillment"], log.Calls);
+        Assert.Equal(1, inboxExecutor.HandlerCalls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenInboxRecordIsAlreadyProcessed_SkipsHandler()
+    {
+        var inboxExecutor = new CapturingInboxHandlerExecutor(
+            DurableInboxHandleStatus.AlreadyProcessed);
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+        services.AddSingleton<IDurableInboxHandlerExecutor>(inboxExecutor);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderProjectionHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        ModuleEventSubscriberExecutionResult result = await scope.ServiceProvider
+            .GetRequiredService<IModuleEventSubscriberExecutor>()
+            .ExecuteAsync(
+                "fulfillment",
+                "sales.order.ready-for-projection.v1",
+                "fulfillment.order-projection.v1",
+                new OrderSubmittedEvent("order-123"),
+                new ModuleEventSubscriberReceiveContext(CreateEventInboxRecord()));
+
+        Assert.Equal(DurableInboxHandleStatus.AlreadyProcessed, result.ReceiveInboxResult?.Status);
+        Assert.Empty(serviceProvider.GetRequiredService<EventCallLog>().Calls);
+        Assert.Equal(0, inboxExecutor.HandlerCalls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenInboxRecordTargetsDifferentModule_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<EventCallLog>();
+        services.AddSingleton<IDurableInboxHandlerExecutor>(
+            new CapturingInboxHandlerExecutor());
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderProjectionHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        var inboxRecord = new DurableInboxRecord(
+            DurableInboxMessageKey.ForEventSubscriber(
+                Guid.Parse("a02f4505-52ba-4f31-a8f3-1d66da04d5f8"),
+                "billing",
+                "fulfillment.order-projection.v1"),
+            DateTimeOffset.Parse("2026-06-09T12:00:00+00:00"));
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleEventSubscriberExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    "sales.order.ready-for-projection.v1",
+                    "fulfillment.order-projection.v1",
+                    new OrderSubmittedEvent("order-123"),
+                    new ModuleEventSubscriberReceiveContext(inboxRecord)));
+
+        Assert.Contains("billing", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ExecuteAsync_WhenSubscriberIsMissing_Throws()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderProjectionHandler>(
+                    "fulfillment.order-projection.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleEventSubscriberExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    "sales.order.ready-for-projection.v1",
+                    "fulfillment.missing.v1",
+                    new OrderSubmittedEvent("order-123")));
+
+        Assert.Contains("fulfillment.missing.v1", exception.Message, StringComparison.Ordinal);
+    }
+
+    private static DurableInboxRecord CreateEventInboxRecord()
+    {
+        return new DurableInboxRecord(
+            DurableInboxMessageKey.ForEventSubscriber(
+                Guid.Parse("a02f4505-52ba-4f31-a8f3-1d66da04d5f8"),
+                "fulfillment",
+                "fulfillment.order-projection.v1"),
+            DateTimeOffset.Parse("2026-06-09T12:00:00+00:00"));
+    }
+
+    private static void ConfigureDurableMessaging(BondstoneModuleBuilder module)
+    {
+        module.UseDurableMessaging();
+        module.UsePersistence("test persistence");
+    }
+
+    private static object CreateEarlyEventSubscriberBehavior(
+        IServiceProvider serviceProvider,
+        Type eventType)
+    {
+        return ActivatorUtilities.CreateInstance<EarlyEventSubscriberSystemBehavior>(
+            serviceProvider);
+    }
+
+    private static object CreateLateEventSubscriberBehavior(
+        IServiceProvider serviceProvider,
+        Type eventType)
+    {
+        return ActivatorUtilities.CreateInstance<LateEventSubscriberSystemBehavior>(
+            serviceProvider);
+    }
+
+    public sealed class EventCallLog
+    {
+        public List<string> Calls { get; } = [];
+    }
+
+    [IntegrationEventIdentity("sales.order.ready-for-projection.v1")]
+    public sealed record OrderSubmittedEvent(string OrderId) : IIntegrationEvent;
+
+    public sealed class OrderProjectionHandler(
+        EventCallLog log,
+        IModuleExecutionContextAccessor executionContextAccessor)
+        : IIntegrationEventHandler<OrderSubmittedEvent>
+    {
+        public ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add(
+                $"handle:{integrationEvent.OrderId}:{executionContextAccessor.Current?.ModuleName}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed class CapturingEventSubscriberBehavior(
+        EventCallLog log,
+        IModuleExecutionContextAccessor executionContextAccessor)
+        : IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>
+    {
+        public async ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            ModuleEventSubscriberExecutionContext context,
+            ModuleEventSubscriberPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add(
+                $"behavior-before:{context.ModuleName}:{context.SubscriberIdentity}:{executionContextAccessor.Current?.ModuleName}");
+            await next(ct);
+            log.Calls.Add(
+                $"behavior-after:{context.ModuleName}:{context.SubscriberIdentity}:{executionContextAccessor.Current?.ModuleName}");
+        }
+    }
+
+    public sealed class EarlyEventSubscriberSystemBehavior(EventCallLog log)
+        : IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>
+    {
+        public async ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            ModuleEventSubscriberExecutionContext context,
+            ModuleEventSubscriberPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add("system-early:before");
+            await next(ct);
+            log.Calls.Add("system-early:after");
+        }
+    }
+
+    public sealed class LateEventSubscriberSystemBehavior(EventCallLog log)
+        : IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>
+    {
+        public async ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            ModuleEventSubscriberExecutionContext context,
+            ModuleEventSubscriberPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add("system-late:before");
+            await next(ct);
+            log.Calls.Add("system-late:after");
+        }
+    }
+
+    public sealed class EventSubscriberCapabilityBehavior(EventCallLog log)
+        : IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>
+    {
+        public async ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            ModuleEventSubscriberExecutionContext context,
+            ModuleEventSubscriberPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add("capability:before");
+            await next(ct);
+            log.Calls.Add("capability:after");
+        }
+    }
+
+    public sealed class OrderingEventSubscriberApplicationBehavior(
+        EventCallLog log,
+        IModuleExecutionContextAccessor executionContextAccessor)
+        : IModuleEventSubscriberPipelineBehavior<OrderSubmittedEvent>
+    {
+        public async ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            ModuleEventSubscriberExecutionContext context,
+            ModuleEventSubscriberPipelineNext next,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"application:before:{executionContextAccessor.Current?.ModuleName}");
+            await next(ct);
+            log.Calls.Add($"application:after:{executionContextAccessor.Current?.ModuleName}");
+        }
+    }
+
+    public sealed class OrderingEventSubscriberHandler(EventCallLog log)
+        : IIntegrationEventHandler<OrderSubmittedEvent>
+    {
+        public ValueTask HandleAsync(
+            OrderSubmittedEvent integrationEvent,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"handle-ordering:{integrationEvent.OrderId}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CapturingInboxHandlerExecutor(
+        DurableInboxHandleStatus status = DurableInboxHandleStatus.Handled)
+        : IDurableInboxHandlerExecutor
+    {
+        public DurableInboxRecord? Record { get; private set; }
+
+        public int HandlerCalls { get; private set; }
+
+        public async ValueTask<DurableInboxHandleResult> HandleOnceAsync(
+            DurableInboxRecord record,
+            Func<CancellationToken, ValueTask> handler,
+            CancellationToken ct = default)
+        {
+            Record = record;
+
+            if (status == DurableInboxHandleStatus.AlreadyProcessed)
+            {
+                return new DurableInboxHandleResult(
+                    DurableInboxHandleStatus.AlreadyProcessed,
+                    record.MarkProcessed(record.ReceivedAtUtc.AddMinutes(1)));
+            }
+
+            HandlerCalls++;
+            await handler(ct);
+
+            return new DurableInboxHandleResult(
+                DurableInboxHandleStatus.Handled,
+                record.MarkProcessed(record.ReceivedAtUtc.AddMinutes(1)));
+        }
+    }
+}

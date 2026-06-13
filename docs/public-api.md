@@ -92,9 +92,11 @@ User application contract:
 
 - `IMessage`
 - `ICommand`
+- `ICommand<TResult>`
 - `IDurableCommand`
 - `IIntegrationEvent`
 - `ICommandHandler<TCommand>`
+- `ICommandHandler<TCommand, TResult>`
 - `IIntegrationEventHandler<TEvent>`
 - `ICommandValidator<TCommand>`
 - `IModuleCommandPipelineBehavior<TCommand>`
@@ -102,6 +104,7 @@ User application contract:
 - `IBondstoneModule`
 - `IDurableCommandSender`
 - `IDurableEventPublisher`
+- `IDurableOperationResultReader`
 - `IDurablePayloadSerializer`
 - `IMessageTypeRegistry`
 - `IModuleExecutionContextAccessor`
@@ -112,8 +115,10 @@ User application contract:
 - `DurableCommandSendStatus`
 - `DurableEventPublishResult`
 - `DurableEventPublishStatus`
+- `DurableOperationResult<TResult>`
 - `DurablePayloadJsonOptions`
 - `ModuleCommandExecutionResult`
+- `ModuleCommandExecutionResult<TResult>`
 - `ModuleEventSubscriberExecutionResult`
 
 Advanced composition API:

@@ -13,7 +13,8 @@ public sealed class ModuleCommandRoute
         MessageTypeRegistration? messageTypeRegistration,
         string? handlerIdentity,
         Type handlerType,
-        Func<IServiceProvider, object, ModuleCommandRoute, ModuleCommandReceiveContext?, CancellationToken, ValueTask<ModuleCommandExecutionResult>> invoke)
+        Type? resultType,
+        Func<IServiceProvider, object, ModuleCommandRoute, ModuleCommandReceiveContext?, CancellationToken, ValueTask<ModuleCommandRouteExecutionResult>> invoke)
     {
         ArgumentNullException.ThrowIfNull(commandType);
         ArgumentNullException.ThrowIfNull(handlerType);
@@ -52,10 +53,11 @@ public sealed class ModuleCommandRoute
         MessageTypeRegistration = messageTypeRegistration;
         HandlerIdentity = handlerIdentity;
         HandlerType = handlerType;
+        ResultType = resultType;
         _invoke = invoke;
     }
 
-    private readonly Func<IServiceProvider, object, ModuleCommandRoute, ModuleCommandReceiveContext?, CancellationToken, ValueTask<ModuleCommandExecutionResult>> _invoke;
+    private readonly Func<IServiceProvider, object, ModuleCommandRoute, ModuleCommandReceiveContext?, CancellationToken, ValueTask<ModuleCommandRouteExecutionResult>> _invoke;
 
     public string ModuleName { get; }
 
@@ -71,7 +73,11 @@ public sealed class ModuleCommandRoute
 
     public Type HandlerType { get; }
 
-    internal ValueTask<ModuleCommandExecutionResult> InvokeAsync(
+    public Type? ResultType { get; }
+
+    public bool HasResult => ResultType is not null;
+
+    internal ValueTask<ModuleCommandRouteExecutionResult> InvokeAsync(
         IServiceProvider serviceProvider,
         object command,
         ModuleCommandReceiveContext? receiveContext,
@@ -101,10 +107,28 @@ public sealed class ModuleCommandRoute
             messageTypeRegistration,
             handlerIdentity,
             typeof(THandler),
+            resultType: null,
             InvokeAsync<TCommand, THandler>);
     }
 
-    private static async ValueTask<ModuleCommandExecutionResult> InvokeAsync<TCommand, THandler>(
+    internal static ModuleCommandRoute Create<TCommand, TResult, THandler>(
+        string moduleName,
+        MessageTypeRegistration? messageTypeRegistration = null,
+        string? handlerIdentity = null)
+        where TCommand : ICommand<TResult>
+        where THandler : class, ICommandHandler<TCommand, TResult>
+    {
+        return new ModuleCommandRoute(
+            moduleName,
+            typeof(TCommand),
+            messageTypeRegistration,
+            handlerIdentity,
+            typeof(THandler),
+            typeof(TResult),
+            InvokeAsync<TCommand, TResult, THandler>);
+    }
+
+    private static async ValueTask<ModuleCommandRouteExecutionResult> InvokeAsync<TCommand, THandler>(
         IServiceProvider serviceProvider,
         object command,
         ModuleCommandRoute route,
@@ -140,7 +164,77 @@ public sealed class ModuleCommandRoute
             handler);
 
         await pipeline.InvokeAsync(ct);
-        return new ModuleCommandExecutionResult(pipeline.Context.ReceiveInboxResult);
+        return new ModuleCommandRouteExecutionResult(
+            Result: null,
+            pipeline.Context.ReceiveInboxResult);
+    }
+
+    private static async ValueTask<ModuleCommandRouteExecutionResult> InvokeAsync<TCommand, TResult, THandler>(
+        IServiceProvider serviceProvider,
+        object command,
+        ModuleCommandRoute route,
+        ModuleCommandReceiveContext? receiveContext,
+        CancellationToken ct)
+        where TCommand : ICommand<TResult>
+        where THandler : class, ICommandHandler<TCommand, TResult>
+    {
+        if (command is not TCommand typedCommand)
+        {
+            throw new ArgumentException(
+                $"Command route for '{typeof(TCommand).FullName}' cannot handle '{command.GetType().FullName}'.",
+                nameof(command));
+        }
+
+        TResult? result = default;
+        bool hasResult = false;
+        ModuleCommandExecutionContext? executionContext = null;
+        ModuleCommandPipelineNext handler = async handlerCt =>
+        {
+            THandler commandHandler = serviceProvider.GetRequiredService<THandler>();
+            result = await commandHandler.HandleAsync(typedCommand, handlerCt);
+            hasResult = true;
+
+            if (receiveContext?.DurableOperationId is not null)
+            {
+                DurableOperationResultPayloadSerializer payloadSerializer =
+                    serviceProvider.GetRequiredService<DurableOperationResultPayloadSerializer>();
+                executionContext!.SetDurableOperationResultPayload(
+                    payloadSerializer.Serialize(result));
+            }
+        };
+
+        ModuleCommandPipelinePlan<TCommand> plan = serviceProvider
+            .GetRequiredService<ModuleCommandPipelinePlanner>()
+            .BuildPlan<TCommand>(
+                serviceProvider,
+                route);
+
+        ModuleCommandPipeline pipeline = BuildPipeline(
+            typedCommand,
+            route,
+            receiveContext,
+            plan,
+            handler);
+
+        executionContext = pipeline.Context;
+        await pipeline.InvokeAsync(ct);
+        if (!hasResult)
+        {
+            if (pipeline.Context.ReceiveInboxResult?.Status is DurableInboxHandleStatus.AlreadyProcessed
+                or DurableInboxHandleStatus.AlreadyReceived)
+            {
+                return new ModuleCommandRouteExecutionResult(
+                    Result: null,
+                    pipeline.Context.ReceiveInboxResult);
+            }
+
+            throw new InvalidOperationException(
+                $"Result command handler '{typeof(THandler).FullName}' did not produce a result.");
+        }
+
+        return new ModuleCommandRouteExecutionResult(
+            result,
+            pipeline.Context.ReceiveInboxResult);
     }
 
     private static ModuleCommandPipeline BuildPipeline<TCommand>(
@@ -180,3 +274,7 @@ public sealed class ModuleCommandRoute
         }
     }
 }
+
+internal sealed record ModuleCommandRouteExecutionResult(
+    object? Result,
+    DurableInboxHandleResult? ReceiveInboxResult);

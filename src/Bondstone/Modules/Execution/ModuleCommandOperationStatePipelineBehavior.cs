@@ -68,7 +68,8 @@ internal sealed class ModuleCommandOperationStatePipelineBehavior<TCommand>(
             new DurableOperationState(
                 durableOperationId,
                 DurableOperationStatus.Completed,
-                timeProvider.GetUtcNow()),
+                timeProvider.GetUtcNow(),
+                context.DurableOperationResultPayload),
             ct);
     }
 

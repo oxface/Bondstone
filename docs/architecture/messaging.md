@@ -21,8 +21,11 @@ continuity.
 ## Commands
 
 `ICommand` is the base marker for module command pipeline execution.
+`ICommand<TResult>` extends `ICommand` for commands that produce an application
+result when executed locally through the module command executor.
 `IDurableCommand` extends `ICommand` for commands accepted for durable outbox
-delivery and transport receive.
+delivery and transport receive. A durable result command implements both
+`IDurableCommand` and `ICommand<TResult>`.
 
 `IDurableCommandSender` accepts a durable command, a required target module,
 and optional metadata such as partition key, durable operation id, trace
@@ -34,7 +37,8 @@ does not expose a public source-module override.
 
 Module command execution is registered through module command routes and
 executed through `IModuleCommandExecutor`. The executor runs typed
-`ICommandHandler<TCommand>` handlers through an internal runtime plan:
+`ICommandHandler<TCommand>` and `ICommandHandler<TCommand, TResult>` handlers
+through an internal runtime plan:
 ordered system and capability contributions selected for the executing module,
 application behavior steps in DI registration order, then the handler. System
 contributions currently cover source-module execution context, receive-side
@@ -42,6 +46,10 @@ inbox handling, durable operation completion, and module-owned persistence
 behavior supplied by provider packages. Provider and capability setup adds
 runtime contribution records to Bondstone module metadata, not executable
 behavior implementations to DI.
+
+Local execution of `ICommand<TResult>` returns a typed
+`ModuleCommandExecutionResult<TResult>` from `ExecuteResultAsync`. Durable send
+does not return `TResult` directly; it accepts work and returns send metadata.
 
 ## Integration Events
 
@@ -242,12 +250,23 @@ state: terminal statuses outrank `Running`, which outranks `Pending`; states
 with equal precedence use the newer update timestamp. If no module-owned
 operation stores are configured, the default reader returns no state.
 
-The command loop writes `Pending` and `Completed`. `Running`, `Failed`, and
-`Cancelled` remain storage/read-model values for application-owned operation
-policies; Bondstone's default command loop does not infer them from broker
-retry or handler exceptions. Polling, timeout, result deserialization, retry
-state, stale receive recovery, and default failure/cancellation transitions are
-outside the current operation-state contract.
+The command loop writes `Pending` and `Completed`. When a durable command also
+implements `ICommand<TResult>` and is received with a durable operation id,
+Bondstone serializes the handler result with the configured durable payload
+JSON options and stores it as the completed operation state's result payload
+inside the target module receive transaction. Callers can observe durable
+results through `IDurableOperationResultReader`: `GetResultAsync<TResult>()`
+reads current state once, while `WaitForResultAsync<TResult>()` performs
+explicit timeout-bounded polling until the operation reaches a terminal state.
+`IDurableOperationReader` remains available as the lower-level state reader.
+
+`Running`, `Failed`, and `Cancelled` remain storage/read-model values for
+application-owned operation policies; Bondstone's default command loop does
+not infer them from broker retry or handler exceptions. Callers choose polling
+cadence, timeout, and API endpoint policy when using the result reader.
+Generated operation ids, retry state, stale receive recovery, default
+failure/cancellation transitions, and provider-specific operation concurrency
+are outside the current operation-state contract.
 
 ## Transport Adapters
 

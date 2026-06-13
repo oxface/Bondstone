@@ -1,392 +1,448 @@
-type public sealed class Bondstone.Configuration.BondstoneBuilder
-  method public Bondstone.Configuration.BondstoneBuilder AddConfigurationValidator(Bondstone.Configuration.IBondstoneConfigurationValidator validator)
-  method public Bondstone.Configuration.BondstoneBuilder AddTransportTopologyDiagnosticSource(Bondstone.Configuration.IDurableTransportTopologyDiagnosticSource diagnosticSource)
-  property Bondstone.Configuration.BondstoneOutboxBuilder Outbox { get; }
-  property Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
-
-type public sealed class Bondstone.Configuration.BondstoneConfigurationValidationContext
-  method public bool HasEventSubscriber(string moduleName, string messageTypeName, string subscriberIdentity)
-  method public bool ModuleHasDurableCommandHandlers(string moduleName)
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.BondstoneModuleRegistration> Modules { get; }
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleCommandRoute> CommandRoutes { get; }
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleCommandRoute> DurableCommandRoutes { get; }
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleEventSubscriberRegistration> EventSubscribers { get; }
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModulePublishedEventRegistration> PublishedEvents { get; }
-  property System.Collections.Generic.IReadOnlyDictionary<string, Bondstone.Modules.BondstoneModuleRegistration> ModulesByName { get; }
-  property bool HasSingleTransport { get; }
-  property int TransportCount { get; }
-
-type public static class Bondstone.Configuration.BondstoneDurablePayloadServiceCollectionExtensions
-  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurablePayloadSerialization(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection ConfigureBondstoneDurablePayloadJson(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<System.Text.Json.JsonSerializerOptions> configure)
-
-type public sealed class Bondstone.Configuration.BondstoneOutboxBuilder
-  method public Bondstone.Configuration.BondstoneOutboxBuilder MarkDispatcher(string dispatcherName)
-  method public Bondstone.Configuration.BondstoneOutboxBuilder MarkPersistenceProvider(string providerName)
-  method public Bondstone.Configuration.BondstoneOutboxBuilder MarkTransport(string transportName)
-  method public Bondstone.Configuration.BondstoneOutboxBuilder MarkWorker(string workerName)
-  property Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
-  property bool HasDispatcher { get; }
-  property bool HasPersistenceProvider { get; }
-  property bool HasTransport { get; }
-  property bool HasWorker { get; }
-
-type public static class Bondstone.Configuration.BondstoneServiceCollectionExtensions
-  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstone(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Bondstone.Configuration.BondstoneBuilder> configure)
-
-type public static class Bondstone.Configuration.DurableModulePersistenceServiceCollectionExtensions
-  method public static extension Bondstone.Persistence.DurableModulePersistenceRegistrationRegistry GetOrAddDurableModulePersistenceRegistrationRegistry(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection UseDurableModuleOutboxDispatchAggregator(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-
-type public interface Bondstone.Configuration.IBondstoneConfigurationValidator
-  method public abstract void Validate(Bondstone.Configuration.BondstoneConfigurationValidationContext context)
-
-type public sealed class Bondstone.Messaging.DurableCommandIdentityAttribute : System.Attribute
-  ctor public Bondstone.Messaging.DurableCommandIdentityAttribute(string name)
-  property string Name { get; }
-
-type public sealed class Bondstone.Messaging.DurableCommandSendResult : System.IEquatable<Bondstone.Messaging.DurableCommandSendResult>
-  ctor public Bondstone.Messaging.DurableCommandSendResult(System.Guid sendId, System.Guid? durableOperationId, Bondstone.Messaging.DurableCommandSendStatus status)
-  method public Bondstone.Messaging.DurableCommandSendResult <Clone>$()
-  method public bool Equals(Bondstone.Messaging.DurableCommandSendResult other)
-  method public override bool Equals(object obj)
-  method public override int GetHashCode()
-  method public override string ToString()
-  method public static bool op_Equality(Bondstone.Messaging.DurableCommandSendResult left, Bondstone.Messaging.DurableCommandSendResult right)
-  method public static bool op_Inequality(Bondstone.Messaging.DurableCommandSendResult left, Bondstone.Messaging.DurableCommandSendResult right)
-  property Bondstone.Messaging.DurableCommandSendStatus Status { get; }
-  property System.Guid SendId { get; }
-  property System.Guid? DurableOperationId { get; }
-
-type public enum Bondstone.Messaging.DurableCommandSendStatus : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
-  field public const Bondstone.Messaging.DurableCommandSendStatus Accepted
-  field public const Bondstone.Messaging.DurableCommandSendStatus Duplicate
-  field public const Bondstone.Messaging.DurableCommandSendStatus Rejected
-
-type public sealed class Bondstone.Messaging.DurableEventPublishResult : System.IEquatable<Bondstone.Messaging.DurableEventPublishResult>
-  ctor public Bondstone.Messaging.DurableEventPublishResult(System.Guid publishId, System.Guid? durableOperationId, Bondstone.Messaging.DurableEventPublishStatus status)
-  method public Bondstone.Messaging.DurableEventPublishResult <Clone>$()
-  method public bool Equals(Bondstone.Messaging.DurableEventPublishResult other)
-  method public override bool Equals(object obj)
-  method public override int GetHashCode()
-  method public override string ToString()
-  method public static bool op_Equality(Bondstone.Messaging.DurableEventPublishResult left, Bondstone.Messaging.DurableEventPublishResult right)
-  method public static bool op_Inequality(Bondstone.Messaging.DurableEventPublishResult left, Bondstone.Messaging.DurableEventPublishResult right)
-  property Bondstone.Messaging.DurableEventPublishStatus Status { get; }
-  property System.Guid PublishId { get; }
-  property System.Guid? DurableOperationId { get; }
-
-type public enum Bondstone.Messaging.DurableEventPublishStatus : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
-  field public const Bondstone.Messaging.DurableEventPublishStatus Accepted
-  field public const Bondstone.Messaging.DurableEventPublishStatus Duplicate
-  field public const Bondstone.Messaging.DurableEventPublishStatus Rejected
-
-type public sealed class Bondstone.Messaging.DurablePayloadJsonOptions
-  ctor public Bondstone.Messaging.DurablePayloadJsonOptions()
-  property System.Text.Json.JsonSerializerOptions JsonSerializerOptions { get; }
-
-type public interface Bondstone.Messaging.ICommand : Bondstone.Messaging.IMessage
-
-type public interface Bondstone.Messaging.IDurableCommand : Bondstone.Messaging.ICommand, Bondstone.Messaging.IMessage
-
-type public interface Bondstone.Messaging.IDurableCommandSender
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableCommandSendResult> SendAsync<TCommand>(TCommand command, string targetModule, System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableCommandSendResult> SendAsync<TCommand>(TCommand command, string targetModule, string partitionKey, System.Guid? durableOperationId = null, Bondstone.Messaging.MessageTraceContext traceContext = null, System.Guid? causationId = null, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Messaging.IDurableEventPublisher
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableEventPublishResult> PublishAsync<TEvent>(TEvent integrationEvent, System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableEventPublishResult> PublishAsync<TEvent>(TEvent integrationEvent, string partitionKey, System.Guid? durableOperationId = null, Bondstone.Messaging.MessageTraceContext traceContext = null, System.Guid? causationId = null, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Messaging.IDurablePayloadSerializer
-  method public abstract object Deserialize(string payload, System.Type messageType)
-  method public abstract string Serialize<TMessage>(TMessage message)
-
-type public interface Bondstone.Messaging.IIntegrationEvent : Bondstone.Messaging.IMessage
-
-type public interface Bondstone.Messaging.IMessage
-
-type public interface Bondstone.Messaging.IMessageTypeRegistry
-  method public abstract Bondstone.Messaging.MessageTypeRegistration Register(System.Type clrType)
-  method public abstract Bondstone.Messaging.MessageTypeRegistration Register(System.Type clrType, string messageTypeName)
-  method public abstract Bondstone.Messaging.MessageTypeRegistration Register<TMessage>()
-  method public abstract Bondstone.Messaging.MessageTypeRegistration Register<TMessage>(string messageTypeName)
-  method public abstract System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> RegisterFromAssembly(System.Reflection.Assembly assembly)
-  method public abstract System.Type ResolveClrType(string messageTypeName)
-  method public abstract bool TryResolveClrType(string messageTypeName, out System.Type clrType)
-  method public abstract string GetMessageTypeName(System.Type clrType)
-  method public abstract string GetMessageTypeName<TMessage>()
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> Registrations { get; }
-
-type public sealed class Bondstone.Messaging.IntegrationEventIdentityAttribute : System.Attribute
-  ctor public Bondstone.Messaging.IntegrationEventIdentityAttribute(string name)
-  property string Name { get; }
-
-type public sealed class Bondstone.Messaging.MessageTypeRegistration : System.IEquatable<Bondstone.Messaging.MessageTypeRegistration>
-  ctor public Bondstone.Messaging.MessageTypeRegistration(System.Type ClrType, string MessageTypeName, Bondstone.Messaging.MessageKind Kind)
-  method public Bondstone.Messaging.MessageTypeRegistration <Clone>$()
-  method public bool Equals(Bondstone.Messaging.MessageTypeRegistration other)
-  method public override bool Equals(object obj)
-  method public override int GetHashCode()
-  method public override string ToString()
-  method public static bool op_Equality(Bondstone.Messaging.MessageTypeRegistration left, Bondstone.Messaging.MessageTypeRegistration right)
-  method public static bool op_Inequality(Bondstone.Messaging.MessageTypeRegistration left, Bondstone.Messaging.MessageTypeRegistration right)
-  method public void Deconstruct(out System.Type ClrType, out string MessageTypeName, out Bondstone.Messaging.MessageKind Kind)
-  property Bondstone.Messaging.MessageKind Kind { get; set; }
-  property System.Type ClrType { get; set; }
-  property string MessageTypeName { get; set; }
-
-type public sealed class Bondstone.Messaging.MessageTypeRegistry : Bondstone.Messaging.IMessageTypeRegistry
-  ctor public Bondstone.Messaging.MessageTypeRegistry()
-  method public Bondstone.Messaging.MessageTypeRegistration Register(System.Type clrType)
-  method public Bondstone.Messaging.MessageTypeRegistration Register(System.Type clrType, string messageTypeName)
-  method public Bondstone.Messaging.MessageTypeRegistration Register<TMessage>()
-  method public Bondstone.Messaging.MessageTypeRegistration Register<TMessage>(string messageTypeName)
-  method public System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> RegisterFromAssembly(System.Reflection.Assembly assembly)
-  method public System.Type ResolveClrType(string messageTypeName)
-  method public bool TryResolveClrType(string messageTypeName, out System.Type clrType)
-  method public string GetMessageTypeName(System.Type clrType)
-  method public string GetMessageTypeName<TMessage>()
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> Registrations { get; }
-
-type public sealed class Bondstone.Messaging.SystemTextJsonDurablePayloadSerializer : Bondstone.Messaging.IDurablePayloadSerializer
-  ctor public Bondstone.Messaging.SystemTextJsonDurablePayloadSerializer(Bondstone.Messaging.DurablePayloadJsonOptions options = null)
-  method public object Deserialize(string payload, System.Type messageType)
-  method public string Serialize<TMessage>(TMessage message)
-
-type public sealed class Bondstone.Modules.BondstoneModuleBuilder
-  method public Bondstone.Modules.BondstoneModuleBuilder AddCommandPipelineContribution(Bondstone.Modules.ModuleCommandPipelineContribution contribution)
-  method public Bondstone.Modules.BondstoneModuleBuilder AddEventSubscriberPipelineContribution(Bondstone.Modules.ModuleEventSubscriberPipelineContribution contribution)
-  method public Bondstone.Modules.BondstoneModuleBuilder UseDurableMessaging()
-  method public Bondstone.Modules.BondstoneModuleBuilder UseOutboxPersistenceProvider(string providerName)
-  method public Bondstone.Modules.BondstoneModuleBuilder UsePersistence(string providerName, System.Type contextType = null)
-  property Bondstone.Modules.BondstoneModuleCommandBuilder Commands { get; }
-  property Bondstone.Modules.BondstoneModuleEventBuilder Events { get; }
-  property Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
-  property string Name { get; }
-
-type public static class Bondstone.Modules.BondstoneModuleBuilderExtensions
-  method public static extension Bondstone.Configuration.BondstoneBuilder AddModule(Bondstone.Configuration.BondstoneBuilder builder, Bondstone.Modules.IBondstoneModule module)
-  method public static extension Bondstone.Configuration.BondstoneBuilder AddModule<TModule>(Bondstone.Configuration.BondstoneBuilder builder)
-  method public static extension Bondstone.Configuration.BondstoneBuilder Module(Bondstone.Configuration.BondstoneBuilder builder, string name, System.Action<Bondstone.Modules.BondstoneModuleBuilder> configure)
-
-type public sealed class Bondstone.Modules.BondstoneModuleCommandBuilder
-  method public Bondstone.Modules.BondstoneModuleCommandBuilder RegisterValidator<TCommand, TValidator>()
-  method public Bondstone.Modules.ModuleCommandRoute RegisterHandler<TCommand, THandler>(string handlerIdentity = null)
-  method public Bondstone.Modules.ModuleCommandRoute RegisterHandler<TCommand, THandler>(string messageTypeName, string handlerIdentity = null)
-  method public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleCommandRoute> RegisterFromAssembly(System.Reflection.Assembly assembly)
-  method public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleCommandRoute> RegisterFromAssemblyContaining<TMarker>()
-  property Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
-  property string ModuleName { get; }
-
-type public sealed class Bondstone.Modules.BondstoneModuleEventBuilder
-  method public Bondstone.Messaging.MessageTypeRegistration RegisterPublishedEvent<TEvent>()
-  method public Bondstone.Messaging.MessageTypeRegistration RegisterPublishedEvent<TEvent>(string messageTypeName)
-  method public Bondstone.Modules.ModuleEventSubscriberRegistration RegisterSubscriber<TEvent, THandler>(string messageTypeName, string subscriberIdentity)
-  method public Bondstone.Modules.ModuleEventSubscriberRegistration RegisterSubscriber<TEvent, THandler>(string subscriberIdentity)
-  property Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
-  property string ModuleName { get; }
-
-type public sealed class Bondstone.Modules.BondstoneModuleRegistration
-  ctor public Bondstone.Modules.BondstoneModuleRegistration(string name, bool usesDurableMessaging, string persistenceProviderName = null, System.Type persistenceContextType = null)
-  property System.Type PersistenceContextType { get; }
-  property bool UsesDurableMessaging { get; }
-  property bool UsesPersistence { get; }
-  property string Name { get; }
-  property string PersistenceProviderName { get; }
-
-type public interface Bondstone.Modules.IBondstoneModule
-  method public abstract void Configure(Bondstone.Modules.BondstoneModuleBuilder module)
-  property string Name { get; }
-
-type public interface Bondstone.Modules.IBondstoneModuleRegistry
-  method public abstract Bondstone.Modules.BondstoneModuleRegistration GetModule(string moduleName)
-  method public abstract bool TryGetModule(string moduleName, out Bondstone.Modules.BondstoneModuleRegistration registration)
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.BondstoneModuleRegistration> Modules { get; }
-
-type public interface Bondstone.Modules.ICommandHandler<TCommand>
-  method public abstract System.Threading.Tasks.ValueTask HandleAsync(TCommand command, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Modules.ICommandValidator<TCommand>
-  method public abstract System.Threading.Tasks.ValueTask ValidateAsync(TCommand command, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Modules.IIntegrationEventHandler<TEvent>
-  method public abstract System.Threading.Tasks.ValueTask HandleAsync(TEvent integrationEvent, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Modules.IModuleCommandExecutor
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleCommandExecutionResult> ExecuteAsync(string moduleName, object command, Bondstone.Modules.ModuleCommandReceiveContext receiveContext, System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleCommandExecutionResult> ExecuteAsync(string moduleName, object command, System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleCommandExecutionResult> ExecuteAsync<TCommand>(string moduleName, TCommand command, Bondstone.Modules.ModuleCommandReceiveContext receiveContext, System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleCommandExecutionResult> ExecuteAsync<TCommand>(string moduleName, TCommand command, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Modules.IModuleCommandPipelineBehavior<TCommand>
-  method public abstract System.Threading.Tasks.ValueTask HandleAsync(TCommand command, Bondstone.Modules.ModuleCommandExecutionContext context, Bondstone.Modules.ModuleCommandPipelineNext next, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Modules.IModuleCommandReceivePipeline
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> HandleOnceAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Modules.IModuleCommandRouteRegistry
-  method public abstract Bondstone.Modules.ModuleCommandRoute GetByCommandType(string moduleName, System.Type commandType)
-  method public abstract Bondstone.Modules.ModuleCommandRoute GetByMessageTypeName(string moduleName, string messageTypeName)
-  method public abstract bool TryGetByCommandType(string moduleName, System.Type commandType, out Bondstone.Modules.ModuleCommandRoute route)
-  method public abstract bool TryGetByMessageTypeName(string moduleName, string messageTypeName, out Bondstone.Modules.ModuleCommandRoute route)
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleCommandRoute> Routes { get; }
-
-type public interface Bondstone.Modules.IModuleEventReceivePipeline
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> HandleOnceAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, string subscriberModule, string subscriberIdentity, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Modules.IModuleEventSubscriberExecutor
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleEventSubscriberExecutionResult> ExecuteAsync(string moduleName, string messageTypeName, string subscriberIdentity, object integrationEvent, Bondstone.Modules.ModuleEventSubscriberReceiveContext receiveContext, System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleEventSubscriberExecutionResult> ExecuteAsync(string moduleName, string messageTypeName, string subscriberIdentity, object integrationEvent, System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleEventSubscriberExecutionResult> ExecuteAsync<TEvent>(string moduleName, string messageTypeName, string subscriberIdentity, TEvent integrationEvent, Bondstone.Modules.ModuleEventSubscriberReceiveContext receiveContext, System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleEventSubscriberExecutionResult> ExecuteAsync<TEvent>(string moduleName, string messageTypeName, string subscriberIdentity, TEvent integrationEvent, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Modules.IModuleEventSubscriberPipelineBehavior<TEvent>
-  method public abstract System.Threading.Tasks.ValueTask HandleAsync(TEvent integrationEvent, Bondstone.Modules.ModuleEventSubscriberExecutionContext context, Bondstone.Modules.ModuleEventSubscriberPipelineNext next, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Modules.IModuleEventSubscriberRegistry
-  method public abstract Bondstone.Modules.ModuleEventSubscriberRegistration GetSubscriber(string moduleName, string messageTypeName, string subscriberIdentity)
-  method public abstract System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleEventSubscriberRegistration> GetByMessageTypeName(string messageTypeName)
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleEventSubscriberRegistration> Subscribers { get; }
-
-type public interface Bondstone.Modules.IModuleExecutionContextAccessor
-  property Bondstone.Modules.ModuleExecutionContext Current { get; }
-
-type public interface Bondstone.Modules.IModulePipelineExecutionContext
-  property Bondstone.Modules.ModulePipelineFeatureCollection Features { get; }
-  property string ModuleName { get; }
-
-type public interface Bondstone.Modules.IModulePublishedEventRegistry
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModulePublishedEventRegistration> PublishedEvents { get; }
-
-type public sealed class Bondstone.Modules.ModuleCommandExecutionContext : Bondstone.Modules.IModulePipelineExecutionContext
-  ctor public Bondstone.Modules.ModuleCommandExecutionContext(Bondstone.Modules.ModuleCommandRoute route, Bondstone.Modules.ModuleCommandReceiveContext receiveContext = null)
-  property Bondstone.Modules.ModuleCommandReceiveContext ReceiveContext { get; }
-  property Bondstone.Modules.ModuleCommandRoute Route { get; }
-  property Bondstone.Modules.ModulePipelineFeatureCollection Features { get; }
-  property Bondstone.Persistence.DurableInboxHandleResult ReceiveInboxResult { get; }
-  property Bondstone.Persistence.DurableInboxRecord ReceiveInboxRecord { get; }
-  property System.Guid? DurableOperationId { get; }
-  property string HandlerIdentity { get; }
-  property string MessageTypeName { get; }
-  property string ModuleName { get; }
-
-type public sealed class Bondstone.Modules.ModuleCommandExecutionResult : System.IEquatable<Bondstone.Modules.ModuleCommandExecutionResult>
-  ctor public Bondstone.Modules.ModuleCommandExecutionResult(Bondstone.Persistence.DurableInboxHandleResult receiveInboxResult = null)
-  method public Bondstone.Modules.ModuleCommandExecutionResult <Clone>$()
-  method public bool Equals(Bondstone.Modules.ModuleCommandExecutionResult other)
-  method public override bool Equals(object obj)
-  method public override int GetHashCode()
-  method public override string ToString()
-  method public static bool op_Equality(Bondstone.Modules.ModuleCommandExecutionResult left, Bondstone.Modules.ModuleCommandExecutionResult right)
-  method public static bool op_Inequality(Bondstone.Modules.ModuleCommandExecutionResult left, Bondstone.Modules.ModuleCommandExecutionResult right)
-  property Bondstone.Persistence.DurableInboxHandleResult ReceiveInboxResult { get; }
-
-type public sealed class Bondstone.Modules.ModuleCommandPipelineContribution
-  ctor public Bondstone.Modules.ModuleCommandPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool> appliesToModule, System.Func<System.IServiceProvider, System.Type, object> createBehavior)
-  ctor public Bondstone.Modules.ModuleCommandPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Type behaviorType, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool> appliesToModule = null)
-  method public bool AppliesTo(Bondstone.Modules.BondstoneModuleRegistration module)
-  property Bondstone.Modules.ModulePipelineStepKind Kind { get; }
-  property int Order { get; }
-  property string Name { get; }
-
-type public sealed class Bondstone.Modules.ModuleCommandPipelineNext : System.ICloneable, System.MulticastDelegate, System.Runtime.Serialization.ISerializable
-  ctor public Bondstone.Modules.ModuleCommandPipelineNext(object object, nint method)
-  method public virtual System.IAsyncResult BeginInvoke(System.Threading.CancellationToken ct, System.AsyncCallback callback, object object)
-  method public virtual System.Threading.Tasks.ValueTask EndInvoke(System.IAsyncResult result)
-  method public virtual System.Threading.Tasks.ValueTask Invoke(System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Modules.ModuleCommandReceiveContext
-  ctor public Bondstone.Modules.ModuleCommandReceiveContext(Bondstone.Persistence.DurableInboxRecord inboxRecord, System.Guid? durableOperationId = null)
-  property Bondstone.Persistence.DurableInboxRecord InboxRecord { get; }
-  property System.Guid? DurableOperationId { get; }
-
-type public sealed class Bondstone.Modules.ModuleCommandRoute
-  property Bondstone.Messaging.MessageTypeRegistration MessageTypeRegistration { get; }
-  property System.Type CommandType { get; }
-  property System.Type HandlerType { get; }
-  property bool IsDurable { get; }
-  property string HandlerIdentity { get; }
-  property string MessageTypeName { get; }
-  property string ModuleName { get; }
-
-type public static class Bondstone.Modules.ModuleCommandSystemPipelineOrder
-  field public const int ExecutionContext
-  field public const int OperationState
-  field public const int ReceiveInbox
-  field public const int Transaction
-  field public const int Validation
-
-type public sealed class Bondstone.Modules.ModuleEventSubscriberExecutionContext : Bondstone.Modules.IModulePipelineExecutionContext
-  ctor public Bondstone.Modules.ModuleEventSubscriberExecutionContext(Bondstone.Modules.ModuleEventSubscriberRegistration subscriber, Bondstone.Modules.ModuleEventSubscriberReceiveContext receiveContext = null)
-  property Bondstone.Modules.ModuleEventSubscriberReceiveContext ReceiveContext { get; }
-  property Bondstone.Modules.ModuleEventSubscriberRegistration Subscriber { get; }
-  property Bondstone.Modules.ModulePipelineFeatureCollection Features { get; }
-  property Bondstone.Persistence.DurableInboxHandleResult ReceiveInboxResult { get; }
-  property Bondstone.Persistence.DurableInboxRecord ReceiveInboxRecord { get; }
-  property System.Guid? DurableOperationId { get; }
-  property string MessageTypeName { get; }
-  property string ModuleName { get; }
-  property string SubscriberIdentity { get; }
-
-type public sealed class Bondstone.Modules.ModuleEventSubscriberExecutionResult : System.IEquatable<Bondstone.Modules.ModuleEventSubscriberExecutionResult>
-  ctor public Bondstone.Modules.ModuleEventSubscriberExecutionResult(Bondstone.Persistence.DurableInboxHandleResult receiveInboxResult = null)
-  method public Bondstone.Modules.ModuleEventSubscriberExecutionResult <Clone>$()
-  method public bool Equals(Bondstone.Modules.ModuleEventSubscriberExecutionResult other)
-  method public override bool Equals(object obj)
-  method public override int GetHashCode()
-  method public override string ToString()
-  method public static bool op_Equality(Bondstone.Modules.ModuleEventSubscriberExecutionResult left, Bondstone.Modules.ModuleEventSubscriberExecutionResult right)
-  method public static bool op_Inequality(Bondstone.Modules.ModuleEventSubscriberExecutionResult left, Bondstone.Modules.ModuleEventSubscriberExecutionResult right)
-  property Bondstone.Persistence.DurableInboxHandleResult ReceiveInboxResult { get; }
-
-type public sealed class Bondstone.Modules.ModuleEventSubscriberPipelineContribution
-  ctor public Bondstone.Modules.ModuleEventSubscriberPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool> appliesToModule, System.Func<System.IServiceProvider, System.Type, object> createBehavior)
-  ctor public Bondstone.Modules.ModuleEventSubscriberPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Type behaviorType, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool> appliesToModule = null)
-  method public bool AppliesTo(Bondstone.Modules.BondstoneModuleRegistration module)
-  property Bondstone.Modules.ModulePipelineStepKind Kind { get; }
-  property int Order { get; }
-  property string Name { get; }
-
-type public sealed class Bondstone.Modules.ModuleEventSubscriberPipelineNext : System.ICloneable, System.MulticastDelegate, System.Runtime.Serialization.ISerializable
-  ctor public Bondstone.Modules.ModuleEventSubscriberPipelineNext(object object, nint method)
-  method public virtual System.IAsyncResult BeginInvoke(System.Threading.CancellationToken ct, System.AsyncCallback callback, object object)
-  method public virtual System.Threading.Tasks.ValueTask EndInvoke(System.IAsyncResult result)
-  method public virtual System.Threading.Tasks.ValueTask Invoke(System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Modules.ModuleEventSubscriberReceiveContext
-  ctor public Bondstone.Modules.ModuleEventSubscriberReceiveContext(Bondstone.Persistence.DurableInboxRecord inboxRecord, System.Guid? durableOperationId = null)
-  property Bondstone.Persistence.DurableInboxRecord InboxRecord { get; }
-  property System.Guid? DurableOperationId { get; }
-
-type public sealed class Bondstone.Modules.ModuleEventSubscriberRegistration
-  property Bondstone.Messaging.MessageTypeRegistration MessageTypeRegistration { get; }
-  property System.Type EventType { get; }
-  property System.Type HandlerType { get; }
-  property string MessageTypeName { get; }
-  property string ModuleName { get; }
-  property string SubscriberIdentity { get; }
-
-type public static class Bondstone.Modules.ModuleEventSubscriberSystemPipelineOrder
-  field public const int ExecutionContext
-  field public const int ReceiveInbox
-  field public const int Transaction
-
-type public sealed class Bondstone.Modules.ModuleExecutionContext
-  ctor public Bondstone.Modules.ModuleExecutionContext(string moduleName)
-  property string ModuleName { get; }
-
-type public sealed class Bondstone.Modules.ModulePipelineFeatureCollection
-  ctor public Bondstone.Modules.ModulePipelineFeatureCollection()
-  method public System.IDisposable Push<TFeature>(TFeature feature)
-  method public bool TryGet<TFeature>(out TFeature feature)
-
-type public enum Bondstone.Modules.ModulePipelineStepKind : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
-  field public const Bondstone.Modules.ModulePipelineStepKind Application
-  field public const Bondstone.Modules.ModulePipelineStepKind Capability
-  field public const Bondstone.Modules.ModulePipelineStepKind System
-
-type public sealed class Bondstone.Modules.ModulePublishedEventRegistration
-  property Bondstone.Messaging.MessageTypeRegistration MessageTypeRegistration { get; }
-  property System.Type EventType { get; }
-  property string MessageTypeName { get; }
-  property string ModuleName { get; }
+namespace Bondstone.Configuration
+{
+    public sealed class BondstoneBuilder
+    {
+        public Bondstone.Configuration.BondstoneOutboxBuilder Outbox { get; }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+        public Bondstone.Configuration.BondstoneBuilder AddConfigurationValidator(Bondstone.Configuration.IBondstoneConfigurationValidator validator) { }
+        public Bondstone.Configuration.BondstoneBuilder AddTransportTopologyDiagnosticSource(Bondstone.Configuration.IDurableTransportTopologyDiagnosticSource diagnosticSource) { }
+    }
+    public sealed class BondstoneConfigurationValidationContext
+    {
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleCommandRoute> CommandRoutes { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleCommandRoute> DurableCommandRoutes { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleEventSubscriberRegistration> EventSubscribers { get; }
+        public bool HasSingleTransport { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.BondstoneModuleRegistration> Modules { get; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, Bondstone.Modules.BondstoneModuleRegistration> ModulesByName { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModulePublishedEventRegistration> PublishedEvents { get; }
+        public int TransportCount { get; }
+        public bool HasEventSubscriber(string moduleName, string messageTypeName, string subscriberIdentity) { }
+        public bool ModuleHasDurableCommandHandlers(string moduleName) { }
+    }
+    public static class BondstoneDurablePayloadServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurablePayloadSerialization(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection ConfigureBondstoneDurablePayloadJson(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<System.Text.Json.JsonSerializerOptions> configure) { }
+    }
+    public sealed class BondstoneOutboxBuilder
+    {
+        public bool HasDispatcher { get; }
+        public bool HasPersistenceProvider { get; }
+        public bool HasTransport { get; }
+        public bool HasWorker { get; }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+        public Bondstone.Configuration.BondstoneOutboxBuilder MarkDispatcher(string dispatcherName) { }
+        public Bondstone.Configuration.BondstoneOutboxBuilder MarkPersistenceProvider(string providerName) { }
+        public Bondstone.Configuration.BondstoneOutboxBuilder MarkTransport(string transportName) { }
+        public Bondstone.Configuration.BondstoneOutboxBuilder MarkWorker(string workerName) { }
+    }
+    public static class BondstoneServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstone(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Bondstone.Configuration.BondstoneBuilder> configure) { }
+    }
+    public static class DurableModulePersistenceServiceCollectionExtensions
+    {
+        public static Bondstone.Persistence.DurableModulePersistenceRegistrationRegistry GetOrAddDurableModulePersistenceRegistrationRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection UseDurableModuleOutboxDispatchAggregator(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    public interface IBondstoneConfigurationValidator
+    {
+        void Validate(Bondstone.Configuration.BondstoneConfigurationValidationContext context);
+    }
+}
+namespace Bondstone.Messaging
+{
+    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct, Inherited=false)]
+    public sealed class DurableCommandIdentityAttribute : System.Attribute
+    {
+        public DurableCommandIdentityAttribute(string name) { }
+        public string Name { get; }
+    }
+    public sealed class DurableCommandSendResult : System.IEquatable<Bondstone.Messaging.DurableCommandSendResult>
+    {
+        public DurableCommandSendResult(System.Guid sendId, System.Guid? durableOperationId, Bondstone.Messaging.DurableCommandSendStatus status) { }
+        public System.Guid? DurableOperationId { get; }
+        public System.Guid SendId { get; }
+        public Bondstone.Messaging.DurableCommandSendStatus Status { get; }
+    }
+    public enum DurableCommandSendStatus
+    {
+        Accepted = 1,
+        Rejected = 2,
+        Duplicate = 3,
+    }
+    public sealed class DurableEventPublishResult : System.IEquatable<Bondstone.Messaging.DurableEventPublishResult>
+    {
+        public DurableEventPublishResult(System.Guid publishId, System.Guid? durableOperationId, Bondstone.Messaging.DurableEventPublishStatus status) { }
+        public System.Guid? DurableOperationId { get; }
+        public System.Guid PublishId { get; }
+        public Bondstone.Messaging.DurableEventPublishStatus Status { get; }
+    }
+    public enum DurableEventPublishStatus
+    {
+        Accepted = 1,
+        Rejected = 2,
+        Duplicate = 3,
+    }
+    public sealed class DurablePayloadJsonOptions
+    {
+        public DurablePayloadJsonOptions() { }
+        public System.Text.Json.JsonSerializerOptions JsonSerializerOptions { get; }
+    }
+    public interface ICommand : Bondstone.Messaging.IMessage { }
+    public interface IDurableCommand : Bondstone.Messaging.ICommand, Bondstone.Messaging.IMessage { }
+    public interface IDurableCommandSender
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableCommandSendResult> SendAsync<TCommand>(TCommand command, string targetModule, System.Threading.CancellationToken ct = default)
+            where TCommand : Bondstone.Messaging.IDurableCommand;
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableCommandSendResult> SendAsync<TCommand>(TCommand command, string targetModule, string? partitionKey, System.Guid? durableOperationId = default, Bondstone.Messaging.MessageTraceContext? traceContext = null, System.Guid? causationId = default, System.Threading.CancellationToken ct = default)
+            where TCommand : Bondstone.Messaging.IDurableCommand;
+    }
+    public interface IDurableEventPublisher
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableEventPublishResult> PublishAsync<TEvent>(TEvent integrationEvent, System.Threading.CancellationToken ct = default)
+            where TEvent : Bondstone.Messaging.IIntegrationEvent;
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableEventPublishResult> PublishAsync<TEvent>(TEvent integrationEvent, string? partitionKey, System.Guid? durableOperationId = default, Bondstone.Messaging.MessageTraceContext? traceContext = null, System.Guid? causationId = default, System.Threading.CancellationToken ct = default)
+            where TEvent : Bondstone.Messaging.IIntegrationEvent;
+    }
+    public interface IDurablePayloadSerializer
+    {
+        object Deserialize(string payload, System.Type messageType);
+        string Serialize<TMessage>(TMessage message)
+            where TMessage : Bondstone.Messaging.IMessage;
+    }
+    public interface IIntegrationEvent : Bondstone.Messaging.IMessage { }
+    public interface IMessage { }
+    public interface IMessageTypeRegistry
+    {
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> Registrations { get; }
+        string GetMessageTypeName(System.Type clrType);
+        string GetMessageTypeName<TMessage>()
+            where TMessage : Bondstone.Messaging.IMessage;
+        Bondstone.Messaging.MessageTypeRegistration Register(System.Type clrType);
+        Bondstone.Messaging.MessageTypeRegistration Register(System.Type clrType, string messageTypeName);
+        Bondstone.Messaging.MessageTypeRegistration Register<TMessage>()
+            where TMessage : Bondstone.Messaging.IMessage;
+        Bondstone.Messaging.MessageTypeRegistration Register<TMessage>(string messageTypeName)
+            where TMessage : Bondstone.Messaging.IMessage;
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> RegisterFromAssembly(System.Reflection.Assembly assembly);
+        System.Type ResolveClrType(string messageTypeName);
+        bool TryResolveClrType(string messageTypeName, out System.Type? clrType);
+    }
+    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct, Inherited=false)]
+    public sealed class IntegrationEventIdentityAttribute : System.Attribute
+    {
+        public IntegrationEventIdentityAttribute(string name) { }
+        public string Name { get; }
+    }
+    public sealed class MessageTypeRegistration : System.IEquatable<Bondstone.Messaging.MessageTypeRegistration>
+    {
+        public MessageTypeRegistration(System.Type ClrType, string MessageTypeName, Bondstone.Messaging.MessageKind Kind) { }
+        public System.Type ClrType { get; init; }
+        public Bondstone.Messaging.MessageKind Kind { get; init; }
+        public string MessageTypeName { get; init; }
+    }
+    public sealed class MessageTypeRegistry : Bondstone.Messaging.IMessageTypeRegistry
+    {
+        public MessageTypeRegistry() { }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> Registrations { get; }
+        public string GetMessageTypeName(System.Type clrType) { }
+        public string GetMessageTypeName<TMessage>()
+            where TMessage : Bondstone.Messaging.IMessage { }
+        public Bondstone.Messaging.MessageTypeRegistration Register(System.Type clrType) { }
+        public Bondstone.Messaging.MessageTypeRegistration Register(System.Type clrType, string messageTypeName) { }
+        public Bondstone.Messaging.MessageTypeRegistration Register<TMessage>()
+            where TMessage : Bondstone.Messaging.IMessage { }
+        public Bondstone.Messaging.MessageTypeRegistration Register<TMessage>(string messageTypeName)
+            where TMessage : Bondstone.Messaging.IMessage { }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> RegisterFromAssembly(System.Reflection.Assembly assembly) { }
+        public System.Type ResolveClrType(string messageTypeName) { }
+        public bool TryResolveClrType(string messageTypeName, out System.Type? clrType) { }
+    }
+    public sealed class SystemTextJsonDurablePayloadSerializer : Bondstone.Messaging.IDurablePayloadSerializer
+    {
+        public SystemTextJsonDurablePayloadSerializer(Bondstone.Messaging.DurablePayloadJsonOptions? options = null) { }
+        public object Deserialize(string payload, System.Type messageType) { }
+        public string Serialize<TMessage>(TMessage message)
+            where TMessage : Bondstone.Messaging.IMessage { }
+    }
+}
+namespace Bondstone.Modules
+{
+    public sealed class BondstoneModuleBuilder
+    {
+        public Bondstone.Modules.BondstoneModuleCommandBuilder Commands { get; }
+        public Bondstone.Modules.BondstoneModuleEventBuilder Events { get; }
+        public string Name { get; }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+        public Bondstone.Modules.BondstoneModuleBuilder AddCommandPipelineContribution(Bondstone.Modules.ModuleCommandPipelineContribution contribution) { }
+        public Bondstone.Modules.BondstoneModuleBuilder AddEventSubscriberPipelineContribution(Bondstone.Modules.ModuleEventSubscriberPipelineContribution contribution) { }
+        public Bondstone.Modules.BondstoneModuleBuilder UseDurableMessaging() { }
+        public Bondstone.Modules.BondstoneModuleBuilder UseOutboxPersistenceProvider(string providerName) { }
+        public Bondstone.Modules.BondstoneModuleBuilder UsePersistence(string providerName, System.Type? contextType = null) { }
+    }
+    public static class BondstoneModuleBuilderExtensions
+    {
+        public static Bondstone.Configuration.BondstoneBuilder AddModule(this Bondstone.Configuration.BondstoneBuilder builder, Bondstone.Modules.IBondstoneModule module) { }
+        public static Bondstone.Configuration.BondstoneBuilder AddModule<TModule>(this Bondstone.Configuration.BondstoneBuilder builder)
+            where TModule : Bondstone.Modules.IBondstoneModule, new () { }
+        public static Bondstone.Configuration.BondstoneBuilder Module(this Bondstone.Configuration.BondstoneBuilder builder, string name, System.Action<Bondstone.Modules.BondstoneModuleBuilder> configure) { }
+    }
+    public sealed class BondstoneModuleCommandBuilder
+    {
+        public string ModuleName { get; }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleCommandRoute> RegisterFromAssembly(System.Reflection.Assembly assembly) { }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleCommandRoute> RegisterFromAssemblyContaining<TMarker>() { }
+        public Bondstone.Modules.ModuleCommandRoute RegisterHandler<TCommand, THandler>(string? handlerIdentity = null)
+            where TCommand : Bondstone.Messaging.ICommand
+            where THandler :  class, Bondstone.Modules.ICommandHandler<TCommand> { }
+        public Bondstone.Modules.ModuleCommandRoute RegisterHandler<TCommand, THandler>(string messageTypeName, string? handlerIdentity = null)
+            where TCommand : Bondstone.Messaging.IDurableCommand
+            where THandler :  class, Bondstone.Modules.ICommandHandler<TCommand> { }
+        public Bondstone.Modules.BondstoneModuleCommandBuilder RegisterValidator<TCommand, TValidator>()
+            where TCommand : Bondstone.Messaging.ICommand
+            where TValidator :  class, Bondstone.Modules.ICommandValidator<TCommand> { }
+    }
+    public sealed class BondstoneModuleEventBuilder
+    {
+        public string ModuleName { get; }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+        public Bondstone.Messaging.MessageTypeRegistration RegisterPublishedEvent<TEvent>()
+            where TEvent : Bondstone.Messaging.IIntegrationEvent { }
+        public Bondstone.Messaging.MessageTypeRegistration RegisterPublishedEvent<TEvent>(string messageTypeName)
+            where TEvent : Bondstone.Messaging.IIntegrationEvent { }
+        public Bondstone.Modules.ModuleEventSubscriberRegistration RegisterSubscriber<TEvent, THandler>(string subscriberIdentity)
+            where TEvent : Bondstone.Messaging.IIntegrationEvent
+            where THandler :  class, Bondstone.Modules.IIntegrationEventHandler<TEvent> { }
+        public Bondstone.Modules.ModuleEventSubscriberRegistration RegisterSubscriber<TEvent, THandler>(string messageTypeName, string subscriberIdentity)
+            where TEvent : Bondstone.Messaging.IIntegrationEvent
+            where THandler :  class, Bondstone.Modules.IIntegrationEventHandler<TEvent> { }
+    }
+    public sealed class BondstoneModuleRegistration
+    {
+        public BondstoneModuleRegistration(string name, bool usesDurableMessaging, string? persistenceProviderName = null, System.Type? persistenceContextType = null) { }
+        public string Name { get; }
+        public System.Type? PersistenceContextType { get; }
+        public string? PersistenceProviderName { get; }
+        public bool UsesDurableMessaging { get; }
+        public bool UsesPersistence { get; }
+    }
+    public interface IBondstoneModule
+    {
+        string Name { get; }
+        void Configure(Bondstone.Modules.BondstoneModuleBuilder module);
+    }
+    public interface IBondstoneModuleRegistry
+    {
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.BondstoneModuleRegistration> Modules { get; }
+        Bondstone.Modules.BondstoneModuleRegistration GetModule(string moduleName);
+        bool TryGetModule(string moduleName, out Bondstone.Modules.BondstoneModuleRegistration? registration);
+    }
+    public interface ICommandHandler<in TCommand>
+        where in TCommand : Bondstone.Messaging.ICommand
+    {
+        System.Threading.Tasks.ValueTask HandleAsync(TCommand command, System.Threading.CancellationToken ct = default);
+    }
+    public interface ICommandValidator<in TCommand>
+        where in TCommand : Bondstone.Messaging.ICommand
+    {
+        System.Threading.Tasks.ValueTask ValidateAsync(TCommand command, System.Threading.CancellationToken ct = default);
+    }
+    public interface IIntegrationEventHandler<in TEvent>
+        where in TEvent : Bondstone.Messaging.IIntegrationEvent
+    {
+        System.Threading.Tasks.ValueTask HandleAsync(TEvent integrationEvent, System.Threading.CancellationToken ct = default);
+    }
+    public interface IModuleCommandExecutor
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleCommandExecutionResult> ExecuteAsync(string moduleName, object command, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleCommandExecutionResult> ExecuteAsync(string moduleName, object command, Bondstone.Modules.ModuleCommandReceiveContext receiveContext, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleCommandExecutionResult> ExecuteAsync<TCommand>(string moduleName, TCommand command, System.Threading.CancellationToken ct = default)
+            where TCommand : Bondstone.Messaging.ICommand;
+        System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleCommandExecutionResult> ExecuteAsync<TCommand>(string moduleName, TCommand command, Bondstone.Modules.ModuleCommandReceiveContext receiveContext, System.Threading.CancellationToken ct = default)
+            where TCommand : Bondstone.Messaging.ICommand;
+    }
+    public interface IModuleCommandPipelineBehavior<TCommand>
+        where TCommand : Bondstone.Messaging.ICommand
+    {
+        System.Threading.Tasks.ValueTask HandleAsync(TCommand command, Bondstone.Modules.ModuleCommandExecutionContext context, Bondstone.Modules.ModuleCommandPipelineNext next, System.Threading.CancellationToken ct = default);
+    }
+    public interface IModuleCommandReceivePipeline
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> HandleOnceAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default);
+    }
+    public interface IModuleCommandRouteRegistry
+    {
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleCommandRoute> Routes { get; }
+        Bondstone.Modules.ModuleCommandRoute GetByCommandType(string moduleName, System.Type commandType);
+        Bondstone.Modules.ModuleCommandRoute GetByMessageTypeName(string moduleName, string messageTypeName);
+        bool TryGetByCommandType(string moduleName, System.Type commandType, out Bondstone.Modules.ModuleCommandRoute? route);
+        bool TryGetByMessageTypeName(string moduleName, string messageTypeName, out Bondstone.Modules.ModuleCommandRoute? route);
+    }
+    public interface IModuleEventReceivePipeline
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> HandleOnceAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, string subscriberModule, string subscriberIdentity, System.Threading.CancellationToken ct = default);
+    }
+    public interface IModuleEventSubscriberExecutor
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleEventSubscriberExecutionResult> ExecuteAsync(string moduleName, string messageTypeName, string subscriberIdentity, object integrationEvent, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleEventSubscriberExecutionResult> ExecuteAsync(string moduleName, string messageTypeName, string subscriberIdentity, object integrationEvent, Bondstone.Modules.ModuleEventSubscriberReceiveContext receiveContext, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleEventSubscriberExecutionResult> ExecuteAsync<TEvent>(string moduleName, string messageTypeName, string subscriberIdentity, TEvent integrationEvent, System.Threading.CancellationToken ct = default)
+            where TEvent : Bondstone.Messaging.IIntegrationEvent;
+        System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleEventSubscriberExecutionResult> ExecuteAsync<TEvent>(string moduleName, string messageTypeName, string subscriberIdentity, TEvent integrationEvent, Bondstone.Modules.ModuleEventSubscriberReceiveContext receiveContext, System.Threading.CancellationToken ct = default)
+            where TEvent : Bondstone.Messaging.IIntegrationEvent;
+    }
+    public interface IModuleEventSubscriberPipelineBehavior<TEvent>
+        where TEvent : Bondstone.Messaging.IIntegrationEvent
+    {
+        System.Threading.Tasks.ValueTask HandleAsync(TEvent integrationEvent, Bondstone.Modules.ModuleEventSubscriberExecutionContext context, Bondstone.Modules.ModuleEventSubscriberPipelineNext next, System.Threading.CancellationToken ct = default);
+    }
+    public interface IModuleEventSubscriberRegistry
+    {
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleEventSubscriberRegistration> Subscribers { get; }
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleEventSubscriberRegistration> GetByMessageTypeName(string messageTypeName);
+        Bondstone.Modules.ModuleEventSubscriberRegistration GetSubscriber(string moduleName, string messageTypeName, string subscriberIdentity);
+    }
+    public interface IModuleExecutionContextAccessor
+    {
+        Bondstone.Modules.ModuleExecutionContext? Current { get; }
+    }
+    public interface IModulePipelineExecutionContext
+    {
+        Bondstone.Modules.ModulePipelineFeatureCollection Features { get; }
+        string ModuleName { get; }
+    }
+    public interface IModulePublishedEventRegistry
+    {
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModulePublishedEventRegistration> PublishedEvents { get; }
+    }
+    public sealed class ModuleCommandExecutionContext : Bondstone.Modules.IModulePipelineExecutionContext
+    {
+        public ModuleCommandExecutionContext(Bondstone.Modules.ModuleCommandRoute route, Bondstone.Modules.ModuleCommandReceiveContext? receiveContext = null) { }
+        public System.Guid? DurableOperationId { get; }
+        public Bondstone.Modules.ModulePipelineFeatureCollection Features { get; }
+        public string? HandlerIdentity { get; }
+        public string? MessageTypeName { get; }
+        public string ModuleName { get; }
+        public Bondstone.Modules.ModuleCommandReceiveContext? ReceiveContext { get; }
+        public Bondstone.Persistence.DurableInboxRecord? ReceiveInboxRecord { get; }
+        public Bondstone.Persistence.DurableInboxHandleResult? ReceiveInboxResult { get; }
+        public Bondstone.Modules.ModuleCommandRoute Route { get; }
+    }
+    public sealed class ModuleCommandExecutionResult : System.IEquatable<Bondstone.Modules.ModuleCommandExecutionResult>
+    {
+        public ModuleCommandExecutionResult(Bondstone.Persistence.DurableInboxHandleResult? receiveInboxResult = null) { }
+        public Bondstone.Persistence.DurableInboxHandleResult? ReceiveInboxResult { get; }
+    }
+    public sealed class ModuleCommandPipelineContribution
+    {
+        public ModuleCommandPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool>? appliesToModule, System.Func<System.IServiceProvider, System.Type, object> createBehavior) { }
+        public ModuleCommandPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Type behaviorType, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool>? appliesToModule = null) { }
+        public Bondstone.Modules.ModulePipelineStepKind Kind { get; }
+        public string Name { get; }
+        public int Order { get; }
+        public bool AppliesTo(Bondstone.Modules.BondstoneModuleRegistration module) { }
+    }
+    public delegate System.Threading.Tasks.ValueTask ModuleCommandPipelineNext(System.Threading.CancellationToken ct = default);
+    public sealed class ModuleCommandReceiveContext
+    {
+        public ModuleCommandReceiveContext(Bondstone.Persistence.DurableInboxRecord inboxRecord, System.Guid? durableOperationId = default) { }
+        public System.Guid? DurableOperationId { get; }
+        public Bondstone.Persistence.DurableInboxRecord InboxRecord { get; }
+    }
+    public sealed class ModuleCommandRoute
+    {
+        public System.Type CommandType { get; }
+        public string? HandlerIdentity { get; }
+        public System.Type HandlerType { get; }
+        public bool IsDurable { get; }
+        public string? MessageTypeName { get; }
+        public Bondstone.Messaging.MessageTypeRegistration? MessageTypeRegistration { get; }
+        public string ModuleName { get; }
+    }
+    public static class ModuleCommandSystemPipelineOrder
+    {
+        public const int ExecutionContext = 100;
+        public const int OperationState = 25;
+        public const int ReceiveInbox = 50;
+        public const int Transaction = 0;
+        public const int Validation = 200;
+    }
+    public sealed class ModuleEventSubscriberExecutionContext : Bondstone.Modules.IModulePipelineExecutionContext
+    {
+        public ModuleEventSubscriberExecutionContext(Bondstone.Modules.ModuleEventSubscriberRegistration subscriber, Bondstone.Modules.ModuleEventSubscriberReceiveContext? receiveContext = null) { }
+        public System.Guid? DurableOperationId { get; }
+        public Bondstone.Modules.ModulePipelineFeatureCollection Features { get; }
+        public string MessageTypeName { get; }
+        public string ModuleName { get; }
+        public Bondstone.Modules.ModuleEventSubscriberReceiveContext? ReceiveContext { get; }
+        public Bondstone.Persistence.DurableInboxRecord? ReceiveInboxRecord { get; }
+        public Bondstone.Persistence.DurableInboxHandleResult? ReceiveInboxResult { get; }
+        public Bondstone.Modules.ModuleEventSubscriberRegistration Subscriber { get; }
+        public string SubscriberIdentity { get; }
+    }
+    public sealed class ModuleEventSubscriberExecutionResult : System.IEquatable<Bondstone.Modules.ModuleEventSubscriberExecutionResult>
+    {
+        public ModuleEventSubscriberExecutionResult(Bondstone.Persistence.DurableInboxHandleResult? receiveInboxResult = null) { }
+        public Bondstone.Persistence.DurableInboxHandleResult? ReceiveInboxResult { get; }
+    }
+    public sealed class ModuleEventSubscriberPipelineContribution
+    {
+        public ModuleEventSubscriberPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool>? appliesToModule, System.Func<System.IServiceProvider, System.Type, object> createBehavior) { }
+        public ModuleEventSubscriberPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Type behaviorType, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool>? appliesToModule = null) { }
+        public Bondstone.Modules.ModulePipelineStepKind Kind { get; }
+        public string Name { get; }
+        public int Order { get; }
+        public bool AppliesTo(Bondstone.Modules.BondstoneModuleRegistration module) { }
+    }
+    public delegate System.Threading.Tasks.ValueTask ModuleEventSubscriberPipelineNext(System.Threading.CancellationToken ct = default);
+    public sealed class ModuleEventSubscriberReceiveContext
+    {
+        public ModuleEventSubscriberReceiveContext(Bondstone.Persistence.DurableInboxRecord inboxRecord, System.Guid? durableOperationId = default) { }
+        public System.Guid? DurableOperationId { get; }
+        public Bondstone.Persistence.DurableInboxRecord InboxRecord { get; }
+    }
+    public sealed class ModuleEventSubscriberRegistration
+    {
+        public System.Type EventType { get; }
+        public System.Type HandlerType { get; }
+        public string MessageTypeName { get; }
+        public Bondstone.Messaging.MessageTypeRegistration MessageTypeRegistration { get; }
+        public string ModuleName { get; }
+        public string SubscriberIdentity { get; }
+    }
+    public static class ModuleEventSubscriberSystemPipelineOrder
+    {
+        public const int ExecutionContext = 100;
+        public const int ReceiveInbox = 50;
+        public const int Transaction = 0;
+    }
+    public sealed class ModuleExecutionContext
+    {
+        public ModuleExecutionContext(string moduleName) { }
+        public string ModuleName { get; }
+    }
+    public sealed class ModulePipelineFeatureCollection
+    {
+        public ModulePipelineFeatureCollection() { }
+        public System.IDisposable Push<TFeature>(TFeature feature)
+            where TFeature :  class { }
+        public bool TryGet<TFeature>(out TFeature? feature)
+            where TFeature :  class { }
+    }
+    public enum ModulePipelineStepKind
+    {
+        System = 0,
+        Capability = 1,
+        Application = 2,
+    }
+    public sealed class ModulePublishedEventRegistration
+    {
+        public System.Type EventType { get; }
+        public string MessageTypeName { get; }
+        public Bondstone.Messaging.MessageTypeRegistration MessageTypeRegistration { get; }
+        public string ModuleName { get; }
+    }
+}

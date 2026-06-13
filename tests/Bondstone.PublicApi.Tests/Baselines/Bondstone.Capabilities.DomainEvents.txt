@@ -1,12 +1,20 @@
-type public sealed class Bondstone.Capabilities.DomainEvents.DomainEventIdentityAttribute : System.Attribute
-  ctor public Bondstone.Capabilities.DomainEvents.DomainEventIdentityAttribute(string name)
-  property string Name { get; }
-
-type public interface Bondstone.Capabilities.DomainEvents.IDomainEvent
-
-type public interface Bondstone.Capabilities.DomainEvents.IDomainEventHandler<TDomainEvent>
-  method public abstract System.Threading.Tasks.ValueTask HandleAsync(TDomainEvent domainEvent, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Capabilities.DomainEvents.IDomainEventSource
-  method public abstract void ClearPendingDomainEvents()
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Capabilities.DomainEvents.IDomainEvent> PendingDomainEvents { get; }
+namespace Bondstone.Capabilities.DomainEvents
+{
+    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct, Inherited=false)]
+    public sealed class DomainEventIdentityAttribute : System.Attribute
+    {
+        public DomainEventIdentityAttribute(string name) { }
+        public string Name { get; }
+    }
+    public interface IDomainEvent { }
+    public interface IDomainEventHandler<in TDomainEvent>
+        where in TDomainEvent : Bondstone.Capabilities.DomainEvents.IDomainEvent
+    {
+        System.Threading.Tasks.ValueTask HandleAsync(TDomainEvent domainEvent, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDomainEventSource
+    {
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.Capabilities.DomainEvents.IDomainEvent> PendingDomainEvents { get; }
+        void ClearPendingDomainEvents();
+    }
+}

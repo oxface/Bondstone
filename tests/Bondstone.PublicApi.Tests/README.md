@@ -3,8 +3,8 @@
 This test project protects the checked-in public API baseline for packable
 Bondstone packages.
 
-The baseline test reflects each package assembly and compares the generated
-public/protected surface to files under `Baselines/`.
+The baseline test uses `PublicApiGenerator` for each package assembly and
+compares the generated public/protected surface to files under `Baselines/`.
 
 To intentionally refresh the baselines after an approved public API change:
 

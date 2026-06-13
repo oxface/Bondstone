@@ -1,25 +1,34 @@
-type public static class Bondstone.Hosting.Outbox.BondstoneHostingBuilderExtensions
-  method public static extension Bondstone.Configuration.BondstoneOutboxBuilder UseDurableDispatcher(Bondstone.Configuration.BondstoneOutboxBuilder outbox)
-  method public static extension Bondstone.Configuration.BondstoneOutboxBuilder UseWorker(Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Action<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions> configureOptions = null)
-
-type public static class Bondstone.Hosting.Outbox.BondstoneHostingServiceCollectionExtensions
-  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurableOutboxDispatcher(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurableOutboxWorker(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions> configureOptions = null)
-
-type public sealed class Bondstone.Hosting.Outbox.DurableOutboxWorker : Microsoft.Extensions.Hosting.BackgroundService, Microsoft.Extensions.Hosting.IHostedService, System.IDisposable
-  ctor public Bondstone.Hosting.Outbox.DurableOutboxWorker(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory serviceScopeFactory, Microsoft.Extensions.Options.IOptions<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions> options, Microsoft.Extensions.Logging.ILogger<Bondstone.Hosting.Outbox.DurableOutboxWorker> logger)
-  method protected override System.Threading.Tasks.Task ExecuteAsync(System.Threading.CancellationToken ct)
-  method public override System.Threading.Tasks.Task StartAsync(System.Threading.CancellationToken ct)
-
-type public sealed class Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions
-  ctor public Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions()
-  method public void Validate()
-  property System.TimeSpan FailureDelay { get; set; }
-  property System.TimeSpan LeaseDuration { get; set; }
-  property System.TimeSpan PollingInterval { get; set; }
-  property int BatchSize { get; set; }
-  property string WorkerId { get; set; }
-
-type public sealed class Bondstone.Hosting.Outbox.DurableOutboxWorkerOptionsValidator : Microsoft.Extensions.Options.IValidateOptions<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions>
-  ctor public Bondstone.Hosting.Outbox.DurableOutboxWorkerOptionsValidator()
-  method public Microsoft.Extensions.Options.ValidateOptionsResult Validate(string name, Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions options)
+namespace Bondstone.Hosting.Outbox
+{
+    public static class BondstoneHostingBuilderExtensions
+    {
+        public static Bondstone.Configuration.BondstoneOutboxBuilder UseDurableDispatcher(this Bondstone.Configuration.BondstoneOutboxBuilder outbox) { }
+        public static Bondstone.Configuration.BondstoneOutboxBuilder UseWorker(this Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Action<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions>? configureOptions = null) { }
+    }
+    public static class BondstoneHostingServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurableOutboxDispatcher(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurableOutboxWorker(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions>? configureOptions = null) { }
+    }
+    public sealed class DurableOutboxWorker : Microsoft.Extensions.Hosting.BackgroundService
+    {
+        public DurableOutboxWorker(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory serviceScopeFactory, Microsoft.Extensions.Options.IOptions<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions> options, Microsoft.Extensions.Logging.ILogger<Bondstone.Hosting.Outbox.DurableOutboxWorker> logger) { }
+        protected override System.Threading.Tasks.Task ExecuteAsync(System.Threading.CancellationToken ct) { }
+        public override System.Threading.Tasks.Task StartAsync(System.Threading.CancellationToken ct) { }
+    }
+    public sealed class DurableOutboxWorkerOptions
+    {
+        public DurableOutboxWorkerOptions() { }
+        public int BatchSize { get; set; }
+        public System.TimeSpan FailureDelay { get; set; }
+        public System.TimeSpan LeaseDuration { get; set; }
+        public System.TimeSpan PollingInterval { get; set; }
+        public string WorkerId { get; set; }
+        public void Validate() { }
+    }
+    public sealed class DurableOutboxWorkerOptionsValidator : Microsoft.Extensions.Options.IValidateOptions<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions>
+    {
+        public DurableOutboxWorkerOptionsValidator() { }
+        public Microsoft.Extensions.Options.ValidateOptionsResult Validate(string? name, Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions options) { }
+    }
+}

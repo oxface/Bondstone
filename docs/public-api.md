@@ -6,10 +6,10 @@ document, not a source of new compatibility promises.
 
 ## Automated Baseline
 
-`tests/Bondstone.PublicApi.Tests` records the current reflection-visible
-public/protected API surface for all packable Bondstone packages. The default
-fast test gate fails when that surface changes without an intentional baseline
-update.
+`tests/Bondstone.PublicApi.Tests` uses `PublicApiGenerator` to record the
+current public/protected API surface for all packable Bondstone packages. The
+default fast test gate fails when that generated API text changes without an
+intentional baseline update.
 
 Refresh baselines with:
 

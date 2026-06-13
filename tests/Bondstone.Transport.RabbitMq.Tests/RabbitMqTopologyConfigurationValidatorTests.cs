@@ -31,6 +31,10 @@ public sealed class RabbitMqTopologyConfigurationValidatorTests
 
         Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            "No RabbitMQ routing key is configured for target module 'fulfillment'.",
+            exception.Message,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -55,6 +59,10 @@ public sealed class RabbitMqTopologyConfigurationValidatorTests
 
         Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales.test.event.v1", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            "No RabbitMQ routing key is configured for message type 'sales.test.event.v1'.",
+            exception.Message,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -79,6 +87,29 @@ public sealed class RabbitMqTopologyConfigurationValidatorTests
 
         Assert.Contains("has no registered durable command handlers", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment.commands", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenOutboxTransportOverloadHasInvalidReceiveBinding_SkipsProviderValidation()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+            });
+            bondstone.Outbox.UseRabbitMqTransport(
+                rabbitMq => rabbitMq.ReceiveQueue("fulfillment.commands")
+                    .AcceptModule("fulfillment"));
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        Assert.NotNull(serviceProvider.GetRequiredService<IRabbitMqTopologyDiagnostics>());
     }
 
     [Fact]

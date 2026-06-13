@@ -112,6 +112,35 @@ public sealed class ModuleReceivePipelineTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task CommandReceive_WhenInboxRecordAlreadyProcessed_CompletesIdempotentlyAndSkipsHandler()
+    {
+        var inboxExecutor = new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.AlreadyProcessed);
+        var services = CreateServices(inboxExecutor);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IModuleCommandReceivePipeline pipeline =
+            scope.ServiceProvider.GetRequiredService<IModuleCommandReceivePipeline>();
+
+        DurableInboxHandleResult result = await pipeline.HandleOnceAsync(CreateCommandEnvelope());
+
+        Assert.Equal(DurableInboxHandleStatus.AlreadyProcessed, result.Status);
+        Assert.Equal(0, inboxExecutor.HandlerCalls);
+        Assert.Empty(serviceProvider.GetRequiredService<CommandCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task EventReceive_WhenSubscriberExists_ExecutesModuleEventSubscriberThroughInbox()
     {
         var inboxExecutor = new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.Handled);

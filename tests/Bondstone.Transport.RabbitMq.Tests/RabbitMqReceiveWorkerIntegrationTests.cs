@@ -9,7 +9,6 @@ using Bondstone.Transport.RabbitMq.Outbox;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
 using Xunit;
 
@@ -93,6 +92,19 @@ public sealed class RabbitMqReceiveWorkerIntegrationTests(RabbitMqFixture fixtur
 
             Assert.Equal(message.MessageId, deadLettered.MessageId);
             Assert.Equal(message.MessageTypeName, deadLettered.MessageTypeName);
+            RecordingLogSink logs = serviceProvider.GetRequiredService<RecordingLogSink>();
+            Assert.Contains(
+                logs.Entries,
+                entry => entry.Level == LogLevel.Error
+                    && entry.Message.Contains(queueName, StringComparison.Ordinal)
+                    && entry.Message.Contains("delivery 1", StringComparison.Ordinal)
+                    && entry.Message.Contains(message.MessageId, StringComparison.Ordinal)
+                    && entry.Message.Contains(message.MessageTypeName, StringComparison.Ordinal)
+                    && entry.Message.Contains("Exchange:", StringComparison.Ordinal)
+                    && entry.Message.Contains($"RoutingKey: {queueName}", StringComparison.Ordinal)
+                    && entry.Message.Contains("Redelivered: False", StringComparison.Ordinal)
+                    && entry.Message.Contains("requeue False", StringComparison.Ordinal)
+                    && entry.Message.Contains("RabbitMQ retry and dead-letter policy remain broker-owned", StringComparison.Ordinal));
         }
         finally
         {
@@ -324,7 +336,8 @@ public sealed class RabbitMqReceiveWorkerIntegrationTests(RabbitMqFixture fixtur
         Action<BondstoneRabbitMqTransportBuilder> configure)
     {
         var services = new ServiceCollection();
-        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+        services.AddSingleton<RecordingLogSink>();
+        services.AddSingleton(typeof(ILogger<>), typeof(RecordingLogger<>));
         services.AddSingleton<IModuleCommandReceivePipeline>(commandPipeline);
         services.AddSingleton(eventPipeline);
         services.AddBondstoneRabbitMqConnection(connection);
@@ -514,4 +527,75 @@ public sealed class RabbitMqReceiveWorkerIntegrationTests(RabbitMqFixture fixtur
         DurableMessageEnvelope Envelope,
         string SubscriberModule,
         string SubscriberIdentity);
+
+    private sealed class RecordingLogSink
+    {
+        private readonly List<RecordingLogEntry> _entries = [];
+        private readonly Lock _lock = new();
+
+        public IReadOnlyCollection<RecordingLogEntry> Entries
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _entries.ToArray();
+                }
+            }
+        }
+
+        public void Add(
+            RecordingLogEntry entry)
+        {
+            lock (_lock)
+            {
+                _entries.Add(entry);
+            }
+        }
+    }
+
+    private sealed class RecordingLogger<T>(
+        RecordingLogSink sink)
+        : ILogger<T>
+    {
+        public IDisposable BeginScope<TState>(
+            TState state)
+            where TState : notnull
+        {
+            return NoopDisposable.Instance;
+        }
+
+        public bool IsEnabled(
+            LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            sink.Add(new RecordingLogEntry(
+                logLevel,
+                formatter(state, exception),
+                exception));
+        }
+    }
+
+    private sealed record RecordingLogEntry(
+        LogLevel Level,
+        string Message,
+        Exception? Exception);
+
+    private sealed class NoopDisposable : IDisposable
+    {
+        public static readonly NoopDisposable Instance = new();
+
+        public void Dispose()
+        {
+        }
+    }
 }

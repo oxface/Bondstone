@@ -79,6 +79,30 @@ public sealed class DurableOutboxDispatcherTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task DispatchAsync_WhenRetryScheduleCannotBeRecorded_CountsStale()
+    {
+        DurableOutboxRecord record = CreateRecord(Guid.Parse("a42e4f2e-2f8b-4c8f-a119-bfffa93ae1de"));
+        var transport = new FakeTransport { Exception = new InvalidOperationException("transport unavailable") };
+        var recorder = new FakeDispatchRecorder { RecordResult = false };
+        DurableOutboxDispatcher dispatcher = CreateDispatcher(
+            new FakeClaimer([record]),
+            new FakeLeaseRenewer(),
+            transport,
+            failurePolicy: new DurableOutboxFailurePolicy(maxAttempts: 5, retryDelays: [TimeSpan.FromSeconds(10)]),
+            recorder: recorder);
+
+        DurableOutboxDispatchResult result = await dispatcher.DispatchAsync(
+            "dispatcher-1",
+            TimeSpan.FromMinutes(5));
+
+        Assert.Equal(0, result.RetryScheduledCount);
+        Assert.Equal(0, result.TerminalFailedCount);
+        Assert.Equal(1, result.StaleCount);
+        Assert.Equal(record.Envelope.MessageId, Assert.Single(recorder.RetryMessageIds));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task DispatchAsync_WhenTransportFailsAndMaxAttemptsReached_MarksTerminalFailed()
     {
         DurableOutboxRecord record = CreateRecord(
@@ -98,6 +122,32 @@ public sealed class DurableOutboxDispatcherTests
             TimeSpan.FromMinutes(5));
 
         Assert.Equal(1, result.TerminalFailedCount);
+        Assert.Equal(record.Envelope.MessageId, Assert.Single(recorder.TerminalFailedMessageIds));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task DispatchAsync_WhenTerminalFailureCannotBeRecorded_CountsStale()
+    {
+        DurableOutboxRecord record = CreateRecord(
+            Guid.Parse("59b28340-bc5d-4a2d-a682-2bfc00f50b27"),
+            attemptCount: 5);
+        var transport = new FakeTransport { Exception = new InvalidOperationException("poison") };
+        var recorder = new FakeDispatchRecorder { RecordResult = false };
+        DurableOutboxDispatcher dispatcher = CreateDispatcher(
+            new FakeClaimer([record]),
+            new FakeLeaseRenewer(),
+            transport,
+            failurePolicy: new DurableOutboxFailurePolicy(maxAttempts: 5),
+            recorder: recorder);
+
+        DurableOutboxDispatchResult result = await dispatcher.DispatchAsync(
+            "dispatcher-1",
+            TimeSpan.FromMinutes(5));
+
+        Assert.Equal(0, result.RetryScheduledCount);
+        Assert.Equal(0, result.TerminalFailedCount);
+        Assert.Equal(1, result.StaleCount);
         Assert.Equal(record.Envelope.MessageId, Assert.Single(recorder.TerminalFailedMessageIds));
     }
 

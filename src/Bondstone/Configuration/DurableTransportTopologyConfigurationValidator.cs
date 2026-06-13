@@ -63,11 +63,12 @@ internal sealed class DurableTransportTopologyConfigurationValidator(
         if (matches.Length == 0)
         {
             string transportNames = FormatTransportNames(diagnostics);
+            string failureReasons = FormatFailureReasons(diagnostics);
             string messageDescription = messageKind == MessageKind.Command
                 ? $"command route for {routeDescription}"
                 : $"event route for {routeDescription}";
             throw new InvalidOperationException(
-                $"No durable outbox transport route is configured for {messageDescription}. Checked transports: {transportNames}.");
+                $"No durable outbox transport route is configured for {messageDescription}. Checked transports: {transportNames}.{failureReasons}");
         }
 
         throw new InvalidOperationException(
@@ -86,5 +87,21 @@ internal sealed class DurableTransportTopologyConfigurationValidator(
         return transportNames.Length == 0
             ? "(none)"
             : $"'{string.Join("', '", transportNames)}'";
+    }
+
+    private static string FormatFailureReasons(
+        IEnumerable<DurableTransportTopologyRouteDiagnostic> diagnostics)
+    {
+        string[] failureReasons = diagnostics
+            .Where(static diagnostic => !diagnostic.HasRoute
+                && !string.IsNullOrWhiteSpace(diagnostic.FailureReason))
+            .OrderBy(static diagnostic => diagnostic.TransportName, StringComparer.Ordinal)
+            .Select(static diagnostic =>
+                $"{diagnostic.TransportName}: {diagnostic.FailureReason}")
+            .ToArray();
+
+        return failureReasons.Length == 0
+            ? string.Empty
+            : $" Details: {string.Join(" ", failureReasons)}";
     }
 }

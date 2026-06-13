@@ -133,6 +133,14 @@ public sealed class AddBondstoneCompositionTests
         Assert.Contains("module 'fulfillment'", exception.Message, StringComparison.Ordinal);
         Assert.Contains("RabbitMq", exception.Message, StringComparison.Ordinal);
         Assert.Contains("ServiceBus", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            "No RabbitMQ routing key is configured for target module 'fulfillment'.",
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "No Service Bus queue is configured for target module 'fulfillment'.",
+            exception.Message,
+            StringComparison.Ordinal);
     }
 
     [Fact]

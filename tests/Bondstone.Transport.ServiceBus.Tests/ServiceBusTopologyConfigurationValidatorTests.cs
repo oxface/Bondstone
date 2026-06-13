@@ -30,6 +30,10 @@ public sealed class ServiceBusTopologyConfigurationValidatorTests
 
         Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            "No Service Bus queue is configured for target module 'fulfillment'.",
+            exception.Message,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -53,6 +57,10 @@ public sealed class ServiceBusTopologyConfigurationValidatorTests
 
         Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales.test.event.v1", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            "No Service Bus event destination is configured for message type 'sales.test.event.v1'.",
+            exception.Message,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -77,6 +85,29 @@ public sealed class ServiceBusTopologyConfigurationValidatorTests
 
         Assert.Contains("has no registered durable command handlers", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment-commands", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenOutboxTransportOverloadHasInvalidReceiveBinding_SkipsProviderValidation()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+            });
+            bondstone.Outbox.UseServiceBusTransport(
+                serviceBus => serviceBus.ReceiveQueue("fulfillment-commands")
+                    .AcceptModule("fulfillment"));
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        Assert.NotNull(serviceProvider.GetRequiredService<IServiceBusTopologyDiagnostics>());
     }
 
     [Fact]

@@ -285,6 +285,11 @@ outbound durable route ownership. When transport diagnostic sources are
 configured, registered durable command target modules and registered published
 events must have exactly one outbound transport route. Zero matches and
 multiple matches fail during `AddBondstone`, before outbox dispatch.
+Normal host setup should use provider transport extensions on the main
+`BondstoneBuilder`, because that path registers the provider topology
+diagnostic sources and configuration validators. The lower-level
+`BondstoneOutboxBuilder` transport overloads register transport services only
+and are advanced composition APIs for manual dispatch setups.
 
 RabbitMQ and Service Bus also validate their provider receive bindings.
 Provider receive bindings always validate that accepted command modules have

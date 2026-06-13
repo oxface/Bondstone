@@ -22,9 +22,7 @@ cost belongs in ADRs and stable docs, not in speculative planning files.
 
 ## Active Issue Notes
 
-- [01-public-api-and-composition-cleanup.md](01-public-api-and-composition-cleanup.md)
-  explores public API classification and setup/composition cleanup before
-  stable compatibility expectations harden.
+No active issue notes.
 
 ## Historical Notes
 

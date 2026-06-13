@@ -48,6 +48,10 @@ The persisted `TerminalFailed` outbox status is a terminal Bondstone outbox
 failure state for an outgoing local outbox record. It does not mean Bondstone
 creates or owns a provider-native broker dead-letter queue. Broker receive
 retry and dead-letter policy remains transport/provider-owned.
+Terminal rows remain persisted until the application or operator applies its
+own retention, archival, purge, reset, or replay procedure. Bondstone does not
+currently provide terminal-outbox recovery helpers or a provider-neutral
+operator mutation API.
 
 `IDurableOutboxFailurePolicy` decides whether a failed claimed delivery attempt
 should be retried or terminally failed. The default
@@ -56,6 +60,9 @@ sequence to produce a deterministic `DurableOutboxFailureDecision`. It is a
 pure policy and does not claim rows, send transport messages, update
 persistence, renew leases, route failed messages, or register background
 workers.
+Failure reasons are persisted as diagnostic text for the failed dispatch
+attempt. They are not a normalized machine-readable remediation contract and
+do not by themselves define an operator recovery action.
 
 `IDurableOutboxTransport` is the minimal transport boundary for sending a
 claimed `DurableOutboxRecord`. Transport adapters own routing, serialization,
@@ -66,7 +73,10 @@ broker-specific acknowledgement, and transport-native behavior.
 dispatching one batch when called. It composes claiming, per-record lease
 renewal, transport send, failure decision, and outcome recording. It is not a
 hosted service and does not own polling, leader election, singleton sweeper
-coordination, route circuit breaking, archiving, or terminal-failure routing.
+coordination, route circuit breaking, archiving, terminal-failure routing, or
+claim-maintenance APIs. Expired outbox processing claims are recovered by the
+provider claimer when that provider supports expired-lease claiming; active
+outcome updates remain claim-owner and lease-time aware.
 Hosted worker composition lives outside the persistence package in
 `Bondstone.Hosting`.
 

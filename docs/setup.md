@@ -98,6 +98,13 @@ Azure Service Bus uses the same Bondstone composition shape with
 `UseServiceBusTransport`, queues for commands, and topic or queue
 destinations for integration events.
 
+Use provider transport extensions on the main `BondstoneBuilder` for normal
+host setup. The lower-level `bondstone.Outbox.UseRabbitMqTransport(...)` and
+`bondstone.Outbox.UseServiceBusTransport(...)` overloads are advanced
+composition APIs for manual outbox transport registration; they do not add the
+provider configuration validators and topology diagnostic sources that the
+normal setup path adds.
+
 When more than one direct transport is registered, Bondstone routes each
 claimed outbox record through the provider whose topology matches that
 message. If no provider or more than one provider matches, dispatch fails

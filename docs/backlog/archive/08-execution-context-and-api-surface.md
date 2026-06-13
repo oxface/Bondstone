@@ -42,8 +42,8 @@ this resolution.
 ## Deferred Work
 
 - Public API inventory, baseline/process design, and concrete type
-  classification continue in
-  [../11-public-api-and-composition-cleanup.md](../11-public-api-and-composition-cleanup.md).
+  classification were later resolved or returned to broad planning in
+  [10-public-api-and-composition-cleanup.md](10-public-api-and-composition-cleanup.md).
 - Receive helper naming or abstraction changes continue in
   [../13-transport-and-hosting-ergonomics.md](../13-transport-and-hosting-ergonomics.md)
   only if custom receive loops show the current dispatcher/handler split is

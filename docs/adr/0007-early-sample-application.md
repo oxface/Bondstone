@@ -1,7 +1,7 @@
 # 0007 Early Sample Application
 
 Status: Accepted
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-03
 
 ## Context
@@ -78,22 +78,31 @@ library infrastructure.
 Aspire adds sample-maintenance cost, but it keeps multi-process sample startup
 explicit and repeatable.
 
-## Applied To
+## Application Notes
 
-- Code: Pending. Sample projects and runnable smoke paths have not been
-  created yet.
-- Stable docs:
-  - [docs/samples.md](../samples.md)
-  - [docs/testing.md](../testing.md)
-  - [docs/architecture.md](../architecture.md)
-  - [docs/README.md](../README.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-- Skills: Not applicable.
+- Current contract: Samples should stay small and exercise Bondstone behavior.
+  Aspire remains the preferred local orchestration host when future samples
+  need multi-process orchestration; the current sample is a direct minimal API
+  plus explicit integration tests.
+- Stable docs: Current sample direction is described in
+  [docs/samples.md](../samples.md), with related testing and architecture
+  context in [docs/testing.md](../testing.md) and
+  [docs/architecture/README.md](../architecture/README.md).
+- Agent guidance: Root [AGENTS.md](../../AGENTS.md) points agents to sample
+  guidance before adding or changing samples.
+- Application evidence: `samples/ModularMonolith` exists with ordering,
+  fulfillment, and billing modules. It exercises module-owned persistence,
+  durable commands, integration events, inbox/outbox behavior, mixed EF and
+  non-EF PostgreSQL persistence, explicit local transport routing, and a
+  preferred RabbitMQ path. Smoke coverage lives in
+  `tests/Bondstone.Samples.Tests`.
+- Pending or deferred: None for the early-sample decision. Additional
+  service-split or broker scenarios should remain bounded future sample work.
 
 ## Verification
 
 Read back [docs/samples.md](../samples.md),
-[docs/testing.md](../testing.md), [docs/architecture.md](../architecture.md),
+[docs/testing.md](../testing.md),
+[docs/architecture/README.md](../architecture/README.md),
 [docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). A runnable
-sample smoke path remains pending.
+sample smoke path is now covered by explicit integration tests.

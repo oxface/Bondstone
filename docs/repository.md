@@ -5,36 +5,11 @@ Bondstone.
 
 ## Layout
 
-Bondstone uses a library-maintenance repository layout:
-
-```text
-.agents/
-  skills/
-.config/
-.devcontainer/
-.github/
-  workflows/
-docs/
-  adr/
-samples/
-src/
-tests/
-AGENTS.md
-Bondstone.slnx
-Directory.Build.props
-Directory.Packages.props
-global.json
-package.json
-pnpm-workspace.yaml
-README.md
-```
-
-The initial source projects are:
-
-- `src/Bondstone`
-- `src/Bondstone.EntityFrameworkCore`
-- `src/Bondstone.EntityFrameworkCore.Postgres`
-- `src/Bondstone.Transport.Rebus`
+Bondstone uses a library-maintenance repository layout with repository
+automation at the root, stable docs under `docs/`, samples under `samples/`,
+package projects under `src/`, tests under `tests/`, and repository agent
+skills under `.agents/skills/`. Current package projects and dependency
+direction are recorded in [packaging.md](packaging.md).
 
 Tests live under `tests/`, grouped by package or integration boundary. Tests
 extracted from the previous root framework test project should be moved or
@@ -44,6 +19,35 @@ product module.
 Samples live under `samples/` and validate realistic library usage. Samples
 are not core package code and must not introduce domain behavior into library
 packages.
+
+## Reference-Based Context Structure
+
+Bondstone uses local context indexes so humans and agents can start from the
+smallest useful folder context and follow references only when needed.
+
+Significant folders should have:
+
+- `AGENTS.md` for agents working in that folder;
+- `README.md` for humans navigating that folder.
+
+These files are indexes, not alternate architecture docs. Keep them short,
+name the folder's scope, and reference the stable docs, ADR workflows, sibling
+packages, tests, and verification entrypoints that matter for that area. Avoid
+copying durable rules from architecture, packaging, testing, or sample docs
+unless the local rule is unusually important and repeated agent misses justify
+duplication.
+
+When adding a package, test boundary, sample, docs area, or agent workflow
+folder, add the local indexes in the same change or explain why an existing
+parent index is enough.
+
+## Work Tracking
+
+Repository docs describe current behavior. ADRs preserve durable decisions and
+decision history. Use GitHub Issues and GitHub Projects for backlog work,
+real-project findings, cleanup tasks, prioritization, and ownership. When an
+issue creates a durable technical decision, add or update an ADR. When an issue
+changes current behavior, update stable docs in the same change.
 
 ## Tooling
 
@@ -82,9 +86,12 @@ Use Release Please for release pull requests, changelog updates, GitHub
 releases, and tags. Use GitHub Actions for package verification and NuGet
 publishing from release events or explicit manual dispatch.
 
-## Application State
+## C# Conventions
 
-This structure is accepted and partially scaffolded. Root tooling, initial
-source projects, initial test projects, solution structure, devcontainer, and
-GitHub automation exist. Samples, real package implementation, and richer
-integration-test infrastructure remain future application work.
+Use `ct` as the standard parameter and local variable name for
+`CancellationToken` values in Bondstone C# source and tests. This convention
+applies to public APIs as well as implementations because C# parameter names
+are visible to named-argument callers.
+
+Keep this document focused on repository layout, local tooling, CI, and
+release automation.

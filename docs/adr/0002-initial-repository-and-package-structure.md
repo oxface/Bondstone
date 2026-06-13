@@ -1,7 +1,7 @@
 # 0002 Initial Repository And Package Structure
 
 Status: Accepted
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-03
 
 ## Context
@@ -98,32 +98,28 @@ This ADR intentionally does not decide NuGet release details or exact sample
 project names. CI command names are now established through the initial
 package scripts.
 
-## Applied To
+## Application Notes
 
-- Code:
-  - [Bondstone.slnx](../../Bondstone.slnx)
-  - [Directory.Build.props](../../Directory.Build.props)
-  - [Directory.Packages.props](../../Directory.Packages.props)
-  - [global.json](../../global.json)
-  - [package.json](../../package.json)
-  - [pnpm-workspace.yaml](../../pnpm-workspace.yaml)
-  - [.prettierignore](../../.prettierignore)
-  - [.devcontainer/devcontainer.json](../../.devcontainer/devcontainer.json)
-  - [.github/workflows/verify.yml](../../.github/workflows/verify.yml)
-  - [.github/workflows/semantic-pr-title.yml](../../.github/workflows/semantic-pr-title.yml)
-  - initial `src/` and `tests/` project files
-  - [samples/README.md](../../samples/README.md)
-- Stable docs:
-  - [docs/repository.md](../repository.md)
-  - [docs/README.md](../README.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-- Skills: Not applicable.
+- Current contract: Bondstone uses a library-maintenance repository layout
+  with source under `src/`, tests under `tests/`, docs under `docs/`, samples
+  under `samples/`, and lightweight root tooling.
+- Stable docs: Current repository layout and tooling rules are described in
+  [docs/repository.md](../repository.md) and indexed from
+  [docs/README.md](../README.md).
+- Agent guidance: Root [AGENTS.md](../../AGENTS.md) points agents to the
+  repository and extraction docs before code or automation changes.
+- Application evidence: The repository shell, solution, package projects, test
+  projects, sample projects, devcontainer, package scripts, and GitHub
+  automation are scaffolded and reflected in stable docs.
+- Pending or deferred: None for this repository-structure decision. Current
+  post-MVP review campaigns are tracked under
+  [docs/backlog](../backlog/README.md).
 
 ## Verification
 
 Read back [docs/repository.md](../repository.md),
 [docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Ran
 `pnpm verify`, which covered formatting, restore, build, test, and pack for the
-scaffold. Real source extraction, sample projects, and infrastructure-backed
-integration checks remain pending.
+scaffold. Phase 01 audit verification rechecked repository layout, package
+projects, sample projects, docs, and agent instructions against the current
+tree.

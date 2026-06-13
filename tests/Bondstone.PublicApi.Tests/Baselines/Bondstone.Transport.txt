@@ -1,0 +1,19 @@
+type public sealed class Bondstone.Configuration.DurableTransportTopologyRouteDiagnostic
+  ctor public Bondstone.Configuration.DurableTransportTopologyRouteDiagnostic(string transportName, Bondstone.Messaging.MessageKind messageKind, string routeSubject, bool hasRoute, string failureReason = null)
+  property Bondstone.Messaging.MessageKind MessageKind { get; }
+  property bool HasRoute { get; }
+  property string FailureReason { get; }
+  property string RouteSubject { get; }
+  property string TransportName { get; }
+
+type public interface Bondstone.Configuration.IDurableTransportTopologyDiagnosticSource
+  method public abstract Bondstone.Configuration.DurableTransportTopologyRouteDiagnostic DescribeCommandRoute(string targetModule)
+  method public abstract Bondstone.Configuration.DurableTransportTopologyRouteDiagnostic DescribeEventRoute(string messageTypeName)
+  property string TransportName { get; }
+
+type public enum Bondstone.Messaging.DurableMessageTopologyDiagnosticKind : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+  field public const Bondstone.Messaging.DurableMessageTopologyDiagnosticKind CommandDestination
+  field public const Bondstone.Messaging.DurableMessageTopologyDiagnosticKind CommandReceiveEndpoint
+  field public const Bondstone.Messaging.DurableMessageTopologyDiagnosticKind CommandRoute
+  field public const Bondstone.Messaging.DurableMessageTopologyDiagnosticKind EventDestination
+  field public const Bondstone.Messaging.DurableMessageTopologyDiagnosticKind EventSubscription

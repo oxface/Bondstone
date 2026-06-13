@@ -1,7 +1,7 @@
 # 0005 Slow Layered Extraction
 
 Status: Accepted
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-03
 
 ## Context
@@ -39,7 +39,7 @@ direction, tests, docs, and migration risks.
 Prefer this broad extraction order unless a later ADR changes it:
 
 1. Core abstractions and low-dependency primitives.
-2. Command and messaging contracts.
+2. Durable command and messaging contracts.
 3. Message identity and registration behavior.
 4. EF Core-neutral persistence abstractions and entities.
 5. PostgreSQL provider behavior.
@@ -78,20 +78,35 @@ reveals an API or dependency flaw.
 The current consumer repository may need substantial adaptation or may stop
 being the primary consumer after Bondstone packaging and samples mature.
 
-## Applied To
+## Application Notes
 
-- Code: Pending. Source extraction has not started yet.
-- Stable docs:
-  - [docs/extraction.md](../extraction.md)
-  - [docs/architecture.md](../architecture.md)
-  - [docs/README.md](../README.md)
-- Agent instructions:
-  - [AGENTS.md](../../AGENTS.md)
-- Skills: Not applicable.
+- Current contract: Bondstone source is extracted slowly by coherent slices,
+  and the historical repository is source material rather than a compatibility
+  constraint.
+- Stable docs: Current implementation scope is described in
+  [docs/archive/mvp-plan.md](../archive/mvp-plan.md), with architecture context in
+  [docs/architecture/README.md](../architecture/README.md) and current
+  persistence context in
+  [docs/architecture/persistence.md](../architecture/persistence.md).
+  Historical extraction notes are archived under
+  [docs/archive](../archive/README.md).
+- Agent guidance: Root [AGENTS.md](../../AGENTS.md) directs agents to follow
+  the slow extraction strategy before moving or rewriting source.
+- Application evidence: Bondstone was extracted through coherent slices rather
+  than a bulk compatibility copy. Current packages, tests, docs, samples,
+  direct transport adapters, EF and non-EF persistence providers, and backlog
+  follow-up plans reflect that staged extraction.
+- Pending or deferred: None for the extraction discipline itself. Future
+  behavior such as richer operation policies, stale recovery, broker topology
+  helpers, and service-split examples requires separate ADR-backed work.
 
 ## Verification
 
-Read back [docs/extraction.md](../extraction.md),
-[docs/architecture.md](../architecture.md), [docs/README.md](../README.md),
-and [AGENTS.md](../../AGENTS.md). Executable verification will happen
-incrementally through focused build/test/doc checks on each moved slice.
+Read back [docs/archive/extraction.md](../archive/extraction.md),
+[docs/architecture/README.md](../architecture/README.md),
+[docs/architecture/messaging.md](../architecture/messaging.md),
+[docs/architecture/persistence.md](../architecture/persistence.md),
+[docs/README.md](../README.md), and [AGENTS.md](../../AGENTS.md). Ran
+`pnpm check`; formatting, restore, build, fast `Unit`/`Application` tests, and
+packaging pass for the current extracted slices. Further extraction will
+continue to use focused build/test/doc checks.

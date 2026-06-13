@@ -102,6 +102,3 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
 - single-root EF fallback composition where root PostgreSQL EF services handle
   outbox, inbox, and operation-state writes when modules declare EF persistence
   but no module-owned durable persistence services are registered.
-
-Follow-up PostgreSQL ideas that are outside the current contract are tracked
-in [../backlog/00-plans.md](../backlog/00-plans.md).

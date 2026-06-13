@@ -9,8 +9,7 @@ domain events without a provider bridge such as
 
 Provider bridges own source discovery and persistence semantics for their
 runtime.
-Local handler dispatch is intentionally deferred in the current runtime:
-registering `IDomainEventHandler<TDomainEvent>` services does not cause
+Registering `IDomainEventHandler<TDomainEvent>` services does not cause
 Bondstone to invoke them automatically.
 
 ## Quick Path

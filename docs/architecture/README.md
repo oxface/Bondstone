@@ -89,6 +89,4 @@ persistence.
 
 The current package split is documented in [../packaging.md](../packaging.md).
 The user-facing setup example is documented in [../setup.md](../setup.md).
-The migration strategy for bringing source into this repository is documented
-in [../archive/extraction.md](../archive/extraction.md).
 Sample direction is documented in [../samples.md](../samples.md).

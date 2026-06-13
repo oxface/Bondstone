@@ -1,7 +1,7 @@
 # 0049 Ad Hoc Backlog Planning
 
-Status: Accepted
-Application: Applied
+Status: Superseded
+Application: Not Applicable
 Date: 2026-06-11
 
 ## Context
@@ -65,24 +65,20 @@ Domain Events implementation exposed same-host module isolation risk.
 
 ## Related Decisions
 
+- Superseded by [0053 GitHub-Tracked Work And Current Docs](0053-github-tracked-work-and-current-docs.md)
 - [0001 Adopt ADR-Led Maintenance](0001-adopt-adr-led-maintenance.md)
 - [0048 Reference-Based Context Structure](0048-reference-based-context-structure.md)
 
 ## Application Notes
 
-- Current contract: `docs/backlog` is an ad hoc planning area with
-  `00-plans.md` plus active issue notes. It is not a maintained implementation
-  roadmap.
-- Stable docs: applied to [docs/README.md](../README.md),
-  [docs/repository.md](../repository.md), and
-  [docs/backlog/README.md](../backlog/README.md).
-- Agent guidance: applied to root [AGENTS.md](../../AGENTS.md) and
-  [docs/backlog/AGENTS.md](../backlog/AGENTS.md).
-- Application evidence: previous active backlog tracks were consolidated into
-  `00-plans.md`; the immediate next issue is
-  `01-module-runtime-isolation.md`; historical backlog archives remain
-  traceability-only.
-- Pending or deferred: none for the planning model.
+- Current contract: superseded by ADR 0053. Bondstone now tracks backlog work
+  in GitHub Issues and GitHub Projects instead of repository backlog docs.
+- Stable docs: current documentation model is carried by
+  [docs/README.md](../README.md) and [docs/repository.md](../repository.md).
+- Agent guidance: current agent guidance is carried by root
+  [AGENTS.md](../../AGENTS.md).
+- Application evidence: `docs/backlog` was removed by ADR 0053 application.
+- Pending or deferred: none.
 
 ## Verification
 

@@ -77,7 +77,8 @@ execution context for the subscriber module.
 
 Event-driven orchestration composes commands and events rather than erasing
 their distinction. A subscriber, saga, process manager, or orchestrator can
-react to an integration event and send durable commands as follow-up work.
+react to an integration event and send durable commands as additional module
+work.
 
 ## Domain Events
 
@@ -108,14 +109,12 @@ explicit module-code mapping step that calls `IDurableEventPublisher` for a
 registered `IIntegrationEvent`.
 
 `Bondstone.Capabilities.DomainEvents` does not provide module pipeline
-behavior. `IDomainEventHandler<TDomainEvent>` remains a future-facing local
-handler contract, but Bondstone does not invoke it automatically.
+behavior. `IDomainEventHandler<TDomainEvent>` is a local handler contract, but
+Bondstone does not invoke it automatically.
 
 The accepted persistence direction is optional module-local records. A
-persisted domain event record may support auditing, local projections, later
-in-module dispatch, or explicit mapping to integration events, but it remains
-private to the owning module unless module code publishes a separate
-integration event.
+persisted domain event record is private to the owning module unless module
+code publishes a separate integration event.
 
 Runtime pipeline behavior for domain event persistence is capability
 bridge-owned, not a public domain event bus. EF Core is the first runtime
@@ -132,9 +131,8 @@ EF Core collection persists module-local domain event records and clears
 sources only after the EF module transaction saves and commits successfully.
 The EF bridge does not resolve or invoke
 `IDomainEventHandler<TDomainEvent>` services and does not map domain events to
-integration events. Integration-event mapping remains pending and must stay
-explicit module code. Domain event follow-up ideas are tracked in
-[../backlog/00-plans.md](../backlog/00-plans.md).
+integration events. Mapping a domain event to an integration event is explicit
+module code.
 
 ## Module Execution Context
 

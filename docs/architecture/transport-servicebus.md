@@ -151,5 +151,4 @@ current transport contract.
 Service Bus has emulator-backed receive worker integration tests for real queue
 delivery, completion after successful command dispatch, abandon/dead-letter
 handoff after failed dispatch, and topic subscription fan-out to configured
-subscriber identities. Follow-up transport ideas are tracked in
-[../backlog/00-plans.md](../backlog/00-plans.md).
+subscriber identities.

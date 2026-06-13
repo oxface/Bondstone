@@ -211,7 +211,7 @@ request carries a caller-supplied durable operation id. Command send stages
 `Pending` when the operation is unknown. Successful durable command receive
 stages `Completed` inside module command execution. Failure states, running
 states, retry state, stale receive recovery, cancellation, and result payloads
-remain later policy.
+are not written by Bondstone's default command loop.
 
 Operation reads aggregate across local module stores. This global read has no
 module identity, so it intentionally creates each configured module
@@ -222,8 +222,8 @@ reader returns no state. Terminal states
 `Running` takes precedence over `Pending`. When statuses have the same
 precedence, the newest `UpdatedAtUtc` wins. The default command loop currently
 writes only `Pending`
-and `Completed`; other statuses are read-model/storage values until a later
-ADR accepts default running, failure, cancellation, or retry semantics.
+and `Completed`; other statuses are read-model/storage values for
+application-owned operation policies.
 
 ## Provider Boundaries
 

@@ -15,8 +15,6 @@ Start with:
 - [docs/architecture/README.md](docs/architecture/README.md) before changing
   runtime architecture, durable messaging, persistence, hosting, or transport
   behavior.
-- [docs/backlog/README.md](docs/backlog/README.md) before extracting or
-  continuing an ad hoc planning issue.
 - [docs/testing.md](docs/testing.md) before moving or writing tests.
 - [docs/samples.md](docs/samples.md) before adding or changing sample
   applications.
@@ -66,10 +64,10 @@ support, migration strategy, compatibility policy, release/publishing, sample
 architecture, repository workflow, and agent harness behavior require ADR
 review before broad implementation.
 
-Backlog docs are ad hoc planning notes, not a maintained roadmap. Do not sweep
-old backlog files after every change. Move durable decisions into ADRs, current
-behavior into stable docs, and remaining ideas into
-[docs/backlog/00-plans.md](docs/backlog/00-plans.md).
+Stable docs describe current behavior only. ADRs preserve the decision trail.
+Track backlog work, real-project findings, cleanup tasks, and prioritization in
+GitHub Issues or GitHub Projects. Move durable decisions into ADRs and current
+behavior into stable docs.
 
 ## ADR And Planning Rules
 

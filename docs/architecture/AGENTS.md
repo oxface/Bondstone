@@ -12,6 +12,4 @@ Start with:
 - Provider-specific persistence or transport docs only when the task touches
   that provider.
 
-Do not put future ideas here unless an accepted ADR makes them current
-guidance. Use [../backlog/00-plans.md](../backlog/00-plans.md) for speculative
-planning.
+Keep non-current ideas and prioritization in GitHub Issues or GitHub Projects.

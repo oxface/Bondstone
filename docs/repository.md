@@ -33,21 +33,21 @@ Significant folders should have:
 These files are indexes, not alternate architecture docs. Keep them short,
 name the folder's scope, and reference the stable docs, ADR workflows, sibling
 packages, tests, and verification entrypoints that matter for that area. Avoid
-copying durable rules from architecture, packaging, testing, sample, or backlog
-docs unless the local rule is unusually important and repeated agent misses
-justify duplication.
+copying durable rules from architecture, packaging, testing, or sample docs
+unless the local rule is unusually important and repeated agent misses justify
+duplication.
 
 When adding a package, test boundary, sample, docs area, or agent workflow
 folder, add the local indexes in the same change or explain why an existing
 parent index is enough.
 
-## Planning Notes
+## Work Tracking
 
-`docs/backlog` is an ad hoc planning area, not a maintained roadmap. Keep loose
-future-work ideas in `docs/backlog/00-plans.md` and extract focused issue notes
-only for immediate work. When an issue is resolved, move durable decisions into
-ADRs, move current behavior into stable docs, and remove the resolved issue
-note unless it still contains short-term context that has not moved elsewhere.
+Repository docs describe current behavior. ADRs preserve durable decisions and
+decision history. Use GitHub Issues and GitHub Projects for backlog work,
+real-project findings, cleanup tasks, prioritization, and ownership. When an
+issue creates a durable technical decision, add or update an ADR. When an issue
+changes current behavior, update stable docs in the same change.
 
 ## Tooling
 

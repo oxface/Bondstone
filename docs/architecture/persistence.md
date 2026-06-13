@@ -12,8 +12,7 @@ Persistence docs are split by ownership boundary:
 - [persistence-postgres.md](persistence-postgres.md) describes
   the PostgreSQL-specific non-EF persistence proof.
 
-Historical extraction details remain in
-[../archive/extraction-plan.md](../archive/extraction-plan.md).
+Current package ownership is recorded in [../packaging.md](../packaging.md).
 
 ## Cross-Cutting Rules
 
@@ -51,8 +50,7 @@ Already-received but unprocessed inbox rows remain operationally loud. Current
 Bondstone persistence has no inbox lease, stale-row sweeper, failed receive
 state, or provider-neutral recovery hook that can prove handler re-execution
 is safe. Applications that need to recover those rows own the inspection,
-mutation, audit, and provider/broker coordination until a later ADR accepts a
-durable Bondstone recovery model.
+mutation, audit, and provider/broker coordination.
 
 Module persistence metadata remains on current module registration. The
 provider name marks that the module declares persistence and lets provider
@@ -101,14 +99,13 @@ record id, owning module, `DomainEventIdentityAttribute` name, timestamps,
 serialized payload, payload metadata, and trace or causation metadata when
 available.
 
-Local domain event dispatch remains deferred. Registering
+Bondstone does not dispatch local domain events. Registering
 `IDomainEventHandler<TDomainEvent>` services does not cause Bondstone to
 dispatch pending `IDomainEvent` instances from the module command or event
 subscriber pipelines.
 
 EF Core is the first accepted capability bridge implementation. Non-EF
-PostgreSQL domain event staging remains application-owned until a later
-decision accepts a concrete provider bridge contract.
+PostgreSQL domain event staging is application-owned.
 
 Domain event persistence activation stays narrow. There is no public
 capability-step registry, public named pipeline-slot API, or generic provider
@@ -136,6 +133,3 @@ abstraction. The package implements the `Bondstone.Persistence` contracts
 directly and owns its connection/session and transaction boundary without
 depending on EF entity mappings, `DbContext`, or
 `IEntityFrameworkCorePersistenceScope`.
-
-Domain event and other persistence ideas outside the current contract are
-tracked in [../backlog/00-plans.md](../backlog/00-plans.md).

@@ -64,8 +64,7 @@ Because the provider uses one scoped `IPostgresModuleSession`, nested execution
 of a different direct-PostgreSQL module in the same service scope is rejected.
 Otherwise the nested module would share the active session transaction instead
 of owning an independent module boundary. Use durable messaging or a separate
-service scope for cross-module follow-up work that needs its own PostgreSQL
-transaction.
+service scope for cross-module work that needs its own PostgreSQL transaction.
 
 The provider contributes passive durable module runtime registrations for the
 module writer, inbox executor, and operation-state store into
@@ -99,6 +98,3 @@ dispatcher aggregates module dispatchers, this provider still owns each
 module's PostgreSQL claim, lease renewal, and outcome-recording SQL; the
 aggregate dispatcher only supplies the sequential call order and remaining
 batch budget.
-
-Follow-up PostgreSQL non-EF persistence ideas that are outside the current
-contract are tracked in [../backlog/00-plans.md](../backlog/00-plans.md).

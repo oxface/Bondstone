@@ -4,8 +4,8 @@ Bondstone is a .NET library for durable module boundaries, durable command
 sending, EF Core backed inbox/outbox persistence, and transport adapters.
 
 Stable docs describe the current package, architecture, setup, repository,
-sample, and verification contracts. Backlog docs hold ad hoc planning notes
-and active issue notes that are not current operating guidance.
+sample, and verification contracts. ADRs preserve the decision trail. GitHub
+Issues and GitHub Projects track backlog work.
 
 ## Packages
 
@@ -29,15 +29,11 @@ package.
 - [docs/architecture/README.md](docs/architecture/README.md) records runtime
   positioning.
 - [docs/setup.md](docs/setup.md) is the single user-facing setup example.
-- [docs/backlog/README.md](docs/backlog/README.md) explains ad hoc planning
-  notes and active issue extraction.
 - [docs/packaging.md](docs/packaging.md) records package and release policy.
 - [docs/repository.md](docs/repository.md) records repository layout and
   tooling.
 - [docs/samples.md](docs/samples.md) records sample direction.
 - [docs/testing.md](docs/testing.md) records test categories and verification.
-- [docs/archive/README.md](docs/archive/README.md) preserves historical
-  planning documents that should not steer new work.
 - [src/](src/) contains package projects.
 - [tests/](tests/) contains package and integration-boundary test projects.
 - [samples/](samples/) is reserved for sample applications.
@@ -75,5 +71,5 @@ Bondstone is built gradually as a durable module-boundary library. Do not
 bulk-copy implementation code from the historical template repository or
 preserve compatibility with it as a design constraint. Current implementation
 work should follow the stable docs, check ADR requirements before broad
-technical decisions, and keep package boundaries, public API shape, tests,
-docs, and service-split pressure visible.
+technical decisions, and keep package boundaries, public API shape, tests, and
+docs aligned.

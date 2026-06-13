@@ -40,8 +40,7 @@ builder.Services.AddBondstone(bondstone =>
 
 Provider-native transport configuration, broker administration, retry,
 dead-letter policy, worker settings, credentials, and topology declaration stay
-app-owned. Bounded helper ideas are tracked outside current guidance in
-[../backlog/00-plans.md](../backlog/00-plans.md).
+app-owned.
 
 ## Durable Messaging Capability
 
@@ -131,9 +130,8 @@ concerns. Runtime contributions are advanced provider/runtime composition.
 
 During subscriber execution, Bondstone's system pipeline sets the current
 module execution context to the subscriber module before the application
-handler runs and restores the previous context afterward. Follow-up durable
-commands published from a subscriber therefore use the subscriber module as
-their source module.
+handler runs and restores the previous context afterward. Durable commands sent
+from a subscriber therefore use the subscriber module as their source module.
 
 ## Application Pipeline Behaviors
 
@@ -179,8 +177,7 @@ for the behavior factory and applicability predicate. Provider packages should
 prefer the behavior-type contribution constructor when the behavior has a
 stable concrete type.
 Bondstone does not currently provide module-scoped application
-behavior registration; ordinary DI registration is the supported model until a
-concrete module-scoping requirement proves otherwise.
+behavior registration. Ordinary DI registration is the supported model.
 
 Command and event subscriber execution contexts also carry a
 `ModulePipelineFeatureCollection`. This is an advanced provider/runtime

@@ -33,8 +33,8 @@ connection and topology setup app-owned.
 The current service-split proof is the modular-monolith sample shape, not a
 second sample host. The bounded extraction path is to keep the contract
 assemblies stable, keep module persistence isolated by schema, and treat
-`fulfillment` as the first future host candidate because it receives a durable
-command and publishes an integration event.
+`fulfillment` as the documented extraction candidate because it receives a
+durable command and publishes an integration event.
 
 Use the RabbitMQ registration path when proving a broker boundary. Broker
 provisioning, deployment, authentication, product UI, and a provider matrix

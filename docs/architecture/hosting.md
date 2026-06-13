@@ -38,10 +38,9 @@ fairness or noisy-neighbor isolation model: a slow module dispatcher can delay
 later modules, and a module dispatcher failure stops the current aggregate
 batch by bubbling to the hosted worker. The hosted worker logs the failed
 batch, waits for `FailureDelay`, and continues with a later batch. Module
-outboxes remain ownership boundaries, while selected-module worker
-registration, per-module worker options, parallel aggregate dispatch, dispatch
-timeouts, and per-module concurrency controls are future work tracked in
-[../backlog/00-plans.md](../backlog/00-plans.md).
+outboxes remain ownership boundaries; selected-module worker registration,
+per-module worker options, parallel aggregate dispatch, dispatch timeouts, and
+per-module concurrency controls are not part of the current worker contract.
 
 `AddBondstone` is the preferred host registration path. Package-specific
 extensions mark what they contribute, and the builder rejects hosted outbox

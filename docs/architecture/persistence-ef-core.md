@@ -173,9 +173,8 @@ after the EF transaction has committed.
 The EF bridge is not a hidden domain-event bus. Calling
 `UseEntityFrameworkCoreDomainEventPersistence()` does not resolve or invoke
 registered `IDomainEventHandler<TDomainEvent>` services or map domain events
-to integration events. Local handler dispatch and domain-event-to-integration
-event mapping remain deferred decisions. EF persistence remains the
-clear-on-observed-commit owner for the sources it stages.
+to integration events. EF persistence remains the clear-on-observed-commit
+owner for the sources it stages.
 
 The EF record shape is `DomainEventRecordEntity`, mapped to
 `domain_event_records` by default. It stores a stable record id, owning module,

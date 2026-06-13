@@ -11,8 +11,6 @@ duplicating durable rules.
   ADR decisions are applied into stable docs and agent instructions.
 - [architecture/README.md](architecture/README.md) records current runtime
   positioning and durable module-boundary architecture.
-- [backlog/README.md](backlog/README.md) explains ad hoc planning notes and
-  active issue extraction.
 - [packaging.md](packaging.md) records current package IDs, target framework,
   and package dependency direction.
 - [public-api.md](public-api.md) records the current public API surface
@@ -22,16 +20,14 @@ duplicating durable rules.
 - [samples.md](samples.md) records current sample application direction.
 - [setup.md](setup.md) is the single user-facing library setup example.
 - [testing.md](testing.md) records current testing direction.
-- [archive/README.md](archive/README.md) preserves historical planning
-  documents that should not steer new work.
 
 ## Documentation Model
 
 - Stable docs describe the current operating contract.
 - ADRs preserve the decision trail and explain why a durable technical decision
   exists.
-- Backlog docs track ad hoc plans and active issue notes that should not be
-  presented as current behavior.
+- GitHub Issues and GitHub Projects track backlog work, real-project findings,
+  cleanup tasks, and prioritization.
 - README files orient human maintainers to a folder or workflow.
 - AGENTS files orient agents to the relevant docs, local constraints, and
   verification expectations for a folder or workflow.
@@ -54,10 +50,6 @@ files with the local context each audience needs.
   conventions, but should reference `packaging.md` for package inventory.
 - `testing.md` owns test policy, categories, and command entrypoints.
 - `architecture/` owns runtime contracts and durable boundary principles.
-- `backlog/` owns ad hoc planning notes and active issue notes that are not
-  active operating guidance.
-- `archive/` preserves historical planning documents that should not steer new
-  implementation work.
 
 ## Expanding Docs
 

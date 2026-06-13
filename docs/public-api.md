@@ -33,8 +33,8 @@ Final decision slice, 2026-06-12:
 - `Bondstone.Utility.StringExtensions`, shipped from
   `Bondstone.Persistence`, remains public for now, but it is not a documented
   application extension point or advanced composition API. It stays a cleanup
-  candidate for a future compatibility-planned internalization or replacement
-  before stronger compatibility expectations.
+  candidate for compatibility-planned internalization or replacement before
+  stronger compatibility expectations.
 - `BondstoneLocalServiceCollectionExtensions` remains public for now only
   because it is already exposed. It has no public registration method and
   should be treated as accidental registration plumbing, not a user-facing or
@@ -202,7 +202,7 @@ Cleanup candidate:
 - `StringExtensions` is a package utility used broadly inside Bondstone and
   transport packages. Its current public visibility should be reviewed before
   stronger compatibility expectations. It is not documented as an application
-  extension point or advanced composition API. Future cleanup should prefer a
+  extension point or advanced composition API. Cleanup should use
   compatibility-planned internalization or replacement, with release notes,
   rather than documenting it as supported user API.
 
@@ -436,9 +436,8 @@ User application contract:
 - `IDomainEvent`
 - `DomainEventIdentityAttribute`
 - `IDomainEventSource`
-- `IDomainEventHandler<TDomainEvent>` is a future-facing local handler
-  contract. Bondstone does not dispatch it automatically in the current
-  runtime.
+- `IDomainEventHandler<TDomainEvent>` is a local handler contract. Bondstone
+  does not dispatch it automatically in the current runtime.
 
 ## Bondstone.Capabilities.DomainEvents.EntityFrameworkCore
 
@@ -452,12 +451,3 @@ Public implementation detail exposed for now:
 - `DomainEventRecordEntity`
 - `DomainEventRecordEntityConfiguration`
 - `DomainEventRecordEntityConfiguration.Columns`
-
-## Follow-Up
-
-- Plan cleanup of the two current cleanup candidates through ADR 0046
-  compatibility review before any visibility reduction or removal.
-- Add an automated public API baseline before stronger compatibility promises
-  or broad public-surface cleanup.
-- Keep package README files focused on normal setup paths and link here for
-  advanced composition classification.

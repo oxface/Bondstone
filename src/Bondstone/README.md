@@ -2,10 +2,10 @@
 
 Core abstractions for durable Bondstone module boundaries.
 
-This package owns module registration and execution contracts, module-local
-domain event contracts, durable command and integration event contracts,
-payload serialization, provider-neutral inbox, outbox, operation-state
-contracts, and the lightweight `AddBondstone` composition surface.
+This package owns module registration and execution contracts, durable command
+and integration event contracts, payload serialization, module-aware runtime
+composition over provider-neutral persistence and transport contracts, and the
+lightweight `AddBondstone` composition surface.
 
 ## Quick Path
 

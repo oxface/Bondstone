@@ -235,9 +235,9 @@ These behaviors run after selected Bondstone/provider runtime contributions
 and inside the module execution context when command or subscriber execution
 establishes one. Passive pipeline contribution records are advanced
 provider/runtime composition contracts stored in Bondstone runtime metadata,
-not the normal application extension path. Module-scoped behavior registration
-is not currently required; prefer DI registration unless a later accepted
-design adds a more specific API.
+not the normal application extension path. Bondstone does not provide
+module-scoped application behavior registration; prefer ordinary DI
+registration.
 
 ## Sending Commands
 
@@ -302,8 +302,7 @@ processed, Bondstone fails the module receive with
 `DurableInboxAlreadyReceivedException` instead of re-running the handler. The
 provider worker then uses its normal failure handoff, such as RabbitMQ negative
 acknowledgement or Service Bus abandon. Recovery of the stale inbox row is an
-operator or application procedure until a later Bondstone recovery model is
-accepted.
+operator or application procedure.
 
 Provider packages also expose native receive message mappers:
 

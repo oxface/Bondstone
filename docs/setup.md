@@ -30,6 +30,38 @@ Install the packages needed for the host:
   explicitly wants in-process queue routing through the durable receive
   pipelines.
 
+## Adoption Path
+
+For a normal PostgreSQL-backed host, start with:
+
+- `Bondstone` for module registration, durable send/publish contracts, and
+  module receive pipelines;
+- `Bondstone.Hosting` for the durable outbox worker;
+- `Bondstone.Persistence.EntityFrameworkCore` and
+  `Bondstone.Persistence.EntityFrameworkCore.Postgres` for EF-backed module
+  persistence;
+- `Bondstone.Persistence.Postgres` only for modules that intentionally avoid
+  EF Core while still using PostgreSQL durable persistence;
+- one direct transport adapter, either `Bondstone.Transport.RabbitMq` or
+  `Bondstone.Transport.ServiceBus`, when messages leave the process through a
+  broker.
+
+Add optional capability packages only when the module uses that capability.
+For example, EF-backed module-local domain event persistence uses
+`Bondstone.Capabilities.DomainEvents` and
+`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`.
+
+Use the provider transport extensions on `AddBondstone` for ordinary hosts.
+Those extensions register provider topology validation and diagnostics as well
+as outbox dispatch. Lower-level persistence, receive, dispatcher, and outbox
+transport types remain available for advanced composition and tests, but they
+are not the quick-start path.
+
+After composing a host, use the modular monolith sample as the adoption proof
+and [testing.md](testing.md) for verification entrypoints. The default quality
+gate is `pnpm check`; infrastructure-backed sample and provider coverage runs
+through `pnpm backend:test:integration`.
+
 ## Host Composition
 
 Hosts compose modules, persistence, transport adapters, and hosted workers

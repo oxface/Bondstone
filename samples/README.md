@@ -28,6 +28,18 @@ The local transport is not a production broker adapter or hidden fallback. The
 sample also exposes an explicit RabbitMQ registration path that keeps broker
 connection and topology setup app-owned.
 
+## Service-Split Path
+
+The current service-split proof is the modular-monolith sample shape, not a
+second sample host. The bounded extraction path is to keep the contract
+assemblies stable, keep module persistence isolated by schema, and treat
+`fulfillment` as the first future host candidate because it receives a durable
+command and publishes an integration event.
+
+Use the RabbitMQ registration path when proving a broker boundary. Broker
+provisioning, deployment, authentication, product UI, and a provider matrix
+stay out of this sample.
+
 Run the app with a PostgreSQL connection string:
 
 ```bash

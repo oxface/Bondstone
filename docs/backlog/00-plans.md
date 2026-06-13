@@ -9,9 +9,7 @@ behavior into stable docs, and return any remaining ideas here.
 
 ## Immediate
 
-- Real project readiness: prepare adoption guidance, package README quick
-  paths, and one bounded service-split sample after the core module runtime
-  and normal setup APIs settle.
+- No immediate issue is extracted.
 
 ## Known Pressure Points
 

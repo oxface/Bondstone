@@ -12,6 +12,16 @@ and active issue notes that are not current operating guidance.
 Current package IDs, dependency direction, target framework, versioning, and
 publishing policy are recorded in [docs/packaging.md](docs/packaging.md).
 
+## Getting Started
+
+Start with [docs/setup.md](docs/setup.md) for the normal host setup path. It
+shows how to compose modules, PostgreSQL persistence, a direct transport
+adapter, and the hosted outbox worker through `AddBondstone`.
+
+Use the package READMEs under [src/](src/) as quick package-purpose guides.
+Use architecture docs when you need the durable behavior contract behind a
+package.
+
 ## Repository Map
 
 - [docs/README.md](docs/README.md) is the durable documentation index.

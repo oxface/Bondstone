@@ -66,3 +66,25 @@ The sample is supplemented with one preferred direct provider path:
 `AddModularMonolithSampleWithRabbitMq(...)`. The RabbitMQ path is covered by
 an explicit Testcontainers RabbitMQ sample smoke test. Do not turn the first
 sample into a broker matrix.
+
+## Service-Split Readiness
+
+The current service-split proof is documentation over the existing modular
+monolith sample, not a separate sample application. The bounded extraction
+story is:
+
+- keep `ordering`, `fulfillment`, and `billing` as module-owned assemblies
+  with explicit contract assemblies where messages cross module boundaries;
+- use separate PostgreSQL schemas and module-owned persistence as the local
+  extraction pressure;
+- treat `fulfillment` as the first candidate for a future separate host
+  because it already handles a durable command and publishes an integration
+  event;
+- use the RabbitMQ path as the preferred direct-provider proof when a broker
+  boundary is needed;
+- keep broker provisioning, deployment, authentication, and product UI outside
+  the sample.
+
+Do not add a second sample host until a concrete verification need justifies
+the extra maintenance cost. A later service-split sample should be one bounded
+host extraction, not a broker/provider matrix or product application.

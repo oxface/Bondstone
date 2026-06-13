@@ -31,6 +31,9 @@ Start with ADR workflow skills:
   affected docs.
 - `bondstone-adr-archive`: archive or remove obsolete ADR material while
   preserving traceability.
+- `bondstone-github-issue-workflow`: create, triage, prioritize, work, and
+  complete GitHub Issues and Project items using the conventions in
+  [docs/github-workflow.md](../../docs/github-workflow.md).
 
 After the ADR skills exist, add implementation-oriented skills only when a
 workflow proves reusable, for example:

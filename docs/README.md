@@ -11,6 +11,8 @@ duplicating durable rules.
   ADR decisions are applied into stable docs and agent instructions.
 - [architecture/README.md](architecture/README.md) records current runtime
   positioning and durable module-boundary architecture.
+- [github-workflow.md](github-workflow.md) records GitHub issue, project
+  status, label, and issue-body conventions.
 - [packaging.md](packaging.md) records current package IDs, target framework,
   and package dependency direction.
 - [public-api.md](public-api.md) records the current public API surface
@@ -45,6 +47,8 @@ files with the local context each audience needs.
 - `setup.md` is the only stable doc for library-user code examples.
 - `packaging.md` owns package IDs, dependency direction, target framework,
   versioning, and publishing policy.
+- `github-workflow.md` owns GitHub issue, project, label, and completion
+  comment conventions.
 - `public-api.md` owns current package public API classification notes.
 - `repository.md` owns repository layout, local tooling, CI, and code
   conventions, but should reference `packaging.md` for package inventory.

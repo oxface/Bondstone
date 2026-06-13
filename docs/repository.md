@@ -48,6 +48,8 @@ decision history. Use GitHub Issues and GitHub Projects for backlog work,
 real-project findings, cleanup tasks, prioritization, and ownership. When an
 issue creates a durable technical decision, add or update an ADR. When an issue
 changes current behavior, update stable docs in the same change.
+Issue formats, project statuses, label conventions, and completion comments
+are recorded in [github-workflow.md](github-workflow.md).
 
 ## Tooling
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bondstone GitHub Issue Workflow"
+  short_description: "Work Bondstone issues through GitHub Projects."
+  default_prompt: "Use $bondstone-github-issue-workflow to create, triage, or complete Bondstone GitHub issues."

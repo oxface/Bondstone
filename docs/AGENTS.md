@@ -8,6 +8,8 @@ Start with:
 - [adr/README.md](adr/README.md) before changing ADRs.
 - [architecture/README.md](architecture/README.md) before changing runtime
   architecture docs.
+- [github-workflow.md](github-workflow.md) before changing GitHub issue,
+  project, label, or completion-comment conventions.
 - [repository.md](repository.md) before changing repository layout, tooling, or
   context-index structure.
 

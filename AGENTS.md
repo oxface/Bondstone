@@ -18,6 +18,8 @@ Start with:
 - [docs/testing.md](docs/testing.md) before moving or writing tests.
 - [docs/samples.md](docs/samples.md) before adding or changing sample
   applications.
+- [docs/github-workflow.md](docs/github-workflow.md) before creating,
+  triaging, prioritizing, or completing GitHub Issues or Project items.
 - [.agents/skills/AGENTS.md](.agents/skills/AGENTS.md) before adding or
   changing repository agent skills.
 
@@ -66,8 +68,9 @@ review before broad implementation.
 
 Stable docs describe current behavior only. ADRs preserve the decision trail.
 Track backlog work, real-project findings, cleanup tasks, and prioritization in
-GitHub Issues or GitHub Projects. Move durable decisions into ADRs and current
-behavior into stable docs.
+GitHub Issues or GitHub Projects using the conventions in
+[docs/github-workflow.md](docs/github-workflow.md). Move durable decisions into
+ADRs and current behavior into stable docs.
 
 ## ADR And Planning Rules
 

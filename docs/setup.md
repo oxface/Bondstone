@@ -239,6 +239,61 @@ not the normal application extension path. Bondstone does not provide
 module-scoped application behavior registration; prefer ordinary DI
 registration.
 
+## Result-Returning Module Commands
+
+Template or application code that already has result-producing command/request
+handlers should move module transaction use cases onto Bondstone
+`ICommand<TResult>` commands when the workflow needs Bondstone module behavior:
+validation, module execution context, provider transaction behavior, durable
+send/publish access, inbox/outbox participation, or operation-state updates.
+
+```csharp
+public sealed record CreateOrderCommand(Guid CustomerId)
+    : ICommand<CreateOrderResult>;
+
+public sealed record CreateOrderResult(Guid OrderId);
+
+public sealed class CreateOrderHandler
+    : ICommandHandler<CreateOrderCommand, CreateOrderResult>
+{
+    public ValueTask<CreateOrderResult> HandleAsync(
+        CreateOrderCommand command,
+        CancellationToken ct = default)
+    {
+        Guid orderId = Guid.NewGuid();
+        return ValueTask.FromResult(new CreateOrderResult(orderId));
+    }
+}
+```
+
+Register the handler on the owning module and execute it from HTTP endpoints,
+schedulers, setup flows, or other app-owned entrypoints through
+`IModuleCommandExecutor.ExecuteResultAsync`:
+
+```csharp
+module.Commands.RegisterHandler<
+    CreateOrderCommand,
+    CreateOrderResult,
+    CreateOrderHandler>();
+
+ModuleCommandExecutionResult<CreateOrderResult> result =
+    await moduleCommandExecutor.ExecuteResultAsync(
+        OrderingModule.ModuleName,
+        new CreateOrderCommand(customerId),
+        ct);
+```
+
+Keep app-owned request/handler or service abstractions for workflows that do
+not need Bondstone module behavior, or as thin application-facing ports that
+delegate into a registered Bondstone command. Do not keep a parallel
+module-command framework for result-producing module transactions.
+
+When the same workflow must cross a durable boundary, the command can also
+implement `IDurableCommand`. Durable send still returns accepted-work metadata,
+not `CreateOrderResult` directly. Supply or create a durable operation id when
+the caller needs to observe the committed result, then read or wait for it
+through `IDurableOperationResultReader`.
+
 ## Sending Commands
 
 Durable commands are sent from inside a module execution context. The default

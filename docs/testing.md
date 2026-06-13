@@ -16,6 +16,12 @@ Tests should protect behavior that matters to consumers:
 Use unit tests for relevant logic and behavior that can be verified without
 external infrastructure.
 
+The public API baseline test is a `Unit` test under
+`tests/Bondstone.PublicApi.Tests`. It reflects packable package assemblies and
+compares their public/protected surface to checked-in baselines. Refresh those
+baselines intentionally with `BONDSTONE_UPDATE_PUBLIC_API_BASELINE=1` only
+after reviewing the compatibility impact of the API change.
+
 Avoid tests whose only meaningful assertion is that a method called another
 method. Interaction assertions are acceptable when the interaction itself is
 the observable contract, but tests should generally assert outcomes, persisted

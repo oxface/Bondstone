@@ -1,0 +1,175 @@
+type public interface Bondstone.Transport.RabbitMq.Inbox.IRabbitMqReceivedMessageDispatcher
+  method public abstract System.Threading.Tasks.ValueTask DispatchAsync(string queueName, Bondstone.Transport.RabbitMq.Outbox.RabbitMqTransportMessage message, System.Threading.CancellationToken ct = default)
+
+type public interface Bondstone.Transport.RabbitMq.Inbox.IRabbitMqReceivedMessageHandler
+  method public abstract System.Threading.Tasks.ValueTask HandleAsync(string queueName, RabbitMQ.Client.Events.BasicDeliverEventArgs delivery, System.Func<ulong, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> acknowledgeAsync, System.Threading.CancellationToken ct = default)
+
+type public sealed class Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveQueueDiagnostic
+  ctor public Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveQueueDiagnostic(string queueName, System.Collections.Generic.IReadOnlyCollection<string> acceptedModules, System.Collections.Generic.IReadOnlyCollection<Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveQueueEventSubscriptionDiagnostic> eventSubscriptions, string failureReason = null)
+  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveQueueEventSubscriptionDiagnostic> EventSubscriptions { get; }
+  property System.Collections.Generic.IReadOnlyCollection<string> AcceptedModules { get; }
+  property bool HasBinding { get; }
+  property string FailureReason { get; }
+  property string QueueName { get; }
+
+type public sealed class Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveQueueEventSubscriptionDiagnostic
+  ctor public Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveQueueEventSubscriptionDiagnostic(string messageTypeName, string subscriberModule, string subscriberIdentity)
+  property string MessageTypeName { get; }
+  property string SubscriberIdentity { get; }
+  property string SubscriberModule { get; }
+
+type public sealed class Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveWorkerOptions
+  ctor public Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveWorkerOptions()
+  method public void Validate()
+  property bool RequeueOnFailure { get; set; }
+  property ushort PrefetchCount { get; set; }
+
+type public static class Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceivedMessageMapper
+  method public static Bondstone.Transport.RabbitMq.Outbox.RabbitMqTransportMessage FromBasicDeliver(RabbitMQ.Client.Events.BasicDeliverEventArgs delivery)
+  method public static Bondstone.Transport.RabbitMq.Outbox.RabbitMqTransportMessage FromBodyAndProperties(System.ReadOnlyMemory<byte> body, RabbitMQ.Client.IReadOnlyBasicProperties properties)
+
+type public static class Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqBuilderExtensions
+  method public static extension Bondstone.Configuration.BondstoneBuilder UseRabbitMqTransport(Bondstone.Configuration.BondstoneBuilder builder, System.Action<Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder> configure)
+  method public static extension Bondstone.Configuration.BondstoneOutboxBuilder UseRabbitMqTransport(Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Action<Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder> configure)
+
+type public sealed class Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqEventRouteBuilder
+  ctor public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqEventRouteBuilder(Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder transportBuilder, string messageTypeName)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder ToQueue(string queueName)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder ToRoutingKey(string routingKey)
+
+type public static class Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqHeaders
+  field public const string Baggage
+  field public const string CausationId
+  field public const string DurableOperationId
+  field public const string MessageId
+  field public const string MessageKind
+  field public const string MessageTypeName
+  field public const string PartitionKey
+  field public const string SourceModule
+  field public const string TargetModule
+  field public const string TraceParent
+  field public const string TraceState
+
+type public sealed class Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqModuleRouteBuilder
+  ctor public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqModuleRouteBuilder(Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder transportBuilder, string targetModule)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder ToRoutingKey(string routingKey)
+
+type public sealed class Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqReceiveQueueBuilder
+  ctor public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqReceiveQueueBuilder(Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder transportBuilder, string queueName)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqReceiveQueueBuilder AcceptModule(string moduleName)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqReceiveQueueBuilder SubscribeEvent(string messageTypeName, string subscriberModule, string subscriberIdentity)
+
+type public static class Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqServiceCollectionExtensions
+  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneRabbitMqConnection(Microsoft.Extensions.DependencyInjection.IServiceCollection services, RabbitMQ.Client.IConnection connection)
+
+type public sealed class Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder
+  ctor public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder()
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqEventRouteBuilder RouteEvent(string messageTypeName)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqModuleRouteBuilder RouteModule(string targetModule)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqReceiveQueueBuilder ReceiveQueue(string queueName)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseCommandExchange(string exchangeName)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseEventExchange(string exchangeName)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseEventQueueConvention()
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseEventQueueConvention(System.Func<string, string> queueNameFactory)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseEventRoutingKeyConvention()
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseEventRoutingKeyConvention(System.Func<string, string> routingKeyFactory)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseModuleRoutingKeyConvention()
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseModuleRoutingKeyConvention(System.Func<string, string> routingKeyFactory)
+  method public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseReceiveWorker(System.Action<Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveWorkerOptions> configureOptions = null)
+
+type public interface Bondstone.Transport.RabbitMq.Outbox.IRabbitMqMessagePublisher
+  method public abstract System.Threading.Tasks.ValueTask PublishAsync(Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination destination, Bondstone.Transport.RabbitMq.Outbox.RabbitMqTransportMessage message, System.Threading.CancellationToken ct = default)
+
+type public interface Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxCommandRouteResolver
+  method public abstract Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination ResolveDestination(Bondstone.Persistence.DurableOutboxRecord record)
+
+type public interface Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxEventRouteResolver
+  method public abstract Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination ResolveDestination(Bondstone.Persistence.DurableOutboxRecord record)
+
+type public interface Bondstone.Transport.RabbitMq.Outbox.IRabbitMqTopologyDiagnostics
+  method public abstract Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveQueueDiagnostic DescribeReceiveQueue(string queueName)
+  method public abstract Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingDiagnostic DescribeCommandRoute(string targetModule)
+  method public abstract Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingDiagnostic DescribeEventRoute(string messageTypeName)
+
+type public sealed class Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingDiagnostic
+  ctor public Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingDiagnostic(string targetModule, Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingSource source, string exchangeName, string routingKey, string failureReason = null)
+  property Bondstone.Messaging.DurableMessageTopologyDiagnosticKind Kind { get; }
+  property Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingSource Source { get; }
+  property bool HasRoute { get; }
+  property string ExchangeName { get; }
+  property string FailureReason { get; }
+  property string RoutingKey { get; }
+  property string TargetModule { get; }
+
+type public enum Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingSource : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+  field public const Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingSource ExplicitRoutingKey
+  field public const Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingSource Missing
+  field public const Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingSource RoutingKeyConvention
+
+type public sealed class Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope : System.IEquatable<Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope>
+  ctor public Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope(System.Guid MessageId, string MessageKind, string MessageTypeName, string SourceModule, string TargetModule, string Payload, string Metadata, System.DateTimeOffset CreatedAtUtc, System.Guid? DurableOperationId, string TraceParent, string TraceState, string TraceBaggage, System.Guid? CausationId, string PartitionKey)
+  method public Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope <Clone>$()
+  method public bool Equals(Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope other)
+  method public override bool Equals(object obj)
+  method public override int GetHashCode()
+  method public override string ToString()
+  method public static Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope From(Bondstone.Messaging.DurableMessageEnvelope envelope)
+  method public static bool op_Equality(Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope left, Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope right)
+  method public static bool op_Inequality(Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope left, Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope right)
+  method public void Deconstruct(out System.Guid MessageId, out string MessageKind, out string MessageTypeName, out string SourceModule, out string TargetModule, out string Payload, out string Metadata, out System.DateTimeOffset CreatedAtUtc, out System.Guid? DurableOperationId, out string TraceParent, out string TraceState, out string TraceBaggage, out System.Guid? CausationId, out string PartitionKey)
+  property System.DateTimeOffset CreatedAtUtc { get; set; }
+  property System.Guid MessageId { get; set; }
+  property System.Guid? CausationId { get; set; }
+  property System.Guid? DurableOperationId { get; set; }
+  property string MessageKind { get; set; }
+  property string MessageTypeName { get; set; }
+  property string Metadata { get; set; }
+  property string PartitionKey { get; set; }
+  property string Payload { get; set; }
+  property string SourceModule { get; set; }
+  property string TargetModule { get; set; }
+  property string TraceBaggage { get; set; }
+  property string TraceParent { get; set; }
+  property string TraceState { get; set; }
+
+type public sealed class Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableOutboxTransport : Bondstone.Persistence.IDurableOutboxTransport
+  ctor public Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableOutboxTransport(Bondstone.Transport.RabbitMq.Outbox.IRabbitMqMessagePublisher publisher, Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxCommandRouteResolver commandRouteResolver, Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxEventRouteResolver eventRouteResolver)
+  method public System.Threading.Tasks.ValueTask SendAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default)
+
+type public sealed class Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingDiagnostic
+  ctor public Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingDiagnostic(string messageTypeName, Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingSource source, Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination destination, string failureReason = null)
+  property Bondstone.Messaging.DurableMessageTopologyDiagnosticKind Kind { get; }
+  property Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingSource Source { get; }
+  property Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination Destination { get; }
+  property Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestinationKind? DestinationKind { get; }
+  property bool HasRoute { get; }
+  property string ExchangeName { get; }
+  property string FailureReason { get; }
+  property string MessageTypeName { get; }
+  property string RoutingKey { get; }
+
+type public enum Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingSource : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+  field public const Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingSource ExplicitQueue
+  field public const Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingSource ExplicitRoutingKey
+  field public const Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingSource Missing
+  field public const Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingSource QueueConvention
+  field public const Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingSource RoutingKeyConvention
+
+type public sealed class Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination
+  ctor public Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination(string exchangeName, string routingKey)
+  method public static Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination ForQueue(string queueName)
+  property Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestinationKind Kind { get; }
+  property string ExchangeName { get; }
+  property string RoutingKey { get; }
+
+type public enum Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestinationKind : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
+  field public const Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestinationKind ExchangeRoute
+  field public const Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestinationKind Queue
+
+type public sealed class Bondstone.Transport.RabbitMq.Outbox.RabbitMqTransportMessage
+  ctor public Bondstone.Transport.RabbitMq.Outbox.RabbitMqTransportMessage(string body, string messageId, string messageTypeName, string correlationId, System.Collections.Generic.IReadOnlyDictionary<string, object> headers)
+  property System.Collections.Generic.IReadOnlyDictionary<string, object> Headers { get; }
+  property string Body { get; }
+  property string CorrelationId { get; }
+  property string MessageId { get; }
+  property string MessageTypeName { get; }

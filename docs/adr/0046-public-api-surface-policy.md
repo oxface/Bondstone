@@ -1,7 +1,7 @@
 # 0046 Public API Surface Policy
 
 Status: Accepted
-Application: Partially Applied
+Application: Applied
 Date: 2026-06-10
 
 ## Context
@@ -69,17 +69,26 @@ an inventory and compatibility plan.
 - Agent guidance: root [AGENTS.md](../../AGENTS.md) now records the
   compatibility-first public API rule.
 - Application evidence: current packages still build with the broad public
-  implementation surface. The review for backlog item 08 found receive
-  dispatchers and settlement helpers intentionally useful for app-owned
-  provider consumers, while lower-level public implementation types need a
-  package-by-package inventory before cleanup.
-- Pending or deferred: public API inventory/baseline work, explicit
-  classification of concrete public types, compatibility test/process design,
-  and any public surface reduction remain future planning items in
-  [docs/backlog/00-plans.md](../backlog/00-plans.md).
+  implementation surface. The package-by-package classification inventory is
+  recorded in [docs/public-api.md](../public-api.md). The automated baseline in
+  `tests/Bondstone.PublicApi.Tests` compares the public/protected surface of
+  every packable package against checked-in baselines during the fast test
+  gate. `Bondstone.Utility.StringExtensions` has been internalized as
+  package-local implementation code and removed from the
+  `Bondstone.Persistence` public API baseline.
+  `BondstoneLocalServiceCollectionExtensions` has been internalized as local
+  transport registration plumbing and removed from the
+  `Bondstone.Transport.Local` public API baseline.
+- Pending or deferred: cleanup candidates and any public surface reduction are
+  tracked in GitHub Issues and GitHub Projects. Those changes still require
+  compatibility planning, ADR review when public API shape or package
+  boundaries change, baseline diffs, and release-note treatment.
 
 ## Verification
 
-Read back this ADR and affected stable docs. No public API was removed or
-renamed in this decision slice. Verified this policy update with the commands
-reported in the backlog resolution.
+Read back this ADR and affected stable docs. The baseline application and
+`StringExtensions` cleanup were verified with:
+
+- `dotnet test tests/Bondstone.PublicApi.Tests/Bondstone.PublicApi.Tests.csproj --configuration Release`
+- `pnpm check`
+- `git diff --check`

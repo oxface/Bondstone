@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bondstone.Transport.Local.Outbox;
 
-public static class BondstoneLocalServiceCollectionExtensions
+internal static class BondstoneLocalServiceCollectionExtensions
 {
     internal static IServiceCollection AddBondstoneLocalOutboxTransport(
         this IServiceCollection services,

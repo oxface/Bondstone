@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Bondstone\Bondstone.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Capabilities.DomainEvents\Bondstone.Capabilities.DomainEvents.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Capabilities.DomainEvents.EntityFrameworkCore\Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Hosting\Bondstone.Hosting.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Persistence\Bondstone.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore\Bondstone.Persistence.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore.Postgres\Bondstone.Persistence.EntityFrameworkCore.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Persistence.Postgres\Bondstone.Persistence.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Transport\Bondstone.Transport.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Transport.Local\Bondstone.Transport.Local.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Transport.RabbitMq\Bondstone.Transport.RabbitMq.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Transport.ServiceBus\Bondstone.Transport.ServiceBus.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Baselines\*.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

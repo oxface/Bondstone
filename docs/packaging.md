@@ -130,6 +130,10 @@ or parameter-name churn is compatibility-sensitive. Do not perform that work
 without a public API inventory, a compatibility plan, and ADR review when the
 change affects public API shape or package boundaries.
 
+The repository also keeps an automated public API baseline under
+`tests/Bondstone.PublicApi.Tests`. Baseline diffs are review evidence for
+public API changes, not automatic approval for breaking compatibility.
+
 ## Version And Dependency Management
 
 Use central package management through `Directory.Packages.props`.

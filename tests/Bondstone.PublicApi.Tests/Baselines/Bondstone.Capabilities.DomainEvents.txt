@@ -1,0 +1,12 @@
+type public sealed class Bondstone.Capabilities.DomainEvents.DomainEventIdentityAttribute : System.Attribute
+  ctor public Bondstone.Capabilities.DomainEvents.DomainEventIdentityAttribute(string name)
+  property string Name { get; }
+
+type public interface Bondstone.Capabilities.DomainEvents.IDomainEvent
+
+type public interface Bondstone.Capabilities.DomainEvents.IDomainEventHandler<TDomainEvent>
+  method public abstract System.Threading.Tasks.ValueTask HandleAsync(TDomainEvent domainEvent, System.Threading.CancellationToken ct = default)
+
+type public interface Bondstone.Capabilities.DomainEvents.IDomainEventSource
+  method public abstract void ClearPendingDomainEvents()
+  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Capabilities.DomainEvents.IDomainEvent> PendingDomainEvents { get; }

@@ -4,6 +4,23 @@ This document records the current public API classification for Bondstone
 packages as cleanup work applies ADR 0046. It is an inventory and guidance
 document, not a source of new compatibility promises.
 
+## Automated Baseline
+
+`tests/Bondstone.PublicApi.Tests` records the current reflection-visible
+public/protected API surface for all packable Bondstone packages. The default
+fast test gate fails when that surface changes without an intentional baseline
+update.
+
+Refresh baselines with:
+
+```bash
+BONDSTONE_UPDATE_PUBLIC_API_BASELINE=1 dotnet test tests/Bondstone.PublicApi.Tests/Bondstone.PublicApi.Tests.csproj --configuration Release
+```
+
+Review the resulting baseline diff before merging. A baseline update records
+that a public API changed; it does not by itself approve breaking changes,
+replace ADR review, or replace release-note treatment.
+
 ## Classification Labels
 
 - Normal setup API: the preferred path for application host and module setup.
@@ -29,24 +46,17 @@ implementation.
 
 Final decision slice, 2026-06-12:
 
-- No public API shape changes are made in this slice.
-- `Bondstone.Utility.StringExtensions`, shipped from
-  `Bondstone.Persistence`, remains public for now, but it is not a documented
-  application extension point or advanced composition API. It stays a cleanup
-  candidate for compatibility-planned internalization or replacement before
-  stronger compatibility expectations.
-- `BondstoneLocalServiceCollectionExtensions` remains public for now only
-  because it is already exposed. It has no public registration method and
-  should be treated as accidental registration plumbing, not a user-facing or
-  advanced composition API. Hiding it requires ADR 0046 compatibility
-  planning and release-note treatment.
+- `Bondstone.Utility.StringExtensions` is no longer public. String
+  normalization helpers are package-local implementation details.
+- `BondstoneLocalServiceCollectionExtensions` is no longer public. Local
+  transport setup stays on `UseLocalTransport`; service registration plumbing
+  is package-local implementation code.
 - No other public implementation detail is clearly obsolete or misleading
   enough to promote to cleanup candidate now. The broad concrete
   implementation surface should remain classified and documented rather than
   churned.
-- A public API baseline/tool is not required for this documentation decision.
-  Add one before stronger compatibility promises or broad public-surface
-  reduction.
+- The current automated public API baseline should run before stronger
+  compatibility promises or broad public-surface reduction.
 
 ## Current Scope
 
@@ -197,15 +207,6 @@ Provider/runtime contract:
 - `DurableModuleOutboxDispatcherRegistration`
 - `DurableModuleOutboxDispatchAggregator`
 
-Cleanup candidate:
-
-- `StringExtensions` is a package utility used broadly inside Bondstone and
-  transport packages. Its current public visibility should be reviewed before
-  stronger compatibility expectations. It is not documented as an application
-  extension point or advanced composition API. Cleanup should use
-  compatibility-planned internalization or replacement, with release notes,
-  rather than documenting it as supported user API.
-
 ## Bondstone.Persistence.EntityFrameworkCore
 
 Normal setup API:
@@ -325,15 +326,6 @@ Normal setup API:
 - `BondstoneLocalModuleRouteBuilder`
 - `BondstoneLocalEventRouteBuilder`
 - `BondstoneLocalQueueBuilder`
-
-Cleanup candidate:
-
-- `BondstoneLocalServiceCollectionExtensions` is a public extension type whose
-  current registration method is internal. Its public visibility should be
-  reviewed before stronger compatibility expectations. It should remain
-  cleanup candidate registration plumbing rather than a documented advanced
-  composition API; hiding it requires ADR 0046 compatibility planning and
-  release-note treatment.
 
 ## Bondstone.Transport.ServiceBus
 

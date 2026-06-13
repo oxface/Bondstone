@@ -23,6 +23,8 @@ Testing policy, categories, and commands are documented in
   covers PostgreSQL EF integration.
 - [Bondstone.Persistence.Postgres.Tests](Bondstone.Persistence.Postgres.Tests)
   covers non-EF PostgreSQL persistence.
+- [Bondstone.PublicApi.Tests](Bondstone.PublicApi.Tests) covers checked-in
+  public API baselines for packable packages.
 - [Bondstone.Transport.Local.Tests](Bondstone.Transport.Local.Tests) covers
   local transport behavior.
 - [Bondstone.Transport.RabbitMq.Tests](Bondstone.Transport.RabbitMq.Tests)

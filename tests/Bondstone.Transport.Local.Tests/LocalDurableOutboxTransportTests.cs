@@ -35,6 +35,25 @@ public sealed class LocalDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenModuleQueueConventionIsConfigured_DispatchesCommandThroughReceivePipeline()
+    {
+        var commandPipeline = new RecordingCommandReceivePipeline();
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            commandPipeline,
+            new RecordingEventReceivePipeline(),
+            local => local.UseModuleQueueConvention());
+        IDurableOutboxTransport transport =
+            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+        DurableOutboxRecord record = CreateRecord();
+
+        await transport.SendAsync(record);
+
+        Assert.Same(record.Envelope, commandPipeline.Envelope);
+        Assert.Equal(1, commandPipeline.HandledCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task SendAsync_WhenEventQueueHasSubscribers_DispatchesEventToEachSubscriber()
     {
         var eventPipeline = new RecordingEventReceivePipeline();
@@ -96,6 +115,41 @@ public sealed class LocalDurableOutboxTransportTests
         Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenDurableCommandHandlerUsesModuleQueueConvention_AllowsStartupValidation()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstone(bondstone =>
+        {
+            RegisterFulfillmentCommandModule(bondstone);
+            bondstone.UseLocalTransport(local => local.UseModuleQueueConvention());
+        });
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenDurableCommandHandlerHasExplicitRouteWithoutQueueBinding_Throws()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                RegisterFulfillmentCommandModule(bondstone);
+                bondstone.UseLocalTransport(
+                    local => local.RouteModule("fulfillment").ToQueue("fulfillment.commands"));
+            }));
+
+        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("module 'fulfillment'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            "Local transport has no queue binding for target module 'fulfillment'.",
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
     private static ServiceProvider CreateServiceProvider(
         RecordingCommandReceivePipeline commandPipeline,
         RecordingEventReceivePipeline eventPipeline,
@@ -131,6 +185,17 @@ public sealed class LocalDurableOutboxTransportTests
                 attemptCount: 1,
                 claimedBy: "worker-1",
                 claimedUntilUtc: DateTimeOffset.Parse("2026-06-09T12:05:00+00:00")));
+    }
+
+    private static void RegisterFulfillmentCommandModule(
+        BondstoneBuilder bondstone)
+    {
+        bondstone.Module("fulfillment", module =>
+        {
+            module.UseDurableMessaging();
+            module.UsePersistence("test persistence");
+            module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
+        });
     }
 
     private static DurableInboxHandleResult CreateHandledResult(
@@ -197,4 +262,17 @@ public sealed class LocalDurableOutboxTransportTests
         DurableMessageEnvelope Envelope,
         string SubscriberModule,
         string SubscriberIdentity);
+
+    [DurableCommandIdentity("fulfillment.test.command.v1")]
+    private sealed record TestCommand : IDurableCommand;
+
+    private sealed class TestCommandHandler : ICommandHandler<TestCommand>
+    {
+        public ValueTask HandleAsync(
+            TestCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
 }

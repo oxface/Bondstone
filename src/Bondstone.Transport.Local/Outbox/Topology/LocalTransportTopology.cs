@@ -66,20 +66,14 @@ internal sealed class LocalTransportTopology
         string targetModule = envelope.TargetModule.NormalizeRequired(
             nameof(envelope),
             "Target module");
-        string? queueName = ResolveQueueName(
-            _queueNamesByTargetModule,
-            _moduleQueueNameConvention,
-            targetModule);
 
-        if (queueName is null
-            || !_queues.TryGetValue(queueName, out LocalQueueRegistration? queue)
-            || !queue.AcceptedModules.Contains(targetModule))
+        if (!TryResolveCommandQueueName(targetModule, out string? queueName))
         {
             binding = null;
             return false;
         }
 
-        binding = new LocalCommandQueueBinding(queue.QueueName, targetModule);
+        binding = new LocalCommandQueueBinding(queueName, targetModule);
         return true;
     }
 
@@ -89,14 +83,8 @@ internal sealed class LocalTransportTopology
         string normalizedTargetModule = targetModule.NormalizeRequired(
             nameof(targetModule),
             "Target module");
-        string? queueName = ResolveQueueName(
-            _queueNamesByTargetModule,
-            _moduleQueueNameConvention,
-            normalizedTargetModule);
 
-        return queueName is not null
-            && _queues.TryGetValue(queueName, out LocalQueueRegistration? queue)
-            && queue.AcceptedModules.Contains(normalizedTargetModule);
+        return TryResolveCommandQueueName(normalizedTargetModule, out _);
     }
 
     public IReadOnlyCollection<LocalEventSubscription> GetEventSubscriptions(
@@ -155,6 +143,45 @@ internal sealed class LocalTransportTopology
             return queueName;
         }
 
+        return queueNameConvention?.Invoke(key).NormalizeRequired(
+            nameof(queueNameConvention),
+            "Local queue name");
+    }
+
+    private bool TryResolveCommandQueueName(
+        string targetModule,
+        out string queueName)
+    {
+        if (_queueNamesByTargetModule.TryGetValue(targetModule, out string? explicitQueueName))
+        {
+            if (_queues.TryGetValue(explicitQueueName, out LocalQueueRegistration? queue)
+                && queue.AcceptedModules.Contains(targetModule))
+            {
+                queueName = queue.QueueName;
+                return true;
+            }
+
+            queueName = string.Empty;
+            return false;
+        }
+
+        string? conventionQueueName = ResolveConventionQueueName(
+            _moduleQueueNameConvention,
+            targetModule);
+        if (conventionQueueName is not null)
+        {
+            queueName = conventionQueueName;
+            return true;
+        }
+
+        queueName = string.Empty;
+        return false;
+    }
+
+    private static string? ResolveConventionQueueName(
+        Func<string, string>? queueNameConvention,
+        string key)
+    {
         return queueNameConvention?.Invoke(key).NormalizeRequired(
             nameof(queueNameConvention),
             "Local queue name");

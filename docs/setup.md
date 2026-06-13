@@ -130,6 +130,14 @@ Azure Service Bus uses the same Bondstone composition shape with
 `UseServiceBusTransport`, queues for commands, and topic or queue
 destinations for integration events.
 
+Provider transport route conventions are outbound-only. RabbitMQ
+`UseModuleRoutingKeyConvention()` and Service Bus `UseModuleQueueConvention()`
+resolve where commands are sent, but hosts that receive commands still need
+explicit receive bindings such as `ReceiveQueue(...).AcceptModule(...)`.
+`Bondstone.Transport.Local` is the local-development exception: its
+`UseModuleQueueConvention()` configures complete in-process command topology
+because there is no broker queue or binding to provision.
+
 Use provider transport extensions on the main `BondstoneBuilder` for normal
 host setup. The lower-level `bondstone.Outbox.UseRabbitMqTransport(...)` and
 `bondstone.Outbox.UseServiceBusTransport(...)` overloads are advanced

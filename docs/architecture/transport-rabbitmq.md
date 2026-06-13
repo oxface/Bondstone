@@ -40,6 +40,12 @@ services report the same resolution results used by dispatch so applications
 and tests can explain missing exchanges or routing keys without publishing
 messages.
 
+Module routing-key conventions configure outbound command destinations only.
+They do not declare broker queues, create bindings, configure consumers, or
+authorize this host to receive commands for matching modules. Hosts that
+receive commands must still declare receive topology with
+`ReceiveQueue(...).AcceptModule(...)`.
+
 RabbitMQ contributes command and event route diagnostics to Bondstone's
 aggregate outbound route ownership validation. Receive queue bindings always
 validate that accepted modules have durable command handlers and subscribed

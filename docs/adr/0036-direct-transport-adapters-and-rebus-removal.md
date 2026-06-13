@@ -110,6 +110,23 @@ The direct provider adapters remain the production-oriented transport
 direction. Local transport keeps the sample useful while direct RabbitMQ and
 Service Bus receive workers are implemented and hardened.
 
+## Amendment 2026-06-13: Complete Local Module Queue Convention
+
+`Bondstone.Transport.Local` should make `UseModuleQueueConvention()` a complete
+local command topology convention. When the convention is configured, each
+target module routes to the convention queue and that convention queue accepts
+the same module for local command dispatch and startup route validation.
+
+Explicit local command routes remain explicit topology. A host that calls
+`RouteModule(...).ToQueue(...)` without `Queue(...).AcceptModule(...)` should
+still fail validation or dispatch because custom local command queue bindings
+are not inferred.
+
+This clarification applies only to local command routing. Local event routes
+still require explicit subscriber bindings because subscriber module and
+subscriber identity are part of the durable receive contract and cannot be
+inferred from an event type alone.
+
 ## Amendment 2026-06-09: RabbitMQ Receive Dispatcher Proof
 
 RabbitMQ receive work should start at the provider adapter boundary before
@@ -332,6 +349,10 @@ diagnostics, and provider-backed integration tests.
   Bondstone envelopes through the neutral receive pipelines. Service Bus also
   maps native `ServiceBusReceivedMessage` instances into
   `ServiceBusTransportMessage`.
+- Local transport module queue convention now configures a usable local
+  command topology for convention-based module-to-module durable command
+  routing. Explicit local command routes still require explicit queue accept
+  bindings, and local event routes still require explicit subscriber bindings.
 - Provider receive handler helpers now prove the common settlement ordering:
   native acknowledgement/completion happens only after Bondstone dispatch
   succeeds, and failures propagate without settling the broker message.
@@ -385,6 +406,11 @@ After explicit local transport package work:
 - `dotnet test Bondstone.slnx --configuration Release --no-build --filter "Category=Unit|Category=Application" --disable-build-servers`
 - `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
 - `pnpm format:check`
+- `git diff --check`
+
+After local module queue convention clarification:
+
+- `dotnet test tests/Bondstone.Transport.Local.Tests/Bondstone.Transport.Local.Tests.csproj --configuration Release --filter "Category=Unit|Category=Application" --disable-build-servers`
 - `git diff --check`
 
 After RabbitMQ receive dispatcher proof:

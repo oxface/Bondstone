@@ -4,15 +4,37 @@
 samples, tests, and local development.
 
 It is not a hidden fallback and it is not a broker replacement. Applications
-must opt in with `UseLocalTransport` and declare local queues, command module
-bindings, and event subscriber bindings.
+must opt in with `UseLocalTransport`.
+
+For basic module-to-module durable command routing, `UseModuleQueueConvention()`
+configures complete local command topology. Each target module routes to
+`{module}.commands`, and that convention queue accepts the same target module.
 
 ```csharp
 bondstone.UseLocalTransport(local =>
 {
-    local.RouteModule("fulfillment").ToQueue("fulfillment.commands");
-    local.Queue("fulfillment.commands").AcceptModule("fulfillment");
+    local.UseModuleQueueConvention();
+});
+```
 
+Use explicit queue bindings when a command route does not follow the module
+queue convention, or when the topology should document the queue name in host
+code:
+
+```csharp
+bondstone.UseLocalTransport(local =>
+{
+    local.RouteModule("fulfillment").ToQueue("fulfillment.priority.commands");
+    local.Queue("fulfillment.priority.commands").AcceptModule("fulfillment");
+});
+```
+
+Event routes still require explicit subscriber bindings because subscriber
+identity is module-owned and cannot be inferred from the event type alone:
+
+```csharp
+bondstone.UseLocalTransport(local =>
+{
     local.RouteEvent("ordering.order-placed.v1").ToQueue("ordering.order-placed");
     local.Queue("ordering.order-placed")
         .SubscribeEvent(

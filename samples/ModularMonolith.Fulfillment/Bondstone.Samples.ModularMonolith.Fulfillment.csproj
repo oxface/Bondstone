@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Bondstone.Capabilities.DomainEvents.EntityFrameworkCore\Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Capabilities.DomainEvents\Bondstone.Capabilities.DomainEvents.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore.Postgres\Bondstone.Persistence.EntityFrameworkCore.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore\Bondstone.Persistence.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone\Bondstone.csproj" />
+    <ProjectReference Include="..\ModularMonolith.Fulfillment.Contracts\Bondstone.Samples.ModularMonolith.Fulfillment.Contracts.csproj" />
+    <ProjectReference Include="..\ModularMonolith.Ordering.Contracts\Bondstone.Samples.ModularMonolith.Ordering.Contracts.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,26 @@
+type public static class Bondstone.Transport.Local.Outbox.BondstoneLocalBuilderExtensions
+  method public static extension Bondstone.Configuration.BondstoneBuilder UseLocalTransport(Bondstone.Configuration.BondstoneBuilder builder, System.Action<Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder> configure)
+  method public static extension Bondstone.Configuration.BondstoneOutboxBuilder UseLocalTransport(Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Action<Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder> configure)
+
+type public sealed class Bondstone.Transport.Local.Outbox.BondstoneLocalEventRouteBuilder
+  ctor public Bondstone.Transport.Local.Outbox.BondstoneLocalEventRouteBuilder(Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder transportBuilder, string messageTypeName)
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder ToQueue(string queueName)
+
+type public sealed class Bondstone.Transport.Local.Outbox.BondstoneLocalModuleRouteBuilder
+  ctor public Bondstone.Transport.Local.Outbox.BondstoneLocalModuleRouteBuilder(Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder transportBuilder, string targetModule)
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder ToQueue(string queueName)
+
+type public sealed class Bondstone.Transport.Local.Outbox.BondstoneLocalQueueBuilder
+  ctor public Bondstone.Transport.Local.Outbox.BondstoneLocalQueueBuilder(Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder transportBuilder, string queueName)
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalQueueBuilder AcceptModule(string moduleName)
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalQueueBuilder SubscribeEvent(string messageTypeName, string subscriberModule, string subscriberIdentity)
+
+type public sealed class Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder
+  ctor public Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder()
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalEventRouteBuilder RouteEvent(string messageTypeName)
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalModuleRouteBuilder RouteModule(string targetModule)
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalQueueBuilder Queue(string queueName)
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder UseEventQueueConvention()
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder UseEventQueueConvention(System.Func<string, string> queueNameFactory)
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder UseModuleQueueConvention()
+  method public Bondstone.Transport.Local.Outbox.BondstoneLocalTransportBuilder UseModuleQueueConvention(System.Func<string, string> queueNameFactory)

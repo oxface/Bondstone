@@ -27,12 +27,15 @@ draft should be removed.
    `Archived`.
 5. Set application state to `Not Applicable` unless the archived ADR explicitly
    remains linked to current applied behavior.
-6. Remove only mistaken, never-accepted drafts or duplicate artifacts.
-7. Identify affected durable docs, AGENTS files, and skills using the mapping
+6. Preserve accepted ADR decision content when archiving. Do not rewrite
+   accepted `Context`, `Decision`, or `Consequences` except for mechanical
+   fixes.
+7. Remove only mistaken, never-accepted drafts or duplicate artifacts.
+8. Identify affected durable docs, AGENTS files, and skills using the mapping
    in [docs/adr/README.md](../../../docs/adr/README.md).
-8. Update stable docs, AGENTS files, and skills that referenced the archived or
+9. Update stable docs, AGENTS files, and skills that referenced the archived or
    removed material.
-9. Report the traceability path or explain why removal was appropriate.
+10. Report the traceability path or explain why removal was appropriate.
 
 ## Output
 

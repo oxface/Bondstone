@@ -14,7 +14,8 @@ explicit amendment that does not replace the decision.
 - [docs/README.md](../../../docs/README.md)
 - [docs/adr/README.md](../../../docs/adr/README.md)
 - The ADR being updated
-- Stable docs, AGENTS files, and skills listed in the ADR's `Applied To`
+- Stable docs, AGENTS files, and skills named by the ADR's `Application Notes`
+  or by the durable-doc mapping
 
 ## Workflow
 
@@ -23,20 +24,25 @@ explicit amendment that does not replace the decision.
    replaced.
 2. Preserve the existing decision trail. Do not silently rewrite accepted
    meaning.
-3. For accepted ADRs, add a dated amendment section or clearly marked
+3. For accepted or amended ADRs, do not rewrite `Context`, `Decision`, or
+   `Consequences` except for mechanical typo, formatting, or broken-link fixes
+   that do not change meaning.
+4. For accepted ADRs, add a dated amendment section for compatible
+   clarification or incremental narrowing.
+5. Update status to `Amended` when the accepted ADR gains a material
    clarification.
-4. Update status to `Amended` when the accepted ADR gains a material
-   clarification.
-5. Preserve or update `Application` to match whether the amended decision is
+6. Preserve or update `Application` to match whether the amended decision is
    applied, pending, in progress, partially applied, deferred, or not
    applicable.
-6. Re-identify affected durable docs, AGENTS files, and skills using the
+7. Re-identify affected durable docs, AGENTS files, and skills using the
    mapping in [docs/adr/README.md](../../../docs/adr/README.md).
-7. Apply the current operating rule into stable docs when the application state
+8. Apply the current operating rule into stable docs when the application state
    is `Applied` or `Partially Applied`. If no suitable doc exists, create the
    smallest useful doc or record the missing doc in [docs/README.md](../../../docs/README.md).
-8. Apply agent-facing effects into relevant AGENTS files or skills.
-9. Update `Applied To` and `Verification`.
+9. Apply agent-facing effects into relevant AGENTS files or skills.
+10. Update `Application Notes` and `Verification` as needed for current
+    application evidence. These sections may evolve without changing accepted
+    decision history.
 
 ## Output
 

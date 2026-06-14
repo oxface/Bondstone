@@ -647,6 +647,36 @@ explicit, timeout-bounded wait is acceptable for the caller. Applications still
 own endpoint policy, timeout choice, polling cadence, and what to do with
 unknown, pending, failed, or cancelled operation state.
 
+For result polling, prefer switching on `DurableOperationResult<TResult>.State`
+when the caller needs to explain why a value is not available:
+
+```csharp
+return durableResult.State switch
+{
+    DurableOperationResultState.CompletedWithResult => Results.Ok(durableResult.Result),
+    DurableOperationResultState.CompletedWithoutResult => Results.NoContent(),
+    DurableOperationResultState.Pending or DurableOperationResultState.Running => Results.Accepted(),
+    DurableOperationResultState.Failed => Results.Problem(durableResult.FailureReason),
+    DurableOperationResultState.Cancelled => Results.StatusCode(StatusCodes.Status409Conflict),
+    DurableOperationResultState.Unknown => Results.NotFound(),
+    DurableOperationResultState.ResultDeserializationFailed => Results.Problem(
+        durableResult.DeserializationFailure?.Message),
+    _ => Results.Problem(),
+};
+```
+
+The existing flags keep their narrow meanings: `IsKnown` means operation state
+exists, `IsCompleted` means the stored status is `Completed`, `IsTerminal`
+means `Completed`, `Failed`, or `Cancelled`, and `HasResult` means the result
+payload was successfully deserialized as `TResult`. A completed operation can
+therefore have `HasResult == false` when no payload was stored or when payload
+deserialization failed.
+
+Deserialization diagnostics include the operation id and requested result type.
+The current operation-state reader does not carry module name, durable message
+type name, or handler identity, so those values are not included in result
+reader diagnostics today.
+
 Bondstone intentionally keeps the in-process and durable result paths
 separate. If an application exposes one business-facing service method for
 "create an order," that method should still choose either local

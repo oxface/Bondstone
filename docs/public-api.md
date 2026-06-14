@@ -58,6 +58,17 @@ Final decision slice, 2026-06-12:
 - The current automated public API baseline should run before stronger
   compatibility promises or broad public-surface reduction.
 
+Issue 26 result diagnostics, 2026-06-14:
+
+- `DurableOperationResultState` and
+  `DurableOperationResultDeserializationFailure` are additive user application
+  contracts for explaining why a durable operation result is not available.
+- `DurableOperationResult<TResult>.State` and `.DeserializationFailure` are
+  additive properties. The existing constructor and the meanings of
+  `IsKnown`, `IsCompleted`, `IsTerminal`, and `HasResult` are preserved.
+- The public API baseline change is intentional and compatibility-sensitive,
+  but it does not remove or rename existing public members.
+
 ## Current Scope
 
 This first pass covers all current package projects:
@@ -116,6 +127,8 @@ User application contract:
 - `DurableEventPublishResult`
 - `DurableEventPublishStatus`
 - `DurableOperationResult<TResult>`
+- `DurableOperationResultDeserializationFailure`
+- `DurableOperationResultState`
 - `DurablePayloadJsonOptions`
 - `ModuleCommandExecutionResult`
 - `ModuleCommandExecutionResult<TResult>`

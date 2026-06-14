@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Bondstone.Persistence;
 
 namespace Bondstone.Messaging;
@@ -95,8 +96,32 @@ internal sealed class DurableOperationResultReader(
                 failureReason: state.FailureReason);
         }
 
-        TResult? result = _payloadSerializer.Deserialize<TResult>(
-            state.ResultPayload);
+        TResult? result;
+        try
+        {
+            result = _payloadSerializer.Deserialize<TResult>(
+                state.ResultPayload);
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            Type resultType = typeof(TResult);
+            string resultTypeName = resultType.FullName ?? resultType.Name;
+            string message =
+                $"Durable operation '{state.DurableOperationId}' completed with a result payload, but the payload could not be deserialized as '{resultTypeName}'. {ex.GetType().Name}: {ex.Message}";
+
+            return new DurableOperationResult<TResult>(
+                state.DurableOperationId,
+                state.Status,
+                state.UpdatedAtUtc,
+                result: default,
+                hasResult: false,
+                state.FailureReason,
+                new DurableOperationResultDeserializationFailure(
+                    state.DurableOperationId,
+                    resultTypeName,
+                    message,
+                    ex.GetType().FullName));
+        }
 
         return new DurableOperationResult<TResult>(
             state.DurableOperationId,

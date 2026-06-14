@@ -260,6 +260,31 @@ reads current state once, while `WaitForResultAsync<TResult>()` performs
 explicit timeout-bounded polling until the operation reaches a terminal state.
 `IDurableOperationReader` remains available as the lower-level state reader.
 
+`DurableOperationResult<TResult>` preserves the operation-state flags and adds
+a single `State` classification for consumer diagnostics:
+
+- `IsKnown` means an operation state row was found.
+- `IsCompleted` means the operation status is `Completed`.
+- `IsTerminal` means the operation status is `Completed`, `Failed`, or
+  `Cancelled`.
+- `HasResult` means a completed result payload was successfully deserialized
+  as `TResult`.
+
+`State` distinguishes unknown operations, pending operations, running
+operations, completed operations with a deserialized result, completed
+operations without a result payload, failed operations, cancelled operations,
+and completed operations whose result payload could not be deserialized as the
+requested result type. Deserialization failures are returned as
+`ResultDeserializationFailed` with a `DeserializationFailure` value that
+includes the operation id, target result type name, diagnostic message, and
+underlying exception type name when available.
+
+The operation-state read model currently carries only operation id, status,
+update timestamp, optional result payload, and optional failure reason. Result
+diagnostics therefore include the operation id and requested result type. They
+do not include module name, message type name, or handler identity unless a
+future operation-state contract stores that context.
+
 `Running`, `Failed`, and `Cancelled` remain storage/read-model values for
 application-owned operation policies; Bondstone's default command loop does
 not infer them from broker retry or handler exceptions. Callers choose polling

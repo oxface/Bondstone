@@ -85,9 +85,29 @@ namespace Bondstone.Messaging
         Rejected = 2,
         Duplicate = 3,
     }
+    public sealed class DurableOperationResultDeserializationFailure : System.IEquatable<Bondstone.Messaging.DurableOperationResultDeserializationFailure>
+    {
+        public DurableOperationResultDeserializationFailure(System.Guid durableOperationId, string resultTypeName, string message, string? exceptionTypeName = null) { }
+        public System.Guid DurableOperationId { get; }
+        public string? ExceptionTypeName { get; }
+        public string Message { get; }
+        public string ResultTypeName { get; }
+    }
+    public enum DurableOperationResultState
+    {
+        Unknown = 0,
+        Pending = 1,
+        Running = 2,
+        CompletedWithResult = 3,
+        CompletedWithoutResult = 4,
+        Failed = 5,
+        Cancelled = 6,
+        ResultDeserializationFailed = 7,
+    }
     public sealed class DurableOperationResult<TResult> : System.IEquatable<Bondstone.Messaging.DurableOperationResult<TResult>>
     {
         public DurableOperationResult(System.Guid durableOperationId, Bondstone.Messaging.DurableOperationStatus? status, System.DateTimeOffset? updatedAtUtc, TResult? result = default, bool hasResult = false, string? failureReason = null) { }
+        public Bondstone.Messaging.DurableOperationResultDeserializationFailure? DeserializationFailure { get; }
         public System.Guid DurableOperationId { get; }
         public string? FailureReason { get; }
         public bool HasResult { get; }
@@ -95,6 +115,7 @@ namespace Bondstone.Messaging
         public bool IsKnown { get; }
         public bool IsTerminal { get; }
         public TResult Result { get; }
+        public Bondstone.Messaging.DurableOperationResultState State { get; }
         public Bondstone.Messaging.DurableOperationStatus? Status { get; }
         public System.DateTimeOffset? UpdatedAtUtc { get; }
     }

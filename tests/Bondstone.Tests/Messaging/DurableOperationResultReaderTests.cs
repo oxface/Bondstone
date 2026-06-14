@@ -21,8 +21,12 @@ public sealed class DurableOperationResultReaderTests
             .GetResultAsync<ReserveOrderResult>(durableOperationId);
 
         Assert.Equal(durableOperationId, result.DurableOperationId);
+        Assert.Equal(DurableOperationResultState.Unknown, result.State);
         Assert.False(result.IsKnown);
+        Assert.False(result.IsCompleted);
+        Assert.False(result.IsTerminal);
         Assert.False(result.HasResult);
+        Assert.Null(result.DeserializationFailure);
         Assert.Null(result.Result);
     }
 
@@ -49,9 +53,71 @@ public sealed class DurableOperationResultReaderTests
         Assert.True(result.IsCompleted);
         Assert.True(result.IsTerminal);
         Assert.True(result.HasResult);
+        Assert.Equal(DurableOperationResultState.CompletedWithResult, result.State);
         Assert.Equal(DurableOperationStatus.Completed, result.Status);
         Assert.Equal(DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"), result.UpdatedAtUtc);
+        Assert.Null(result.DeserializationFailure);
         Assert.Equal(new ReserveOrderResult(new DurableOrderId("A-100"), Accepted: true), result.Result);
+    }
+
+    [Theory]
+    [InlineData(DurableOperationStatus.Pending, DurableOperationResultState.Pending)]
+    [InlineData(DurableOperationStatus.Running, DurableOperationResultState.Running)]
+    [Trait("Category", "Unit")]
+    public async Task GetResultAsync_WhenOperationIsNotTerminal_ReturnsStateWithoutResult(
+        DurableOperationStatus operationStatus,
+        DurableOperationResultState expectedState)
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new CapturingModuleOperationStateStore("fulfillment")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                operationStatus,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .GetResultAsync<ReserveOrderResult>(durableOperationId);
+
+        Assert.True(result.IsKnown);
+        Assert.False(result.IsCompleted);
+        Assert.False(result.IsTerminal);
+        Assert.False(result.HasResult);
+        Assert.Equal(expectedState, result.State);
+        Assert.Equal(operationStatus, result.Status);
+        Assert.Null(result.DeserializationFailure);
+        Assert.Null(result.Result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetResultAsync_WhenOperationCompletedWithoutResultPayload_ReturnsCompletedWithoutResult()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new CapturingModuleOperationStateStore("fulfillment")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00")),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .GetResultAsync<ReserveOrderResult>(durableOperationId);
+
+        Assert.True(result.IsKnown);
+        Assert.True(result.IsCompleted);
+        Assert.True(result.IsTerminal);
+        Assert.False(result.HasResult);
+        Assert.Equal(DurableOperationResultState.CompletedWithoutResult, result.State);
+        Assert.Equal(DurableOperationStatus.Completed, result.Status);
+        Assert.Null(result.DeserializationFailure);
+        Assert.Null(result.Result);
     }
 
     [Fact]
@@ -77,9 +143,78 @@ public sealed class DurableOperationResultReaderTests
         Assert.False(result.IsCompleted);
         Assert.True(result.IsTerminal);
         Assert.False(result.HasResult);
+        Assert.Equal(DurableOperationResultState.Failed, result.State);
         Assert.Equal(DurableOperationStatus.Failed, result.Status);
         Assert.Equal("handler failed", result.FailureReason);
+        Assert.Null(result.DeserializationFailure);
         Assert.Null(result.Result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetResultAsync_WhenOperationCancelled_ReturnsTerminalCancelledWithoutResult()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new CapturingModuleOperationStateStore("fulfillment")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Cancelled,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                failureReason: "caller cancelled"),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .GetResultAsync<ReserveOrderResult>(durableOperationId);
+
+        Assert.True(result.IsKnown);
+        Assert.False(result.IsCompleted);
+        Assert.True(result.IsTerminal);
+        Assert.False(result.HasResult);
+        Assert.Equal(DurableOperationResultState.Cancelled, result.State);
+        Assert.Equal(DurableOperationStatus.Cancelled, result.Status);
+        Assert.Equal("caller cancelled", result.FailureReason);
+        Assert.Null(result.DeserializationFailure);
+        Assert.Null(result.Result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetResultAsync_WhenOperationCompletedWithInvalidResultPayload_ReturnsDeserializationFailure()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new CapturingModuleOperationStateStore("fulfillment")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":{"unexpected":true},"accepted":true}"""),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .GetResultAsync<ReserveOrderResult>(durableOperationId);
+
+        Assert.True(result.IsKnown);
+        Assert.True(result.IsCompleted);
+        Assert.True(result.IsTerminal);
+        Assert.False(result.HasResult);
+        Assert.Equal(DurableOperationResultState.ResultDeserializationFailed, result.State);
+        Assert.Equal(DurableOperationStatus.Completed, result.Status);
+        Assert.Null(result.Result);
+
+        DurableOperationResultDeserializationFailure failure =
+            Assert.IsType<DurableOperationResultDeserializationFailure>(
+                result.DeserializationFailure);
+        Assert.Equal(durableOperationId, failure.DurableOperationId);
+        Assert.Equal(typeof(ReserveOrderResult).FullName, failure.ResultTypeName);
+        Assert.Contains(durableOperationId.ToString(), failure.Message);
+        Assert.Contains(typeof(ReserveOrderResult).FullName!, failure.Message);
+        Assert.Equal(typeof(System.Text.Json.JsonException).FullName, failure.ExceptionTypeName);
     }
 
     [Fact]
@@ -109,6 +244,7 @@ public sealed class DurableOperationResultReaderTests
 
         Assert.True(result.IsCompleted);
         Assert.True(result.HasResult);
+        Assert.Equal(DurableOperationResultState.CompletedWithResult, result.State);
         Assert.Equal(new ReserveOrderResult(new DurableOrderId("A-100"), Accepted: true), result.Result);
         Assert.True(store.ReadCount >= 2);
     }

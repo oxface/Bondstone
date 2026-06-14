@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/oxface/Bondstone/compare/Bondstone-v1.1.0...Bondstone-v1.2.0) (2026-06-14)
+
+
+### Features
+
+* commands with results ([b959df3](https://github.com/oxface/Bondstone/commit/b959df38f635bbde2f969e4066ec945007791c4b))
+
+
+### Bug Fixes
+
+* immediate fixes ([03979e3](https://github.com/oxface/Bondstone/commit/03979e3f70418cc755c9f3dbe49d36b98f980f6c))
+* local queues convension fix ([a8f8fc1](https://github.com/oxface/Bondstone/commit/a8f8fc10cede1e5aa4adaa5b6d6428f0f184a5d5))
+
 ## [1.1.0](https://github.com/oxface/Bondstone/compare/Bondstone-v1.0.1...Bondstone-v1.1.0) (2026-06-13)
 
 

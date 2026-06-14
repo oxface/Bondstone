@@ -20,4 +20,11 @@ domain events. Pair it with a provider bridge, such as
 should be persisted. It is not an integration event transport package; use the
 durable publish APIs from `Bondstone` for integration events.
 
-See [../../docs/architecture/messaging.md](../../docs/architecture/messaging.md).
+Install this package in modules whose domain model exposes module-local domain
+events through `IDomainEventSource`. Do not install it as a replacement for
+integration events, transport publishing, or durable outbox setup.
+
+See:
+
+- [Messaging architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/messaging.md)
+- [Package discovery](https://github.com/oxface/Bondstone/blob/main/docs/package-discovery.md)

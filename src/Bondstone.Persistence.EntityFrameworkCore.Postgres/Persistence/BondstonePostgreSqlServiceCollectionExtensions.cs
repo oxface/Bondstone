@@ -12,8 +12,20 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 
+/// <summary>
+/// Registers PostgreSQL-backed EF Core durable persistence services.
+/// </summary>
 public static class BondstonePostgreSqlServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers PostgreSQL DbContext and durable outbox, inbox, and operation-state services.
+    /// </summary>
+    /// <typeparam name="TDbContext">The DbContext type that contains Bondstone durable mappings.</typeparam>
+    /// <param name="services">The service collection that receives the persistence registrations.</param>
+    /// <param name="connectionString">The PostgreSQL connection string used by the DbContext.</param>
+    /// <param name="configureNpgsql">Optional Npgsql provider configuration.</param>
+    /// <param name="schema">The optional schema for Bondstone durable tables.</param>
+    /// <returns>The same service collection for chained setup.</returns>
     public static IServiceCollection AddBondstonePostgreSqlPersistence<TDbContext>(
         this IServiceCollection services,
         string connectionString,
@@ -55,6 +67,14 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers PostgreSQL DbContext infrastructure for module-owned EF Core durable persistence.
+    /// </summary>
+    /// <typeparam name="TDbContext">The module DbContext type.</typeparam>
+    /// <param name="services">The service collection that receives the infrastructure registrations.</param>
+    /// <param name="connectionString">The PostgreSQL connection string used by the DbContext.</param>
+    /// <param name="configureNpgsql">Optional Npgsql provider configuration.</param>
+    /// <returns>The same service collection for chained setup.</returns>
     public static IServiceCollection AddBondstonePostgreSqlModuleInfrastructure<TDbContext>(
         this IServiceCollection services,
         string connectionString,
@@ -71,6 +91,14 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers module-scoped PostgreSQL EF Core durable outbox, inbox, operation-state, and dispatcher services.
+    /// </summary>
+    /// <typeparam name="TDbContext">The module DbContext type.</typeparam>
+    /// <param name="services">The service collection that receives the module persistence registrations.</param>
+    /// <param name="moduleName">The module name that owns the persistence registrations.</param>
+    /// <param name="schema">The optional schema for Bondstone durable tables.</param>
+    /// <returns>The same service collection for chained setup.</returns>
     public static IServiceCollection AddBondstonePostgreSqlModulePersistence<TDbContext>(
         this IServiceCollection services,
         string moduleName,

@@ -12,11 +12,17 @@ lightweight `AddBondstone` composition surface.
 Start here for every Bondstone host, then add hosting, persistence, capability,
 and transport packages as needed. Normal application setup should use
 `AddBondstone` with module-owned registration helpers as shown in
-[../../docs/setup.md](../../docs/setup.md).
+[the setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md).
+
+Install this package in projects that declare Bondstone modules, commands,
+integration events, handlers, durable send/publish calls, or in-process module
+execution. Provider, hosting, and transport packages are installed separately
+only when the project calls their setup APIs.
 
 See:
 
-- [../../docs/architecture/messaging.md](../../docs/architecture/messaging.md)
-- [../../docs/architecture/modules.md](../../docs/architecture/modules.md)
-- [../../docs/architecture/persistence-core.md](../../docs/architecture/persistence-core.md)
-- [../../tests/Bondstone.Tests](../../tests/Bondstone.Tests)
+- [Messaging architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/messaging.md)
+- [Module architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/modules.md)
+- [Persistence contracts](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-core.md)
+- [Package discovery](https://github.com/oxface/Bondstone/blob/main/docs/package-discovery.md)
+- [Core tests](https://github.com/oxface/Bondstone/tree/main/tests/Bondstone.Tests)

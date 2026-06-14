@@ -6,8 +6,17 @@ Bondstone.
 ## Quick Path
 
 Most applications should install a concrete persistence provider package and
-use its module helper from [../../docs/setup.md](../../docs/setup.md). Use this
-package directly for custom persistence, dispatch composition, or tests that
-need the provider-neutral contracts.
+use its module helper from
+[the setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md).
+Use this package directly for custom persistence, dispatch composition, or
+tests that need the provider-neutral contracts.
 
-See [../../docs/architecture/persistence-core.md](../../docs/architecture/persistence-core.md).
+Install this package when implementing or composing custom durable outbox,
+inbox, operation-state, dispatcher, or transport persistence behavior. Normal
+EF Core or PostgreSQL applications usually get it transitively from a concrete
+provider package.
+
+See:
+
+- [Persistence contracts](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-core.md)
+- [Package discovery](https://github.com/oxface/Bondstone/blob/main/docs/package-discovery.md)

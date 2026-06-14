@@ -165,11 +165,18 @@ The publish workflow packs `Bondstone.slnx` and publishes every `.nupkg`
 created under `artifacts/packages`. Packable package projects included in the
 solution are covered by the same publish loop.
 
-Shared package metadata belongs in `Directory.Build.props`. Project-specific
-descriptions, dependencies, and package assets belong in the package project
-file.
+Shared package metadata belongs in `Directory.Build.props`; packable-project
+build and pack behavior that depends on project-local properties may live in
+`Directory.Build.targets`. Project-specific descriptions, dependencies, and
+package assets belong in the package project file.
 
-Package artifacts should include symbols and the root package README.
+Package artifacts should include symbols, the project-local package README,
+and XML API documentation. Package README links that reference repository docs,
+source paths, or tests should use absolute GitHub URLs so they work from NuGet
+and package-manager UI surfaces. XML API documentation should cover normal
+consumer-facing setup and contract APIs first; comprehensive comments for every
+public advanced-composition or exposed implementation type remain incremental
+cleanup.
 Publishing uses GitHub Actions with NuGet trusted publishing. The workflow uses
 GitHub OIDC through `NuGet/login@v1` to obtain a short-lived NuGet API key
 instead of storing a long-lived `NUGET_API_KEY` secret.

@@ -6,8 +6,17 @@ using Bondstone.Persistence;
 
 namespace Bondstone.Configuration;
 
+/// <summary>
+/// Adds Bondstone core services and module registration to an application service collection.
+/// </summary>
 public static class BondstoneServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers Bondstone core services, runs module and durable messaging configuration, and validates the resulting setup.
+    /// </summary>
+    /// <param name="services">The service collection that receives Bondstone registrations.</param>
+    /// <param name="configure">Configures modules, durable messaging, persistence, hosting, and transport extensions through the Bondstone builder.</param>
+    /// <returns>The same service collection for chained host setup.</returns>
     public static IServiceCollection AddBondstone(
         this IServiceCollection services,
         Action<BondstoneBuilder> configure)

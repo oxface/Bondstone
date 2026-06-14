@@ -8,8 +8,17 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Persistence;
 
+/// <summary>
+/// Registers provider-neutral EF Core durable persistence services.
+/// </summary>
 public static class BondstoneEntityFrameworkCoreServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers EF Core-backed durable outbox, inbox, operation-state, and persistence-scope services.
+    /// </summary>
+    /// <typeparam name="TDbContext">The DbContext type that contains Bondstone durable mappings.</typeparam>
+    /// <param name="services">The service collection that receives the persistence registrations.</param>
+    /// <returns>The same service collection for chained setup.</returns>
     public static IServiceCollection AddBondstoneEntityFrameworkCorePersistence<TDbContext>(
         this IServiceCollection services)
         where TDbContext : DbContext

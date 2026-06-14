@@ -12,3 +12,17 @@ public sealed record ModuleCommandExecutionResult
     public DurableInboxHandleResult? ReceiveInboxResult { get; }
 }
 
+public sealed record ModuleCommandExecutionResult<TResult>
+{
+    public ModuleCommandExecutionResult(
+        TResult result,
+        DurableInboxHandleResult? receiveInboxResult = null)
+    {
+        Result = result;
+        ReceiveInboxResult = receiveInboxResult;
+    }
+
+    public TResult Result { get; }
+
+    public DurableInboxHandleResult? ReceiveInboxResult { get; }
+}

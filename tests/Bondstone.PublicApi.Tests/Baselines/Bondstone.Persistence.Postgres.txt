@@ -1,79 +1,108 @@
-type public sealed class Bondstone.Persistence.Postgres.Inbox.PostgresDurableInboxRegistrar : Bondstone.Persistence.IDurableInboxRegistrar
-  ctor public Bondstone.Persistence.Postgres.Inbox.PostgresDurableInboxRegistrar(Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, string schema = null)
-  method public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxRegistrationResult> RegisterAsync(Bondstone.Persistence.DurableInboxRecord record, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Persistence.Postgres.Inbox.PostgresDurableInboxStore : Bondstone.Persistence.IDurableInboxStore
-  ctor public Bondstone.Persistence.Postgres.Inbox.PostgresDurableInboxStore(Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, string schema = null)
-  method public System.Threading.Tasks.ValueTask AddAsync(Bondstone.Persistence.DurableInboxRecord record, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask MarkProcessedAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.DateTimeOffset processedAtUtc, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxRecord> GetAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Persistence.Postgres.Inbox.PostgresModuleDurableInboxHandlerExecutor : Bondstone.Persistence.IDurableInboxHandlerExecutor
-  ctor public Bondstone.Persistence.Postgres.Inbox.PostgresModuleDurableInboxHandlerExecutor(string moduleName, Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, System.TimeProvider timeProvider = null, string schema = null)
-  method public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> HandleOnceAsync(Bondstone.Persistence.DurableInboxRecord record, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> handler, System.Threading.CancellationToken ct = default)
-  property string ModuleName { get; }
-
-type public sealed class Bondstone.Persistence.Postgres.Operations.PostgresDurableOperationStateStore : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
-  ctor public Bondstone.Persistence.Postgres.Operations.PostgresDurableOperationStateStore(Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, string schema = null)
-  method public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Persistence.Postgres.Operations.PostgresModuleDurableOperationStateStore : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
-  ctor public Bondstone.Persistence.Postgres.Operations.PostgresModuleDurableOperationStateStore(string moduleName, Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, string schema = null)
-  method public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default)
-  property string ModuleName { get; }
-
-type public sealed class Bondstone.Persistence.Postgres.Outbox.PostgresDurableOutboxClaimer : Bondstone.Persistence.IDurableOutboxClaimer
-  ctor public Bondstone.Persistence.Postgres.Outbox.PostgresDurableOutboxClaimer(Npgsql.NpgsqlDataSource dataSource, System.TimeProvider timeProvider = null, string schema = null)
-  method public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableOutboxRecord>> ClaimAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Persistence.Postgres.Outbox.PostgresDurableOutboxDispatchRecorder : Bondstone.Persistence.IDurableOutboxDispatchRecorder
-  ctor public Bondstone.Persistence.Postgres.Outbox.PostgresDurableOutboxDispatchRecorder(Npgsql.NpgsqlDataSource dataSource, string schema = null)
-  method public System.Threading.Tasks.ValueTask<bool> MarkDispatchedAsync(System.Guid messageId, string claimedBy, System.DateTimeOffset dispatchedAtUtc, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask<bool> MarkTerminalFailedAsync(System.Guid messageId, string claimedBy, string failureReason, System.DateTimeOffset failedAtUtc, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask<bool> ScheduleRetryAsync(System.Guid messageId, string claimedBy, string failureReason, System.DateTimeOffset failedAtUtc, System.DateTimeOffset nextAttemptAtUtc, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Persistence.Postgres.Outbox.PostgresDurableOutboxLeaseRenewer : Bondstone.Persistence.IDurableOutboxLeaseRenewer
-  ctor public Bondstone.Persistence.Postgres.Outbox.PostgresDurableOutboxLeaseRenewer(Npgsql.NpgsqlDataSource dataSource, System.TimeProvider timeProvider = null, string schema = null)
-  method public System.Threading.Tasks.ValueTask<bool> RenewAsync(System.Guid messageId, string claimedBy, System.TimeSpan leaseDuration, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Persistence.Postgres.Outbox.PostgresDurableOutboxWriter : Bondstone.Persistence.IDurableOutboxWriter
-  ctor public Bondstone.Persistence.Postgres.Outbox.PostgresDurableOutboxWriter(Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, System.TimeProvider timeProvider = null, string schema = null)
-  method public System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Persistence.Postgres.Outbox.PostgresModuleDurableOutboxDispatcher : Bondstone.Persistence.IDurableOutboxDispatcher
-  ctor public Bondstone.Persistence.Postgres.Outbox.PostgresModuleDurableOutboxDispatcher(string moduleName, Npgsql.NpgsqlDataSource dataSource, Bondstone.Persistence.IDurableOutboxTransport transport, Bondstone.Persistence.IDurableOutboxFailurePolicy failurePolicy, System.TimeProvider timeProvider = null, string schema = null)
-  method public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableOutboxDispatchResult> DispatchAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default)
-  property string ModuleName { get; }
-
-type public sealed class Bondstone.Persistence.Postgres.Outbox.PostgresModuleDurableOutboxWriter : Bondstone.Persistence.IDurableOutboxWriter
-  ctor public Bondstone.Persistence.Postgres.Outbox.PostgresModuleDurableOutboxWriter(string moduleName, Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, System.TimeProvider timeProvider = null, string schema = null)
-  method public System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default)
-  property string ModuleName { get; }
-
-type public static class Bondstone.Persistence.Postgres.Persistence.BondstonePostgresBuilderExtensions
-  method public static extension Bondstone.Configuration.BondstoneBuilder UsePostgresPersistence(Bondstone.Configuration.BondstoneBuilder builder, string moduleName, string connectionString, string schema = null)
-  method public static extension Bondstone.Modules.BondstoneModuleBuilder UsePostgresPersistence(Bondstone.Modules.BondstoneModuleBuilder module, string connectionString, string schema = null)
-
-type public static class Bondstone.Persistence.Postgres.Persistence.BondstonePostgresServiceCollectionExtensions
-  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstonePostgresModulePersistence(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string moduleName, string schema = null)
-  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstonePostgresPersistence(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string connectionString)
-
-type public interface Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession
-  method public abstract System.Threading.Tasks.ValueTask EnsureOpenAsync(System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask ExecuteInTransactionAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> operation, System.Threading.CancellationToken ct = default)
-  property Npgsql.NpgsqlConnection Connection { get; }
-  property Npgsql.NpgsqlTransaction Transaction { get; }
-
-type public sealed class Bondstone.Persistence.Postgres.Persistence.PostgresModuleSession : Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession, System.IAsyncDisposable
-  ctor public Bondstone.Persistence.Postgres.Persistence.PostgresModuleSession(Npgsql.NpgsqlDataSource dataSource)
-  method public System.Threading.Tasks.ValueTask DisposeAsync()
-  method public System.Threading.Tasks.ValueTask EnsureOpenAsync(System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask ExecuteInTransactionAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> operation, System.Threading.CancellationToken ct = default)
-  property Npgsql.NpgsqlConnection Connection { get; }
-  property Npgsql.NpgsqlTransaction Transaction { get; }
-
-type public static class Bondstone.Persistence.Postgres.Persistence.PostgresSchema
-  method public static System.Threading.Tasks.ValueTask EnsureDurableMessagingTablesAsync(Npgsql.NpgsqlConnection connection, string schema = null, System.Threading.CancellationToken ct = default)
-  method public static System.Threading.Tasks.ValueTask EnsureDurableMessagingTablesAsync(Npgsql.NpgsqlDataSource dataSource, string schema = null, System.Threading.CancellationToken ct = default)
+namespace Bondstone.Persistence.Postgres.Inbox
+{
+    public sealed class PostgresDurableInboxRegistrar : Bondstone.Persistence.IDurableInboxRegistrar
+    {
+        public PostgresDurableInboxRegistrar(Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, string? schema = null) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxRegistrationResult> RegisterAsync(Bondstone.Persistence.DurableInboxRecord record, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class PostgresDurableInboxStore : Bondstone.Persistence.IDurableInboxStore
+    {
+        public PostgresDurableInboxStore(Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, string? schema = null) { }
+        public System.Threading.Tasks.ValueTask AddAsync(Bondstone.Persistence.DurableInboxRecord record, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxRecord?> GetAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask MarkProcessedAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.DateTimeOffset processedAtUtc, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class PostgresModuleDurableInboxHandlerExecutor : Bondstone.Persistence.IDurableInboxHandlerExecutor
+    {
+        public PostgresModuleDurableInboxHandlerExecutor(string moduleName, Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, System.TimeProvider? timeProvider = null, string? schema = null) { }
+        public string ModuleName { get; }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> HandleOnceAsync(Bondstone.Persistence.DurableInboxRecord record, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> handler, System.Threading.CancellationToken ct = default) { }
+    }
+}
+namespace Bondstone.Persistence.Postgres.Operations
+{
+    public sealed class PostgresDurableOperationStateStore : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
+    {
+        public PostgresDurableOperationStateStore(Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, string? schema = null) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class PostgresModuleDurableOperationStateStore : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
+    {
+        public PostgresModuleDurableOperationStateStore(string moduleName, Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, string? schema = null) { }
+        public string ModuleName { get; }
+        public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default) { }
+    }
+}
+namespace Bondstone.Persistence.Postgres.Outbox
+{
+    public sealed class PostgresDurableOutboxClaimer : Bondstone.Persistence.IDurableOutboxClaimer
+    {
+        public PostgresDurableOutboxClaimer(Npgsql.NpgsqlDataSource dataSource, System.TimeProvider? timeProvider = null, string? schema = null) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableOutboxRecord>> ClaimAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class PostgresDurableOutboxDispatchRecorder : Bondstone.Persistence.IDurableOutboxDispatchRecorder
+    {
+        public PostgresDurableOutboxDispatchRecorder(Npgsql.NpgsqlDataSource dataSource, string? schema = null) { }
+        public System.Threading.Tasks.ValueTask<bool> MarkDispatchedAsync(System.Guid messageId, string claimedBy, System.DateTimeOffset dispatchedAtUtc, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<bool> MarkTerminalFailedAsync(System.Guid messageId, string claimedBy, string failureReason, System.DateTimeOffset failedAtUtc, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<bool> ScheduleRetryAsync(System.Guid messageId, string claimedBy, string failureReason, System.DateTimeOffset failedAtUtc, System.DateTimeOffset nextAttemptAtUtc, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class PostgresDurableOutboxLeaseRenewer : Bondstone.Persistence.IDurableOutboxLeaseRenewer
+    {
+        public PostgresDurableOutboxLeaseRenewer(Npgsql.NpgsqlDataSource dataSource, System.TimeProvider? timeProvider = null, string? schema = null) { }
+        public System.Threading.Tasks.ValueTask<bool> RenewAsync(System.Guid messageId, string claimedBy, System.TimeSpan leaseDuration, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class PostgresDurableOutboxWriter : Bondstone.Persistence.IDurableOutboxWriter
+    {
+        public PostgresDurableOutboxWriter(Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, System.TimeProvider? timeProvider = null, string? schema = null) { }
+        public System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class PostgresModuleDurableOutboxDispatcher : Bondstone.Persistence.IDurableOutboxDispatcher
+    {
+        public PostgresModuleDurableOutboxDispatcher(string moduleName, Npgsql.NpgsqlDataSource dataSource, Bondstone.Persistence.IDurableOutboxTransport transport, Bondstone.Persistence.IDurableOutboxFailurePolicy failurePolicy, System.TimeProvider? timeProvider = null, string? schema = null) { }
+        public string ModuleName { get; }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableOutboxDispatchResult> DispatchAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class PostgresModuleDurableOutboxWriter : Bondstone.Persistence.IDurableOutboxWriter
+    {
+        public PostgresModuleDurableOutboxWriter(string moduleName, Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession session, System.TimeProvider? timeProvider = null, string? schema = null) { }
+        public string ModuleName { get; }
+        public System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default) { }
+    }
+}
+namespace Bondstone.Persistence.Postgres.Persistence
+{
+    public static class BondstonePostgresBuilderExtensions
+    {
+        public static Bondstone.Modules.BondstoneModuleBuilder UsePostgresPersistence(this Bondstone.Modules.BondstoneModuleBuilder module, string connectionString, string? schema = null) { }
+        public static Bondstone.Configuration.BondstoneBuilder UsePostgresPersistence(this Bondstone.Configuration.BondstoneBuilder builder, string moduleName, string connectionString, string? schema = null) { }
+    }
+    public static class BondstonePostgresServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstonePostgresModulePersistence(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string moduleName, string? schema = null) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstonePostgresPersistence(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string connectionString) { }
+    }
+    public interface IPostgresModuleSession
+    {
+        Npgsql.NpgsqlConnection Connection { get; }
+        Npgsql.NpgsqlTransaction? Transaction { get; }
+        System.Threading.Tasks.ValueTask EnsureOpenAsync(System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask ExecuteInTransactionAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> operation, System.Threading.CancellationToken ct = default);
+    }
+    public sealed class PostgresModuleSession : Bondstone.Persistence.Postgres.Persistence.IPostgresModuleSession, System.IAsyncDisposable
+    {
+        public PostgresModuleSession(Npgsql.NpgsqlDataSource dataSource) { }
+        public Npgsql.NpgsqlConnection Connection { get; }
+        public Npgsql.NpgsqlTransaction? Transaction { get; }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask EnsureOpenAsync(System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask ExecuteInTransactionAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> operation, System.Threading.CancellationToken ct = default) { }
+    }
+    public static class PostgresSchema
+    {
+        public static System.Threading.Tasks.ValueTask EnsureDurableMessagingTablesAsync(Npgsql.NpgsqlConnection connection, string? schema = null, System.Threading.CancellationToken ct = default) { }
+        public static System.Threading.Tasks.ValueTask EnsureDurableMessagingTablesAsync(Npgsql.NpgsqlDataSource dataSource, string? schema = null, System.Threading.CancellationToken ct = default) { }
+    }
+}

@@ -1,189 +1,209 @@
-type public interface Bondstone.Transport.ServiceBus.Inbox.IServiceBusReceivedMessageDispatcher
-  method public abstract System.Threading.Tasks.ValueTask DispatchAsync(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource source, Bondstone.Transport.ServiceBus.Outbox.ServiceBusTransportMessage message, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Transport.ServiceBus.Inbox.IServiceBusReceivedMessageHandler
-  method public abstract System.Threading.Tasks.ValueTask HandleAsync(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource source, Azure.Messaging.ServiceBus.ServiceBusReceivedMessage message, System.Func<Azure.Messaging.ServiceBus.ServiceBusReceivedMessage, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> completeAsync, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource : System.IEquatable<Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource>
-  method public Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource <Clone>$()
-  method public bool Equals(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource other)
-  method public override bool Equals(object obj)
-  method public override int GetHashCode()
-  method public override string ToString()
-  method public static Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource ForQueue(string queueName)
-  method public static Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource ForSubscription(string topicName, string subscriptionName)
-  method public static bool op_Equality(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource left, Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource right)
-  method public static bool op_Inequality(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource left, Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource right)
-  property Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceKind Kind { get; }
-  property string DisplayName { get; }
-  property string EntityName { get; }
-  property string SubscriptionName { get; }
-
-type public sealed class Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceDiagnostic
-  ctor public Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceDiagnostic(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource source, System.Collections.Generic.IReadOnlyCollection<string> acceptedModules, System.Collections.Generic.IReadOnlyCollection<Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceEventSubscriptionDiagnostic> eventSubscriptions, string failureReason = null)
-  property Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource Source { get; }
-  property System.Collections.Generic.IReadOnlyCollection<Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceEventSubscriptionDiagnostic> EventSubscriptions { get; }
-  property System.Collections.Generic.IReadOnlyCollection<string> AcceptedModules { get; }
-  property bool HasBinding { get; }
-  property string FailureReason { get; }
-
-type public sealed class Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceEventSubscriptionDiagnostic
-  ctor public Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceEventSubscriptionDiagnostic(string messageTypeName, string subscriberModule, string subscriberIdentity)
-  property string MessageTypeName { get; }
-  property string SubscriberIdentity { get; }
-  property string SubscriberModule { get; }
-
-type public enum Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceKind : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
-  field public const Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceKind Queue
-  field public const Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceKind Subscription
-
-type public sealed class Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveWorkerOptions
-  ctor public Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveWorkerOptions()
-  method public void Validate()
-  property System.TimeSpan MaxAutoLockRenewalDuration { get; set; }
-  property int MaxConcurrentCalls { get; set; }
-
-type public static class Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceivedMessageMapper
-  method public static Bondstone.Transport.ServiceBus.Outbox.ServiceBusTransportMessage FromReceivedMessage(Azure.Messaging.ServiceBus.ServiceBusReceivedMessage message)
-
-type public static class Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusBuilderExtensions
-  method public static extension Bondstone.Configuration.BondstoneBuilder UseServiceBusTransport(Bondstone.Configuration.BondstoneBuilder builder, System.Action<Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder> configure)
-  method public static extension Bondstone.Configuration.BondstoneOutboxBuilder UseServiceBusTransport(Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Action<Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder> configure)
-
-type public sealed class Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusEventRouteBuilder
-  ctor public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusEventRouteBuilder(Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder transportBuilder, string messageTypeName)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder ToQueue(string queueName)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder ToTopic(string topicName)
-
-type public static class Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusHeaders
-  field public const string Baggage
-  field public const string CausationId
-  field public const string DurableOperationId
-  field public const string MessageId
-  field public const string MessageKind
-  field public const string MessageTypeName
-  field public const string PartitionKey
-  field public const string SourceModule
-  field public const string TargetModule
-  field public const string TraceParent
-  field public const string TraceState
-
-type public sealed class Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusModuleRouteBuilder
-  ctor public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusModuleRouteBuilder(Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder transportBuilder, string targetModule)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder ToQueue(string queueName)
-
-type public sealed class Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusReceiveSourceBuilder
-  ctor public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusReceiveSourceBuilder(Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder transportBuilder, Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource source)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusReceiveSourceBuilder AcceptModule(string moduleName)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusReceiveSourceBuilder SubscribeEvent(string messageTypeName, string subscriberModule, string subscriberIdentity)
-
-type public static class Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusServiceCollectionExtensions
-  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneServiceBusClient(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Azure.Messaging.ServiceBus.ServiceBusClient client)
-
-type public sealed class Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder
-  ctor public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder()
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusEventRouteBuilder RouteEvent(string messageTypeName)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusModuleRouteBuilder RouteModule(string targetModule)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusReceiveSourceBuilder ReceiveQueue(string queueName)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusReceiveSourceBuilder ReceiveSubscription(string topicName, string subscriptionName)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseEventQueueConvention()
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseEventQueueConvention(System.Func<string, string> queueNameFactory)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseEventTopicConvention()
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseEventTopicConvention(System.Func<string, string> topicNameFactory)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseModuleQueueConvention()
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseModuleQueueConvention(System.Func<string, string> queueNameFactory)
-  method public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseReceiveWorker(System.Action<Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveWorkerOptions> configureOptions = null)
-
-type public interface Bondstone.Transport.ServiceBus.Outbox.IServiceBusMessageSender
-  method public abstract System.Threading.Tasks.ValueTask SendAsync(string entityName, Bondstone.Transport.ServiceBus.Outbox.ServiceBusTransportMessage message, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Transport.ServiceBus.Outbox.IServiceBusOutboxDestinationResolver
-  method public abstract string ResolveQueueName(Bondstone.Persistence.DurableOutboxRecord record)
-
-type public interface Bondstone.Transport.ServiceBus.Outbox.IServiceBusOutboxEventDestinationResolver
-  method public abstract Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestination ResolveDestination(Bondstone.Persistence.DurableOutboxRecord record)
-
-type public interface Bondstone.Transport.ServiceBus.Outbox.IServiceBusTopologyDiagnostics
-  method public abstract Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceDiagnostic DescribeReceiveSource(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource source)
-  method public abstract Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationDiagnostic DescribeCommandDestination(string targetModule)
-  method public abstract Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationDiagnostic DescribeEventDestination(string messageTypeName)
-
-type public sealed class Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationDiagnostic
-  ctor public Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationDiagnostic(string targetModule, Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationSource source, string queueName = null, string failureReason = null)
-  property Bondstone.Messaging.DurableMessageTopologyDiagnosticKind Kind { get; }
-  property Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationSource Source { get; }
-  property bool HasDestination { get; }
-  property string FailureReason { get; }
-  property string QueueName { get; }
-  property string TargetModule { get; }
-
-type public enum Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationSource : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
-  field public const Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationSource ExplicitQueue
-  field public const Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationSource Missing
-  field public const Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationSource QueueConvention
-
-type public sealed class Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope : System.IEquatable<Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope>
-  ctor public Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope(System.Guid MessageId, string MessageKind, string MessageTypeName, string SourceModule, string TargetModule, string Payload, string Metadata, System.DateTimeOffset CreatedAtUtc, System.Guid? DurableOperationId, string TraceParent, string TraceState, string TraceBaggage, System.Guid? CausationId, string PartitionKey)
-  method public Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope <Clone>$()
-  method public bool Equals(Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope other)
-  method public override bool Equals(object obj)
-  method public override int GetHashCode()
-  method public override string ToString()
-  method public static Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope From(Bondstone.Messaging.DurableMessageEnvelope envelope)
-  method public static bool op_Equality(Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope left, Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope right)
-  method public static bool op_Inequality(Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope left, Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope right)
-  method public void Deconstruct(out System.Guid MessageId, out string MessageKind, out string MessageTypeName, out string SourceModule, out string TargetModule, out string Payload, out string Metadata, out System.DateTimeOffset CreatedAtUtc, out System.Guid? DurableOperationId, out string TraceParent, out string TraceState, out string TraceBaggage, out System.Guid? CausationId, out string PartitionKey)
-  property System.DateTimeOffset CreatedAtUtc { get; set; }
-  property System.Guid MessageId { get; set; }
-  property System.Guid? CausationId { get; set; }
-  property System.Guid? DurableOperationId { get; set; }
-  property string MessageKind { get; set; }
-  property string MessageTypeName { get; set; }
-  property string Metadata { get; set; }
-  property string PartitionKey { get; set; }
-  property string Payload { get; set; }
-  property string SourceModule { get; set; }
-  property string TargetModule { get; set; }
-  property string TraceBaggage { get; set; }
-  property string TraceParent { get; set; }
-  property string TraceState { get; set; }
-
-type public sealed class Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableOutboxTransport : Bondstone.Persistence.IDurableOutboxTransport
-  ctor public Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableOutboxTransport(Bondstone.Transport.ServiceBus.Outbox.IServiceBusMessageSender messageSender, Bondstone.Transport.ServiceBus.Outbox.IServiceBusOutboxDestinationResolver destinationResolver, Bondstone.Transport.ServiceBus.Outbox.IServiceBusOutboxEventDestinationResolver eventDestinationResolver)
-  method public System.Threading.Tasks.ValueTask SendAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestination
-  ctor public Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestination(Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationKind kind, string entityName)
-  property Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationKind Kind { get; }
-  property string EntityName { get; }
-
-type public sealed class Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationDiagnostic
-  ctor public Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationDiagnostic(string messageTypeName, Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationSource source, Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestination destination, string failureReason = null)
-  property Bondstone.Messaging.DurableMessageTopologyDiagnosticKind Kind { get; }
-  property Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestination Destination { get; }
-  property Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationKind? DestinationKind { get; }
-  property Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationSource Source { get; }
-  property bool HasDestination { get; }
-  property string EntityName { get; }
-  property string FailureReason { get; }
-  property string MessageTypeName { get; }
-
-type public enum Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationKind : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
-  field public const Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationKind Queue
-  field public const Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationKind Topic
-
-type public enum Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationSource : System.IComparable, System.IConvertible, System.IFormattable, System.ISpanFormattable
-  field public const Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationSource ExplicitQueue
-  field public const Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationSource ExplicitTopic
-  field public const Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationSource Missing
-  field public const Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationSource QueueConvention
-  field public const Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationSource TopicConvention
-
-type public sealed class Bondstone.Transport.ServiceBus.Outbox.ServiceBusTransportMessage
-  ctor public Bondstone.Transport.ServiceBus.Outbox.ServiceBusTransportMessage(string body, string messageId, string subject, string correlationId, string partitionKey, System.Collections.Generic.IReadOnlyDictionary<string, object> applicationProperties)
-  property System.Collections.Generic.IReadOnlyDictionary<string, object> ApplicationProperties { get; }
-  property string Body { get; }
-  property string CorrelationId { get; }
-  property string MessageId { get; }
-  property string PartitionKey { get; }
-  property string Subject { get; }
+namespace Bondstone.Transport.ServiceBus.Inbox
+{
+    public interface IServiceBusReceivedMessageDispatcher
+    {
+        System.Threading.Tasks.ValueTask DispatchAsync(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource source, Bondstone.Transport.ServiceBus.Outbox.ServiceBusTransportMessage message, System.Threading.CancellationToken ct = default);
+    }
+    public interface IServiceBusReceivedMessageHandler
+    {
+        System.Threading.Tasks.ValueTask HandleAsync(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource source, Azure.Messaging.ServiceBus.ServiceBusReceivedMessage message, System.Func<Azure.Messaging.ServiceBus.ServiceBusReceivedMessage, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> completeAsync, System.Threading.CancellationToken ct = default);
+    }
+    public sealed class ServiceBusReceiveSource : System.IEquatable<Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource>
+    {
+        public string DisplayName { get; }
+        public string EntityName { get; }
+        public Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceKind Kind { get; }
+        public string? SubscriptionName { get; }
+        public static Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource ForQueue(string queueName) { }
+        public static Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource ForSubscription(string topicName, string subscriptionName) { }
+    }
+    public sealed class ServiceBusReceiveSourceDiagnostic
+    {
+        public ServiceBusReceiveSourceDiagnostic(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource source, System.Collections.Generic.IReadOnlyCollection<string> acceptedModules, System.Collections.Generic.IReadOnlyCollection<Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceEventSubscriptionDiagnostic> eventSubscriptions, string? failureReason = null) { }
+        public System.Collections.Generic.IReadOnlyCollection<string> AcceptedModules { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceEventSubscriptionDiagnostic> EventSubscriptions { get; }
+        public string? FailureReason { get; }
+        public bool HasBinding { get; }
+        public Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource Source { get; }
+    }
+    public sealed class ServiceBusReceiveSourceEventSubscriptionDiagnostic
+    {
+        public ServiceBusReceiveSourceEventSubscriptionDiagnostic(string messageTypeName, string subscriberModule, string subscriberIdentity) { }
+        public string MessageTypeName { get; }
+        public string SubscriberIdentity { get; }
+        public string SubscriberModule { get; }
+    }
+    public enum ServiceBusReceiveSourceKind
+    {
+        Queue = 1,
+        Subscription = 2,
+    }
+    public sealed class ServiceBusReceiveWorkerOptions
+    {
+        public ServiceBusReceiveWorkerOptions() { }
+        public System.TimeSpan MaxAutoLockRenewalDuration { get; set; }
+        public int MaxConcurrentCalls { get; set; }
+        public void Validate() { }
+    }
+    public static class ServiceBusReceivedMessageMapper
+    {
+        public static Bondstone.Transport.ServiceBus.Outbox.ServiceBusTransportMessage FromReceivedMessage(Azure.Messaging.ServiceBus.ServiceBusReceivedMessage message) { }
+    }
+}
+namespace Bondstone.Transport.ServiceBus.Outbox
+{
+    public static class BondstoneServiceBusBuilderExtensions
+    {
+        public static Bondstone.Configuration.BondstoneBuilder UseServiceBusTransport(this Bondstone.Configuration.BondstoneBuilder builder, System.Action<Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder> configure) { }
+        public static Bondstone.Configuration.BondstoneOutboxBuilder UseServiceBusTransport(this Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Action<Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder> configure) { }
+    }
+    public sealed class BondstoneServiceBusEventRouteBuilder
+    {
+        public BondstoneServiceBusEventRouteBuilder(Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder transportBuilder, string messageTypeName) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder ToQueue(string queueName) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder ToTopic(string topicName) { }
+    }
+    public static class BondstoneServiceBusHeaders
+    {
+        public const string Baggage = "baggage";
+        public const string CausationId = "bondstone-causation-id";
+        public const string DurableOperationId = "bondstone-durable-operation-id";
+        public const string MessageId = "bondstone-message-id";
+        public const string MessageKind = "bondstone-message-kind";
+        public const string MessageTypeName = "bondstone-message-type-name";
+        public const string PartitionKey = "bondstone-partition-key";
+        public const string SourceModule = "bondstone-source-module";
+        public const string TargetModule = "bondstone-target-module";
+        public const string TraceParent = "traceparent";
+        public const string TraceState = "tracestate";
+    }
+    public sealed class BondstoneServiceBusModuleRouteBuilder
+    {
+        public BondstoneServiceBusModuleRouteBuilder(Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder transportBuilder, string targetModule) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder ToQueue(string queueName) { }
+    }
+    public sealed class BondstoneServiceBusReceiveSourceBuilder
+    {
+        public BondstoneServiceBusReceiveSourceBuilder(Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder transportBuilder, Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource source) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusReceiveSourceBuilder AcceptModule(string moduleName) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusReceiveSourceBuilder SubscribeEvent(string messageTypeName, string subscriberModule, string subscriberIdentity) { }
+    }
+    public static class BondstoneServiceBusServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneServiceBusClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Azure.Messaging.ServiceBus.ServiceBusClient client) { }
+    }
+    public sealed class BondstoneServiceBusTransportBuilder
+    {
+        public BondstoneServiceBusTransportBuilder() { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusReceiveSourceBuilder ReceiveQueue(string queueName) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusReceiveSourceBuilder ReceiveSubscription(string topicName, string subscriptionName) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusEventRouteBuilder RouteEvent(string messageTypeName) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusModuleRouteBuilder RouteModule(string targetModule) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseEventQueueConvention() { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseEventQueueConvention(System.Func<string, string> queueNameFactory) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseEventTopicConvention() { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseEventTopicConvention(System.Func<string, string> topicNameFactory) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseModuleQueueConvention() { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseModuleQueueConvention(System.Func<string, string> queueNameFactory) { }
+        public Bondstone.Transport.ServiceBus.Outbox.BondstoneServiceBusTransportBuilder UseReceiveWorker(System.Action<Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveWorkerOptions>? configureOptions = null) { }
+    }
+    public interface IServiceBusMessageSender
+    {
+        System.Threading.Tasks.ValueTask SendAsync(string entityName, Bondstone.Transport.ServiceBus.Outbox.ServiceBusTransportMessage message, System.Threading.CancellationToken ct = default);
+    }
+    public interface IServiceBusOutboxDestinationResolver
+    {
+        string ResolveQueueName(Bondstone.Persistence.DurableOutboxRecord record);
+    }
+    public interface IServiceBusOutboxEventDestinationResolver
+    {
+        Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestination ResolveDestination(Bondstone.Persistence.DurableOutboxRecord record);
+    }
+    public interface IServiceBusTopologyDiagnostics
+    {
+        Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationDiagnostic DescribeCommandDestination(string targetModule);
+        Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationDiagnostic DescribeEventDestination(string messageTypeName);
+        Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSourceDiagnostic DescribeReceiveSource(Bondstone.Transport.ServiceBus.Inbox.ServiceBusReceiveSource source);
+    }
+    public sealed class ServiceBusCommandDestinationDiagnostic
+    {
+        public ServiceBusCommandDestinationDiagnostic(string targetModule, Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationSource source, string? queueName = null, string? failureReason = null) { }
+        public string? FailureReason { get; }
+        public bool HasDestination { get; }
+        public Bondstone.Messaging.DurableMessageTopologyDiagnosticKind Kind { get; }
+        public string? QueueName { get; }
+        public Bondstone.Transport.ServiceBus.Outbox.ServiceBusCommandDestinationSource Source { get; }
+        public string TargetModule { get; }
+    }
+    public enum ServiceBusCommandDestinationSource
+    {
+        Missing = 0,
+        ExplicitQueue = 1,
+        QueueConvention = 2,
+    }
+    public sealed class ServiceBusDurableMessageEnvelope : System.IEquatable<Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope>
+    {
+        public ServiceBusDurableMessageEnvelope(System.Guid MessageId, string MessageKind, string MessageTypeName, string SourceModule, string? TargetModule, string Payload, string? Metadata, System.DateTimeOffset CreatedAtUtc, System.Guid? DurableOperationId, string? TraceParent, string? TraceState, string? TraceBaggage, System.Guid? CausationId, string? PartitionKey) { }
+        public System.Guid? CausationId { get; init; }
+        public System.DateTimeOffset CreatedAtUtc { get; init; }
+        public System.Guid? DurableOperationId { get; init; }
+        public System.Guid MessageId { get; init; }
+        public string MessageKind { get; init; }
+        public string MessageTypeName { get; init; }
+        public string? Metadata { get; init; }
+        public string? PartitionKey { get; init; }
+        public string Payload { get; init; }
+        public string SourceModule { get; init; }
+        public string? TargetModule { get; init; }
+        public string? TraceBaggage { get; init; }
+        public string? TraceParent { get; init; }
+        public string? TraceState { get; init; }
+        public static Bondstone.Transport.ServiceBus.Outbox.ServiceBusDurableMessageEnvelope From(Bondstone.Messaging.DurableMessageEnvelope envelope) { }
+    }
+    public sealed class ServiceBusDurableOutboxTransport : Bondstone.Persistence.IDurableOutboxTransport
+    {
+        public ServiceBusDurableOutboxTransport(Bondstone.Transport.ServiceBus.Outbox.IServiceBusMessageSender messageSender, Bondstone.Transport.ServiceBus.Outbox.IServiceBusOutboxDestinationResolver destinationResolver, Bondstone.Transport.ServiceBus.Outbox.IServiceBusOutboxEventDestinationResolver eventDestinationResolver) { }
+        public System.Threading.Tasks.ValueTask SendAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class ServiceBusEventDestination
+    {
+        public ServiceBusEventDestination(Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationKind kind, string entityName) { }
+        public string EntityName { get; }
+        public Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationKind Kind { get; }
+    }
+    public sealed class ServiceBusEventDestinationDiagnostic
+    {
+        public ServiceBusEventDestinationDiagnostic(string messageTypeName, Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationSource source, Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestination? destination, string? failureReason = null) { }
+        public Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestination? Destination { get; }
+        public Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationKind? DestinationKind { get; }
+        public string? EntityName { get; }
+        public string? FailureReason { get; }
+        public bool HasDestination { get; }
+        public Bondstone.Messaging.DurableMessageTopologyDiagnosticKind Kind { get; }
+        public string MessageTypeName { get; }
+        public Bondstone.Transport.ServiceBus.Outbox.ServiceBusEventDestinationSource Source { get; }
+    }
+    public enum ServiceBusEventDestinationKind
+    {
+        Queue = 1,
+        Topic = 2,
+    }
+    public enum ServiceBusEventDestinationSource
+    {
+        Missing = 0,
+        ExplicitQueue = 1,
+        ExplicitTopic = 2,
+        QueueConvention = 3,
+        TopicConvention = 4,
+    }
+    public sealed class ServiceBusTransportMessage
+    {
+        public ServiceBusTransportMessage(string body, string messageId, string subject, string correlationId, string? partitionKey, System.Collections.Generic.IReadOnlyDictionary<string, object> applicationProperties) { }
+        public System.Collections.Generic.IReadOnlyDictionary<string, object> ApplicationProperties { get; }
+        public string Body { get; }
+        public string CorrelationId { get; }
+        public string MessageId { get; }
+        public string? PartitionKey { get; }
+        public string Subject { get; }
+    }
+}

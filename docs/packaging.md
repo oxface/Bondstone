@@ -24,6 +24,9 @@ Ship one NuGet package per package project. Package IDs match project names:
 - `Bondstone.Transport.ServiceBus`
 - `Bondstone.Transport.RabbitMq`
 
+For a consumer-facing capability and namespace matrix, see
+[package-discovery.md](package-discovery.md).
+
 `Bondstone.Transport.ServiceBus` and `Bondstone.Transport.RabbitMq` are the
 production-oriented direct transport adapters. They include outgoing durable
 outbox dispatch, provider-native receive topology, opt-in hosted receive
@@ -108,13 +111,21 @@ builder while preserving the dependency direction above. The builder is a
 guardrail for common host setup, not a replacement for lower-level
 registration methods needed by advanced consumers and tests.
 
+Result-returning command contracts and local module result execution live in
+`Bondstone` with the rest of the command/module execution surface. Durable
+result observation uses provider-neutral operation state from
+`Bondstone.Persistence`, with typed operation result reading exposed from
+`Bondstone` because it uses Bondstone's durable payload serialization options.
+Transport packages continue to expose accepted delivery rather than direct
+request/response execution.
+
 ## Public API Surface
 
 Normal user-facing API is the setup and module contract surface: message
-markers and identity attributes, module registration builders, `AddBondstone`
-composition, provider/transport builder extensions, durable send/publish
-contracts, receive pipeline contracts, result types, options, and documented
-diagnostic shapes.
+markers and identity attributes, result-returning command contracts, module
+registration builders, `AddBondstone` composition, provider/transport builder
+extensions, durable send/publish contracts, receive pipeline contracts, result
+types, options, and documented diagnostic shapes.
 
 Some public low-level persistence, transport, receive, dispatcher, resolver,
 module pipeline contribution, module pipeline behavior, and concrete provider

@@ -17,6 +17,17 @@ public interface IModuleCommandExecutor
         CancellationToken ct = default)
         where TCommand : ICommand;
 
+    ValueTask<ModuleCommandExecutionResult<TResult>> ExecuteResultAsync<TResult>(
+        string moduleName,
+        ICommand<TResult> command,
+        CancellationToken ct = default);
+
+    ValueTask<ModuleCommandExecutionResult<TResult>> ExecuteResultAsync<TResult>(
+        string moduleName,
+        ICommand<TResult> command,
+        ModuleCommandReceiveContext receiveContext,
+        CancellationToken ct = default);
+
     ValueTask<ModuleCommandExecutionResult> ExecuteAsync(
         string moduleName,
         object command,

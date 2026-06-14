@@ -83,6 +83,50 @@ public sealed class ModuleReceivePipelineTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task CommandReceive_WhenResultCommandHasOperationId_StoresCompletedResultPayload()
+    {
+        var inboxExecutor = new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.Handled);
+        var operationStore = new CapturingOperationStateStore();
+        var services = CreateServices(inboxExecutor);
+        services.AddSingleton<IDurableOperationStateStore>(operationStore);
+        services.ConfigureBondstoneDurablePayloadJson(
+            options => options.Converters.Add(new DurableOrderIdJsonConverter()));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<
+                    ReserveConvertedOrderResultCommand,
+                    ReserveConvertedOrderResult,
+                    ReserveConvertedOrderResultHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IModuleCommandReceivePipeline pipeline =
+            scope.ServiceProvider.GetRequiredService<IModuleCommandReceivePipeline>();
+        Guid durableOperationId = Guid.Parse("70e5d65f-bc87-43ca-b09c-299cb34a573b");
+
+        DurableInboxHandleResult result = await pipeline.HandleOnceAsync(
+            CreateConvertedResultCommandEnvelope(durableOperationId));
+
+        Assert.Equal(DurableInboxHandleStatus.Handled, result.Status);
+        DurableOperationState state = Assert.Single(operationStore.SavedStates);
+        Assert.Equal(durableOperationId, state.DurableOperationId);
+        Assert.Equal(DurableOperationStatus.Completed, state.Status);
+        Assert.Equal(DateTimeOffset.Parse("2026-06-06T12:01:00+00:00"), state.UpdatedAtUtc);
+        Assert.Equal("""{"orderId":"payload-A-100","accepted":true}""", state.ResultPayload);
+        Assert.Equal(
+            ["handle-result-converted:A-100"],
+            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task CommandReceive_WhenInboxRecordAlreadyReceived_ThrowsAndSkipsHandler()
     {
         var inboxExecutor = new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.AlreadyReceived);
@@ -220,6 +264,21 @@ public sealed class ModuleReceivePipelineTests
             partitionKey: "orders/A-100");
     }
 
+    private static DurableMessageEnvelope CreateConvertedResultCommandEnvelope(
+        Guid durableOperationId)
+    {
+        return new DurableMessageEnvelope(
+            Guid.Parse("ee4d3f75-7ee5-41bf-93cb-d8a2eec97a9f"),
+            MessageKind.Command,
+            "receive.fulfillment.order.reserve-converted-result.v1",
+            "sales",
+            "fulfillment",
+            """{"orderId":"payload-A-100"}""",
+            DateTimeOffset.Parse("2026-06-05T12:00:00+00:00"),
+            durableOperationId,
+            partitionKey: "orders/A-100");
+    }
+
     private static DurableMessageEnvelope CreateEventEnvelope()
     {
         return new DurableMessageEnvelope(
@@ -261,6 +320,26 @@ public sealed class ModuleReceivePipelineTests
         {
             log.Calls.Add($"handle-converted:{command.OrderId.Value}");
             return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed record ReserveConvertedOrderResult(DurableOrderId OrderId, bool Accepted);
+
+    [DurableCommandIdentity("receive.fulfillment.order.reserve-converted-result.v1")]
+    public sealed record ReserveConvertedOrderResultCommand(DurableOrderId OrderId)
+        : IDurableCommand, ICommand<ReserveConvertedOrderResult>;
+
+    public sealed class ReserveConvertedOrderResultHandler(CommandCallLog log)
+        : ICommandHandler<ReserveConvertedOrderResultCommand, ReserveConvertedOrderResult>
+    {
+        public ValueTask<ReserveConvertedOrderResult> HandleAsync(
+            ReserveConvertedOrderResultCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"handle-result-converted:{command.OrderId.Value}");
+            return ValueTask.FromResult(new ReserveConvertedOrderResult(
+                command.OrderId,
+                Accepted: true));
         }
     }
 
@@ -310,6 +389,26 @@ public sealed class ModuleReceivePipelineTests
             }
 
             return new DurableInboxHandleResult(status, record);
+        }
+    }
+
+    private sealed class CapturingOperationStateStore : IDurableOperationStateStore
+    {
+        public List<DurableOperationState> SavedStates { get; } = [];
+
+        public ValueTask<DurableOperationState?> GetStateAsync(
+            Guid durableOperationId,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult<DurableOperationState?>(null);
+        }
+
+        public ValueTask SaveAsync(
+            DurableOperationState state,
+            CancellationToken ct = default)
+        {
+            SavedStates.Add(state);
+            return ValueTask.CompletedTask;
         }
     }
 

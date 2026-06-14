@@ -39,6 +39,11 @@ Diagnostic services report the same resolution results used by dispatch so
 applications and tests can explain missing queues, topics, or destinations
 without sending messages.
 
+Module queue conventions configure outbound command destinations only. They do
+not create Service Bus queues, configure processors, or authorize this host to
+receive commands for matching modules. Hosts that receive commands must still
+declare receive topology with `ReceiveQueue(...).AcceptModule(...)`.
+
 Service Bus contributes command and event destination diagnostics to
 Bondstone's aggregate outbound route ownership validation. Receive source
 bindings always validate that accepted modules have durable command handlers

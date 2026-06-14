@@ -1,158 +1,199 @@
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Inbox.EntityFrameworkCoreDurableInboxStore<TDbContext> : Bondstone.Persistence.IDurableInboxStore
-  ctor public Bondstone.Persistence.EntityFrameworkCore.Inbox.EntityFrameworkCoreDurableInboxStore<TDbContext>(TDbContext context)
-  method public System.Threading.Tasks.ValueTask AddAsync(Bondstone.Persistence.DurableInboxRecord record, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask MarkProcessedAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.DateTimeOffset processedAtUtc, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxRecord> GetAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Inbox.InboxMessageEntity
-  method public Bondstone.Persistence.DurableInboxRecord ToRecord()
-  method public static Bondstone.Persistence.EntityFrameworkCore.Inbox.InboxMessageEntity FromRecord(Bondstone.Persistence.DurableInboxRecord record)
-  method public void MarkProcessed(System.DateTimeOffset processedAtUtc)
-  property System.DateTimeOffset ReceivedAtUtc { get; }
-  property System.DateTimeOffset? ProcessedAtUtc { get; }
-  property System.Guid MessageId { get; }
-  property string HandlerIdentity { get; }
-  property string ModuleName { get; }
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Inbox.InboxMessageEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Persistence.EntityFrameworkCore.Inbox.InboxMessageEntity>
-  ctor public Bondstone.Persistence.EntityFrameworkCore.Inbox.InboxMessageEntityConfiguration(string schema = null)
-  field public const int HandlerIdentityMaxLength
-  field public const int ModuleNameMaxLength
-  field public const string PrimaryKeyName
-  field public const string TableName
-  method public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Persistence.EntityFrameworkCore.Inbox.InboxMessageEntity> builder)
-
-type public static class Bondstone.Persistence.EntityFrameworkCore.Inbox.InboxMessageEntityConfiguration.Columns
-  field public const string HandlerIdentity
-  field public const string MessageId
-  field public const string ModuleName
-  field public const string ProcessedAtUtc
-  field public const string ReceivedAtUtc
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Operations.EntityFrameworkCoreDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
-  ctor public Bondstone.Persistence.EntityFrameworkCore.Operations.EntityFrameworkCoreDurableOperationStateStore<TDbContext>(TDbContext context)
-  method public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Operations.EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
-  ctor public Bondstone.Persistence.EntityFrameworkCore.Operations.EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>(string moduleName, TDbContext context)
-  method public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default)
-  property string ModuleName { get; }
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntity
-  method public Bondstone.Messaging.DurableOperationState ToState()
-  method public static Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntity FromState(Bondstone.Messaging.DurableOperationState state)
-  method public void ApplyState(Bondstone.Messaging.DurableOperationState state)
-  property Bondstone.Messaging.DurableOperationStatus Status { get; }
-  property System.DateTimeOffset UpdatedAtUtc { get; }
-  property System.Guid DurableOperationId { get; }
-  property string FailureReason { get; }
-  property string ResultPayload { get; }
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntity>
-  ctor public Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntityConfiguration(string schema = null)
-  field public const int StatusMaxLength
-  method public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntity> builder)
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Outbox.EntityFrameworkCoreDurableOutboxWriter<TDbContext> : Bondstone.Persistence.IDurableOutboxWriter
-  ctor public Bondstone.Persistence.EntityFrameworkCore.Outbox.EntityFrameworkCoreDurableOutboxWriter<TDbContext>(TDbContext context, System.TimeProvider timeProvider = null)
-  method public System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default)
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Outbox.EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext> : Bondstone.Persistence.IDurableOutboxWriter
-  ctor public Bondstone.Persistence.EntityFrameworkCore.Outbox.EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext>(string moduleName, TDbContext context, System.TimeProvider timeProvider = null)
-  method public System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default)
-  property string ModuleName { get; }
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Outbox.OutboxMessageEntity
-  method public Bondstone.Persistence.DurableOutboxRecord ToRecord()
-  method public static Bondstone.Persistence.EntityFrameworkCore.Outbox.OutboxMessageEntity FromRecord(Bondstone.Persistence.DurableOutboxRecord record)
-  property Bondstone.Messaging.MessageKind MessageKind { get; }
-  property Bondstone.Persistence.DurableOutboxStatus Status { get; }
-  property System.DateTimeOffset CreatedAtUtc { get; }
-  property System.DateTimeOffset StoredAtUtc { get; }
-  property System.DateTimeOffset? ClaimedUntilUtc { get; }
-  property System.DateTimeOffset? DispatchedAtUtc { get; }
-  property System.DateTimeOffset? FailedAtUtc { get; }
-  property System.DateTimeOffset? NextAttemptAtUtc { get; }
-  property System.Guid MessageId { get; }
-  property System.Guid? CausationId { get; }
-  property System.Guid? DurableOperationId { get; }
-  property int AttemptCount { get; }
-  property string ClaimedBy { get; }
-  property string FailureReason { get; }
-  property string MessageTypeName { get; }
-  property string Metadata { get; }
-  property string PartitionKey { get; }
-  property string Payload { get; }
-  property string SourceModule { get; }
-  property string TargetModule { get; }
-  property string TraceBaggage { get; }
-  property string TraceParent { get; }
-  property string TraceState { get; }
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Outbox.OutboxMessageEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Persistence.EntityFrameworkCore.Outbox.OutboxMessageEntity>
-  ctor public Bondstone.Persistence.EntityFrameworkCore.Outbox.OutboxMessageEntityConfiguration(string schema = null)
-  field public const int ClaimedByMaxLength
-  field public const int FailureReasonMaxLength
-  field public const int MessageTypeNameMaxLength
-  field public const int ModuleNameMaxLength
-  field public const int PartitionKeyMaxLength
-  field public const int StatusMaxLength
-  field public const int TraceParentMaxLength
-  field public const int TraceStateMaxLength
-  field public const string PrimaryKeyName
-  field public const string TableName
-  method public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Persistence.EntityFrameworkCore.Outbox.OutboxMessageEntity> builder)
-
-type public static class Bondstone.Persistence.EntityFrameworkCore.Outbox.OutboxMessageEntityConfiguration.Columns
-  field public const string AttemptCount
-  field public const string CausationId
-  field public const string ClaimedBy
-  field public const string ClaimedUntilUtc
-  field public const string CreatedAtUtc
-  field public const string DispatchedAtUtc
-  field public const string DurableOperationId
-  field public const string FailedAtUtc
-  field public const string FailureReason
-  field public const string MessageId
-  field public const string MessageKind
-  field public const string MessageTypeName
-  field public const string Metadata
-  field public const string NextAttemptAtUtc
-  field public const string PartitionKey
-  field public const string Payload
-  field public const string SourceModule
-  field public const string Status
-  field public const string StoredAtUtc
-  field public const string TargetModule
-  field public const string TraceBaggage
-  field public const string TraceParent
-  field public const string TraceState
-
-type public static class Bondstone.Persistence.EntityFrameworkCore.Persistence.BondstoneEntityFrameworkCoreModuleBuilderExtensions
-  method public static extension Bondstone.Modules.BondstoneModuleBuilder UseEntityFrameworkCoreModulePersistence<TDbContext>(Bondstone.Modules.BondstoneModuleBuilder module)
-  method public static extension Bondstone.Modules.BondstoneModuleBuilder UseEntityFrameworkCorePersistence<TDbContext>(Bondstone.Modules.BondstoneModuleBuilder module)
-
-type public static class Bondstone.Persistence.EntityFrameworkCore.Persistence.BondstoneEntityFrameworkCoreServiceCollectionExtensions
-  method public static extension Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneEntityFrameworkCorePersistence<TDbContext>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-
-type public static class Bondstone.Persistence.EntityFrameworkCore.Persistence.BondstoneModelBuilderExtensions
-  method public static extension Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneInbox(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string schema = null)
-  method public static extension Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneOperationState(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string schema = null)
-  method public static extension Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneOutbox(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string schema = null)
-  method public static extension Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstonePersistence(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string schema = null)
-
-type public static class Bondstone.Persistence.EntityFrameworkCore.Persistence.EntityFrameworkCoreModulePersistence
-  field public const string ProviderName
-
-type public sealed class Bondstone.Persistence.EntityFrameworkCore.Persistence.EntityFrameworkCorePersistenceScope<TDbContext> : Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope
-  ctor public Bondstone.Persistence.EntityFrameworkCore.Persistence.EntityFrameworkCorePersistenceScope<TDbContext>(TDbContext context)
-  method public System.Threading.Tasks.ValueTask ExecuteAsync(System.Func<Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> operation, System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask SaveChangesAsync(System.Threading.CancellationToken ct = default)
-  method public System.Threading.Tasks.ValueTask<TResult> ExecuteAsync<TResult>(System.Func<Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TResult>> operation, System.Threading.CancellationToken ct = default)
-
-type public interface Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope
-  method public abstract System.Threading.Tasks.ValueTask ExecuteAsync(System.Func<Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> operation, System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask SaveChangesAsync(System.Threading.CancellationToken ct = default)
-  method public abstract System.Threading.Tasks.ValueTask<TResult> ExecuteAsync<TResult>(System.Func<Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TResult>> operation, System.Threading.CancellationToken ct = default)
+namespace Bondstone.Persistence.EntityFrameworkCore.Inbox
+{
+    public sealed class EntityFrameworkCoreDurableInboxStore<TDbContext> : Bondstone.Persistence.IDurableInboxStore
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreDurableInboxStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask AddAsync(Bondstone.Persistence.DurableInboxRecord record, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxRecord?> GetAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask MarkProcessedAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.DateTimeOffset processedAtUtc, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class InboxMessageEntity
+    {
+        public string HandlerIdentity { get; }
+        public System.Guid MessageId { get; }
+        public string ModuleName { get; }
+        public System.DateTimeOffset? ProcessedAtUtc { get; }
+        public System.DateTimeOffset ReceivedAtUtc { get; }
+        public void MarkProcessed(System.DateTimeOffset processedAtUtc) { }
+        public Bondstone.Persistence.DurableInboxRecord ToRecord() { }
+        public static Bondstone.Persistence.EntityFrameworkCore.Inbox.InboxMessageEntity FromRecord(Bondstone.Persistence.DurableInboxRecord record) { }
+    }
+    public sealed class InboxMessageEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Persistence.EntityFrameworkCore.Inbox.InboxMessageEntity>
+    {
+        public const int HandlerIdentityMaxLength = 512;
+        public const int ModuleNameMaxLength = 128;
+        public const string PrimaryKeyName = "PK_inbox_messages";
+        public const string TableName = "inbox_messages";
+        public InboxMessageEntityConfiguration(string? schema = null) { }
+        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Persistence.EntityFrameworkCore.Inbox.InboxMessageEntity> builder) { }
+        public static class Columns
+        {
+            public const string HandlerIdentity = "HandlerIdentity";
+            public const string MessageId = "MessageId";
+            public const string ModuleName = "ModuleName";
+            public const string ProcessedAtUtc = "ProcessedAtUtc";
+            public const string ReceivedAtUtc = "ReceivedAtUtc";
+        }
+    }
+}
+namespace Bondstone.Persistence.EntityFrameworkCore.Operations
+{
+    public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreDurableOperationStateStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreModuleDurableOperationStateStore(string moduleName, TDbContext context) { }
+        public string ModuleName { get; }
+        public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class OperationStateEntity
+    {
+        public System.Guid DurableOperationId { get; }
+        public string? FailureReason { get; }
+        public string? ResultPayload { get; }
+        public Bondstone.Messaging.DurableOperationStatus Status { get; }
+        public System.DateTimeOffset UpdatedAtUtc { get; }
+        public void ApplyState(Bondstone.Messaging.DurableOperationState state) { }
+        public Bondstone.Messaging.DurableOperationState ToState() { }
+        public static Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntity FromState(Bondstone.Messaging.DurableOperationState state) { }
+    }
+    public sealed class OperationStateEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntity>
+    {
+        public const int StatusMaxLength = 32;
+        public OperationStateEntityConfiguration(string? schema = null) { }
+        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntity> builder) { }
+    }
+}
+namespace Bondstone.Persistence.EntityFrameworkCore.Outbox
+{
+    public sealed class EntityFrameworkCoreDurableOutboxWriter<TDbContext> : Bondstone.Persistence.IDurableOutboxWriter
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreDurableOutboxWriter(TDbContext context, System.TimeProvider? timeProvider = null) { }
+        public System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext> : Bondstone.Persistence.IDurableOutboxWriter
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreModuleDurableOutboxWriter(string moduleName, TDbContext context, System.TimeProvider? timeProvider = null) { }
+        public string ModuleName { get; }
+        public System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class OutboxMessageEntity
+    {
+        public int AttemptCount { get; }
+        public System.Guid? CausationId { get; }
+        public string? ClaimedBy { get; }
+        public System.DateTimeOffset? ClaimedUntilUtc { get; }
+        public System.DateTimeOffset CreatedAtUtc { get; }
+        public System.DateTimeOffset? DispatchedAtUtc { get; }
+        public System.Guid? DurableOperationId { get; }
+        public System.DateTimeOffset? FailedAtUtc { get; }
+        public string? FailureReason { get; }
+        public System.Guid MessageId { get; }
+        public Bondstone.Messaging.MessageKind MessageKind { get; }
+        public string MessageTypeName { get; }
+        public string? Metadata { get; }
+        public System.DateTimeOffset? NextAttemptAtUtc { get; }
+        public string? PartitionKey { get; }
+        public string Payload { get; }
+        public string SourceModule { get; }
+        public Bondstone.Persistence.DurableOutboxStatus Status { get; }
+        public System.DateTimeOffset StoredAtUtc { get; }
+        public string? TargetModule { get; }
+        public string? TraceBaggage { get; }
+        public string? TraceParent { get; }
+        public string? TraceState { get; }
+        public Bondstone.Persistence.DurableOutboxRecord ToRecord() { }
+        public static Bondstone.Persistence.EntityFrameworkCore.Outbox.OutboxMessageEntity FromRecord(Bondstone.Persistence.DurableOutboxRecord record) { }
+    }
+    public sealed class OutboxMessageEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Persistence.EntityFrameworkCore.Outbox.OutboxMessageEntity>
+    {
+        public const int ClaimedByMaxLength = 256;
+        public const int FailureReasonMaxLength = 2048;
+        public const int MessageTypeNameMaxLength = 256;
+        public const int ModuleNameMaxLength = 128;
+        public const int PartitionKeyMaxLength = 512;
+        public const string PrimaryKeyName = "PK_outbox_messages";
+        public const int StatusMaxLength = 32;
+        public const string TableName = "outbox_messages";
+        public const int TraceParentMaxLength = 128;
+        public const int TraceStateMaxLength = 512;
+        public OutboxMessageEntityConfiguration(string? schema = null) { }
+        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Persistence.EntityFrameworkCore.Outbox.OutboxMessageEntity> builder) { }
+        public static class Columns
+        {
+            public const string AttemptCount = "AttemptCount";
+            public const string CausationId = "CausationId";
+            public const string ClaimedBy = "ClaimedBy";
+            public const string ClaimedUntilUtc = "ClaimedUntilUtc";
+            public const string CreatedAtUtc = "CreatedAtUtc";
+            public const string DispatchedAtUtc = "DispatchedAtUtc";
+            public const string DurableOperationId = "DurableOperationId";
+            public const string FailedAtUtc = "FailedAtUtc";
+            public const string FailureReason = "FailureReason";
+            public const string MessageId = "MessageId";
+            public const string MessageKind = "MessageKind";
+            public const string MessageTypeName = "MessageTypeName";
+            public const string Metadata = "Metadata";
+            public const string NextAttemptAtUtc = "NextAttemptAtUtc";
+            public const string PartitionKey = "PartitionKey";
+            public const string Payload = "Payload";
+            public const string SourceModule = "SourceModule";
+            public const string Status = "Status";
+            public const string StoredAtUtc = "StoredAtUtc";
+            public const string TargetModule = "TargetModule";
+            public const string TraceBaggage = "TraceBaggage";
+            public const string TraceParent = "TraceParent";
+            public const string TraceState = "TraceState";
+        }
+    }
+}
+namespace Bondstone.Persistence.EntityFrameworkCore.Persistence
+{
+    public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
+    {
+        public static Bondstone.Modules.BondstoneModuleBuilder UseEntityFrameworkCoreModulePersistence<TDbContext>(this Bondstone.Modules.BondstoneModuleBuilder module)
+            where TDbContext : Microsoft.EntityFrameworkCore.DbContext { }
+        public static Bondstone.Modules.BondstoneModuleBuilder UseEntityFrameworkCorePersistence<TDbContext>(this Bondstone.Modules.BondstoneModuleBuilder module)
+            where TDbContext : Microsoft.EntityFrameworkCore.DbContext { }
+    }
+    public static class BondstoneEntityFrameworkCoreServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneEntityFrameworkCorePersistence<TDbContext>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+            where TDbContext : Microsoft.EntityFrameworkCore.DbContext { }
+    }
+    public static class BondstoneModelBuilderExtensions
+    {
+        public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneInbox(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
+        public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneOperationState(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
+        public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneOutbox(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
+        public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstonePersistence(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
+    }
+    public static class EntityFrameworkCoreModulePersistence
+    {
+        public const string ProviderName = "EntityFrameworkCore";
+    }
+    public sealed class EntityFrameworkCorePersistenceScope<TDbContext> : Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCorePersistenceScope(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask ExecuteAsync(System.Func<Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> operation, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<TResult> ExecuteAsync<TResult>(System.Func<Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TResult>> operation, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask SaveChangesAsync(System.Threading.CancellationToken ct = default) { }
+    }
+    public interface IEntityFrameworkCorePersistenceScope
+    {
+        System.Threading.Tasks.ValueTask ExecuteAsync(System.Func<Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> operation, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<TResult> ExecuteAsync<TResult>(System.Func<Bondstone.Persistence.EntityFrameworkCore.Persistence.IEntityFrameworkCorePersistenceScope, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TResult>> operation, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask SaveChangesAsync(System.Threading.CancellationToken ct = default);
+    }
+}

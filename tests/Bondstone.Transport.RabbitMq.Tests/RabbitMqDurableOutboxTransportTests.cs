@@ -32,11 +32,30 @@ public sealed class RabbitMqDurableOutboxTransportTests
         Assert.NotNull(publisher.Message);
         Assert.Equal(CreateRecord().Envelope.MessageId.ToString("D"), publisher.Message.MessageId);
         Assert.Equal("fulfillment.order.reserve.v1", publisher.Message.MessageTypeName);
+        Assert.Equal("4bf92f3577b34da6a3ce929d0e0e4736", publisher.Message.CorrelationId);
+        Assert.Equal("3f1a9e26-75d4-4a7d-bb48-ae453f5e5e02", publisher.Message.Headers[
+            BondstoneRabbitMqHeaders.MessageId]);
         Assert.Equal(MessageKind.Command.ToString(), publisher.Message.Headers[
             BondstoneRabbitMqHeaders.MessageKind]);
+        Assert.Equal("sales", publisher.Message.Headers[
+            BondstoneRabbitMqHeaders.SourceModule]);
         Assert.Equal("fulfillment", publisher.Message.Headers[
             BondstoneRabbitMqHeaders.TargetModule]);
+        Assert.Equal("5dac5be5-d1ef-432d-a5d5-597103ae44c9", publisher.Message.Headers[
+            BondstoneRabbitMqHeaders.DurableOperationId]);
+        Assert.Equal("a2d07b16-258d-4ad2-b310-1ef95d5c0936", publisher.Message.Headers[
+            BondstoneRabbitMqHeaders.CausationId]);
+        Assert.Equal("orders/A-100", publisher.Message.Headers[
+            BondstoneRabbitMqHeaders.PartitionKey]);
+        Assert.Equal(
+            "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
+            publisher.Message.Headers[BondstoneRabbitMqHeaders.TraceParent]);
+        Assert.Equal("rojo=00f067aa0ba902b7", publisher.Message.Headers[
+            BondstoneRabbitMqHeaders.TraceState]);
+        Assert.Equal("tenant=acme", publisher.Message.Headers[
+            BondstoneRabbitMqHeaders.Baggage]);
         Assert.Contains("\"MessageKind\":\"Command\"", publisher.Message.Body, StringComparison.Ordinal);
+        Assert.Contains("\"TraceBaggage\":\"tenant=acme\"", publisher.Message.Body, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -169,9 +188,12 @@ public sealed class RabbitMqDurableOutboxTransportTests
             DateTimeOffset.Parse("2026-06-09T12:00:00+00:00"),
             durableOperationId: Guid.Parse("5dac5be5-d1ef-432d-a5d5-597103ae44c9"),
             traceContext: new MessageTraceContext(
-                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00"),
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
+                "rojo=00f067aa0ba902b7",
+                "tenant=acme"),
             causationId: Guid.Parse("a2d07b16-258d-4ad2-b310-1ef95d5c0936"),
-            partitionKey: "orders/A-100");
+            partitionKey: "orders/A-100",
+            metadata: """{"source":"test"}""");
 
         return new DurableOutboxRecord(
             envelope,

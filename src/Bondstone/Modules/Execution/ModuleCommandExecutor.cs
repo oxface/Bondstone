@@ -42,6 +42,34 @@ internal sealed class ModuleCommandExecutor(
             ct);
     }
 
+    public async ValueTask<ModuleCommandExecutionResult<TResult>> ExecuteResultAsync<TResult>(
+        string moduleName,
+        ICommand<TResult> command,
+        CancellationToken ct = default)
+    {
+        return await ExecuteResultCoreAsync(
+            moduleName,
+            command,
+            receiveContext: null,
+            ct);
+    }
+
+    public async ValueTask<ModuleCommandExecutionResult<TResult>> ExecuteResultAsync<TResult>(
+        string moduleName,
+        ICommand<TResult> command,
+        ModuleCommandReceiveContext receiveContext,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(receiveContext);
+
+        return await ExecuteResultCoreAsync(
+            moduleName,
+            command,
+            receiveContext,
+            ct);
+    }
+
     public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync(
         string moduleName,
         object command,
@@ -83,11 +111,13 @@ internal sealed class ModuleCommandExecutor(
             moduleName,
             typeof(TCommand));
 
-        return await route.InvokeAsync(
+        ModuleCommandRouteExecutionResult result = await route.InvokeAsync(
             _serviceProvider,
             command,
             receiveContext,
             ct);
+
+        return new ModuleCommandExecutionResult(result.ReceiveInboxResult);
     }
 
     private async ValueTask<ModuleCommandExecutionResult> ExecuteCoreAsync(
@@ -109,10 +139,41 @@ internal sealed class ModuleCommandExecutor(
             moduleName,
             command.GetType());
 
-        return await route.InvokeAsync(
+        ModuleCommandRouteExecutionResult result = await route.InvokeAsync(
             _serviceProvider,
             command,
             receiveContext,
             ct);
+
+        return new ModuleCommandExecutionResult(result.ReceiveInboxResult);
+    }
+
+    private async ValueTask<ModuleCommandExecutionResult<TResult>> ExecuteResultCoreAsync<TResult>(
+        string moduleName,
+        ICommand<TResult> command,
+        ModuleCommandReceiveContext? receiveContext,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        ModuleCommandRoute route = _routeRegistry.GetByCommandType(
+            moduleName,
+            command.GetType());
+
+        if (route.ResultType != typeof(TResult))
+        {
+            throw new InvalidOperationException(
+                $"Command route '{route.ModuleName}/{route.CommandType.FullName}' does not produce result type '{typeof(TResult).FullName}'.");
+        }
+
+        ModuleCommandRouteExecutionResult result = await route.InvokeAsync(
+            _serviceProvider,
+            command,
+            receiveContext,
+            ct);
+
+        return new ModuleCommandExecutionResult<TResult>(
+            (TResult)result.Result!,
+            result.ReceiveInboxResult);
     }
 }

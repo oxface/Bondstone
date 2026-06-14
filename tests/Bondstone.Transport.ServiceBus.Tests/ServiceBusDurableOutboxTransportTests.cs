@@ -26,12 +26,31 @@ public sealed class ServiceBusDurableOutboxTransportTests
         Assert.NotNull(sender.Message);
         Assert.Equal(CreateRecord().Envelope.MessageId.ToString("D"), sender.Message.MessageId);
         Assert.Equal("fulfillment.order.reserve.v1", sender.Message.Subject);
+        Assert.Equal("4bf92f3577b34da6a3ce929d0e0e4736", sender.Message.CorrelationId);
         Assert.Equal("orders/A-100", sender.Message.PartitionKey);
+        Assert.Equal("3f1a9e26-75d4-4a7d-bb48-ae453f5e5e02", sender.Message.ApplicationProperties[
+            BondstoneServiceBusHeaders.MessageId]);
         Assert.Equal(MessageKind.Command.ToString(), sender.Message.ApplicationProperties[
             BondstoneServiceBusHeaders.MessageKind]);
+        Assert.Equal("sales", sender.Message.ApplicationProperties[
+            BondstoneServiceBusHeaders.SourceModule]);
         Assert.Equal("fulfillment", sender.Message.ApplicationProperties[
             BondstoneServiceBusHeaders.TargetModule]);
+        Assert.Equal("5dac5be5-d1ef-432d-a5d5-597103ae44c9", sender.Message.ApplicationProperties[
+            BondstoneServiceBusHeaders.DurableOperationId]);
+        Assert.Equal("a2d07b16-258d-4ad2-b310-1ef95d5c0936", sender.Message.ApplicationProperties[
+            BondstoneServiceBusHeaders.CausationId]);
+        Assert.Equal("orders/A-100", sender.Message.ApplicationProperties[
+            BondstoneServiceBusHeaders.PartitionKey]);
+        Assert.Equal(
+            "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
+            sender.Message.ApplicationProperties[BondstoneServiceBusHeaders.TraceParent]);
+        Assert.Equal("rojo=00f067aa0ba902b7", sender.Message.ApplicationProperties[
+            BondstoneServiceBusHeaders.TraceState]);
+        Assert.Equal("tenant=acme", sender.Message.ApplicationProperties[
+            BondstoneServiceBusHeaders.Baggage]);
         Assert.Contains("\"MessageKind\":\"Command\"", sender.Message.Body, StringComparison.Ordinal);
+        Assert.Contains("\"TraceBaggage\":\"tenant=acme\"", sender.Message.Body, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -152,9 +171,12 @@ public sealed class ServiceBusDurableOutboxTransportTests
             DateTimeOffset.Parse("2026-06-09T12:00:00+00:00"),
             durableOperationId: Guid.Parse("5dac5be5-d1ef-432d-a5d5-597103ae44c9"),
             traceContext: new MessageTraceContext(
-                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00"),
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
+                "rojo=00f067aa0ba902b7",
+                "tenant=acme"),
             causationId: Guid.Parse("a2d07b16-258d-4ad2-b310-1ef95d5c0936"),
-            partitionKey: "orders/A-100");
+            partitionKey: "orders/A-100",
+            metadata: """{"source":"test"}""");
 
         return new DurableOutboxRecord(
             envelope,

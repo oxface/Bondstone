@@ -1,44 +1,56 @@
-type public sealed class Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents.DomainEventRecordEntity
-  property System.DateTimeOffset CapturedAtUtc { get; }
-  property System.DateTimeOffset OccurredAtUtc { get; }
-  property System.Guid DomainEventId { get; }
-  property System.Guid? CausationId { get; }
-  property string DomainEventName { get; }
-  property string ModuleName { get; }
-  property string Payload { get; }
-  property string PayloadMetadata { get; }
-  property string PayloadTypeName { get; }
-  property string TraceBaggage { get; }
-  property string TraceParent { get; }
-  property string TraceState { get; }
-
-type public sealed class Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents.DomainEventRecordEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents.DomainEventRecordEntity>
-  ctor public Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents.DomainEventRecordEntityConfiguration(string schema = null)
-  field public const int DomainEventNameMaxLength
-  field public const int ModuleNameMaxLength
-  field public const int PayloadTypeNameMaxLength
-  field public const int TraceParentMaxLength
-  field public const int TraceStateMaxLength
-  field public const string PrimaryKeyName
-  field public const string TableName
-  method public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents.DomainEventRecordEntity> builder)
-
-type public static class Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents.DomainEventRecordEntityConfiguration.Columns
-  field public const string CapturedAtUtc
-  field public const string CausationId
-  field public const string DomainEventId
-  field public const string DomainEventName
-  field public const string ModuleName
-  field public const string OccurredAtUtc
-  field public const string Payload
-  field public const string PayloadMetadata
-  field public const string PayloadTypeName
-  field public const string TraceBaggage
-  field public const string TraceParent
-  field public const string TraceState
-
-type public static class Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence.BondstoneDomainEventModelBuilderExtensions
-  method public static extension Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneDomainEvents(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string schema = null)
-
-type public static class Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence.BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensions
-  method public static extension Bondstone.Modules.BondstoneModuleBuilder UseEntityFrameworkCoreDomainEventPersistence(Bondstone.Modules.BondstoneModuleBuilder module)
+namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents
+{
+    public sealed class DomainEventRecordEntity
+    {
+        public System.DateTimeOffset CapturedAtUtc { get; }
+        public System.Guid? CausationId { get; }
+        public System.Guid DomainEventId { get; }
+        public string DomainEventName { get; }
+        public string ModuleName { get; }
+        public System.DateTimeOffset OccurredAtUtc { get; }
+        public string Payload { get; }
+        public string? PayloadMetadata { get; }
+        public string PayloadTypeName { get; }
+        public string? TraceBaggage { get; }
+        public string? TraceParent { get; }
+        public string? TraceState { get; }
+    }
+    public sealed class DomainEventRecordEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents.DomainEventRecordEntity>
+    {
+        public const int DomainEventNameMaxLength = 256;
+        public const int ModuleNameMaxLength = 128;
+        public const int PayloadTypeNameMaxLength = 1024;
+        public const string PrimaryKeyName = "PK_domain_event_records";
+        public const string TableName = "domain_event_records";
+        public const int TraceParentMaxLength = 128;
+        public const int TraceStateMaxLength = 512;
+        public DomainEventRecordEntityConfiguration(string? schema = null) { }
+        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents.DomainEventRecordEntity> builder) { }
+        public static class Columns
+        {
+            public const string CapturedAtUtc = "CapturedAtUtc";
+            public const string CausationId = "CausationId";
+            public const string DomainEventId = "DomainEventId";
+            public const string DomainEventName = "DomainEventName";
+            public const string ModuleName = "ModuleName";
+            public const string OccurredAtUtc = "OccurredAtUtc";
+            public const string Payload = "Payload";
+            public const string PayloadMetadata = "PayloadMetadata";
+            public const string PayloadTypeName = "PayloadTypeName";
+            public const string TraceBaggage = "TraceBaggage";
+            public const string TraceParent = "TraceParent";
+            public const string TraceState = "TraceState";
+        }
+    }
+}
+namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence
+{
+    public static class BondstoneDomainEventModelBuilderExtensions
+    {
+        public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneDomainEvents(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
+    }
+    public static class BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensions
+    {
+        public static Bondstone.Modules.BondstoneModuleBuilder UseEntityFrameworkCoreDomainEventPersistence(this Bondstone.Modules.BondstoneModuleBuilder module) { }
+    }
+}

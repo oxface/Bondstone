@@ -138,6 +138,52 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task ModuleCommands_WhenCommandReturnsResult_ReturnsTypedResultThroughPipeline()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.Commands.RegisterHandler<
+                    CreateDraftOrderResultCommand,
+                    CreateDraftOrderResult,
+                    CreateDraftOrderResultHandler>();
+                module.Commands.RegisterValidator<
+                    CreateDraftOrderResultCommand,
+                    CreateDraftOrderResultValidator>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        ModuleCommandExecutionResult<CreateDraftOrderResult> result = await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteResultAsync(
+                "sales",
+                new CreateDraftOrderResultCommand("draft-123"));
+
+        Assert.Equal(new CreateDraftOrderResult("draft-123", "created"), result.Result);
+        Assert.Null(result.ReceiveInboxResult);
+        Assert.Equal(
+            ["validate-result-draft:draft-123", "handle-result-draft:draft-123"],
+            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
+
+        IModuleCommandRouteRegistry routeRegistry =
+            serviceProvider.GetRequiredService<IModuleCommandRouteRegistry>();
+        ModuleCommandRoute route = routeRegistry.GetByCommandType(
+            "sales",
+            typeof(CreateDraftOrderResultCommand));
+
+        Assert.False(route.IsDurable);
+        Assert.Equal(typeof(CreateDraftOrderResult), route.ResultType);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task ModuleCommands_WhenSameCommandTypeHasValidatorsInDifferentModules_RunsOnlyExecutingModuleValidator()
     {
         var services = new ServiceCollection();
@@ -549,6 +595,34 @@ public sealed class ModuleCommandRegistrationTests
         Assert.Equal("fulfillment", route.ModuleName);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task RegisterFromAssemblyContaining_WhenResultHandlerExists_RegistersResultRoute()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Commands.RegisterFromAssemblyContaining<CreateDraftOrderResultCommand>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        ModuleCommandExecutionResult<CreateDraftOrderResult> result = await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteResultAsync(
+                "sales",
+                new CreateDraftOrderResultCommand("draft-456"));
+
+        Assert.Equal(new CreateDraftOrderResult("draft-456", "created"), result.Result);
+    }
+
     private sealed class FulfillmentModule : IBondstoneModule
     {
         public string Name => "fulfillment";
@@ -663,6 +737,37 @@ public sealed class ModuleCommandRegistrationTests
             CancellationToken ct = default)
         {
             log.Calls.Add($"validate-draft:{command.DraftId}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed record CreateDraftOrderResult(string DraftId, string Status);
+
+    public sealed record CreateDraftOrderResultCommand(string DraftId)
+        : ICommand<CreateDraftOrderResult>;
+
+    public sealed class CreateDraftOrderResultHandler(CommandCallLog log)
+        : ICommandHandler<CreateDraftOrderResultCommand, CreateDraftOrderResult>
+    {
+        public ValueTask<CreateDraftOrderResult> HandleAsync(
+            CreateDraftOrderResultCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"handle-result-draft:{command.DraftId}");
+            return ValueTask.FromResult(new CreateDraftOrderResult(
+                command.DraftId,
+                "created"));
+        }
+    }
+
+    public sealed class CreateDraftOrderResultValidator(CommandCallLog log)
+        : ICommandValidator<CreateDraftOrderResultCommand>
+    {
+        public ValueTask ValidateAsync(
+            CreateDraftOrderResultCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"validate-result-draft:{command.DraftId}");
             return ValueTask.CompletedTask;
         }
     }

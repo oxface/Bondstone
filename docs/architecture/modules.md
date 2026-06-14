@@ -70,9 +70,19 @@ module.Commands.RegisterHandler<ReserveInventoryCommand, ReserveInventoryHandler
 module.Commands.RegisterValidator<ReserveInventoryCommand, ReserveInventoryValidator>();
 ```
 
+Commands that return immediate application results use the same module command
+boundary:
+
+```csharp
+module.Commands.RegisterHandler<
+    CreateOrderCommand,
+    CreateOrderResult,
+    CreateOrderHandler>();
+```
+
 The route stores module name, stable message type identity, command CLR type,
-handler type, and stable handler identity. Handler identity is part of the
-command receive inbox key and must remain stable.
+handler type, optional result type, and stable handler identity. Handler
+identity is part of the command receive inbox key and must remain stable.
 
 Command validators registered through `module.Commands` are module-owned
 metadata. Bondstone records them by module and command type, then the built-in
@@ -81,7 +91,9 @@ constructs validator implementation types, but it is not used to select all
 validators for a command CLR type globally.
 
 `IModuleCommandExecutor` executes registered typed handlers through selected
-runtime contributions and application pipeline behaviors. It is not a generic
+runtime contributions and application pipeline behaviors. Void commands use
+`ExecuteAsync`; result commands use `ExecuteResultAsync` and return a typed
+`ModuleCommandExecutionResult<TResult>`. The executor is not a generic
 mediator for arbitrary in-process calls.
 
 Command execution is assembled by an internal runtime planner. The current
@@ -97,6 +109,11 @@ During command execution, Bondstone's system pipeline sets the current module
 execution context to the route's module before the application handler runs
 and restores the previous context afterward. This is the source-module context
 used by durable command sending and event publishing inside the handler.
+
+For result commands, existing `IModuleCommandPipelineBehavior<TCommand>`
+behaviors still wrap the handler in the same order. Result-specific behavior
+that inspects or transforms `TResult` is not part of the current public
+pipeline contract.
 
 ## Event Registration
 
@@ -231,9 +248,11 @@ completion, or supplied manually by HTTP routes and custom hosts.
 
 Application-owned entrypoints that need module command behavior should call
 `IModuleCommandExecutor` for a registered module command rather than calling
-`IDurableCommandSender` directly outside a module execution context. Explicit
-source-module send/publish APIs, module-scoped clients, and mediator-like HTTP
-command routing are not part of the current module contract.
+`IDurableCommandSender` directly outside a module execution context. Use
+`ExecuteResultAsync` when the registered module command implements
+`ICommand<TResult>`. Explicit source-module send/publish APIs, module-scoped
+clients, and mediator-like HTTP command routing are not part of the current
+module contract.
 
 ## Receive Pipeline
 

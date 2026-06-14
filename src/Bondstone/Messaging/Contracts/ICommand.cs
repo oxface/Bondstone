@@ -6,3 +6,10 @@ namespace Bondstone.Messaging;
 public interface ICommand : IMessage
 {
 }
+
+/// <summary>
+/// Marker for a command that produces a result when executed through a Bondstone module command pipeline.
+/// </summary>
+public interface ICommand<TResult> : ICommand
+{
+}

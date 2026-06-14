@@ -6,10 +6,10 @@ document, not a source of new compatibility promises.
 
 ## Automated Baseline
 
-`tests/Bondstone.PublicApi.Tests` records the current reflection-visible
-public/protected API surface for all packable Bondstone packages. The default
-fast test gate fails when that surface changes without an intentional baseline
-update.
+`tests/Bondstone.PublicApi.Tests` uses `PublicApiGenerator` to record the
+current public/protected API surface for all packable Bondstone packages. The
+default fast test gate fails when that generated API text changes without an
+intentional baseline update.
 
 Refresh baselines with:
 
@@ -92,9 +92,11 @@ User application contract:
 
 - `IMessage`
 - `ICommand`
+- `ICommand<TResult>`
 - `IDurableCommand`
 - `IIntegrationEvent`
 - `ICommandHandler<TCommand>`
+- `ICommandHandler<TCommand, TResult>`
 - `IIntegrationEventHandler<TEvent>`
 - `ICommandValidator<TCommand>`
 - `IModuleCommandPipelineBehavior<TCommand>`
@@ -102,6 +104,7 @@ User application contract:
 - `IBondstoneModule`
 - `IDurableCommandSender`
 - `IDurableEventPublisher`
+- `IDurableOperationResultReader`
 - `IDurablePayloadSerializer`
 - `IMessageTypeRegistry`
 - `IModuleExecutionContextAccessor`
@@ -112,8 +115,10 @@ User application contract:
 - `DurableCommandSendStatus`
 - `DurableEventPublishResult`
 - `DurableEventPublishStatus`
+- `DurableOperationResult<TResult>`
 - `DurablePayloadJsonOptions`
 - `ModuleCommandExecutionResult`
+- `ModuleCommandExecutionResult<TResult>`
 - `ModuleEventSubscriberExecutionResult`
 
 Advanced composition API:

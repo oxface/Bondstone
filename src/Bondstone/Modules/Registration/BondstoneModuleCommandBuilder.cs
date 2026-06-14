@@ -61,6 +61,32 @@ public sealed class BondstoneModuleCommandBuilder
             handlerIdentity ?? registration.MessageTypeName);
     }
 
+    public ModuleCommandRoute RegisterHandler<TCommand, TResult, THandler>(
+        string? handlerIdentity = null)
+        where TCommand : ICommand<TResult>
+        where THandler : class, ICommandHandler<TCommand, TResult>
+    {
+        MessageTypeRegistration? registration = typeof(IDurableCommand).IsAssignableFrom(typeof(TCommand))
+            ? _messageTypeRegistry.Register<TCommand>()
+            : null;
+
+        return RegisterHandler<TCommand, TResult, THandler>(
+            registration,
+            handlerIdentity ?? registration?.MessageTypeName);
+    }
+
+    public ModuleCommandRoute RegisterHandler<TCommand, TResult, THandler>(
+        string messageTypeName,
+        string? handlerIdentity = null)
+        where TCommand : IDurableCommand, ICommand<TResult>
+        where THandler : class, ICommandHandler<TCommand, TResult>
+    {
+        MessageTypeRegistration registration = _messageTypeRegistry.Register<TCommand>(messageTypeName);
+        return RegisterHandler<TCommand, TResult, THandler>(
+            registration,
+            handlerIdentity ?? registration.MessageTypeName);
+    }
+
     public BondstoneModuleCommandBuilder RegisterValidator<TCommand, TValidator>()
         where TCommand : ICommand
         where TValidator : class, ICommandValidator<TCommand>
@@ -113,14 +139,35 @@ public sealed class BondstoneModuleCommandBuilder
         return _commandRouteRegistry.Register(route);
     }
 
+    private ModuleCommandRoute RegisterHandler<TCommand, TResult, THandler>(
+        MessageTypeRegistration? registration,
+        string? handlerIdentity)
+        where TCommand : ICommand<TResult>
+        where THandler : class, ICommandHandler<TCommand, TResult>
+    {
+        Services.TryAddScoped<THandler>();
+
+        ModuleCommandRoute route = ModuleCommandRoute.Create<TCommand, TResult, THandler>(
+            ModuleName,
+            registration,
+            handlerIdentity);
+
+        return _commandRouteRegistry.Register(route);
+    }
+
     private IReadOnlyCollection<ModuleCommandRoute> RegisterHandlerType(Type handlerType)
     {
         Type[] handlerInterfaces = GetClosedGenericInterfaces(
             handlerType,
             typeof(ICommandHandler<>));
+        Type[] resultHandlerInterfaces = GetClosedGenericInterfaces(
+            handlerType,
+            typeof(ICommandHandler<,>));
 
         return handlerInterfaces
             .Select(handlerInterface => RegisterClosedHandlerType(handlerType, handlerInterface))
+            .Concat(resultHandlerInterfaces.Select(handlerInterface =>
+                RegisterClosedResultHandlerType(handlerType, handlerInterface)))
             .ToArray();
     }
 
@@ -141,12 +188,44 @@ public sealed class BondstoneModuleCommandBuilder
         return (ModuleCommandRoute)method.Invoke(this, [registration])!;
     }
 
+    private ModuleCommandRoute RegisterClosedResultHandlerType(
+        Type handlerType,
+        Type handlerInterface)
+    {
+        Type[] genericArguments = handlerInterface.GetGenericArguments();
+        Type commandType = genericArguments[0];
+        Type resultType = genericArguments[1];
+        MessageTypeRegistration? registration = typeof(IDurableCommand).IsAssignableFrom(commandType)
+            ? _messageTypeRegistry.Register(commandType)
+            : null;
+        Services.TryAddScoped(handlerType);
+
+        MethodInfo method = typeof(BondstoneModuleCommandBuilder)
+            .GetMethod(nameof(RegisterClosedResultHandlerTypeCore), BindingFlags.Instance | BindingFlags.NonPublic)!
+            .MakeGenericMethod(commandType, resultType, handlerType);
+
+        return (ModuleCommandRoute)method.Invoke(this, [registration])!;
+    }
+
     private ModuleCommandRoute RegisterClosedHandlerTypeCore<TCommand, THandler>(
         MessageTypeRegistration? registration)
         where TCommand : ICommand
         where THandler : class, ICommandHandler<TCommand>
     {
         ModuleCommandRoute route = ModuleCommandRoute.Create<TCommand, THandler>(
+            ModuleName,
+            registration,
+            registration?.MessageTypeName);
+
+        return _commandRouteRegistry.Register(route);
+    }
+
+    private ModuleCommandRoute RegisterClosedResultHandlerTypeCore<TCommand, TResult, THandler>(
+        MessageTypeRegistration? registration)
+        where TCommand : ICommand<TResult>
+        where THandler : class, ICommandHandler<TCommand, TResult>
+    {
+        ModuleCommandRoute route = ModuleCommandRoute.Create<TCommand, TResult, THandler>(
             ModuleName,
             registration,
             registration?.MessageTypeName);

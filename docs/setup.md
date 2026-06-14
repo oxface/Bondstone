@@ -62,6 +62,311 @@ and [testing.md](testing.md) for verification entrypoints. The default quality
 gate is `pnpm check`; infrastructure-backed sample and provider coverage runs
 through `pnpm backend:test:integration`.
 
+## Golden Path: EF/Postgres Local Modular Monolith
+
+For a modular monolith that uses module-owned EF Core `DbContext` types,
+PostgreSQL persistence, local in-process transport, and the hosted outbox
+worker, use this package set in the projects that call the corresponding APIs:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="Bondstone" />
+  <PackageReference Include="Bondstone.Hosting" />
+  <PackageReference Include="Bondstone.Persistence.EntityFrameworkCore" />
+  <PackageReference Include="Bondstone.Persistence.EntityFrameworkCore.Postgres" />
+  <PackageReference Include="Bondstone.Transport.Local" />
+</ItemGroup>
+```
+
+Add these only when a module uses EF-backed module-local domain event
+persistence:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="Bondstone.Capabilities.DomainEvents" />
+  <PackageReference Include="Bondstone.Capabilities.DomainEvents.EntityFrameworkCore" />
+</ItemGroup>
+```
+
+Contracts projects that define durable commands or integration events need
+`Bondstone`. Module implementation projects that configure EF persistence need
+the EF Core and PostgreSQL packages. Host projects that configure local
+transport and the hosted worker need `Bondstone.Transport.Local` and
+`Bondstone.Hosting`. See [packaging.md](packaging.md) for the full package
+matrix and dependency direction, and
+[package-discovery.md](package-discovery.md) for package and namespace
+discovery by capability.
+
+Common namespaces for this path are:
+
+- `Bondstone.Configuration` for `AddBondstone` and `BondstoneBuilder`.
+- `Bondstone.Modules` for `IBondstoneModule`, `BondstoneModuleBuilder`,
+  command handlers, event handlers, and module registration.
+- `Bondstone.Messaging` for `ICommand`, `IDurableCommand`,
+  `IIntegrationEvent`, `DurableCommandIdentityAttribute`,
+  `IntegrationEventIdentityAttribute`, `IDurableCommandSender`, and
+  `IDurableEventPublisher`.
+- `Bondstone.Persistence.EntityFrameworkCore.Persistence` for
+  `ApplyBondstonePersistence`, `ApplyBondstoneOutbox`,
+  `ApplyBondstoneInbox`, `ApplyBondstoneOperationState`, and
+  `UseEntityFrameworkCorePersistence`.
+- `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence` for
+  `UsePostgreSqlPersistence`.
+- `Bondstone.Capabilities.DomainEvents` for optional `IDomainEvent` and
+  `IDomainEventSource`.
+- `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence` for
+  optional `UseEntityFrameworkCoreDomainEventPersistence` and
+  `ApplyBondstoneDomainEvents`.
+- `Bondstone.Transport.Local.Outbox` for `UseLocalTransport` and local queue
+  topology.
+- `Bondstone.Hosting.Outbox` for `UseWorker` and
+  `DurableOutboxWorkerOptions`.
+
+Host composition wires modules, local transport, and the hosted outbox worker:
+
+```csharp
+using Bondstone.Configuration;
+using Bondstone.Hosting.Outbox;
+using Bondstone.Transport.Local.Outbox;
+using MyApp.Fulfillment;
+using MyApp.Fulfillment.Contracts;
+using MyApp.Ordering;
+using MyApp.Ordering.Contracts;
+
+string connectionString = builder.Configuration.GetConnectionString("App")!;
+
+builder.Services.AddBondstone(bondstone =>
+{
+    bondstone.AddOrderingModule(connectionString);
+    bondstone.AddFulfillmentModule(connectionString);
+
+    bondstone.UseLocalTransport(local =>
+    {
+        local.UseModuleQueueConvention();
+
+        local.RouteEvent(OrderingIntegrationEvents.OrderPlaced)
+            .ToQueue("ordering.order-placed");
+        local.Queue("ordering.order-placed")
+            .SubscribeEvent(
+                OrderingIntegrationEvents.OrderPlaced,
+                FulfillmentModule.ModuleName,
+                "fulfillment.order-placed-projection.v1");
+    });
+
+    bondstone.Outbox.UseWorker(options =>
+    {
+        options.WorkerId = "myapp-outbox-worker";
+        options.BatchSize = 25;
+        options.PollingInterval = TimeSpan.FromSeconds(1);
+    });
+});
+```
+
+`UseWorker(...)` registers the default durable dispatcher and the hosted
+outbox worker. Use `bondstone.Outbox.UseDurableDispatcher()` only for advanced
+manual dispatcher composition where the host does not want the built-in worker.
+
+`Bondstone.Transport.Local` is explicit local development and sample
+infrastructure. `local.UseModuleQueueConvention()` is complete command
+topology for local module-to-module durable command dispatch: target module
+`fulfillment` routes to `fulfillment.commands`, and that queue accepts the
+same module. Event routes still need explicit subscriber bindings because
+subscriber module and subscriber identity are durable receive identity.
+
+Module assemblies should expose a thin host extension and a module-owned
+`IBondstoneModule` registration object:
+
+```csharp
+using Bondstone.Configuration;
+using Bondstone.Modules;
+using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
+using MyApp.Fulfillment.Contracts;
+using MyApp.Ordering.Contracts;
+
+namespace MyApp.Fulfillment;
+
+public static class FulfillmentModuleRegistration
+{
+    public static BondstoneBuilder AddFulfillmentModule(
+        this BondstoneBuilder bondstone,
+        string connectionString)
+    {
+        return bondstone.AddModule(
+            new FulfillmentBondstoneModule(connectionString));
+    }
+}
+
+public sealed class FulfillmentBondstoneModule(string connectionString)
+    : IBondstoneModule
+{
+    public string Name => FulfillmentModule.ModuleName;
+
+    public void Configure(BondstoneModuleBuilder module)
+    {
+        module.UseDurableMessaging();
+        module.UsePostgreSqlPersistence<FulfillmentDbContext>(
+            connectionString,
+            schema: FulfillmentModule.ModuleName);
+
+        module.Commands.RegisterFromAssemblyContaining<ReserveInventoryHandler>();
+        module.Events.RegisterPublishedEvent<InventoryReservedEvent>();
+        module.Events.RegisterSubscriber<OrderPlacedEvent, RecordOrderPlacedHandler>(
+            "fulfillment.order-placed-projection.v1");
+    }
+}
+```
+
+Assembly scanning registers concrete `ICommandHandler<TCommand>` and
+`ICommandHandler<TCommand, TResult>` implementations in the marker assembly.
+Use explicit registration when the module needs a visible handler identity or
+does not want assembly scanning:
+
+```csharp
+module.Commands.RegisterHandler<ReserveInventoryCommand, ReserveInventoryHandler>();
+```
+
+Durable command contracts use stable message identity:
+
+```csharp
+using Bondstone.Messaging;
+
+namespace MyApp.Fulfillment.Contracts;
+
+[DurableCommandIdentity("fulfillment.inventory.reserve.v1")]
+public sealed record ReserveInventoryCommand(
+    Guid OrderId,
+    string Sku,
+    int Quantity)
+    : IDurableCommand;
+```
+
+Handlers are ordinary module services. Bondstone's module transaction behavior
+commits handler state, inbox markers, operation state, and outgoing outbox rows
+for modules that declare durable EF persistence:
+
+```csharp
+using Bondstone.Modules;
+using MyApp.Fulfillment.Contracts;
+
+namespace MyApp.Fulfillment;
+
+public sealed class ReserveInventoryHandler(FulfillmentDbContext dbContext)
+    : ICommandHandler<ReserveInventoryCommand>
+{
+    public ValueTask HandleAsync(
+        ReserveInventoryCommand command,
+        CancellationToken ct = default)
+    {
+        dbContext.Reservations.Add(new FulfillmentReservation(
+            command.OrderId,
+            command.Sku,
+            command.Quantity));
+
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+EF-backed module `DbContext` types map both application tables and the
+Bondstone durable tables used by the module:
+
+```csharp
+using Bondstone.Persistence.EntityFrameworkCore.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+namespace MyApp.Fulfillment;
+
+public sealed class FulfillmentDbContext(
+    DbContextOptions<FulfillmentDbContext> options)
+    : DbContext(options)
+{
+    public DbSet<FulfillmentReservation> Reservations => Set<FulfillmentReservation>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<FulfillmentReservation>(entity =>
+        {
+            entity.ToTable("reservations", FulfillmentModule.ModuleName);
+            entity.HasKey(reservation => reservation.Id);
+            entity.Property(reservation => reservation.Sku).IsRequired();
+        });
+
+        modelBuilder.ApplyBondstonePersistence(FulfillmentModule.ModuleName);
+    }
+}
+```
+
+When the module also persists module-local domain events, opt in at module
+registration and map the domain event record shape explicitly:
+
+```csharp
+using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+public void Configure(BondstoneModuleBuilder module)
+{
+    module.UseDurableMessaging();
+    module.UsePostgreSqlPersistence<FulfillmentDbContext>(
+        connectionString,
+        schema: FulfillmentModule.ModuleName);
+    module.UseEntityFrameworkCoreDomainEventPersistence();
+}
+
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.ApplyBondstonePersistence(FulfillmentModule.ModuleName);
+    modelBuilder.ApplyBondstoneDomainEvents(FulfillmentModule.ModuleName);
+}
+```
+
+`ApplyBondstonePersistence(...)` maps the durable outbox, inbox, and operation
+state tables. `ApplyBondstoneDomainEvents(...)` is separate because domain
+events are optional module-local records, not transport messages or outgoing
+outbox records. Use the granular `ApplyBondstoneOutbox(...)`,
+`ApplyBondstoneInbox(...)`, and `ApplyBondstoneOperationState(...)` helpers
+only when a `DbContext` intentionally maps a smaller durable surface.
+
+Hosts and migrators have different responsibilities:
+
+- The runtime host composes `AddBondstone`, module registrations, local or
+  provider transport, application entrypoints, and the hosted outbox worker.
+- An EF migrator or design-time factory composes the module `DbContext`
+  provider options, schema names, application entities, and the same
+  `ApplyBondstone...` mappings. It does not need local transport, broker
+  transport, receive workers, or `bondstone.Outbox.UseWorker(...)`.
+- If a migrator executable calls module registration to reuse provider setup,
+  compose modules and persistence only. Omit transport setup and hosted
+  workers so migration generation and application startup do not dispatch
+  durable messages.
+- Migrations are application-owned. Generate and apply them per module
+  `DbContext`, for example:
+
+```bash
+dotnet ef migrations add InitialFulfillment \
+  --context FulfillmentDbContext \
+  --project src/MyApp.Fulfillment \
+  --startup-project src/MyApp.Migrator
+```
+
+Applications own module names, domain model tables, EF migration history,
+PostgreSQL schemas or databases, connection strings, local or broker topology
+names, stable durable message identities, stable command handler and event
+subscriber identities, and operational policies around broker retry,
+dead-lettering, schema deployment, and inbox/outbox maintenance.
+
+Bondstone provides the `AddBondstone` composition guardrails, module execution
+context, command and event subscriber pipelines, durable payload
+serialization, EF mapping helpers for Bondstone tables, module-bound
+PostgreSQL durable infrastructure, local transport dispatch through the
+provider-neutral receive pipelines, and the hosted outbox polling loop.
+
+For deeper behavior and limitations, see [architecture/modules.md](architecture/modules.md),
+[architecture/persistence-ef-core.md](architecture/persistence-ef-core.md),
+[architecture/persistence-postgresql.md](architecture/persistence-postgresql.md),
+[architecture/transport-local.md](architecture/transport-local.md), and
+[architecture/hosting.md](architecture/hosting.md).
+
 ## Host Composition
 
 Hosts compose modules, persistence, transport adapters, and hosted workers
@@ -129,6 +434,14 @@ builder.Services.AddBondstone(bondstone =>
 Azure Service Bus uses the same Bondstone composition shape with
 `UseServiceBusTransport`, queues for commands, and topic or queue
 destinations for integration events.
+
+Provider transport route conventions are outbound-only. RabbitMQ
+`UseModuleRoutingKeyConvention()` and Service Bus `UseModuleQueueConvention()`
+resolve where commands are sent, but hosts that receive commands still need
+explicit receive bindings such as `ReceiveQueue(...).AcceptModule(...)`.
+`Bondstone.Transport.Local` is the local-development exception: its
+`UseModuleQueueConvention()` configures complete in-process command topology
+because there is no broker queue or binding to provision.
 
 Use provider transport extensions on the main `BondstoneBuilder` for normal
 host setup. The lower-level `bondstone.Outbox.UseRabbitMqTransport(...)` and
@@ -238,6 +551,61 @@ provider/runtime composition contracts stored in Bondstone runtime metadata,
 not the normal application extension path. Bondstone does not provide
 module-scoped application behavior registration; prefer ordinary DI
 registration.
+
+## Result-Returning Module Commands
+
+Template or application code that already has result-producing command/request
+handlers should move module transaction use cases onto Bondstone
+`ICommand<TResult>` commands when the workflow needs Bondstone module behavior:
+validation, module execution context, provider transaction behavior, durable
+send/publish access, inbox/outbox participation, or operation-state updates.
+
+```csharp
+public sealed record CreateOrderCommand(Guid CustomerId)
+    : ICommand<CreateOrderResult>;
+
+public sealed record CreateOrderResult(Guid OrderId);
+
+public sealed class CreateOrderHandler
+    : ICommandHandler<CreateOrderCommand, CreateOrderResult>
+{
+    public ValueTask<CreateOrderResult> HandleAsync(
+        CreateOrderCommand command,
+        CancellationToken ct = default)
+    {
+        Guid orderId = Guid.NewGuid();
+        return ValueTask.FromResult(new CreateOrderResult(orderId));
+    }
+}
+```
+
+Register the handler on the owning module and execute it from HTTP endpoints,
+schedulers, setup flows, or other app-owned entrypoints through
+`IModuleCommandExecutor.ExecuteResultAsync`:
+
+```csharp
+module.Commands.RegisterHandler<
+    CreateOrderCommand,
+    CreateOrderResult,
+    CreateOrderHandler>();
+
+ModuleCommandExecutionResult<CreateOrderResult> result =
+    await moduleCommandExecutor.ExecuteResultAsync(
+        OrderingModule.ModuleName,
+        new CreateOrderCommand(customerId),
+        ct);
+```
+
+Keep app-owned request/handler or service abstractions for workflows that do
+not need Bondstone module behavior, or as thin application-facing ports that
+delegate into a registered Bondstone command. Do not keep a parallel
+module-command framework for result-producing module transactions.
+
+When the same workflow must cross a durable boundary, the command can also
+implement `IDurableCommand`. Durable send still returns accepted-work metadata,
+not `CreateOrderResult` directly. Supply or create a durable operation id when
+the caller needs to observe the committed result, then read or wait for it
+through `IDurableOperationResultReader`.
 
 ## Sending Commands
 

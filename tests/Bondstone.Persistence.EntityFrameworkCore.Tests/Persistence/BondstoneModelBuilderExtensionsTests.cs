@@ -87,6 +87,15 @@ public sealed class BondstoneModelBuilderExtensionsTests
         Assert.Equal(
             OperationStateEntityConfiguration.StatusMaxLength,
             entityType.FindProperty(nameof(OperationStateEntity.Status))!.GetMaxLength());
+        Assert.Equal(
+            OperationStateEntityConfiguration.ModuleNameMaxLength,
+            entityType.FindProperty(nameof(OperationStateEntity.ModuleName))!.GetMaxLength());
+        Assert.Equal(
+            OperationStateEntityConfiguration.MessageTypeNameMaxLength,
+            entityType.FindProperty(nameof(OperationStateEntity.MessageTypeName))!.GetMaxLength());
+        Assert.Equal(
+            OperationStateEntityConfiguration.HandlerIdentityMaxLength,
+            entityType.FindProperty(nameof(OperationStateEntity.HandlerIdentity))!.GetMaxLength());
     }
 
     [Fact]

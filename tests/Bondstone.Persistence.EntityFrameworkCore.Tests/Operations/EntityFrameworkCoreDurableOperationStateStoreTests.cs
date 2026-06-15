@@ -51,7 +51,11 @@ public sealed class EntityFrameworkCoreDurableOperationStateStoreTests
             durableOperationId,
             DurableOperationStatus.Completed,
             DateTimeOffset.Parse("2026-06-04T00:01:00+00:00"),
-            """ {"ok":true} """);
+            """ {"ok":true} """,
+            diagnosticContext: new DurableOperationDiagnosticContext(
+                "fulfillment",
+                "fulfillment.order.reserve.v1",
+                "receive.fulfillment.order.reserve.v1"));
 
         await store.SaveAsync(pending);
         await context.SaveChangesAsync();

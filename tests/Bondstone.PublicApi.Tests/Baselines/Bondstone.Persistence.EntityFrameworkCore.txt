@@ -58,6 +58,9 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Operations
     {
         public System.Guid DurableOperationId { get; }
         public string? FailureReason { get; }
+        public string? HandlerIdentity { get; }
+        public string? MessageTypeName { get; }
+        public string? ModuleName { get; }
         public string? ResultPayload { get; }
         public Bondstone.Messaging.DurableOperationStatus Status { get; }
         public System.DateTimeOffset UpdatedAtUtc { get; }
@@ -67,6 +70,9 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Operations
     }
     public sealed class OperationStateEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntity>
     {
+        public const int HandlerIdentityMaxLength = 512;
+        public const int MessageTypeNameMaxLength = 256;
+        public const int ModuleNameMaxLength = 128;
         public const int StatusMaxLength = 32;
         public OperationStateEntityConfiguration(string? schema = null) { }
         public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Persistence.EntityFrameworkCore.Operations.OperationStateEntity> builder) { }

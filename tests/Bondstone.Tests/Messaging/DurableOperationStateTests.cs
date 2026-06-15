@@ -17,13 +17,21 @@ public sealed class DurableOperationStateTests
             DurableOperationStatus.Completed,
             updatedAtUtc,
             """ {"result":true} """,
-            " failed once ");
+            " failed once ",
+            new DurableOperationDiagnosticContext(
+                " fulfillment ",
+                "orders.reserve.v1",
+                " handler.reserve "));
 
         Assert.Equal(durableOperationId, state.DurableOperationId);
         Assert.Equal(DurableOperationStatus.Completed, state.Status);
         Assert.Equal(updatedAtUtc, state.UpdatedAtUtc);
         Assert.Equal(""" {"result":true} """, state.ResultPayload);
         Assert.Equal(" failed once ", state.FailureReason);
+        Assert.NotNull(state.DiagnosticContext);
+        Assert.Equal(" fulfillment ", state.DiagnosticContext.ModuleName);
+        Assert.Equal("orders.reserve.v1", state.DiagnosticContext.MessageTypeName);
+        Assert.Equal(" handler.reserve ", state.DiagnosticContext.HandlerIdentity);
     }
 
     [Fact]
@@ -39,6 +47,29 @@ public sealed class DurableOperationStateTests
 
         Assert.Null(state.ResultPayload);
         Assert.Null(state.FailureReason);
+        Assert.Null(state.DiagnosticContext);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DiagnosticContext_WhenValuesAreValid_NormalizesOptionalFields()
+    {
+        var context = new DurableOperationDiagnosticContext(
+            moduleName: " fulfillment ",
+            messageTypeName: "orders.reserve.v1",
+            handlerIdentity: " ");
+
+        Assert.Equal(" fulfillment ", context.ModuleName);
+        Assert.Equal("orders.reserve.v1", context.MessageTypeName);
+        Assert.Null(context.HandlerIdentity);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void DiagnosticContext_WhenAllValuesAreBlank_Throws()
+    {
+        Assert.Throws<ArgumentException>(
+            () => new DurableOperationDiagnosticContext(" ", null, " "));
     }
 
     [Fact]

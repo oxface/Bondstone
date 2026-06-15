@@ -9,13 +9,19 @@ public sealed class OperationStateEntity
         DurableOperationStatus status,
         DateTimeOffset updatedAtUtc,
         string? resultPayload,
-        string? failureReason)
+        string? failureReason,
+        string? moduleName,
+        string? messageTypeName,
+        string? handlerIdentity)
     {
         DurableOperationId = durableOperationId;
         Status = status;
         UpdatedAtUtc = updatedAtUtc;
         ResultPayload = resultPayload;
         FailureReason = failureReason;
+        ModuleName = moduleName;
+        MessageTypeName = messageTypeName;
+        HandlerIdentity = handlerIdentity;
     }
 
     private OperationStateEntity()
@@ -32,6 +38,12 @@ public sealed class OperationStateEntity
 
     public string? FailureReason { get; private set; }
 
+    public string? ModuleName { get; private set; }
+
+    public string? MessageTypeName { get; private set; }
+
+    public string? HandlerIdentity { get; private set; }
+
     public static OperationStateEntity FromState(DurableOperationState state)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -41,7 +53,10 @@ public sealed class OperationStateEntity
             state.Status,
             state.UpdatedAtUtc,
             state.ResultPayload,
-            state.FailureReason);
+            state.FailureReason,
+            state.DiagnosticContext?.ModuleName,
+            state.DiagnosticContext?.MessageTypeName,
+            state.DiagnosticContext?.HandlerIdentity);
     }
 
     public void ApplyState(DurableOperationState state)
@@ -58,6 +73,9 @@ public sealed class OperationStateEntity
         UpdatedAtUtc = state.UpdatedAtUtc;
         ResultPayload = state.ResultPayload;
         FailureReason = state.FailureReason;
+        ModuleName = state.DiagnosticContext?.ModuleName;
+        MessageTypeName = state.DiagnosticContext?.MessageTypeName;
+        HandlerIdentity = state.DiagnosticContext?.HandlerIdentity;
     }
 
     public DurableOperationState ToState()
@@ -67,6 +85,22 @@ public sealed class OperationStateEntity
             Status,
             UpdatedAtUtc,
             ResultPayload,
-            FailureReason);
+            FailureReason,
+            CreateDiagnosticContext());
+    }
+
+    private DurableOperationDiagnosticContext? CreateDiagnosticContext()
+    {
+        if (ModuleName is null
+            && MessageTypeName is null
+            && HandlerIdentity is null)
+        {
+            return null;
+        }
+
+        return new DurableOperationDiagnosticContext(
+            ModuleName,
+            MessageTypeName,
+            HandlerIdentity);
     }
 }

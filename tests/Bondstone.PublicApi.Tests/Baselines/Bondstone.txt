@@ -87,7 +87,8 @@ namespace Bondstone.Messaging
     }
     public sealed class DurableOperationResultDeserializationFailure : System.IEquatable<Bondstone.Messaging.DurableOperationResultDeserializationFailure>
     {
-        public DurableOperationResultDeserializationFailure(System.Guid durableOperationId, string resultTypeName, string message, string? exceptionTypeName = null) { }
+        public DurableOperationResultDeserializationFailure(System.Guid durableOperationId, string resultTypeName, string message, string? exceptionTypeName = null, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null) { }
+        public Bondstone.Messaging.DurableOperationDiagnosticContext? DiagnosticContext { get; }
         public System.Guid DurableOperationId { get; }
         public string? ExceptionTypeName { get; }
         public string Message { get; }
@@ -106,8 +107,9 @@ namespace Bondstone.Messaging
     }
     public sealed class DurableOperationResult<TResult> : System.IEquatable<Bondstone.Messaging.DurableOperationResult<TResult>>
     {
-        public DurableOperationResult(System.Guid durableOperationId, Bondstone.Messaging.DurableOperationStatus? status, System.DateTimeOffset? updatedAtUtc, TResult? result = default, bool hasResult = false, string? failureReason = null) { }
+        public DurableOperationResult(System.Guid durableOperationId, Bondstone.Messaging.DurableOperationStatus? status, System.DateTimeOffset? updatedAtUtc, TResult? result = default, bool hasResult = false, string? failureReason = null, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null) { }
         public Bondstone.Messaging.DurableOperationResultDeserializationFailure? DeserializationFailure { get; }
+        public Bondstone.Messaging.DurableOperationDiagnosticContext? DiagnosticContext { get; }
         public System.Guid DurableOperationId { get; }
         public string? FailureReason { get; }
         public bool HasResult { get; }

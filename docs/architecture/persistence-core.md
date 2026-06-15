@@ -209,9 +209,12 @@ deserialization.
 Current command-loop integration uses the store only when an envelope or send
 request carries a caller-supplied durable operation id. Command send stages
 `Pending` when the operation is unknown. Successful durable command receive
-stages `Completed` inside module command execution. Failure states, running
-states, retry state, stale receive recovery, cancellation, and result payloads
-are not written by Bondstone's default command loop.
+stages `Completed` inside module command execution. Result-returning durable
+command receive also stores the serialized result payload and optional
+diagnostic context from the receive route: module name, durable message type
+name, and handler identity. Failure states, running states, retry state, stale
+receive recovery, and cancellation are not written by Bondstone's default
+command loop.
 
 Operation reads aggregate across local module stores. This global read has no
 module identity, so it intentionally creates each configured module
@@ -224,6 +227,10 @@ precedence, the newest `UpdatedAtUtc` wins. The default command loop currently
 writes only `Pending`
 and `Completed`; other statuses are read-model/storage values for
 application-owned operation policies.
+
+Diagnostic context fields are nullable for compatibility with old rows,
+manually-created operation states, and operation states written before the
+result diagnostic context contract existed.
 
 ## Provider Boundaries
 

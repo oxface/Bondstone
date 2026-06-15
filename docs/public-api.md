@@ -69,6 +69,18 @@ Issue 26 result diagnostics, 2026-06-14:
 - The public API baseline change is intentional and compatibility-sensitive,
   but it does not remove or rename existing public members.
 
+Issue 28 result diagnostic context, 2026-06-15:
+
+- `DurableOperationDiagnosticContext` is an additive user application
+  contract for the optional module name, durable message type name, and
+  handler identity associated with an operation state.
+- `DurableOperationState`, `DurableOperationResult<TResult>`, and
+  `DurableOperationResultDeserializationFailure` expose an optional
+  `DiagnosticContext` property so result diagnostics can name the module,
+  durable message type, and handler when stored.
+- The constructor changes are additive optional parameters. Existing callers
+  and old operation rows continue to work with null diagnostic context.
+
 ## Current Scope
 
 This first pass covers all current package projects:
@@ -121,6 +133,7 @@ User application contract:
 - `IModuleExecutionContextAccessor`
 - `DurableCommandIdentityAttribute`
 - `IntegrationEventIdentityAttribute`
+- `DurableOperationDiagnosticContext`
 - `MessageTypeRegistration`
 - `DurableCommandSendResult`
 - `DurableCommandSendStatus`

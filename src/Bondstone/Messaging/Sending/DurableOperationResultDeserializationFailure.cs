@@ -6,7 +6,8 @@ public sealed record DurableOperationResultDeserializationFailure
         Guid durableOperationId,
         string resultTypeName,
         string message,
-        string? exceptionTypeName = null)
+        string? exceptionTypeName = null,
+        DurableOperationDiagnosticContext? diagnosticContext = null)
     {
         if (durableOperationId == Guid.Empty)
         {
@@ -24,6 +25,7 @@ public sealed record DurableOperationResultDeserializationFailure
         ExceptionTypeName = string.IsNullOrWhiteSpace(exceptionTypeName)
             ? null
             : exceptionTypeName;
+        DiagnosticContext = diagnosticContext;
     }
 
     public Guid DurableOperationId { get; }
@@ -33,4 +35,6 @@ public sealed record DurableOperationResultDeserializationFailure
     public string Message { get; }
 
     public string? ExceptionTypeName { get; }
+
+    public DurableOperationDiagnosticContext? DiagnosticContext { get; }
 }

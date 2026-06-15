@@ -45,6 +45,48 @@ public sealed class PostgresPersistenceTests(PostgresFixture fixture)
 
     [Fact]
     [Trait("Category", "Integration")]
+    public async Task EnsureDurableMessagingTablesAsync_WhenOperationTableExists_AddsDiagnosticContextColumns()
+    {
+        const string schema = "dapper_schema_operation_context";
+        await ResetSchemaAsync(schema);
+
+        await using NpgsqlDataSource dataSource =
+            NpgsqlDataSource.Create(fixture.ConnectionString);
+        await using NpgsqlConnection connection =
+            await dataSource.OpenConnectionAsync();
+        await connection.ExecuteAsync($"""CREATE SCHEMA "{schema}" """);
+        await connection.ExecuteAsync(
+            $"""
+            CREATE TABLE "{schema}"."operation_states" (
+                "DurableOperationId" uuid NOT NULL,
+                "Status" character varying(32) NOT NULL,
+                "UpdatedAtUtc" timestamp with time zone NOT NULL,
+                "ResultPayload" text NULL,
+                "FailureReason" text NULL,
+                CONSTRAINT "PK_operation_states" PRIMARY KEY ("DurableOperationId")
+            )
+            """);
+
+        await PostgresSchema.EnsureDurableMessagingTablesAsync(
+            dataSource,
+            schema);
+
+        string[] columns = (await connection.QueryAsync<string>(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = @Schema
+            AND table_name = 'operation_states'
+            AND column_name IN ('ModuleName', 'MessageTypeName', 'HandlerIdentity')
+            ORDER BY column_name
+            """,
+            new { Schema = schema })).ToArray();
+
+        Assert.Equal(["HandlerIdentity", "MessageTypeName", "ModuleName"], columns);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task WriteAsync_WhenTransactionCommits_PersistsOutboxMessage()
     {
         const string schema = "dapper_outbox_commit";
@@ -437,7 +479,11 @@ public sealed class PostgresPersistenceTests(PostgresFixture fixture)
                 await store.SaveAsync(new DurableOperationState(
                     operationId,
                     DurableOperationStatus.Completed,
-                    DateTimeOffset.UtcNow), ct);
+                    DateTimeOffset.UtcNow,
+                    diagnosticContext: new DurableOperationDiagnosticContext(
+                        "fulfillment",
+                        "fulfillment.order.reserve.v1",
+                        "receive.fulfillment.order.reserve.v1")), ct);
             },
             CancellationToken.None);
 
@@ -445,6 +491,10 @@ public sealed class PostgresPersistenceTests(PostgresFixture fixture)
 
         Assert.NotNull(state);
         Assert.Equal(DurableOperationStatus.Completed, state.Status);
+        Assert.NotNull(state.DiagnosticContext);
+        Assert.Equal("fulfillment", state.DiagnosticContext.ModuleName);
+        Assert.Equal("fulfillment.order.reserve.v1", state.DiagnosticContext.MessageTypeName);
+        Assert.Equal("receive.fulfillment.order.reserve.v1", state.DiagnosticContext.HandlerIdentity);
     }
 
     private async Task ResetSchemaAsync(string schema)

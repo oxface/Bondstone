@@ -15,7 +15,11 @@ public sealed class OperationStateEntityTests
             DurableOperationStatus.Completed,
             DateTimeOffset.Parse("2026-06-04T00:00:00+00:00"),
             """ {"ok":true} """,
-            " failed once ");
+            " failed once ",
+            new DurableOperationDiagnosticContext(
+                "fulfillment",
+                "fulfillment.order.reserve.v1",
+                "receive.fulfillment.order.reserve.v1"));
 
         OperationStateEntity entity = OperationStateEntity.FromState(state);
 
@@ -24,6 +28,10 @@ public sealed class OperationStateEntityTests
         Assert.Equal(state.UpdatedAtUtc, entity.UpdatedAtUtc);
         Assert.Equal(state.ResultPayload, entity.ResultPayload);
         Assert.Equal(state.FailureReason, entity.FailureReason);
+        Assert.NotNull(state.DiagnosticContext);
+        Assert.Equal(state.DiagnosticContext.ModuleName, entity.ModuleName);
+        Assert.Equal(state.DiagnosticContext.MessageTypeName, entity.MessageTypeName);
+        Assert.Equal(state.DiagnosticContext.HandlerIdentity, entity.HandlerIdentity);
     }
 
     [Fact]

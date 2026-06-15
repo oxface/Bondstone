@@ -8,7 +8,8 @@ public sealed record DurableOperationResult<TResult>
         DateTimeOffset? updatedAtUtc,
         TResult? result = default,
         bool hasResult = false,
-        string? failureReason = null)
+        string? failureReason = null,
+        DurableOperationDiagnosticContext? diagnosticContext = null)
         : this(
             durableOperationId,
             status,
@@ -16,6 +17,7 @@ public sealed record DurableOperationResult<TResult>
             result,
             hasResult,
             failureReason,
+            diagnosticContext,
             deserializationFailure: null)
     {
     }
@@ -27,6 +29,7 @@ public sealed record DurableOperationResult<TResult>
         TResult? result,
         bool hasResult,
         string? failureReason,
+        DurableOperationDiagnosticContext? diagnosticContext,
         DurableOperationResultDeserializationFailure? deserializationFailure)
     {
         if (durableOperationId == Guid.Empty)
@@ -70,6 +73,7 @@ public sealed record DurableOperationResult<TResult>
         FailureReason = string.IsNullOrWhiteSpace(failureReason)
             ? null
             : failureReason;
+        DiagnosticContext = diagnosticContext;
         DeserializationFailure = deserializationFailure;
     }
 
@@ -84,6 +88,8 @@ public sealed record DurableOperationResult<TResult>
     public bool HasResult { get; }
 
     public string? FailureReason { get; }
+
+    public DurableOperationDiagnosticContext? DiagnosticContext { get; }
 
     public DurableOperationResultDeserializationFailure? DeserializationFailure { get; }
 

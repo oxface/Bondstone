@@ -102,8 +102,17 @@ public static class PostgresSchema
                 "UpdatedAtUtc" timestamp with time zone NOT NULL,
                 "ResultPayload" text NULL,
                 "FailureReason" text NULL,
+                "ModuleName" character varying(128) NULL,
+                "MessageTypeName" character varying(256) NULL,
+                "HandlerIdentity" character varying(512) NULL,
                 CONSTRAINT "PK_operation_states" PRIMARY KEY ("DurableOperationId")
             );
+            ALTER TABLE {{operationTable}}
+                ADD COLUMN IF NOT EXISTS "ModuleName" character varying(128) NULL;
+            ALTER TABLE {{operationTable}}
+                ADD COLUMN IF NOT EXISTS "MessageTypeName" character varying(256) NULL;
+            ALTER TABLE {{operationTable}}
+                ADD COLUMN IF NOT EXISTS "HandlerIdentity" character varying(512) NULL;
             CREATE INDEX IF NOT EXISTS "IX_operation_states_Status"
                 ON {{operationTable}} ("Status");
             CREATE INDEX IF NOT EXISTS "IX_operation_states_UpdatedAtUtc"

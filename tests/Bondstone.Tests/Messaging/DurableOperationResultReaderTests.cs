@@ -41,7 +41,11 @@ public sealed class DurableOperationResultReaderTests
                 durableOperationId,
                 DurableOperationStatus.Completed,
                 DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
-                """{"orderId":"payload-A-100","accepted":true}"""),
+                """{"orderId":"payload-A-100","accepted":true}""",
+                diagnosticContext: new DurableOperationDiagnosticContext(
+                    "fulfillment",
+                    "fulfillment.order.reserve.v1",
+                    "receive.fulfillment.order.reserve.v1")),
         };
         await using ServiceProvider serviceProvider = CreateServiceProvider(store);
 
@@ -56,6 +60,10 @@ public sealed class DurableOperationResultReaderTests
         Assert.Equal(DurableOperationResultState.CompletedWithResult, result.State);
         Assert.Equal(DurableOperationStatus.Completed, result.Status);
         Assert.Equal(DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"), result.UpdatedAtUtc);
+        Assert.NotNull(result.DiagnosticContext);
+        Assert.Equal("fulfillment", result.DiagnosticContext.ModuleName);
+        Assert.Equal("fulfillment.order.reserve.v1", result.DiagnosticContext.MessageTypeName);
+        Assert.Equal("receive.fulfillment.order.reserve.v1", result.DiagnosticContext.HandlerIdentity);
         Assert.Null(result.DeserializationFailure);
         Assert.Equal(new ReserveOrderResult(new DurableOrderId("A-100"), Accepted: true), result.Result);
     }
@@ -191,7 +199,11 @@ public sealed class DurableOperationResultReaderTests
                 durableOperationId,
                 DurableOperationStatus.Completed,
                 DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
-                """{"orderId":{"unexpected":true},"accepted":true}"""),
+                """{"orderId":{"unexpected":true},"accepted":true}""",
+                diagnosticContext: new DurableOperationDiagnosticContext(
+                    "fulfillment",
+                    "fulfillment.order.reserve.v1",
+                    "receive.fulfillment.order.reserve.v1")),
         };
         await using ServiceProvider serviceProvider = CreateServiceProvider(store);
 
@@ -205,6 +217,10 @@ public sealed class DurableOperationResultReaderTests
         Assert.False(result.HasResult);
         Assert.Equal(DurableOperationResultState.ResultDeserializationFailed, result.State);
         Assert.Equal(DurableOperationStatus.Completed, result.Status);
+        Assert.NotNull(result.DiagnosticContext);
+        Assert.Equal("fulfillment", result.DiagnosticContext.ModuleName);
+        Assert.Equal("fulfillment.order.reserve.v1", result.DiagnosticContext.MessageTypeName);
+        Assert.Equal("receive.fulfillment.order.reserve.v1", result.DiagnosticContext.HandlerIdentity);
         Assert.Null(result.Result);
 
         DurableOperationResultDeserializationFailure failure =
@@ -214,7 +230,42 @@ public sealed class DurableOperationResultReaderTests
         Assert.Equal(typeof(ReserveOrderResult).FullName, failure.ResultTypeName);
         Assert.Contains(durableOperationId.ToString(), failure.Message);
         Assert.Contains(typeof(ReserveOrderResult).FullName!, failure.Message);
+        Assert.Contains("fulfillment", failure.Message);
+        Assert.Contains("fulfillment.order.reserve.v1", failure.Message);
+        Assert.Contains("receive.fulfillment.order.reserve.v1", failure.Message);
         Assert.Equal(typeof(System.Text.Json.JsonException).FullName, failure.ExceptionTypeName);
+        Assert.NotNull(failure.DiagnosticContext);
+        Assert.Equal("fulfillment", failure.DiagnosticContext.ModuleName);
+        Assert.Equal("fulfillment.order.reserve.v1", failure.DiagnosticContext.MessageTypeName);
+        Assert.Equal("receive.fulfillment.order.reserve.v1", failure.DiagnosticContext.HandlerIdentity);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetResultAsync_WhenInvalidResultPayloadHasNoDiagnosticContext_ReturnsUsefulDeserializationFailure()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new CapturingModuleOperationStateStore("fulfillment")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":{"unexpected":true},"accepted":true}"""),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .GetResultAsync<ReserveOrderResult>(durableOperationId);
+
+        DurableOperationResultDeserializationFailure failure =
+            Assert.IsType<DurableOperationResultDeserializationFailure>(
+                result.DeserializationFailure);
+        Assert.Contains(durableOperationId.ToString(), failure.Message);
+        Assert.Contains(typeof(ReserveOrderResult).FullName!, failure.Message);
+        Assert.Null(result.DiagnosticContext);
+        Assert.Null(failure.DiagnosticContext);
     }
 
     [Fact]

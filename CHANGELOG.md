@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.1](https://github.com/oxface/Bondstone/compare/Bondstone-v1.2.0...Bondstone-v1.2.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* couple of diagnostics and document fixes ([#29](https://github.com/oxface/Bondstone/issues/29)) ([3b89eaa](https://github.com/oxface/Bondstone/commit/3b89eaace333958f1f65e5cc1aa66f7f118dc32d))
+* extra code documentation ([76baf9d](https://github.com/oxface/Bondstone/commit/76baf9d2e5c524cc9d7bfe2f2e7624c493381b76))
+* extra diagnostics ([e2b5d5e](https://github.com/oxface/Bondstone/commit/e2b5d5ec0834a2dfa604521393b3eb53f12e3981))
+* more durability diagnostics ([9f361c4](https://github.com/oxface/Bondstone/commit/9f361c4f2ca1d639f4682a499c16bfae97b04eec))
+
 ## [1.2.0](https://github.com/oxface/Bondstone/compare/Bondstone-v1.1.0...Bondstone-v1.2.0) (2026-06-14)
 
 

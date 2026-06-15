@@ -9,7 +9,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <IsPackable>false</IsPackable>
     <RestoreUseLegacyDependencyResolver>true</RestoreUseLegacyDependencyResolver>
-    <VersionPrefix>1.2.0</VersionPrefix> <!-- x-release-please-version -->
+    <VersionPrefix>1.2.1</VersionPrefix> <!-- x-release-please-version -->
     <VersionSuffix Condition="'$(GITHUB_ACTIONS)' != 'true'">local</VersionSuffix>
   </PropertyGroup>
 

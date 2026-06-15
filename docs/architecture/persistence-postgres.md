@@ -36,10 +36,16 @@ The provider reuses the current durable table names and column shape:
 - `inbox_messages`
 - `operation_states`
 
+Operation-state rows include nullable diagnostic context columns for module
+name, durable message type name, and handler identity. Existing rows may leave
+those columns null.
+
 Schema creation remains application-owned for production. The package exposes
 `PostgresSchema.EnsureDurableMessagingTablesAsync(...)` as an explicit
 proof/test/sample helper; normal provider registration does not silently
-create or migrate schemas.
+create or migrate schemas. The helper creates the current operation-state
+shape and adds missing diagnostic context columns to helper-managed tables,
+but production schema migration remains application-owned.
 
 ## Module Usage
 

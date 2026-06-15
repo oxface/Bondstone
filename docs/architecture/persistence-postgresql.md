@@ -86,7 +86,7 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
 - transaction commit/rollback;
 - savepoint rollback after duplicate inbox inserts;
 - inbox processed timestamps and registration outcomes;
-- operation-state updates;
+- operation-state updates, including nullable result diagnostic context;
 - outbox claim lease columns;
 - `FOR UPDATE SKIP LOCKED` selection;
 - outbox claiming for due rows, scheduled rows, locked-row skipping, expired

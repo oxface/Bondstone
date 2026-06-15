@@ -16,9 +16,17 @@ namespace Bondstone.Messaging
         public string? TargetModule { get; }
         public Bondstone.Messaging.MessageTraceContext? TraceContext { get; }
     }
+    public sealed class DurableOperationDiagnosticContext : System.IEquatable<Bondstone.Messaging.DurableOperationDiagnosticContext>
+    {
+        public DurableOperationDiagnosticContext(string? moduleName = null, string? messageTypeName = null, string? handlerIdentity = null) { }
+        public string? HandlerIdentity { get; }
+        public string? MessageTypeName { get; }
+        public string? ModuleName { get; }
+    }
     public sealed class DurableOperationState : System.IEquatable<Bondstone.Messaging.DurableOperationState>
     {
-        public DurableOperationState(System.Guid durableOperationId, Bondstone.Messaging.DurableOperationStatus status, System.DateTimeOffset updatedAtUtc, string? resultPayload = null, string? failureReason = null) { }
+        public DurableOperationState(System.Guid durableOperationId, Bondstone.Messaging.DurableOperationStatus status, System.DateTimeOffset updatedAtUtc, string? resultPayload = null, string? failureReason = null, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null) { }
+        public Bondstone.Messaging.DurableOperationDiagnosticContext? DiagnosticContext { get; }
         public System.Guid DurableOperationId { get; }
         public string? FailureReason { get; }
         public string? ResultPayload { get; }

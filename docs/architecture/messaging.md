@@ -254,11 +254,41 @@ The command loop writes `Pending` and `Completed`. When a durable command also
 implements `ICommand<TResult>` and is received with a durable operation id,
 Bondstone serializes the handler result with the configured durable payload
 JSON options and stores it as the completed operation state's result payload
-inside the target module receive transaction. Callers can observe durable
-results through `IDurableOperationResultReader`: `GetResultAsync<TResult>()`
-reads current state once, while `WaitForResultAsync<TResult>()` performs
-explicit timeout-bounded polling until the operation reaches a terminal state.
-`IDurableOperationReader` remains available as the lower-level state reader.
+inside the target module receive transaction. The same completed operation
+state also stores optional diagnostic context from the receive route: module
+name, durable message type name, and handler identity. Callers can observe
+durable results through `IDurableOperationResultReader`:
+`GetResultAsync<TResult>()` reads current state once, while
+`WaitForResultAsync<TResult>()` performs explicit timeout-bounded polling
+until the operation reaches a terminal state. `IDurableOperationReader`
+remains available as the lower-level state reader.
+
+`DurableOperationResult<TResult>` preserves the operation-state flags and adds
+a single `State` classification for consumer diagnostics:
+
+- `IsKnown` means an operation state row was found.
+- `IsCompleted` means the operation status is `Completed`.
+- `IsTerminal` means the operation status is `Completed`, `Failed`, or
+  `Cancelled`.
+- `HasResult` means a completed result payload was successfully deserialized
+  as `TResult`.
+
+`State` distinguishes unknown operations, pending operations, running
+operations, completed operations with a deserialized result, completed
+operations without a result payload, failed operations, cancelled operations,
+and completed operations whose result payload could not be deserialized as the
+requested result type. Deserialization failures are returned as
+`ResultDeserializationFailed` with a `DeserializationFailure` value that
+includes the operation id, target result type name, diagnostic message, and
+underlying exception type name when available. When operation state carries
+diagnostic context, the result and deserialization failure diagnostics also
+include module name, durable message type name, and handler identity.
+
+Operation diagnostic context is optional. It may be absent for old rows,
+manually-created operation states, operations created before this feature, or
+provider schemas that have not been migrated. Result diagnostics remain useful
+without it by including the operation id and requested result type when those
+values are known.
 
 `Running`, `Failed`, and `Cancelled` remain storage/read-model values for
 application-owned operation policies; Bondstone's default command loop does

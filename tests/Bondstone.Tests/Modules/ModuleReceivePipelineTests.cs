@@ -120,6 +120,14 @@ public sealed class ModuleReceivePipelineTests
         Assert.Equal(DurableOperationStatus.Completed, state.Status);
         Assert.Equal(DateTimeOffset.Parse("2026-06-06T12:01:00+00:00"), state.UpdatedAtUtc);
         Assert.Equal("""{"orderId":"payload-A-100","accepted":true}""", state.ResultPayload);
+        Assert.NotNull(state.DiagnosticContext);
+        Assert.Equal("fulfillment", state.DiagnosticContext.ModuleName);
+        Assert.Equal(
+            "receive.fulfillment.order.reserve-converted-result.v1",
+            state.DiagnosticContext.MessageTypeName);
+        Assert.Equal(
+            "receive.fulfillment.order.reserve-converted-result.v1",
+            state.DiagnosticContext.HandlerIdentity);
         Assert.Equal(
             ["handle-result-converted:A-100"],
             serviceProvider.GetRequiredService<CommandCallLog>().Calls);

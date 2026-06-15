@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Bondstone.Persistence;
 
 namespace Bondstone.Messaging;
@@ -92,11 +93,40 @@ internal sealed class DurableOperationResultReader(
                 state.DurableOperationId,
                 state.Status,
                 state.UpdatedAtUtc,
-                failureReason: state.FailureReason);
+                failureReason: state.FailureReason,
+                diagnosticContext: state.DiagnosticContext);
         }
 
-        TResult? result = _payloadSerializer.Deserialize<TResult>(
-            state.ResultPayload);
+        TResult? result;
+        try
+        {
+            result = _payloadSerializer.Deserialize<TResult>(
+                state.ResultPayload);
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            Type resultType = typeof(TResult);
+            string resultTypeName = resultType.FullName ?? resultType.Name;
+            string message = CreateDeserializationFailureMessage(
+                state,
+                resultTypeName,
+                ex);
+
+            return new DurableOperationResult<TResult>(
+                state.DurableOperationId,
+                state.Status,
+                state.UpdatedAtUtc,
+                result: default,
+                hasResult: false,
+                state.FailureReason,
+                state.DiagnosticContext,
+                new DurableOperationResultDeserializationFailure(
+                    state.DurableOperationId,
+                    resultTypeName,
+                    message,
+                    ex.GetType().FullName,
+                    state.DiagnosticContext));
+        }
 
         return new DurableOperationResult<TResult>(
             state.DurableOperationId,
@@ -104,7 +134,35 @@ internal sealed class DurableOperationResultReader(
             state.UpdatedAtUtc,
             result,
             hasResult: true,
-            state.FailureReason);
+            state.FailureReason,
+            state.DiagnosticContext);
+    }
+
+    private static string CreateDeserializationFailureMessage(
+        DurableOperationState state,
+        string resultTypeName,
+        Exception exception)
+    {
+        string message =
+            $"Durable operation '{state.DurableOperationId}' completed with a result payload, but the payload could not be deserialized as '{resultTypeName}'.";
+
+        DurableOperationDiagnosticContext? context = state.DiagnosticContext;
+        if (context?.ModuleName is not null)
+        {
+            message += $" Module '{context.ModuleName}'.";
+        }
+
+        if (context?.MessageTypeName is not null)
+        {
+            message += $" Message type '{context.MessageTypeName}'.";
+        }
+
+        if (context?.HandlerIdentity is not null)
+        {
+            message += $" Handler '{context.HandlerIdentity}'.";
+        }
+
+        return $"{message} {exception.GetType().Name}: {exception.Message}";
     }
 
     private static void ValidateOperationId(Guid durableOperationId)

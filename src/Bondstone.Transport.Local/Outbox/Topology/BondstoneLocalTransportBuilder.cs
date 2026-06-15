@@ -2,6 +2,9 @@ using Bondstone.Utility;
 
 namespace Bondstone.Transport.Local.Outbox;
 
+/// <summary>
+/// Builds local in-process transport topology for module command and event routing.
+/// </summary>
 public sealed class BondstoneLocalTransportBuilder
 {
     private readonly Dictionary<string, string> _queueNamesByTargetModule =
@@ -21,6 +24,11 @@ public sealed class BondstoneLocalTransportBuilder
             _moduleQueueNameConvention,
             _eventQueueNameConvention);
 
+    /// <summary>
+    /// Starts explicit routing for commands sent to a target module.
+    /// </summary>
+    /// <param name="targetModule">The target module name.</param>
+    /// <returns>A route builder for selecting the local queue.</returns>
     public BondstoneLocalModuleRouteBuilder RouteModule(
         string targetModule)
     {
@@ -33,11 +41,20 @@ public sealed class BondstoneLocalTransportBuilder
             normalizedTargetModule);
     }
 
+    /// <summary>
+    /// Routes each target module to a local command queue named <c>{module}.commands</c>.
+    /// </summary>
+    /// <returns>The same local transport builder for chained setup.</returns>
     public BondstoneLocalTransportBuilder UseModuleQueueConvention()
     {
         return UseModuleQueueConvention(static moduleName => $"{moduleName}.commands");
     }
 
+    /// <summary>
+    /// Routes each target module to a local command queue name produced by the supplied convention.
+    /// </summary>
+    /// <param name="queueNameFactory">Creates a queue name from the target module name.</param>
+    /// <returns>The same local transport builder for chained setup.</returns>
     public BondstoneLocalTransportBuilder UseModuleQueueConvention(
         Func<string, string> queueNameFactory)
     {

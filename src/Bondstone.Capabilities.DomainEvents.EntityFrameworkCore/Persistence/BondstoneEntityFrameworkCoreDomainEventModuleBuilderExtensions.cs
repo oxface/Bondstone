@@ -6,8 +6,16 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
 
+/// <summary>
+/// Adds EF Core persistence behavior for Bondstone module-local domain events.
+/// </summary>
 public static class BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensions
 {
+    /// <summary>
+    /// Configures a module to collect and stage EF-backed module-local domain event records inside the module transaction.
+    /// </summary>
+    /// <param name="module">The module builder.</param>
+    /// <returns>The same module builder for chained setup.</returns>
     public static BondstoneModuleBuilder UseEntityFrameworkCoreDomainEventPersistence(
         this BondstoneModuleBuilder module)
     {

@@ -11,10 +11,15 @@ behavior without depending on EF Core.
 Use this package for PostgreSQL modules that intentionally do not use EF Core.
 Normal modules call `module.UsePostgresPersistence(...)` from their
 `IBondstoneModule` registration as shown in
-[../../docs/setup.md](../../docs/setup.md).
+[the setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md).
+
+Install this package when a module wants Dapper-backed PostgreSQL durable
+messaging persistence and `IPostgresModuleSession` access instead of EF Core
+module persistence. EF-backed modules should use
+`Bondstone.Persistence.EntityFrameworkCore.Postgres`.
 
 See:
 
-- [../../docs/architecture/persistence-postgres.md](../../docs/architecture/persistence-postgres.md)
-- [../../docs/architecture/persistence-core.md](../../docs/architecture/persistence-core.md)
-- [../../tests/Bondstone.Persistence.Postgres.Tests](../../tests/Bondstone.Persistence.Postgres.Tests)
+- [Non-EF PostgreSQL persistence architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-postgres.md)
+- [Persistence contracts](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-core.md)
+- [Non-EF PostgreSQL persistence tests](https://github.com/oxface/Bondstone/tree/main/tests/Bondstone.Persistence.Postgres.Tests)

@@ -1,7 +1,11 @@
 using Bondstone.Messaging;
 using Bondstone.Modules;
+using Bondstone.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Samples.ModularMonolith;
+using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Bondstone.Samples.ModularMonolith.Ordering;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
@@ -61,12 +65,50 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
             Assert.Equal(3, result.DispatchedOutboxCount);
             Assert.Equal(1, result.FulfillmentDomainEventRecordCount);
             Assert.Equal("fulfillment.inventory-reservation-recorded.v1", result.FulfillmentDomainEventName);
+            Assert.Equal(DurableOperationResultState.CompletedWithResult, result.ReservationResultState);
+            Assert.NotNull(result.ReservationId);
             Assert.Equal(DurableOperationStatus.Completed, result.OperationStatus);
+
+            OutboxMessageEntity reserveCommandOutbox =
+                await ReadFulfillmentCommandOutboxAsync(serviceProvider);
+            DurableInboxHandleResult duplicateResult;
+            await using (AsyncServiceScope duplicateScope = serviceProvider.CreateAsyncScope())
+            {
+                IModuleCommandReceivePipeline pipeline =
+                    duplicateScope.ServiceProvider.GetRequiredService<IModuleCommandReceivePipeline>();
+
+                duplicateResult = await pipeline.HandleOnceAsync(
+                    reserveCommandOutbox.ToRecord().Envelope);
+            }
+
+            Assert.Equal(DurableInboxHandleStatus.AlreadyProcessed, duplicateResult.Status);
+            Assert.Equal(reserveCommandOutbox.MessageId, duplicateResult.Record.Key.MessageId);
+            Assert.Equal(FulfillmentModule.ModuleName, duplicateResult.Record.Key.ModuleName);
+            Assert.Equal("fulfillment.inventory.reserve.v1", duplicateResult.Record.Key.HandlerIdentity);
+
+            OrderStatusResult afterDuplicate = await serviceProvider.ReadOrderStatusAsync(
+                orderId,
+                durableOperationId);
+            Assert.Equal(result, afterDuplicate);
         }
         finally
         {
             await StopHostedServicesAsync(hostedServices);
         }
+    }
+
+    private static async Task<OutboxMessageEntity> ReadFulfillmentCommandOutboxAsync(
+        IServiceProvider serviceProvider)
+    {
+        await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
+        OrderingDbContext context =
+            scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
+
+        return await context
+            .Set<OutboxMessageEntity>()
+            .SingleAsync(entity =>
+                entity.TargetModule == FulfillmentModule.ModuleName
+                && entity.MessageTypeName == "fulfillment.inventory.reserve.v1");
     }
 
     private static async Task<IReadOnlyList<IHostedService>> StartHostedServicesAsync(
@@ -119,6 +161,8 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
                     DispatchedOutboxCount: 3,
                     FulfillmentDomainEventRecordCount: 1,
                     FulfillmentDomainEventName: "fulfillment.inventory-reservation-recorded.v1",
+                    ReservationResultState: DurableOperationResultState.CompletedWithResult,
+                    ReservationId: not null,
                     OperationStatus: DurableOperationStatus.Completed,
                 })
             {

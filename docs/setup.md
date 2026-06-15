@@ -237,7 +237,14 @@ public sealed record ReserveInventoryCommand(
     Guid OrderId,
     string Sku,
     int Quantity)
-    : IDurableCommand;
+    : IDurableCommand,
+        ICommand<ReserveInventoryResult>;
+
+public sealed record ReserveInventoryResult(
+    Guid ReservationId,
+    Guid OrderId,
+    string Sku,
+    int Quantity);
 ```
 
 Handlers are ordinary module services. Bondstone's module transaction behavior
@@ -251,18 +258,24 @@ using MyApp.Fulfillment.Contracts;
 namespace MyApp.Fulfillment;
 
 public sealed class ReserveInventoryHandler(FulfillmentDbContext dbContext)
-    : ICommandHandler<ReserveInventoryCommand>
+    : ICommandHandler<ReserveInventoryCommand, ReserveInventoryResult>
 {
-    public ValueTask HandleAsync(
+    public ValueTask<ReserveInventoryResult> HandleAsync(
         ReserveInventoryCommand command,
         CancellationToken ct = default)
     {
-        dbContext.Reservations.Add(new FulfillmentReservation(
+        var reservation = new FulfillmentReservation(
+            Guid.NewGuid(),
+            command.OrderId,
+            command.Sku,
+            command.Quantity);
+        dbContext.Reservations.Add(reservation);
+
+        return ValueTask.FromResult(new ReserveInventoryResult(
+            reservation.Id,
             command.OrderId,
             command.Sku,
             command.Quantity));
-
-        return ValueTask.CompletedTask;
     }
 }
 ```
@@ -561,8 +574,9 @@ validation, module execution context, provider transaction behavior, durable
 send/publish access, inbox/outbox participation, or operation-state updates.
 
 ```csharp
+[DurableCommandIdentity("ordering.order.create.v1")]
 public sealed record CreateOrderCommand(Guid CustomerId)
-    : ICommand<CreateOrderResult>;
+    : IDurableCommand, ICommand<CreateOrderResult>;
 
 public sealed record CreateOrderResult(Guid OrderId);
 
@@ -594,6 +608,8 @@ ModuleCommandExecutionResult<CreateOrderResult> result =
         OrderingModule.ModuleName,
         new CreateOrderCommand(customerId),
         ct);
+
+CreateOrderResult created = result.Result;
 ```
 
 Keep app-owned request/handler or service abstractions for workflows that do
@@ -601,11 +617,108 @@ not need Bondstone module behavior, or as thin application-facing ports that
 delegate into a registered Bondstone command. Do not keep a parallel
 module-command framework for result-producing module transactions.
 
-When the same workflow must cross a durable boundary, the command can also
-implement `IDurableCommand`. Durable send still returns accepted-work metadata,
-not `CreateOrderResult` directly. Supply or create a durable operation id when
-the caller needs to observe the committed result, then read or wait for it
+`ExecuteResultAsync` is the local, in-process path. It runs the command through
+the owning module command pipeline and returns
+`ModuleCommandExecutionResult<TResult>`, which carries the handler result plus
+execution metadata such as receive inbox handling when the executor is called
+from a receive pipeline.
+
+When the same workflow must cross a durable boundary, keep the same logical
+command contract and add durable identity through `IDurableCommand`. Durable
+send is not RPC: it accepts work and returns send metadata, not
+`CreateOrderResult` directly. Supply or create a durable operation id when the
+caller needs to observe the committed result, record that id in the
+application response or workflow state, then read or wait for it explicitly
 through `IDurableOperationResultReader`.
+
+```csharp
+Guid durableOperationId = Guid.NewGuid();
+
+DurableCommandSendResult sendResult = await durableCommandSender.SendAsync(
+    new CreateOrderCommand(customerId),
+    targetModule: OrderingModule.ModuleName,
+    partitionKey: customerId.ToString("D"),
+    durableOperationId: durableOperationId,
+    ct: ct);
+
+DurableOperationResult<CreateOrderResult> durableResult =
+    await durableOperationResultReader.WaitForResultAsync<CreateOrderResult>(
+        sendResult.DurableOperationId!.Value,
+        timeout: TimeSpan.FromSeconds(30),
+        pollInterval: TimeSpan.FromMilliseconds(250),
+        ct: ct);
+
+if (durableResult is { IsCompleted: true, HasResult: true, Result: { } order })
+{
+    Guid orderId = order.OrderId;
+}
+```
+
+Use `GetResultAsync<TResult>()` when an API endpoint should read the current
+operation state once. Use `WaitForResultAsync<TResult>()` only where an
+explicit, timeout-bounded wait is acceptable for the caller. Applications still
+own endpoint policy, timeout choice, polling cadence, and what to do with
+unknown, pending, failed, or cancelled operation state.
+
+For result polling, prefer switching on `DurableOperationResult<TResult>.State`
+when the caller needs to explain why a value is not available:
+
+```csharp
+return durableResult.State switch
+{
+    DurableOperationResultState.CompletedWithResult => Results.Ok(durableResult.Result),
+    DurableOperationResultState.CompletedWithoutResult => Results.NoContent(),
+    DurableOperationResultState.Pending or DurableOperationResultState.Running => Results.Accepted(),
+    DurableOperationResultState.Failed => Results.Problem(durableResult.FailureReason),
+    DurableOperationResultState.Cancelled => Results.StatusCode(StatusCodes.Status409Conflict),
+    DurableOperationResultState.Unknown => Results.NotFound(),
+    DurableOperationResultState.ResultDeserializationFailed => Results.Problem(
+        durableResult.DeserializationFailure?.Message),
+    _ => Results.Problem(),
+};
+```
+
+The existing flags keep their narrow meanings: `IsKnown` means operation state
+exists, `IsCompleted` means the stored status is `Completed`, `IsTerminal`
+means `Completed`, `Failed`, or `Cancelled`, and `HasResult` means the result
+payload was successfully deserialized as `TResult`. A completed operation can
+therefore have `HasResult == false` when no payload was stored or when payload
+deserialization failed.
+
+Deserialization diagnostics include the operation id and requested result type.
+The current operation-state reader does not carry module name, durable message
+type name, or handler identity, so those values are not included in result
+reader diagnostics today.
+
+Bondstone intentionally keeps the in-process and durable result paths
+separate. If an application exposes one business-facing service method for
+"create an order," that method should still choose either local
+`ExecuteResultAsync` or durable `SendAsync` plus operation-result observation
+based on the workflow boundary instead of hiding durable transport as a
+synchronous request/response call.
+
+The durable operation id ties the send and result lookup together:
+
+- The caller supplies or records the operation id when sending durable work.
+- `IDurableCommandSender.SendAsync` returns `DurableCommandSendResult` with the
+  send id, accepted status, and the supplied `DurableOperationId`.
+- When the sending module has operation-state persistence, Bondstone stages
+  the operation as `Pending` if the operation is not already known.
+- When the target module receives a durable `IDurableCommand` that also
+  implements `ICommand<TResult>`, the receive pipeline executes the result
+  handler through the normal module command pipeline.
+- After the handler and surrounding pipeline succeed, Bondstone stores
+  `Completed` plus the serialized result payload inside the target module
+  receive transaction.
+- `IDurableOperationResultReader` uses the same operation id to find operation
+  state and deserialize the completed result payload.
+
+Durable command payload serialization uses `IDurablePayloadSerializer`. The
+default serializer and the built-in durable operation result payload serializer
+use Bondstone's durable payload JSON options, configured through
+`ConfigureBondstoneDurablePayloadJson(...)`. Application code should configure
+that JSON surface for command/result DTO converters instead of introducing a
+separate result serializer abstraction.
 
 ## Sending Commands
 
@@ -619,8 +732,9 @@ module command/subscriber pipeline.
 await durableCommandSender.SendAsync(
     new ReserveInventoryCommand(orderId, sku, quantity),
     targetModule: FulfillmentModule.ModuleName,
+    partitionKey: orderId.ToString("D"),
     durableOperationId: operationId,
-    ct);
+    ct: ct);
 ```
 
 The send result means the message was accepted into the source module outbox.

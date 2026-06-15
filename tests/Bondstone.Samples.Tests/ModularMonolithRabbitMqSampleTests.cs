@@ -75,6 +75,8 @@ public sealed class ModularMonolithRabbitMqSampleTests(
             Assert.Equal(3, result.DispatchedOutboxCount);
             Assert.Equal(1, result.FulfillmentDomainEventRecordCount);
             Assert.Equal("fulfillment.inventory-reservation-recorded.v1", result.FulfillmentDomainEventName);
+            Assert.Equal(DurableOperationResultState.CompletedWithResult, result.ReservationResultState);
+            Assert.NotNull(result.ReservationId);
             Assert.Equal(DurableOperationStatus.Completed, result.OperationStatus);
         }
         finally
@@ -185,6 +187,8 @@ public sealed class ModularMonolithRabbitMqSampleTests(
                     DispatchedOutboxCount: 3,
                     FulfillmentDomainEventRecordCount: 1,
                     FulfillmentDomainEventName: "fulfillment.inventory-reservation-recorded.v1",
+                    ReservationResultState: DurableOperationResultState.CompletedWithResult,
+                    ReservationId: not null,
                     OperationStatus: DurableOperationStatus.Completed,
                 })
             {

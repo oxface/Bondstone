@@ -7,7 +7,8 @@ public sealed record DurableOperationState
         DurableOperationStatus status,
         DateTimeOffset updatedAtUtc,
         string? resultPayload = null,
-        string? failureReason = null)
+        string? failureReason = null,
+        DurableOperationDiagnosticContext? diagnosticContext = null)
     {
         if (durableOperationId == Guid.Empty)
         {
@@ -38,6 +39,7 @@ public sealed record DurableOperationState
         FailureReason = string.IsNullOrWhiteSpace(failureReason)
             ? null
             : failureReason;
+        DiagnosticContext = diagnosticContext;
     }
 
     public Guid DurableOperationId { get; }
@@ -49,4 +51,6 @@ public sealed record DurableOperationState
     public string? ResultPayload { get; }
 
     public string? FailureReason { get; }
+
+    public DurableOperationDiagnosticContext? DiagnosticContext { get; }
 }

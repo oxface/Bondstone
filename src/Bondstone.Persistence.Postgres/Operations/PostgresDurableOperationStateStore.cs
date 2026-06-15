@@ -27,7 +27,8 @@ public sealed class PostgresDurableOperationStateStore(
                 new CommandDefinition(
                     $$"""
                     SELECT "DurableOperationId", "Status", "UpdatedAtUtc",
-                        "ResultPayload", "FailureReason"
+                        "ResultPayload", "FailureReason", "ModuleName",
+                        "MessageTypeName", "HandlerIdentity"
                     FROM {{_tableName}}
                     WHERE "DurableOperationId" = @DurableOperationId
                     """,
@@ -49,18 +50,23 @@ public sealed class PostgresDurableOperationStateStore(
             $$"""
             INSERT INTO {{_tableName}} (
                 "DurableOperationId", "Status", "UpdatedAtUtc",
-                "ResultPayload", "FailureReason"
+                "ResultPayload", "FailureReason", "ModuleName",
+                "MessageTypeName", "HandlerIdentity"
             )
             VALUES (
                 @DurableOperationId, @Status, @UpdatedAtUtc,
-                @ResultPayload, @FailureReason
+                @ResultPayload, @FailureReason, @ModuleName,
+                @MessageTypeName, @HandlerIdentity
             )
             ON CONFLICT ("DurableOperationId") DO UPDATE
             SET
                 "Status" = EXCLUDED."Status",
                 "UpdatedAtUtc" = EXCLUDED."UpdatedAtUtc",
                 "ResultPayload" = EXCLUDED."ResultPayload",
-                "FailureReason" = EXCLUDED."FailureReason"
+                "FailureReason" = EXCLUDED."FailureReason",
+                "ModuleName" = EXCLUDED."ModuleName",
+                "MessageTypeName" = EXCLUDED."MessageTypeName",
+                "HandlerIdentity" = EXCLUDED."HandlerIdentity"
             """,
             new
             {
@@ -69,6 +75,9 @@ public sealed class PostgresDurableOperationStateStore(
                 state.UpdatedAtUtc,
                 state.ResultPayload,
                 state.FailureReason,
+                ModuleName = state.DiagnosticContext?.ModuleName,
+                MessageTypeName = state.DiagnosticContext?.MessageTypeName,
+                HandlerIdentity = state.DiagnosticContext?.HandlerIdentity,
             },
             _session.Transaction,
             cancellationToken: ct));

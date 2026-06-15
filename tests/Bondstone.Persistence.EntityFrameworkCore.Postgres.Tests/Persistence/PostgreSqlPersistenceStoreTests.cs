@@ -59,7 +59,11 @@ public sealed partial class PostgreSqlPersistenceTests
                 durableOperationId,
                 DurableOperationStatus.Completed,
                 DateTimeOffset.Parse("2026-06-04T00:00:04+00:00"),
-                resultPayload: """{"status":"ok"}""");
+                resultPayload: """{"status":"ok"}""",
+                diagnosticContext: new DurableOperationDiagnosticContext(
+                    "fulfillment",
+                    "fulfillment.order.reserve.v1",
+                    "receive.fulfillment.order.reserve.v1"));
 
             await store.SaveAsync(pendingState);
             await context.SaveChangesAsync();
@@ -74,5 +78,8 @@ public sealed partial class PostgreSqlPersistenceTests
 
         Assert.Equal(DurableOperationStatus.Completed, entity.Status);
         Assert.Equal("""{"status":"ok"}""", entity.ResultPayload);
+        Assert.Equal("fulfillment", entity.ModuleName);
+        Assert.Equal("fulfillment.order.reserve.v1", entity.MessageTypeName);
+        Assert.Equal("receive.fulfillment.order.reserve.v1", entity.HandlerIdentity);
     }
 }

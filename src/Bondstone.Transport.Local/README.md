@@ -13,8 +13,12 @@ in-process queue routing. Production-oriented hosts should use a direct
 broker adapter such as `Bondstone.Transport.RabbitMq` or
 `Bondstone.Transport.ServiceBus`.
 
+Install this package only when the host intentionally routes durable messages
+through local queues and Bondstone receive pipelines. It is not a production
+broker fallback and does not provide broker durability.
+
 See:
 
-- [../../docs/architecture/transport-local.md](../../docs/architecture/transport-local.md)
-- [../../docs/architecture/messaging.md](../../docs/architecture/messaging.md)
-- [../../tests/Bondstone.Transport.Local.Tests](../../tests/Bondstone.Transport.Local.Tests)
+- [Local transport architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/transport-local.md)
+- [Messaging architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/messaging.md)
+- [Local transport tests](https://github.com/oxface/Bondstone/tree/main/tests/Bondstone.Transport.Local.Tests)

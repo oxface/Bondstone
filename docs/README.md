@@ -14,7 +14,7 @@ duplicating durable rules.
 - [github-workflow.md](github-workflow.md) records GitHub issue, project
   status, label, and issue-body conventions.
 - [packaging.md](packaging.md) records current package IDs, target framework,
-  and package dependency direction.
+  package artifact policy, and package dependency direction.
 - [package-discovery.md](package-discovery.md) maps common consumer-facing
   capabilities to package IDs and namespaces.
 - [public-api.md](public-api.md) records the current public API surface
@@ -48,7 +48,7 @@ files with the local context each audience needs.
 
 - `setup.md` is the only stable doc for library-user code examples.
 - `packaging.md` owns package IDs, dependency direction, target framework,
-  versioning, and publishing policy.
+  package artifact policy, versioning, and publishing policy.
 - `package-discovery.md` owns package and namespace discovery guidance for
   common consumer-facing APIs.
 - `github-workflow.md` owns GitHub issue, project, label, and completion

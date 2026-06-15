@@ -1,6 +1,6 @@
 # 0054 Result-Returning Command Model
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-13
 
@@ -153,6 +153,29 @@ operation ids, result content-type/version metadata, failure/cancellation
 policy beyond stored terminal state, default timeout policy, and
 provider-specific operation concurrency remain deferred.
 
+## Amendment 2026-06-15: Durable Result Diagnostic Context
+
+The typed durable operation result reader also needs enough stored context to
+produce useful diagnostics when a durable result is unavailable or a completed
+result payload cannot be deserialized as the requested type.
+
+Bondstone will carry optional diagnostic context on durable operation state:
+
+- module name;
+- durable message type name; and
+- handler identity.
+
+The target module receive path stores this context when a durable result
+command completes with a durable operation id. The context is diagnostic only:
+it does not create durable request/reply semantics, does not make send wait
+for a result, and does not change the caller-owned polling, timeout, or
+endpoint policy.
+
+Operation states created before this amendment, manually-created operation
+states, and provider rows that have not been migrated may not include this
+context. Result diagnostics must therefore remain useful with only the
+operation id and requested result type.
+
 ## Consequences
 
 Module application workflows can use Bondstone's existing module command
@@ -204,7 +227,9 @@ decisions.
   commands keep accepted-work send semantics and expose committed result
   payloads through operation state when an operation id is supplied.
   `IDurableOperationResultReader` provides current-state reads and
-  timeout-bounded polling over those operation result payloads.
+  timeout-bounded polling over those operation result payloads. Completed
+  durable result command receives also store optional operation diagnostic
+  context: module name, durable message type name, and handler identity.
 - Stable docs: Current behavior is described in
   [docs/architecture/modules.md](../architecture/modules.md),
   [docs/architecture/messaging.md](../architecture/messaging.md),
@@ -216,9 +241,10 @@ decisions.
   for this applied slice.
 - Application evidence: Core command contracts, module command registration,
   assembly scanning, route metadata, executor behavior, result payload
-  serialization, durable receive operation-state completion, typed durable
-  operation result reading, timeout-bounded polling, stable docs, focused core
-  tests, and the public API baseline are updated.
+  serialization, durable receive operation-state completion with diagnostic
+  context, typed durable operation result reading, timeout-bounded polling,
+  stable docs, focused core and persistence tests, and the public API baseline
+  are updated.
 - Pending or deferred: Generated operation ids, richer failure/cancellation
   policy, default timeout policy, result content-type/version metadata,
   result-specific pipeline behavior, and provider-specific operation
@@ -250,3 +276,15 @@ Reviewed prior-art docs:
 - [Wolverine message bus request/reply](https://wolverinefx.net/guide/messaging/message-bus.html)
 - [Brighter returning results from a handler](https://brightercommand.gitbook.io/paramore-brighter-documentation/brighter-request-handlers-and-middleware-pipelines/returningresultsfromahandler)
 - [Brighter basic concepts](https://brightercommand.gitbook.io/paramore-brighter-documentation/overview/basicconcepts)
+
+Applied the durable result diagnostic context amendment and verified with:
+
+- `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --filter "FullyQualifiedName~DurableOperationResultReaderTests|FullyQualifiedName~ModuleReceivePipelineTests|FullyQualifiedName~DurableOperationStateTests"`
+- `dotnet test tests/Bondstone.Persistence.EntityFrameworkCore.Tests/Bondstone.Persistence.EntityFrameworkCore.Tests.csproj --configuration Release --filter "FullyQualifiedName~OperationStateEntityTests|FullyQualifiedName~EntityFrameworkCoreDurableOperationStateStoreTests|FullyQualifiedName~BondstoneModelBuilderExtensionsTests"`
+- `dotnet test tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --filter "FullyQualifiedName~OperationStateStore_WhenStateIsSavedAgain_UpdatesExistingState"`
+- `dotnet test tests/Bondstone.Persistence.Postgres.Tests/Bondstone.Persistence.Postgres.Tests.csproj --configuration Release --filter "FullyQualifiedName~PostgresPersistenceTests"`
+- `BONDSTONE_UPDATE_PUBLIC_API_BASELINE=1 dotnet test tests/Bondstone.PublicApi.Tests/Bondstone.PublicApi.Tests.csproj --configuration Release`
+- `dotnet test tests/Bondstone.PublicApi.Tests/Bondstone.PublicApi.Tests.csproj --configuration Release`
+- `git diff --check`
+- `pnpm backend:build`
+- `pnpm check`

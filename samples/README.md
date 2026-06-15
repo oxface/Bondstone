@@ -19,14 +19,45 @@ sample. It proves the current durable command and integration event loop with:
 - outbox-backed durable command sending from ordering to fulfillment;
 - outbox-backed durable event publishing from ordering and fulfillment;
 - durable outbox worker dispatch through explicit
-  `Bondstone.Transport.Local` queue routing that calls the provider-neutral
-  module receive pipelines;
+  `Bondstone.Transport.Local` command queue convention and explicit event
+  subscriber bindings that call the provider-neutral module receive pipelines;
 - module command and event subscriber execution with receive inbox handling
   and handler state saved in the subscriber module transaction boundary.
 
-The local transport is not a production broker adapter or hidden fallback. The
-sample also exposes an explicit RabbitMQ registration path that keeps broker
-connection and topology setup app-owned.
+Start with these files when copying the setup into a modular monolith:
+
+- [`ModularMonolith/ModularMonolithApplication.cs`](ModularMonolith/ModularMonolithApplication.cs)
+  for host composition, `UseModuleQueueConvention()`, explicit event
+  subscribers, the hosted outbox worker, database preparation, and status
+  reads.
+- [`ModularMonolith.Ordering/OrderingBondstoneModule.cs`](ModularMonolith.Ordering/OrderingBondstoneModule.cs)
+  and [`ModularMonolith.Fulfillment/FulfillmentBondstoneModule.cs`](ModularMonolith.Fulfillment/FulfillmentBondstoneModule.cs)
+  for module-owned `IBondstoneModule` registration.
+- [`ModularMonolith.Ordering/OrderingDbContext.cs`](ModularMonolith.Ordering/OrderingDbContext.cs)
+  and [`ModularMonolith.Fulfillment/FulfillmentDbContext.cs`](ModularMonolith.Fulfillment/FulfillmentDbContext.cs)
+  for module-owned EF Core schemas, `ApplyBondstonePersistence`, and optional
+  `ApplyBondstoneDomainEvents`.
+- [`ModularMonolith.Fulfillment.Contracts/ReserveInventoryCommand.cs`](ModularMonolith.Fulfillment.Contracts/ReserveInventoryCommand.cs)
+  and [`ModularMonolith.Fulfillment/ReserveInventoryHandler.cs`](ModularMonolith.Fulfillment/ReserveInventoryHandler.cs)
+  for a durable command that returns a persisted operation result.
+- [`../tests/Bondstone.Samples.Tests/ModularMonolithSampleTests.cs`](../tests/Bondstone.Samples.Tests/ModularMonolithSampleTests.cs)
+  for the smoke test that proves durable delivery, processed inbox
+  idempotency, persisted operation results, and dispatched outbox evidence.
+
+The sample uses `EnsureCreated`/explicit SQL only for local smoke-test setup.
+Consumer applications should generate normal EF Core migrations from their
+module-owned `DbContext` types so each module migration includes both the
+application tables and the Bondstone tables added by
+`ApplyBondstonePersistence(...)`. Modules using EF-backed domain event
+persistence should also include the tables added by
+`ApplyBondstoneDomainEvents(...)`.
+
+The local transport is not a production broker adapter or hidden fallback.
+`UseModuleQueueConvention()` is complete local durable command topology for
+module-to-module command dispatch. Event routes still bind subscribers
+explicitly because subscriber module and subscriber identity are part of
+durable receive identity. The sample also exposes an explicit RabbitMQ
+registration path that keeps broker connection and topology setup app-owned.
 
 ## Service-Split Path
 

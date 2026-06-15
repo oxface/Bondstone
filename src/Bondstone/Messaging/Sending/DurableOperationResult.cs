@@ -8,7 +8,29 @@ public sealed record DurableOperationResult<TResult>
         DateTimeOffset? updatedAtUtc,
         TResult? result = default,
         bool hasResult = false,
-        string? failureReason = null)
+        string? failureReason = null,
+        DurableOperationDiagnosticContext? diagnosticContext = null)
+        : this(
+            durableOperationId,
+            status,
+            updatedAtUtc,
+            result,
+            hasResult,
+            failureReason,
+            diagnosticContext,
+            deserializationFailure: null)
+    {
+    }
+
+    internal DurableOperationResult(
+        Guid durableOperationId,
+        DurableOperationStatus? status,
+        DateTimeOffset? updatedAtUtc,
+        TResult? result,
+        bool hasResult,
+        string? failureReason,
+        DurableOperationDiagnosticContext? diagnosticContext,
+        DurableOperationResultDeserializationFailure? deserializationFailure)
     {
         if (durableOperationId == Guid.Empty)
         {
@@ -26,14 +48,33 @@ public sealed record DurableOperationResult<TResult>
                 "Operation status is not supported.");
         }
 
+        if (deserializationFailure is not null)
+        {
+            if (deserializationFailure.DurableOperationId != durableOperationId)
+            {
+                throw new ArgumentException(
+                    "Deserialization failure operation id must match the durable operation id.",
+                    nameof(deserializationFailure));
+            }
+
+            if (status != DurableOperationStatus.Completed)
+            {
+                throw new ArgumentException(
+                    "Deserialization failure can only be reported for a completed durable operation.",
+                    nameof(deserializationFailure));
+            }
+        }
+
         DurableOperationId = durableOperationId;
         Status = status;
         UpdatedAtUtc = updatedAtUtc;
         Result = result;
-        HasResult = hasResult;
+        HasResult = deserializationFailure is null && hasResult;
         FailureReason = string.IsNullOrWhiteSpace(failureReason)
             ? null
             : failureReason;
+        DiagnosticContext = diagnosticContext;
+        DeserializationFailure = deserializationFailure;
     }
 
     public Guid DurableOperationId { get; }
@@ -47,6 +88,24 @@ public sealed record DurableOperationResult<TResult>
     public bool HasResult { get; }
 
     public string? FailureReason { get; }
+
+    public DurableOperationDiagnosticContext? DiagnosticContext { get; }
+
+    public DurableOperationResultDeserializationFailure? DeserializationFailure { get; }
+
+    public DurableOperationResultState State => DeserializationFailure is not null
+        ? DurableOperationResultState.ResultDeserializationFailed
+        : Status switch
+        {
+            null => DurableOperationResultState.Unknown,
+            DurableOperationStatus.Pending => DurableOperationResultState.Pending,
+            DurableOperationStatus.Running => DurableOperationResultState.Running,
+            DurableOperationStatus.Completed when HasResult => DurableOperationResultState.CompletedWithResult,
+            DurableOperationStatus.Completed => DurableOperationResultState.CompletedWithoutResult,
+            DurableOperationStatus.Failed => DurableOperationResultState.Failed,
+            DurableOperationStatus.Cancelled => DurableOperationResultState.Cancelled,
+            _ => throw new InvalidOperationException("Operation status is not supported."),
+        };
 
     public bool IsKnown => Status is not null;
 

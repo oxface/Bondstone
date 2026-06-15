@@ -95,8 +95,10 @@ or result payload semantics are accepted.
   caller-supplied operation ids. Sends with an operation id stage `Pending`
   operation state when the operation is unknown. Successful module command
   receive with an operation id stages `Completed` inside module command
-  execution. Missing operation-state persistence is a clear configuration
-  error when tracking is used.
+  execution. ADR 0054 later narrows result-command behavior so completed
+  durable result commands may also store result payloads and optional
+  diagnostic context on operation state. Missing operation-state persistence
+  is a clear configuration error when tracking is used.
 - Stable docs: Current operation-state behavior is described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/modules.md](../architecture/modules.md),
@@ -113,10 +115,11 @@ or result payload semantics are accepted.
   behavior, module-owned operation reads use explicit status precedence, and
   focused unit/application tests cover send, receive, reader precedence, and
   transaction behavior.
-- Pending or deferred: None for the current operation-state integration.
-  Failure states, running states, cancellation states, result payloads,
-  polling/waiting APIs, retry state, stale receive recovery, and
-  provider-specific concurrency policy remain separate future decisions.
+- Pending or deferred: None for the original operation-state integration.
+  Result payloads, typed result reading, and result diagnostic context are
+  governed by ADR 0054. Failure states, running states, cancellation states,
+  retry state, stale receive recovery, and provider-specific concurrency
+  policy remain separate future decisions.
 
 ## Verification
 

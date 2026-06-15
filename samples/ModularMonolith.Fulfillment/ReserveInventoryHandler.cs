@@ -7,16 +7,17 @@ namespace Bondstone.Samples.ModularMonolith.Fulfillment;
 public sealed class ReserveInventoryHandler(
     FulfillmentDbContext dbContext,
     IDurableEventPublisher eventPublisher)
-    : ICommandHandler<ReserveInventoryCommand>
+    : ICommandHandler<ReserveInventoryCommand, ReserveInventoryResult>
 {
-    public async ValueTask HandleAsync(
+    public async ValueTask<ReserveInventoryResult> HandleAsync(
         ReserveInventoryCommand command,
         CancellationToken ct = default)
     {
-        dbContext.Reservations.Add(FulfillmentReservation.Reserve(
+        FulfillmentReservation reservation = FulfillmentReservation.Reserve(
             command.OrderId,
             command.Sku,
-            command.Quantity));
+            command.Quantity);
+        dbContext.Reservations.Add(reservation);
 
         await eventPublisher.PublishAsync(
             new InventoryReservedEvent(
@@ -25,5 +26,11 @@ public sealed class ReserveInventoryHandler(
                 command.Quantity),
             partitionKey: command.OrderId.ToString("D"),
             ct: ct);
+
+        return new ReserveInventoryResult(
+            reservation.Id,
+            command.OrderId,
+            command.Sku,
+            command.Quantity);
     }
 }

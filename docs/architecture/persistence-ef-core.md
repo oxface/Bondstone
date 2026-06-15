@@ -110,9 +110,11 @@ Already-received but unprocessed inbox rows remain a loud receive outcome, not
 an EF Core stale-row recovery feature.
 
 `EntityFrameworkCoreDurableOperationStateStore<TDbContext>` reads and stages
-durable operation state in the current EF Core `DbContext`. It does not own
-transition policy, optimistic concurrency, or automatic transaction boundaries.
-The store requires the operation-state entity mapping and fails with a clear
+durable operation state in the current EF Core `DbContext`. Operation-state
+mapping includes nullable diagnostic context columns for module name, durable
+message type name, and handler identity. It does not own transition policy,
+optimistic concurrency, or automatic transaction boundaries. The store
+requires the operation-state entity mapping and fails with a clear
 `ApplyBondstoneOperationState()` mapping error if it is used with a DbContext
 that does not map operation state.
 

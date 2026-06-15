@@ -14,6 +14,12 @@ internal sealed class PostgresOperationStateRow
 
     public string? FailureReason { get; init; }
 
+    public string? ModuleName { get; init; }
+
+    public string? MessageTypeName { get; init; }
+
+    public string? HandlerIdentity { get; init; }
+
     public DurableOperationState ToState()
     {
         return new DurableOperationState(
@@ -21,6 +27,22 @@ internal sealed class PostgresOperationStateRow
             Enum.Parse<DurableOperationStatus>(Status),
             UpdatedAtUtc,
             ResultPayload,
-            FailureReason);
+            FailureReason,
+            CreateDiagnosticContext());
+    }
+
+    private DurableOperationDiagnosticContext? CreateDiagnosticContext()
+    {
+        if (ModuleName is null
+            && MessageTypeName is null
+            && HandlerIdentity is null)
+        {
+            return null;
+        }
+
+        return new DurableOperationDiagnosticContext(
+            ModuleName,
+            MessageTypeName,
+            HandlerIdentity);
     }
 }

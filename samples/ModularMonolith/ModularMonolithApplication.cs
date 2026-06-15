@@ -41,10 +41,7 @@ public static class ModularMonolithApplication
             connectionString,
             bondstone => bondstone.UseLocalTransport(local =>
             {
-                local.RouteModule(FulfillmentModule.ModuleName)
-                    .ToQueue("fulfillment.commands");
-                local.Queue("fulfillment.commands")
-                    .AcceptModule(FulfillmentModule.ModuleName);
+                local.UseModuleQueueConvention();
 
                 local.RouteEvent(OrderingIntegrationEvents.OrderPlaced)
                     .ToQueue("ordering.order-placed");
@@ -231,9 +228,15 @@ public static class ModularMonolithApplication
             scope.ServiceProvider.GetRequiredService<FulfillmentDbContext>();
         IDurableOperationReader operationReader =
             scope.ServiceProvider.GetRequiredService<IDurableOperationReader>();
+        IDurableOperationResultReader operationResultReader =
+            scope.ServiceProvider.GetRequiredService<IDurableOperationResultReader>();
 
         DurableOperationState? operationState =
             await operationReader.GetStateAsync(durableOperationId, ct);
+        DurableOperationResult<ReserveInventoryResult> operationResult =
+            await operationResultReader.GetResultAsync<ReserveInventoryResult>(
+                durableOperationId,
+                ct);
         int processedInboxCount =
             await fulfillmentContext
                 .Set<InboxMessageEntity>()
@@ -273,6 +276,8 @@ public static class ModularMonolithApplication
             dispatchedOutboxCount,
             fulfillmentDomainEventRecordCount,
             fulfillmentDomainEventName,
+            operationResult.State,
+            operationResult.Result?.ReservationId,
             operationState?.Status);
     }
 
@@ -362,4 +367,6 @@ public sealed record OrderStatusResult(
     int DispatchedOutboxCount,
     int FulfillmentDomainEventRecordCount,
     string? FulfillmentDomainEventName,
+    DurableOperationResultState ReservationResultState,
+    Guid? ReservationId,
     DurableOperationStatus? OperationStatus);

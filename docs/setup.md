@@ -237,7 +237,14 @@ public sealed record ReserveInventoryCommand(
     Guid OrderId,
     string Sku,
     int Quantity)
-    : IDurableCommand;
+    : IDurableCommand,
+        ICommand<ReserveInventoryResult>;
+
+public sealed record ReserveInventoryResult(
+    Guid ReservationId,
+    Guid OrderId,
+    string Sku,
+    int Quantity);
 ```
 
 Handlers are ordinary module services. Bondstone's module transaction behavior
@@ -251,18 +258,24 @@ using MyApp.Fulfillment.Contracts;
 namespace MyApp.Fulfillment;
 
 public sealed class ReserveInventoryHandler(FulfillmentDbContext dbContext)
-    : ICommandHandler<ReserveInventoryCommand>
+    : ICommandHandler<ReserveInventoryCommand, ReserveInventoryResult>
 {
-    public ValueTask HandleAsync(
+    public ValueTask<ReserveInventoryResult> HandleAsync(
         ReserveInventoryCommand command,
         CancellationToken ct = default)
     {
-        dbContext.Reservations.Add(new FulfillmentReservation(
+        var reservation = new FulfillmentReservation(
+            Guid.NewGuid(),
+            command.OrderId,
+            command.Sku,
+            command.Quantity);
+        dbContext.Reservations.Add(reservation);
+
+        return ValueTask.FromResult(new ReserveInventoryResult(
+            reservation.Id,
             command.OrderId,
             command.Sku,
             command.Quantity));
-
-        return ValueTask.CompletedTask;
     }
 }
 ```

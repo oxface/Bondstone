@@ -7,4 +7,11 @@ public sealed record ReserveInventoryCommand(
     Guid OrderId,
     string Sku,
     int Quantity)
-    : IDurableCommand;
+    : IDurableCommand,
+        ICommand<ReserveInventoryResult>;
+
+public sealed record ReserveInventoryResult(
+    Guid ReservationId,
+    Guid OrderId,
+    string Sku,
+    int Quantity);

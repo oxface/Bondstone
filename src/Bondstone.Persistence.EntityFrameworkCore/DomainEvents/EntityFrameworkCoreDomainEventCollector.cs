@@ -1,9 +1,9 @@
 using System.Text.Json;
-using Bondstone.Capabilities.DomainEvents;
+using Bondstone.DomainEvents;
 using Bondstone.Messaging;
 using Microsoft.EntityFrameworkCore;
 
-namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
+namespace Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 
 internal sealed class EntityFrameworkCoreDomainEventCollector(
     DbContext dbContext,

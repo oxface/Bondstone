@@ -111,6 +111,18 @@ The broader package split remains accepted and applied. `Bondstone.Persistence`,
 `Bondstone.Transport`, the renamed EF persistence package chain, hosting,
 concrete transports, and non-EF PostgreSQL persistence remain current.
 
+## Amendment 2026-06-16: Domain Events Returned To Core
+
+ADR 0058 supersedes ADR 0052's capability-package placement. The active domain
+event contracts now live in the core `Bondstone` package under the
+`Bondstone.DomainEvents` namespace. EF-backed domain event collection, record
+mapping, and explicit module opt-in now live in
+`Bondstone.Persistence.EntityFrameworkCore`.
+
+The old `Bondstone.Capabilities.DomainEvents` and
+`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` package projects are
+removed from the active package set.
+
 ## Related Decisions
 
 - Supersedes the EF package identity deferral in
@@ -121,15 +133,17 @@ concrete transports, and non-EF PostgreSQL persistence remain current.
   [0046 Public API Surface Policy](0046-public-api-surface-policy.md).
 - Amended by
   [0052 Domain Event Capability Package Boundary](0052-domain-event-capability-package-boundary.md).
+- Amended by
+  [0058 Domain Events In Core And EF Persistence](0058-domain-events-in-core-and-ef-persistence.md).
 
 ## Application Notes
 
 - Current contract: Package identities and dependency direction are documented
   in [docs/packaging.md](../packaging.md). Source package navigation is
   documented in [src/README.md](../../src/README.md).
-- Stable docs: Architecture docs now describe
-  `Bondstone.Persistence`, `Bondstone.Transport`,
-  `Bondstone.Capabilities.DomainEvents`, and the renamed EF package chain.
+- Stable docs: Architecture docs now describe `Bondstone.Persistence`,
+  active transport adapters, `Bondstone.DomainEvents`, and the renamed EF
+  package chain.
 - Agent guidance: Root [AGENTS.md](../../AGENTS.md) still requires ADR review
   before package-boundary, public API, provider, transport, durable behavior,
   or runtime changes.
@@ -138,9 +152,9 @@ concrete transports, and non-EF PostgreSQL persistence remain current.
   for the split.
 - Pending or deferred: Public API inventory, old-package compatibility policy,
   and any future type-forwarding packages remain separate decisions.
-- Amendment: ADR 0052 keeps the broader package split but replaces the
-  `Bondstone.DomainEvents` package placement with capability packages and an
-  EF bridge package.
+- Amendment: ADR 0058 keeps the broader package split but replaces the
+  capability package placement with core `Bondstone.DomainEvents` contracts
+  and EF package-owned domain event persistence.
 
 ## Verification
 

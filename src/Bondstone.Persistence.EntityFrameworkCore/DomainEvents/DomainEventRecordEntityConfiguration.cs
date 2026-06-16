@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
+namespace Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 
 public sealed class DomainEventRecordEntityConfiguration(string? schema = null)
     : IEntityTypeConfiguration<DomainEventRecordEntity>

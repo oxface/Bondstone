@@ -1,6 +1,5 @@
 using Bondstone.Configuration;
-using Bondstone.Capabilities.DomainEvents;
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
+using Bondstone.DomainEvents;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Messaging;
@@ -9,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Postgres.Tests;
+namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.DomainEvents;
 
 public sealed class PostgreSqlDomainEventTransactionTests(PostgreSqlFixture fixture)
     : IClassFixture<PostgreSqlFixture>

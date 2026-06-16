@@ -1,5 +1,5 @@
 using Bondstone.Configuration;
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
+using Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;

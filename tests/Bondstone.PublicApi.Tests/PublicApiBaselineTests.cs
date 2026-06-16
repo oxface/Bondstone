@@ -43,8 +43,6 @@ public sealed class PublicApiBaselineTests
         return
         [
             "Bondstone",
-            "Bondstone.Capabilities.DomainEvents",
-            "Bondstone.Capabilities.DomainEvents.EntityFrameworkCore",
             "Bondstone.Hosting",
             "Bondstone.Persistence",
             "Bondstone.Persistence.EntityFrameworkCore",

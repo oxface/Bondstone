@@ -1,7 +1,6 @@
 using Bondstone.Configuration;
-using Bondstone.Capabilities.DomainEvents;
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
+using Bondstone.DomainEvents;
+using Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Messaging;
 using Bondstone.Modules;
@@ -10,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Tests;
+namespace Bondstone.Persistence.EntityFrameworkCore.Tests.DomainEvents;
 
 public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 {
@@ -64,7 +63,7 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task ModuleCommands_WhenDomainEventHandlerIsRegistered_DoesNotDispatchAndStagesBeforeSave()
+    public async Task ModuleCommands_WhenApplicationBehaviorRaisesDomainEvent_StagesBeforeSave()
     {
         string databaseName = Guid.NewGuid().ToString("N");
         var services = new ServiceCollection();
@@ -72,9 +71,6 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
         services.AddScoped<
             IModuleCommandPipelineBehavior<RaiseLoggedDomainEventCommand>,
             LoggedDomainEventCommandBehavior>();
-        services.AddScoped<
-            IDomainEventHandler<InventoryReservedDomainEvent>,
-            RecordingInventoryReservedDomainEventHandler>();
         services.AddDbContext<DomainEventTestDbContext>(options =>
             UseInMemory(options, databaseName));
 
@@ -112,8 +108,6 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
                 "clear",
             ],
             capture.Calls);
-        Assert.DoesNotContain("domain-handler", capture.Calls);
-
         using IServiceScope verificationScope = serviceProvider.CreateScope();
         DomainEventTestDbContext context =
             verificationScope.ServiceProvider.GetRequiredService<DomainEventTestDbContext>();
@@ -231,7 +225,7 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
         Assert.Contains(
-            "Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Command",
+            "Bondstone.Persistence.EntityFrameworkCore.DomainEvents.Command",
             exception.Message,
             StringComparison.Ordinal);
         Assert.Contains("required persistence declaration", exception.Message, StringComparison.Ordinal);
@@ -254,7 +248,7 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
         Assert.Contains(
-            "Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Command",
+            "Bondstone.Persistence.EntityFrameworkCore.DomainEvents.Command",
             exception.Message,
             StringComparison.Ordinal);
         Assert.Contains("required persistence declaration", exception.Message, StringComparison.Ordinal);
@@ -509,18 +503,6 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
             capture.Calls.Add("application-before");
             await next(ct);
             capture.Calls.Add("application-after");
-        }
-    }
-
-    public sealed class RecordingInventoryReservedDomainEventHandler(DomainEventCapture capture)
-        : IDomainEventHandler<InventoryReservedDomainEvent>
-    {
-        public ValueTask HandleAsync(
-            InventoryReservedDomainEvent domainEvent,
-            CancellationToken ct = default)
-        {
-            capture.Calls.Add("domain-handler");
-            return ValueTask.CompletedTask;
         }
     }
 

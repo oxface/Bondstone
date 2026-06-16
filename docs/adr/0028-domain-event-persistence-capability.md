@@ -240,6 +240,21 @@ event capability packages.
 This keeps domain events as optional Bondstone utility functionality rather
 than core durable messaging or persistence semantics.
 
+### 2026-06-16: Domain Events In Core And EF Persistence
+
+ADR 0058 supersedes ADR 0052's capability-package placement. The active
+domain event contracts now live in the core `Bondstone` package under the
+`Bondstone.DomainEvents` namespace:
+
+- `IDomainEvent`;
+- `DomainEventIdentityAttribute`;
+- `IDomainEventSource`.
+
+`IDomainEventHandler<TDomainEvent>` is removed from the active public API
+until a concrete local-dispatch model is accepted by a future ADR. EF-backed
+domain event collection, record mapping, module opt-in, and persistence now
+live in `Bondstone.Persistence.EntityFrameworkCore`.
+
 ## Related Decisions
 
 - [0004 Positioning And Service Extraction Path](0004-positioning-and-service-extraction-path.md)
@@ -251,24 +266,23 @@ than core durable messaging or persistence semantics.
 - [0033 First-Class Event Publish/Subscribe Topology](0033-first-class-event-publish-subscribe-topology.md)
 - [0051 Package Boundary Split](0051-package-boundary-split.md)
 - [0052 Domain Event Capability Package Boundary](0052-domain-event-capability-package-boundary.md)
+- [0058 Domain Events In Core And EF Persistence](0058-domain-events-in-core-and-ef-persistence.md)
 
 ## Application Notes
 
 - Current contract: Bondstone owns a small module-local `IDomainEvent`
-  contract, `DomainEventIdentityAttribute`, `IDomainEventSource`, and
-  `IDomainEventHandler<TDomainEvent>` in the `Bondstone.Capabilities.DomainEvents` package
-  under the `Bondstone.Capabilities.DomainEvents` namespace. `IDomainEvent` does not extend
-  the messaging `IMessage` marker. EF Core is the first provider-backed
-  bridge for optional collection and persistence, using `ChangeTracker` plus
-  `IDomainEventSource`. EF domain event persistence activates only when the
-  `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` bridge package is
-  referenced and EF-backed modules explicitly opt into the capability through
-  `UseEntityFrameworkCoreDomainEventPersistence()` and map the record shape
-  with `ApplyBondstoneDomainEvents()`. `ApplyBondstonePersistence()` remains
-  the durable EF mapping bundle for outbox, inbox, and operation state.
-  Non-EF PostgreSQL domain event staging remains application-owned. Domain
-  events stay module-local unless module code explicitly maps selected facts
-  to integration events.
+  contract, `DomainEventIdentityAttribute`, and `IDomainEventSource` in the
+  core `Bondstone` package under the `Bondstone.DomainEvents` namespace.
+  `IDomainEvent` does not extend the messaging `IMessage` marker. EF Core is
+  the first provider-backed implementation for optional collection and
+  persistence, using `ChangeTracker` plus `IDomainEventSource`. EF domain
+  event persistence activates only when EF-backed modules explicitly opt into
+  it through `UseEntityFrameworkCoreDomainEventPersistence()` and map the
+  record shape with `ApplyBondstoneDomainEvents()`.
+  `ApplyBondstonePersistence()` remains the durable EF mapping bundle for
+  outbox, inbox, and operation state. Non-EF PostgreSQL domain event staging
+  remains application-owned. Domain events stay module-local unless module
+  code explicitly maps selected facts to integration events.
 - Stable docs: Current domain event direction is described in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/persistence.md](../architecture/persistence.md), and
@@ -281,11 +295,10 @@ than core durable messaging or persistence semantics.
   public API, package-boundary, persistence, provider, durable behavior, or
   module runtime changes.
 - Application evidence: Stable docs and backlog guidance are updated. Domain
-  event contracts and contract tests are implemented through
-  `Bondstone.Capabilities.DomainEvents`. EF collection, explicit EF mapping,
-  persisted record mapping, runtime opt-in behavior, and transaction-clear
-  tests are implemented in
-  `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`.
+  event contracts and contract tests are implemented through `Bondstone`. EF
+  collection, explicit EF mapping, persisted record mapping, runtime opt-in
+  behavior, and transaction-clear tests are implemented in
+  `Bondstone.Persistence.EntityFrameworkCore` and its PostgreSQL test suite.
 - Pending or deferred: Non-EF PostgreSQL staging and integration-event mapping
   remain deferred until a later accepted decision narrows or reopens them.
 

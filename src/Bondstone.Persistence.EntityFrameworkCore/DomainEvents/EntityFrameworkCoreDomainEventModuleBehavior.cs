@@ -1,12 +1,12 @@
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
-using Bondstone.Capabilities.DomainEvents;
+using Bondstone.DomainEvents;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
+namespace Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 
 internal sealed class EntityFrameworkCoreDomainEventModuleCommandBehavior<TCommand>(
     IServiceProvider serviceProvider,

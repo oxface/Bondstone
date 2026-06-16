@@ -51,11 +51,11 @@ module-aware runtime resolution over the persistence contracts.
 tests, and local development. It is not a fallback and does not replace broker
 durability. See [transport-local.md](transport-local.md).
 
-`Bondstone.Capabilities.DomainEvents` contains small module-local domain event
-capability contracts. It is not a transport, message bus, or provider runtime
-package. `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` is the EF
-Core bridge that provides the first runtime implementation for collection and
-persistence.
+Module-local domain event contracts live in `Bondstone.DomainEvents` in the
+core `Bondstone` package. They are not transport messages, message-bus
+contracts, or provider runtime APIs. EF-backed collection and persistence live
+in `Bondstone.Persistence.EntityFrameworkCore` and activate only through
+explicit module opt-in and explicit EF mapping.
 
 ## Topic Docs
 

@@ -1,7 +1,5 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.csproj" />
-    <Project Path="src/Bondstone.Capabilities.DomainEvents/Bondstone.Capabilities.DomainEvents.csproj" />
     <Project Path="src/Bondstone.Persistence/Bondstone.Persistence.csproj" />
     <Project Path="src/Bondstone.Persistence.EntityFrameworkCore.Postgres/Bondstone.Persistence.EntityFrameworkCore.Postgres.csproj" />
     <Project Path="src/Bondstone.Persistence.EntityFrameworkCore/Bondstone.Persistence.EntityFrameworkCore.csproj" />
@@ -19,9 +17,6 @@
     <Project Path="samples/ModularMonolith/Bondstone.Samples.ModularMonolith.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Bondstone.Capabilities.DomainEvents.Tests/Bondstone.Capabilities.DomainEvents.Tests.csproj" />
-    <Project Path="tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Postgres.Tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Postgres.Tests.csproj" />
-    <Project Path="tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Tests/Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Tests.csproj" />
     <Project Path="tests/Bondstone.Composition.Tests/Bondstone.Composition.Tests.csproj" />
     <Project Path="tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.csproj" />
     <Project Path="tests/Bondstone.Persistence.EntityFrameworkCore.Tests/Bondstone.Persistence.EntityFrameworkCore.Tests.csproj" />

@@ -1,4 +1,4 @@
-namespace Bondstone.Capabilities.DomainEvents;
+namespace Bondstone.DomainEvents;
 
 public interface IDomainEventSource
 {

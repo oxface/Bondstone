@@ -1,7 +1,7 @@
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
+using Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 
-namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
+namespace Bondstone.Persistence.EntityFrameworkCore.Persistence;
 
 /// <summary>
 /// Adds Bondstone module-local domain event record mappings to EF Core models.

@@ -50,6 +50,21 @@ namespace Bondstone.Configuration
         void Validate(Bondstone.Configuration.BondstoneConfigurationValidationContext context);
     }
 }
+namespace Bondstone.DomainEvents
+{
+    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct, Inherited=false)]
+    public sealed class DomainEventIdentityAttribute : System.Attribute
+    {
+        public DomainEventIdentityAttribute(string name) { }
+        public string Name { get; }
+    }
+    public interface IDomainEvent { }
+    public interface IDomainEventSource
+    {
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.DomainEvents.IDomainEvent> PendingDomainEvents { get; }
+        void ClearPendingDomainEvents();
+    }
+}
 namespace Bondstone.Messaging
 {
     [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct, Inherited=false)]

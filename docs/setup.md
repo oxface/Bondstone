@@ -6,18 +6,15 @@ This document shows the current host setup shape for Bondstone.
 
 Install the packages needed for the host:
 
-- `Bondstone` for core module, command, integration-event, and module
-  execution contracts.
-- `Bondstone.Capabilities.DomainEvents` when domain model types expose
-  module-local domain events.
-- `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` when EF-backed
-  modules opt into domain event collection and persistence.
+- `Bondstone` for core module, command, integration-event, domain-event, and
+  module execution contracts.
 - `Bondstone.Hosting` when the host runs the durable outbox worker.
 - `Bondstone.Persistence` for provider-neutral durable envelopes, inbox,
   outbox, operation state, and persistence contracts used by custom
   persistence or dispatch composition.
-- `Bondstone.Persistence.EntityFrameworkCore` for EF Core durable persistence mappings and
-  module transaction behavior.
+- `Bondstone.Persistence.EntityFrameworkCore` for EF Core durable persistence
+  mappings, module transaction behavior, and optional EF-backed domain event
+  persistence.
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
   classification and provider registration.
 - `Bondstone.Transport.RabbitMq` when the host dispatches durable outbox
@@ -39,10 +36,9 @@ For a normal PostgreSQL-backed host, start with:
 - `Bondstone.Transport.RabbitMq` when messages leave the process through the
   remaining direct broker adapter.
 
-Add optional capability packages only when the module uses that capability.
-For example, EF-backed module-local domain event persistence uses
-`Bondstone.Capabilities.DomainEvents` and
-`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`.
+Domain event contracts are in the core `Bondstone` package. EF-backed
+module-local domain event persistence uses
+`Bondstone.Persistence.EntityFrameworkCore` and remains explicit opt-in.
 
 Use the provider transport extensions on `AddBondstone` for ordinary hosts.
 Those extensions register outbox dispatch and receive helpers. Broker
@@ -72,16 +68,6 @@ worker, use this package set in the projects that call the corresponding APIs:
 </ItemGroup>
 ```
 
-Add these only when a module uses EF-backed module-local domain event
-persistence:
-
-```xml
-<ItemGroup>
-  <PackageReference Include="Bondstone.Capabilities.DomainEvents" />
-  <PackageReference Include="Bondstone.Capabilities.DomainEvents.EntityFrameworkCore" />
-</ItemGroup>
-```
-
 Contracts projects that define durable commands or integration events need
 `Bondstone`. Module implementation projects that configure EF persistence need
 the EF Core and PostgreSQL packages. Host projects that configure local
@@ -100,17 +86,16 @@ Common namespaces for this path are:
   `IIntegrationEvent`, `DurableCommandIdentityAttribute`,
   `IntegrationEventIdentityAttribute`, `IDurableCommandSender`, and
   `IDurableEventPublisher`.
+- `Bondstone.DomainEvents` for optional `IDomainEvent` and
+  `IDomainEventSource`.
 - `Bondstone.Persistence.EntityFrameworkCore.Persistence` for
   `ApplyBondstonePersistence`, `ApplyBondstoneOutbox`,
   `ApplyBondstoneInbox`, `ApplyBondstoneOperationState`, and
-  `UseEntityFrameworkCorePersistence`.
+  `UseEntityFrameworkCorePersistence`, and optional
+  `UseEntityFrameworkCoreDomainEventPersistence` and
+  `ApplyBondstoneDomainEvents`.
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence` for
   `UsePostgreSqlPersistence`.
-- `Bondstone.Capabilities.DomainEvents` for optional `IDomainEvent` and
-  `IDomainEventSource`.
-- `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence` for
-  optional `UseEntityFrameworkCoreDomainEventPersistence` and
-  `ApplyBondstoneDomainEvents`.
 - `Bondstone.Transport.Local.Outbox` for `UseLocalTransport` and local queue
   topology.
 - `Bondstone.Hosting.Outbox` for `UseWorker` and
@@ -307,7 +292,6 @@ When the module also persists module-local domain events, opt in at module
 registration and map the domain event record shape explicitly:
 
 ```csharp
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Microsoft.EntityFrameworkCore;
 

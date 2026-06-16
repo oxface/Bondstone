@@ -1,4 +1,4 @@
-namespace Bondstone.Capabilities.DomainEvents;
+namespace Bondstone.DomainEvents;
 
 /// <summary>
 /// Marker for a module-local domain fact.

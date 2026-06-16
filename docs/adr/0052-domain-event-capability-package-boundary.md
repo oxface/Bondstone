@@ -1,7 +1,7 @@
 # 0052 Domain Event Capability Package Boundary
 
-Status: Amended
-Application: Applied
+Status: Superseded
+Application: Not Applicable
 Date: 2026-06-11
 
 ## Context
@@ -231,6 +231,8 @@ deferred to the broader pipeline contribution model accepted in ADR 0025.
 
 ## Related Decisions
 
+- Superseded by
+  [0058 Domain Events In Core And EF Persistence](0058-domain-events-in-core-and-ef-persistence.md).
 - Amends [0051 Package Boundary Split](0051-package-boundary-split.md).
 - Amends [0028 Domain Event Persistence Capability](0028-domain-event-persistence-capability.md).
 - Relates to

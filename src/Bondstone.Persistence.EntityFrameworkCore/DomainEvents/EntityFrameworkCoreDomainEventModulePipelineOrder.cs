@@ -1,6 +1,6 @@
 using Bondstone.Modules;
 
-namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
+namespace Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 
 internal static class EntityFrameworkCoreDomainEventModulePipelineOrder
 {

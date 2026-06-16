@@ -1,10 +1,10 @@
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
+using Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 using Bondstone.Modules;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
+namespace Bondstone.Persistence.EntityFrameworkCore.Persistence;
 
 /// <summary>
 /// Adds EF Core persistence behavior for Bondstone module-local domain events.
@@ -34,14 +34,14 @@ public static class BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensio
                 serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
         module.AddCommandPipelineContribution(
             new ModuleCommandPipelineContribution(
-                "Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Command",
+                "Bondstone.Persistence.EntityFrameworkCore.DomainEvents.Command",
                 ModulePipelineStepKind.Capability,
                 EntityFrameworkCoreDomainEventModulePipelineOrder.Command,
                 typeof(EntityFrameworkCoreDomainEventModuleCommandBehavior<>),
                 AppliesToModule));
         module.AddEventSubscriberPipelineContribution(
             new ModuleEventSubscriberPipelineContribution(
-                "Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.EventSubscriber",
+                "Bondstone.Persistence.EntityFrameworkCore.DomainEvents.EventSubscriber",
                 ModulePipelineStepKind.Capability,
                 EntityFrameworkCoreDomainEventModulePipelineOrder.EventSubscriber,
                 typeof(EntityFrameworkCoreDomainEventModuleEventSubscriberBehavior<>),

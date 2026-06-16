@@ -1,8 +1,8 @@
-using Bondstone.Capabilities.DomainEvents;
+using Bondstone.DomainEvents;
 using Bondstone.Messaging;
 using Xunit;
 
-namespace Bondstone.Capabilities.DomainEvents.Tests;
+namespace Bondstone.Tests.DomainEvents;
 
 public sealed class DomainEventContractTests
 {
@@ -57,29 +57,6 @@ public sealed class DomainEventContractTests
         Assert.Equal("clrType", exception.ParamName);
     }
 
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task DomainEventHandler_WhenImplemented_HandlesLocalDomainEvent()
-    {
-        var handler = new InventoryReservedHandler();
-        var domainEvent = new InventoryReservedDomainEvent("inventory-1");
-
-        await handler.HandleAsync(domainEvent);
-
-        Assert.Equal(domainEvent, handler.HandledDomainEvent);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void DomainEventHandler_GenericArgumentIsConstrainedToDomainEvent()
-    {
-        Type genericParameter = typeof(IDomainEventHandler<>).GetGenericArguments()[0];
-
-        Assert.Contains(
-            typeof(IDomainEvent),
-            genericParameter.GetGenericParameterConstraints());
-    }
-
     private sealed class InventoryReservation(string inventoryId) : IDomainEventSource
     {
         private readonly List<IDomainEvent> _pendingDomainEvents = [];
@@ -94,19 +71,6 @@ public sealed class DomainEventContractTests
         public void ClearPendingDomainEvents()
         {
             _pendingDomainEvents.Clear();
-        }
-    }
-
-    private sealed class InventoryReservedHandler : IDomainEventHandler<InventoryReservedDomainEvent>
-    {
-        public InventoryReservedDomainEvent? HandledDomainEvent { get; private set; }
-
-        public ValueTask HandleAsync(
-            InventoryReservedDomainEvent domainEvent,
-            CancellationToken ct = default)
-        {
-            HandledDomainEvent = domainEvent;
-            return ValueTask.CompletedTask;
         }
     }
 

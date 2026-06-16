@@ -11,16 +11,14 @@ persistence provider, transport adapter, or optional capability.
 
 ## Packages
 
-- [Bondstone](Bondstone) contains core abstractions.
-- [Bondstone.Capabilities.DomainEvents](Bondstone.Capabilities.DomainEvents)
-  contains optional module-local domain event capability contracts.
-- [Bondstone.Capabilities.DomainEvents.EntityFrameworkCore](Bondstone.Capabilities.DomainEvents.EntityFrameworkCore)
-  contains the EF Core bridge for domain event persistence.
+- [Bondstone](Bondstone) contains core abstractions, including module-local
+  domain event contracts.
 - [Bondstone.Hosting](Bondstone.Hosting) contains hosted worker composition.
 - [Bondstone.Persistence](Bondstone.Persistence) contains provider-neutral
   durable persistence contracts and records.
 - [Bondstone.Persistence.EntityFrameworkCore](Bondstone.Persistence.EntityFrameworkCore) contains EF
-  Core persistence mappings and boundaries.
+  Core persistence mappings, boundaries, and optional EF-backed domain event
+  persistence.
 - [Bondstone.Persistence.EntityFrameworkCore.Postgres](Bondstone.Persistence.EntityFrameworkCore.Postgres)
   contains PostgreSQL-specific EF Core integration.
 - [Bondstone.Transport.Local](Bondstone.Transport.Local) contains explicit

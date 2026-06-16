@@ -1,7 +1,7 @@
-using Bondstone.Capabilities.DomainEvents;
+using Bondstone.DomainEvents;
 using Bondstone.Messaging;
 
-namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
+namespace Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 
 public sealed class DomainEventRecordEntity
 {

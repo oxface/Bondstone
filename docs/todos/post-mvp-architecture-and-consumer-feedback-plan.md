@@ -558,6 +558,54 @@ Applied on 2026-06-16:
 3. Add a small diagnostic report only if the simplified model still needs one.
    Deferred; the simplified model does not currently justify a new report.
 
+### Next: Runtime Pipeline Simplification
+
+Preparatory work applied on 2026-06-16:
+
+- Domain event contracts moved into the core `Bondstone` package under
+  `Bondstone.DomainEvents`.
+- EF-backed domain event persistence moved into
+  `Bondstone.Persistence.EntityFrameworkCore`.
+- Removed the old `Bondstone.Capabilities.DomainEvents` and
+  `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` packages and their
+  standalone tests.
+- Removed `IDomainEventHandler<TDomainEvent>` from the active public API
+  because Bondstone still has no accepted local domain-event dispatch model.
+
+Pipeline simplification is not applied yet. The current runtime still uses the
+generalized contribution planner, public `ModuleCommandPipelineContribution`
+and `ModuleEventSubscriberPipelineContribution` records, public step-kind/order
+types, and `ModulePipelineFeatureCollection` as provider/capability
+coordination. That was useful while proving EF persistence, operation
+completion, receive inbox, and domain event capability composition, but it is
+now the biggest remaining "framework" shape after transport simplification.
+
+1. Create or supersede ADR coverage for the fixed module runtime sequence.
+2. Remove public module pipeline contribution APIs from normal module setup.
+3. Replace contribution registry/planner selection with an internal fixed
+   sequence:
+   - establish module execution context;
+   - open module persistence transaction when configured;
+   - run receive inbox when a receive context exists;
+   - run application pipeline behaviors and handler;
+   - stage operation completion when applicable;
+   - collect EF domain event records when explicitly enabled;
+   - save, commit, and run observed-commit cleanup.
+4. Keep `IModuleCommandPipelineBehavior<TCommand>` and
+   `IModuleEventSubscriberPipelineBehavior<TEvent>` as the application-owned
+   extension points.
+5. Move EF transaction behavior from generic pipeline contribution to an
+   internal runtime step selected by module persistence metadata.
+6. Move EF domain event persistence from generalized capability contribution
+   to explicit EF module runtime metadata and internal transaction-adjacent
+   behavior.
+7. Internalize or remove `ModulePipelineFeatureCollection`,
+   `IModulePipelineExecutionContext`, `ModulePipelineStepKind`, system order
+   constants, and contribution records unless a current package still needs a
+   package-visible replacement contract.
+8. Refresh public API baselines, module architecture docs, EF/domain-event
+   architecture docs, and affected composition/runtime tests.
+
 ### Then: Extraction Proof
 
 1. Add a service-split sample or test slice that extracts one module into a

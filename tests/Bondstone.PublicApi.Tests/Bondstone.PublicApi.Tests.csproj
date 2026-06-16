@@ -1,8 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\..\src\Bondstone\Bondstone.csproj" />
-    <ProjectReference Include="..\..\src\Bondstone.Capabilities.DomainEvents\Bondstone.Capabilities.DomainEvents.csproj" />
-    <ProjectReference Include="..\..\src\Bondstone.Capabilities.DomainEvents.EntityFrameworkCore\Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Hosting\Bondstone.Hosting.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Persistence\Bondstone.Persistence.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore\Bondstone.Persistence.EntityFrameworkCore.csproj" />

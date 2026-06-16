@@ -1,8 +1,8 @@
 # EF Core Persistence
 
 `Bondstone.Persistence.EntityFrameworkCore` owns provider-neutral EF Core
-entity classes, model mappings, staging stores, and the EF persistence scope.
-It does not depend on domain-event capability packages.
+entity classes, model mappings, staging stores, the EF persistence scope, and
+optional EF-backed domain event persistence.
 
 ## Model Mappings
 
@@ -39,9 +39,8 @@ command and event subscriber execution. The model must include outbox and
 inbox mappings, either by calling `ApplyBondstoneOutbox` and
 `ApplyBondstoneInbox`, or by using the durable `ApplyBondstonePersistence`
 helper. Operation-state mapping validation remains tied to operation-state
-store usage. Modules that opt into EF domain event persistence through
-`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` must map domain
-event records explicitly with that package's `ApplyBondstoneDomainEvents()`.
+store usage. Modules that opt into EF domain event persistence must map domain
+event records explicitly with `ApplyBondstoneDomainEvents()`.
 
 ## Registration And Stores
 
@@ -161,27 +160,25 @@ The columns are diagnostic only. They are not part of the operation-state key,
 are not indexed by Bondstone, and do not change operation-state precedence,
 completion, or result deserialization behavior.
 
-ADR 0028 accepts EF Core as the first provider bridge for optional
-module-local domain event collection and persistence. The implementation lives
-in `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`, not in the base
-EF persistence package.
+ADR 0028 accepts EF Core as the first provider implementation for optional
+module-local domain event collection and persistence. ADR 0058 moves that
+implementation into `Bondstone.Persistence.EntityFrameworkCore`.
 
 The accepted EF collection mechanism is narrow: the module transaction
 behavior collects domain events through `DbContext.ChangeTracker` entries
-whose entities implement the
-`Bondstone.Capabilities.DomainEvents.IDomainEventSource` contract. The bridge
-must not require a Bondstone aggregate base class, a custom
-DbContext base class, `SaveChangesAsync` interception, arbitrary method-name
-reflection, automatic publication from EF interceptors, or hidden dispatch to
-`IDomainEventHandler<TDomainEvent>`.
+whose entities implement the `Bondstone.DomainEvents.IDomainEventSource`
+contract. The EF behavior must not require a Bondstone aggregate base class, a
+custom DbContext base class, `SaveChangesAsync` interception, arbitrary
+method-name reflection, automatic publication from EF interceptors, or hidden
+handler dispatch.
 
-EF-backed domain event persistence is bridge-owned runtime behavior. It
-activates only when the bridge package is referenced and modules declare EF
-Core persistence and explicitly opt into domain event persistence with
-`UseEntityFrameworkCoreDomainEventPersistence()`. The opt-in is narrow
-bridge-owned module metadata; Bondstone does not provide a public capability-step
-registry or public named pipeline slots. The bridge contributes ordered
-capability pipeline records through its setup API.
+EF-backed domain event persistence is EF-owned runtime behavior. It activates
+only when modules declare EF Core persistence and explicitly opt into domain
+event persistence with `UseEntityFrameworkCoreDomainEventPersistence()`. The
+opt-in is narrow EF-owned module metadata; Bondstone does not provide a public
+capability-step registry or public named pipeline slots. The current EF
+implementation contributes ordered runtime records through its setup API until
+the fixed module pipeline simplification is applied.
 
 EF-backed domain event collection belongs inside module command execution and
 module integration event subscriber execution. The placement is:
@@ -215,11 +212,11 @@ Those callbacks are lightweight runtime cleanup hooks; domain event records
 are already staged before `SaveChangesAsync`, and callback failures can surface
 after the EF transaction has committed.
 
-The EF bridge is not a hidden domain-event bus. Calling
+The EF behavior is not a hidden domain-event bus. Calling
 `UseEntityFrameworkCoreDomainEventPersistence()` does not resolve or invoke
-registered `IDomainEventHandler<TDomainEvent>` services or map domain events
-to integration events. EF persistence remains the clear-on-observed-commit
-owner for the sources it stages.
+local domain event handlers or map domain events to integration events. EF
+persistence remains the clear-on-observed-commit owner for the sources it
+stages.
 
 The EF record shape is `DomainEventRecordEntity`, mapped to
 `domain_event_records` by default. It stores a stable record id, owning module,

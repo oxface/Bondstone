@@ -1,4 +1,4 @@
-namespace Bondstone.Capabilities.DomainEvents;
+namespace Bondstone.DomainEvents;
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
 public sealed class DomainEventIdentityAttribute(string name) : Attribute

@@ -85,35 +85,30 @@ persistence records private module facts inside the owning module persistence
 boundary; it does not write outgoing outbox messages, create inbox records,
 publish transport events, or expose domain events as integration contracts.
 
-The core shape is intentionally small and lives under
-`Bondstone.Capabilities.DomainEvents` in the
-`Bondstone.Capabilities.DomainEvents` package: module domain objects may
-implement
+The core shape is intentionally small and lives under `Bondstone.DomainEvents`
+in the core `Bondstone` package: module domain objects may implement
 `IDomainEventSource` to expose pending `IDomainEvent` instances through
-`PendingDomainEvents` and clear them through `ClearPendingDomainEvents()`.
-Capability bridge packages may collect, stage, and clear those events when the
-module opts into the capability. Persisted records should carry a stable
-record id, owning module, `DomainEventIdentityAttribute` name, timestamps,
-serialized payload, payload metadata, and trace or causation metadata when
-available.
+`PendingDomainEvents` and clear them through `ClearPendingDomainEvents()`. EF
+module behavior may collect, stage, and clear those events when the module
+opts into EF-backed domain event persistence. Persisted records should carry a
+stable record id, owning module, `DomainEventIdentityAttribute` name,
+timestamps, serialized payload, payload metadata, and trace or causation
+metadata when available.
 
-Bondstone does not dispatch local domain events. Registering
-`IDomainEventHandler<TDomainEvent>` services does not cause Bondstone to
-dispatch pending `IDomainEvent` instances from the module command or event
-subscriber pipelines.
+Bondstone does not dispatch local domain events and does not expose an active
+local domain event handler contract.
 
-EF Core is the first accepted capability bridge implementation. Non-EF
-PostgreSQL domain event staging is application-owned.
+EF Core is the first accepted persistence implementation. Non-EF PostgreSQL
+domain event staging is application-owned.
 
 Domain event persistence activation stays narrow. There is no public
 capability-step registry, public named pipeline-slot API, or generic provider
-metadata registry. Capability bridge packages can contribute ordered
-capability pipeline records through their setup APIs. The
-`Bondstone.Capabilities.DomainEvents` package contains the shared contracts; the
-`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` bridge activates
-from a module's EF persistence declaration, an explicit
-`UseEntityFrameworkCoreDomainEventPersistence()` module opt-in, and
-bridge-owned EF services.
+metadata registry. EF domain event persistence activates from a module's EF
+persistence declaration, an explicit
+`UseEntityFrameworkCoreDomainEventPersistence()` module opt-in, explicit
+`ApplyBondstoneDomainEvents()` mapping, and EF-owned services. The current
+implementation still contributes ordered runtime records through setup APIs
+until the module pipeline simplification is applied.
 
 The EF runtime behavior belongs inside module command and integration event
 subscriber execution. It collects and stages pending domain events after
@@ -121,9 +116,9 @@ application behavior and handler logic, while the module execution context is
 still active, and before the EF transaction owner saves and commits. Pending
 events are cleared only after collection, staging, save, and commit succeed.
 
-Capability bridge packages own their persisted shapes and provider-specific
+The EF package owns the persisted domain event shape and provider-specific
 tests. Provider-owned SQL should reuse table, column, and constraint names
-from the bridge mappings when those mappings define the persisted shape.
+from the EF mappings when those mappings define the persisted shape.
 
 EF Core with PostgreSQL durability semantics is the supported persistence path
 for the post-MVP MVP. The previous direct non-EF

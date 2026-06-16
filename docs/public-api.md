@@ -177,8 +177,6 @@ Public API curation, 2026-06-16:
 This first pass covers all current package projects:
 
 - `Bondstone`
-- `Bondstone.Capabilities.DomainEvents`
-- `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`
 - `Bondstone.Hosting`
 - `Bondstone.Persistence`
 - `Bondstone.Persistence.EntityFrameworkCore`
@@ -216,6 +214,9 @@ User application contract:
 - `ICommandValidator<TCommand>`
 - `IModuleCommandPipelineBehavior<TCommand>`
 - `IModuleEventSubscriberPipelineBehavior<TEvent>`
+- `IDomainEvent`
+- `DomainEventIdentityAttribute`
+- `IDomainEventSource`
 - `IBondstoneModule`
 - `IDurableCommandSender`
 - `IDurableEventPublisher`
@@ -349,6 +350,8 @@ Normal setup API:
 - `BondstoneEntityFrameworkCoreServiceCollectionExtensions`
 - `BondstoneEntityFrameworkCoreModuleBuilderExtensions`
 - `BondstoneModelBuilderExtensions`
+- `BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensions`
+- `BondstoneDomainEventModelBuilderExtensions`
 
 Advanced composition API:
 
@@ -376,6 +379,9 @@ Public implementation detail exposed for now:
 - `InboxMessageEntityConfiguration.Columns`
 - `OperationStateEntity`
 - `OperationStateEntityConfiguration`
+- `DomainEventRecordEntity`
+- `DomainEventRecordEntityConfiguration`
+- `DomainEventRecordEntityConfiguration.Columns`
 
 ## Bondstone.Persistence.EntityFrameworkCore.Postgres
 
@@ -457,26 +463,3 @@ Public implementation detail exposed for now:
 - `BondstoneRabbitMqHeaders`
 - `RabbitMqDurableMessageEnvelope`
 - `RabbitMqDurableEnvelopeDispatcher`
-
-## Bondstone.Capabilities.DomainEvents
-
-User application contract:
-
-- `IDomainEvent`
-- `DomainEventIdentityAttribute`
-- `IDomainEventSource`
-- `IDomainEventHandler<TDomainEvent>` is a local handler contract. Bondstone
-  does not dispatch it automatically in the current runtime.
-
-## Bondstone.Capabilities.DomainEvents.EntityFrameworkCore
-
-Normal setup API:
-
-- `BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensions`
-- `BondstoneDomainEventModelBuilderExtensions`
-
-Public implementation detail exposed for now:
-
-- `DomainEventRecordEntity`
-- `DomainEventRecordEntityConfiguration`
-- `DomainEventRecordEntityConfiguration.Columns`

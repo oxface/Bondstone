@@ -1,7 +1,7 @@
 using Bondstone.Modules;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 
-namespace Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
+namespace Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 
 internal sealed class EntityFrameworkCoreDomainEventModuleRuntimeRegistry(
     IBondstoneModuleRegistry moduleRegistry)

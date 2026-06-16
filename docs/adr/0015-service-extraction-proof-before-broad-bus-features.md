@@ -1,7 +1,7 @@
 # 0015 Service Extraction Proof Before Broad Bus Features
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Partially Applied
 Date: 2026-06-16
 
 ## Context
@@ -74,15 +74,23 @@ toward owning application messaging infrastructure.
 
 - Current contract: stable architecture docs already position Bondstone as
   modular-monolith first with service extraction as an evolution path.
-- Stable docs: proposed follow-up should sharpen docs that compare Bondstone
-  with full bus frameworks and explain extraction scenarios.
-- Agent guidance: no new agent rule is required until accepted and applied.
+- Stable docs: operations guidance now reinforces app-owned broker policy and
+  thin-adapter boundaries used by extraction proofs. Follow-up should still
+  sharpen docs that compare Bondstone with full bus frameworks and explain
+  extraction scenarios.
+- Agent guidance: no new agent rule is required until extraction guidance is
+  stable enough to affect future implementation choices.
 - Application evidence: modular monolith sample and broker-backed extraction
-  tests already exist.
+  tests already exist; production operations docs now describe the ownership
+  split that keeps thin broker adapters from becoming a full bus runtime.
 - Pending or deferred: improve extraction docs, route-aware multi-transport
   sample when needed, and clear "choose Bondstone vs a bus" guidance.
 
 ## Verification
 
-ADR draft only. Reviewed architecture, setup, sample, transport, and package
-docs while producing this proposal.
+Accepted during v2 planning. Reviewed architecture, setup, sample, transport,
+and package docs while producing this decision. Application remains partial:
+the modular-monolith positioning and broker-backed tests exist, while sharper
+extraction and "Bondstone versus bus framework" guidance remains pending. On
+2026-06-16, added operations guidance that supports the extraction boundary
+without adding broad bus features.

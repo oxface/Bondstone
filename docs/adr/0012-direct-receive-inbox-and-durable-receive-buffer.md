@@ -1,7 +1,7 @@
 # 0012 Direct Receive Inbox And Durable Receive Buffer
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Partially Applied
 Date: 2026-06-16
 
 ## Context
@@ -85,20 +85,26 @@ retention policy, and documentation.
 - Current contract: direct receive uses inbox idempotency and treats
   already-received/unprocessed rows as ambiguous receive failures.
 - Stable docs: current behavior is documented in messaging and persistence
-  architecture docs. Proposed follow-up should add a focused durable receive
-  buffer design before implementation.
+  architecture docs and [operations.md](../operations.md). Follow-up should
+  add a focused durable receive buffer design before implementation.
 - Agent guidance: no new agent rule is required until a receive-buffer ADR is
   accepted.
 - Application evidence: `DurableInboxHandlerExecutor` runs the handler only
   when registration is new and marks processed after the handler completes;
   EF module transaction behavior commits receive state and handler effects
-  together; RabbitMQ and Service Bus adapters settle after receive succeeds.
+  together; RabbitMQ and Service Bus adapters settle after receive succeeds;
+  operations guidance documents why already-received/unprocessed rows remain
+  ambiguous in the direct receive model.
 - Pending or deferred: durable receive buffer persistence records, leases,
   retry policy, terminal receive failure state, worker options, retention, and
   tests.
 
 ## Verification
 
-ADR draft only. Reviewed current messaging architecture docs and receive,
-inbox, EF transaction, RabbitMQ receive worker, and Service Bus receive worker
-code paths while producing this proposal.
+Accepted during v2 planning. Reviewed current messaging architecture docs and
+receive, inbox, EF transaction, RabbitMQ receive worker, and Service Bus
+receive worker code paths while producing this decision. Application remains
+partial because the direct receive inbox exists today, while the optional
+durable receive buffer is still design work. On 2026-06-16, added production
+operations guidance for the current direct receive semantics and stale inbox
+inspection model.

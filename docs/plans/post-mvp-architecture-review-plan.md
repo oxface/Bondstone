@@ -8,10 +8,10 @@ This plan prioritizes the architecture work identified after Bondstone's
 public MVP publication and initial consumer feedback.
 
 The plan is intentionally a planning handoff, not a durable architecture
-contract. Accept or revise the related ADRs before broad implementation. Move
+contract. Use the accepted ADRs below as decision boundaries while moving
 implementation tasks into GitHub Issues or GitHub Projects.
 
-## Proposed ADRs
+## Accepted ADRs
 
 - [0011 OTel Native Diagnostics And Misconfiguration Reporting](../adr/0011-otel-native-diagnostics-and-misconfiguration-reporting.md)
 - [0012 Direct Receive Inbox And Durable Receive Buffer](../adr/0012-direct-receive-inbox-and-durable-receive-buffer.md)

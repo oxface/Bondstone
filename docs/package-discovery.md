@@ -4,7 +4,9 @@ This guide maps common Bondstone capabilities to NuGet package IDs and the
 namespaces that expose the setup APIs most consumers import. For a complete
 working host shape, start with the canonical setup path in [setup.md](setup.md).
 For package boundaries, dependency direction, target framework, and publishing
-policy, see [packaging.md](packaging.md).
+policy, see [packaging.md](packaging.md). For production operations and
+observability, see [operations.md](operations.md) and
+[observability.md](observability.md).
 
 ## Capability Matrix
 
@@ -138,7 +140,8 @@ Custom or app-owned broker integrations normally use:
 
 The application or transport library owns broker topology, subscriptions,
 native consumers, ack/nack/settlement, retry, dead-letter policy, prefetch,
-and monitoring.
+and monitoring. Bondstone-owned receive, settlement, stale inbox, and terminal
+outbox guidance is centralized in [operations.md](operations.md).
 
 Rebus remains app-owned guidance rather than a Bondstone package because Rebus
 already owns bus routing, handlers, subscriptions, retries, error queues,
@@ -272,6 +275,10 @@ records, not outbox records.
 
 - [setup.md](setup.md) is the canonical golden-path setup example.
 - [packaging.md](packaging.md) owns package IDs and dependency direction.
+- [operations.md](operations.md) describes production receive, outbox, inbox,
+  operation-state, migration, retention, and app-owned recovery guidance.
+- [observability.md](observability.md) describes current diagnostics and the
+  OpenTelemetry-native direction.
 - [public-api.md](public-api.md) classifies the current public API surface.
 - [architecture/messaging.md](architecture/messaging.md) describes commands,
   integration events, domain events, receive pipelines, and transport

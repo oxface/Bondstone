@@ -1,7 +1,7 @@
 # 0016 Non-Throwing Operation Wait Ergonomics
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Partially Applied
 Date: 2026-06-16
 
 ## Context
@@ -76,16 +76,25 @@ operation.
   timeout.
 - Stable docs: messaging architecture and setup docs describe the throwing
   timeout behavior and recommend `GetResultAsync<TResult>()` for current-state
-  endpoint reads.
+  endpoint reads. [operations.md](../operations.md) also documents timeout,
+  finalization, and expiration ownership for production callers.
 - Agent guidance: no new agent rule is required until a future API is
   accepted.
 - Application evidence: tests cover terminal success, terminal failure,
-  handle-based polling, and timeout throwing behavior.
+  handle-based polling, and timeout throwing behavior; stable operations docs
+  now state that wait timeout is caller patience and does not write durable
+  operation state.
 - Pending or deferred: design and add a non-throwing wait API only when
   endpoint ergonomics justify public API expansion.
 
 ## Verification
 
-ADR draft only. Stable docs and interface XML comments were corrected in the
-same work item, and focused unit coverage was added for current timeout
-behavior.
+Accepted during v2 planning. Stable docs and interface XML comments were
+corrected in the same work item, and focused unit coverage was added for
+current timeout behavior. Application remains partial because the existing
+throwing behavior is documented and tested, while the additive non-throwing
+API remains deferred.
+
+On 2026-06-16, added production operations guidance for result polling,
+throwing wait timeout behavior, explicit finalization, and app-owned
+expiration jobs.

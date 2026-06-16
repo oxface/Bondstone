@@ -1,7 +1,7 @@
 # 0013 Worker Boundaries And Transport Adapter Ownership
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Partially Applied
 Date: 2026-06-16
 
 ## Context
@@ -83,17 +83,26 @@ do not provision or manage broker infrastructure.
 - Current contract: the durable outbox worker moves outbox records through
   Bondstone dispatch state; broker adapter receive workers are explicit
   opt-in and hand envelopes to Bondstone receive.
-- Stable docs: hosting and messaging architecture docs describe much of this
-  boundary today. Proposed follow-up should make the worker boundary explicit
-  in hosting docs.
-- Agent guidance: no new agent rule is required until accepted and applied.
+- Stable docs: hosting and messaging architecture docs now describe this
+  boundary, and [operations.md](../operations.md) carries production ownership
+  guidance for workers, broker settlement, and app-owned provider policy.
+- Agent guidance: no new agent rule is required; root and architecture AGENTS
+  files already route runtime, hosting, and transport work through the
+  architecture docs.
 - Application evidence: current outbox worker composes
   `IDurableOutboxDispatcher`; current RabbitMQ and Service Bus receive workers
-  do not provision topology.
+  do not provision topology; hosting docs explicitly say Bondstone workers may
+  move records between Bondstone-owned durable states but must not manage
+  provider-native infrastructure.
 - Pending or deferred: selected-module worker options, receive-buffer worker,
   operation-expiration worker, and worker metrics remain future work.
 
 ## Verification
 
-ADR draft only. Reviewed hosting and messaging architecture docs plus current
-outbox and transport receive worker code paths while producing this proposal.
+Accepted during v2 planning. Reviewed hosting and messaging architecture docs
+plus current outbox and transport receive worker code paths while producing
+this decision. Application remains partial until the hosting docs explicitly
+state the worker boundary and adapter ownership rules. On 2026-06-16, updated
+hosting and operations docs with those rules; application remains partial
+because selected-module worker options, receive-buffer worker,
+operation-expiration worker, and worker metrics are still future work.

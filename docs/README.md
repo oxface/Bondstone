@@ -13,6 +13,10 @@ duplicating durable rules.
   positioning and durable module-boundary architecture.
 - [github-workflow.md](github-workflow.md) records GitHub issue, project
   status, label, and issue-body conventions.
+- [observability.md](observability.md) records current diagnostic surfaces and
+  the OpenTelemetry-native direction.
+- [operations.md](operations.md) records production operations, lifecycle,
+  retention, receive, migration, and ownership guidance.
 - [packaging.md](packaging.md) records current package IDs, target framework,
   package artifact policy, and package dependency direction.
 - [package-discovery.md](package-discovery.md) maps common consumer-facing
@@ -57,6 +61,12 @@ files with the local context each audience needs.
   package artifact policy, versioning, and publishing policy.
 - `package-discovery.md` owns package and namespace discovery guidance for
   common consumer-facing APIs.
+- `operations.md` owns production operations guidance for receive semantics,
+  broker settlement, outbox and inbox inspection, operation finalization and
+  expiration, EF migrations, package upgrades, contract evolution, retention,
+  and app-owned recovery.
+- `observability.md` owns current diagnostic surfaces and planned
+  OpenTelemetry-native instrumentation direction.
 - `plans/` owns short-lived planning handoffs only. It must not become a
   parallel architecture or backlog system.
 - `github-workflow.md` owns GitHub issue, project, label, and completion

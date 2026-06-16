@@ -1,7 +1,7 @@
 # 0014 Production Operations And Lifecycle Guidance
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Partially Applied
 Date: 2026-06-16
 
 ## Context
@@ -77,19 +77,30 @@ note.
 
 ## Application Notes
 
-- Current contract: operational behavior is distributed across setup,
-  architecture, testing, and package discovery docs.
-- Stable docs: proposed follow-up should add a stable operations guide and
-  link it from docs README, setup, architecture, package discovery, and
-  package READMEs where relevant.
-- Agent guidance: no new agent rule is required until accepted and applied.
+- Current contract: production operations guidance is centralized in
+  [operations.md](../operations.md), with detailed architecture docs remaining
+  the deeper runtime contract.
+- Stable docs: docs README, setup, architecture, package discovery, packaging,
+  messaging, and hosting docs link to the operations or observability guidance.
+  Package README links remain a follow-up.
+- Agent guidance: no new agent rule is required; root and docs AGENTS files
+  already route documentation and architecture changes through stable docs and
+  ADR review.
 - Application evidence: inspectors, finalizer, expiration processor, EF
   mappings, broker adapter receive workers, and public API baselines already
-  exist.
-- Pending or deferred: create the operations guide, package README links,
-  and tests/docs for adapter failure handoff.
+  exist. The operations guide documents direct receive behavior, stale inbox
+  ambiguity, broker settlement after successful receive, terminal outbox
+  inspection, operation polling/finalization/expiration, EF migration
+  ownership, table-shape upgrades, contract evolution, serializer
+  compatibility, retention, and Bondstone/app ownership boundaries.
+- Pending or deferred: package README links, deeper adapter failure-handoff
+  tests/docs, and finalized observability vocabulary remain follow-up work.
 
 ## Verification
 
-ADR draft only. Reviewed setup, architecture, public API, testing, packaging,
-and package discovery docs while producing this proposal.
+Accepted during v2 planning. Reviewed setup, architecture, public API,
+testing, packaging, and package discovery docs while producing this decision.
+On 2026-06-16, added the production operations guide, observability guide, and
+related stable-doc links. Application is partially applied because package
+README links, adapter failure-handoff follow-up, and finalized observability
+vocabulary remain open.

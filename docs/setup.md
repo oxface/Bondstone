@@ -48,9 +48,12 @@ receive, dispatcher, and local transport types remain available for advanced
 composition and tests, but they are not the quick-start path.
 
 After composing a host, use the modular monolith sample as the adoption proof
-and [testing.md](testing.md) for verification entrypoints. The default quality
-gate is `pnpm check`; infrastructure-backed sample and provider coverage runs
-through `pnpm backend:test:integration`.
+and [testing.md](testing.md) for verification entrypoints. Use
+[operations.md](operations.md) for production receive, outbox, inbox,
+operation, migration, retention, and ownership guidance, and
+[observability.md](observability.md) for current diagnostics. The default
+quality gate is `pnpm check`; infrastructure-backed sample and provider
+coverage runs through `pnpm backend:test:integration`.
 
 ## Golden Path: EF/Postgres Local Modular Monolith
 
@@ -373,7 +376,8 @@ For deeper behavior and limitations, see [architecture/modules.md](architecture/
 [architecture/persistence-ef-core.md](architecture/persistence-ef-core.md),
 [architecture/persistence-postgresql.md](architecture/persistence-postgresql.md),
 [architecture/transport-local.md](architecture/transport-local.md), and
-[architecture/hosting.md](architecture/hosting.md).
+[architecture/hosting.md](architecture/hosting.md). For production runbooks
+and retention guidance, see [operations.md](operations.md).
 
 ## Host Composition
 
@@ -504,7 +508,9 @@ IReadOnlyList<DurableOutboxRecord> failedRows = await inspector
 Inspection is read-only. Resetting a terminal row, replaying a message,
 purging old rows, archiving them, or issuing a compensating command remains an
 application/operator runbook decision because the application must prove
-whether the downstream side effect already happened.
+whether the downstream side effect already happened. See
+[operations.md](operations.md) for production inspection, recovery, and
+retention guidance.
 
 ## Module Registration
 
@@ -860,7 +866,8 @@ IReadOnlyList<DurableInboxRecord> staleReceives = await inboxInspector
 Inspection is read-only. Marking rows processed, deleting rows, re-running a
 handler, moving broker messages, or issuing a compensating action remains an
 application/operator runbook decision because the application must prove what
-happened during the ambiguous receive attempt.
+happened during the ambiguous receive attempt. See [operations.md](operations.md)
+for the full direct receive failure model.
 
 The default modular monolith sample uses explicit `Bondstone.Transport.Local`
 queue routing for local development and fast adoption. RabbitMQ and Azure

@@ -200,3 +200,5 @@ nuget.org, not GitHub Packages.
 
 Initial packages have been published to nuget.org. Keep this document focused
 on package boundaries, dependency direction, versioning, and publishing rules.
+Operational package-upgrade guidance for EF table-shape changes, migration
+ownership, and retention lives in [operations.md](operations.md).

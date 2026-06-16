@@ -1,7 +1,7 @@
 # 0011 OTel Native Diagnostics And Misconfiguration Reporting
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Partially Applied
 Date: 2026-06-16
 
 ## Context
@@ -76,20 +76,27 @@ policy.
 
 ## Application Notes
 
-- Current contract: Bondstone has some trace, inspection, result diagnostic,
-  log, and exception surfaces, but no consolidated observability contract.
-- Stable docs: proposed follow-up should add a stable observability guide and
-  link it from setup, architecture, package discovery, and testing docs.
-- Agent guidance: no new agent rule is required until the stable observability
-  guide exists.
+- Current contract: Bondstone diagnostics should stay OpenTelemetry-native,
+  with transport-infrastructure diagnostics left to the application and native
+  broker tooling.
+- Stable docs: [observability.md](../observability.md) documents the current
+  diagnostic surfaces and OTel-native direction; setup, architecture, and
+  package discovery docs link to it. Testing-specific diagnostics guidance
+  remains future work.
+- Agent guidance: no new agent rule is required until the stable
+  observability guide exists.
 - Application evidence: `ModuleReceiveTelemetry` starts receive activities;
   operation state can carry diagnostic context; inspectors expose terminal
   outbox and unprocessed inbox rows.
-- Pending or deferred: define activity names, tags, metrics, log event ids,
-  and misconfiguration-message conventions.
+- Pending or deferred: define the complete stable activity-name, tag, metric,
+  log event-id, and misconfiguration-message vocabulary, then expand
+  instrumentation beyond the current receive activity and worker logs.
 
 ## Verification
 
-ADR draft only. Read repository ADR guidance and current architecture,
-messaging, setup, packaging, and public API docs during the review that
-produced this proposal.
+Accepted during v2 planning. Read repository ADR guidance and current
+architecture, messaging, setup, packaging, and public API docs during the
+review that produced this decision. On 2026-06-16, added the stable
+observability guide and links from setup, architecture, and package discovery
+docs. Application remains partial until the full OTel vocabulary, metrics, log
+event ids, and misconfiguration-message conventions are applied.

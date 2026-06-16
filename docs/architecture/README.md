@@ -79,4 +79,8 @@ explicit module opt-in and explicit EF mapping.
 
 The current package split is documented in [../packaging.md](../packaging.md).
 The user-facing setup example is documented in [../setup.md](../setup.md).
+Production receive, outbox, inbox, operation, migration, retention, and
+ownership guidance is documented in [../operations.md](../operations.md).
+Current diagnostic surfaces and the OpenTelemetry-native direction are
+documented in [../observability.md](../observability.md).
 Sample direction is documented in [../samples.md](../samples.md).

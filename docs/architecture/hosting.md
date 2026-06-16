@@ -74,5 +74,23 @@ dependencies.
 
 ## Worker Ownership
 
+A Bondstone worker may move records between Bondstone-owned durable states.
+The current built-in example is the hosted outbox worker moving outbox records
+through claim, dispatch, retry, and terminal-failure outcomes.
+
+Bondstone workers must not manage provider-native infrastructure. Queue,
+exchange, topic, subscription, rule, binding, broker retry, dead-letter,
+prefetch, concurrency, subscription policy, and provider monitoring remain
+application-owned or provider-native.
+
+Transport adapter receive workers are explicit opt-in ergonomics around native
+deliveries and Bondstone envelopes. They may read a native delivery, call
+`IDurableEnvelopeReceiver`, and perform native settlement according to adapter
+options. They must not infer topology from module registrations or become a
+provider-neutral bus host. Application hosts may bypass adapter workers and
+call `IDurableMessageEnvelopeSerializer` plus `IDurableEnvelopeReceiver` from
+their own native receive loops.
+
 Provider SQL remains in provider packages. Transport-specific send, receive,
-and envelope behavior remains in transport adapter packages.
+and envelope behavior remains in transport adapter packages. Production worker
+and broker ownership guidance lives in [../operations.md](../operations.md).

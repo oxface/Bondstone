@@ -145,8 +145,11 @@ Acceptance criteria:
 Likely work:
 
 - Verify `GenerateDocumentationFile` and pack output for all packable projects.
+  Applied: packable projects generate XML documentation through
+  `Directory.Build.targets`.
 - Add a package artifact test that opens each `.nupkg` and asserts matching
-  `.xml` files under `lib/net10.0/`.
+  `.xml` files under `lib/net10.0/`. Applied:
+  `tests/Bondstone.Package.Tests` runs from `pnpm backend:pack`.
 - Confirm CI/release pack uses the same configuration as local pack.
 
 ### P1: Local Transport Worker Delivery Must Preserve Inbox Semantics
@@ -466,8 +469,8 @@ Applied on 2026-06-16:
    simplification.
 2. Add a guardrail that prevents module handlers from synchronously executing
    another module's command through `IModuleCommandExecutor`.
-3. Verify XML docs are produced and included in `.nupkg` files.
-4. Add package artifact tests for XML docs beside DLLs.
+3. Verify XML docs are produced and included in `.nupkg` files. Applied.
+4. Add package artifact tests for XML docs beside DLLs. Applied.
 5. Fix local transport delivery so worker dispatch preserves consumer inbox
    persistence.
 6. Add local transport integration tests for first delivery and duplicate

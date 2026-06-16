@@ -26,6 +26,7 @@
     <Project Path="tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.csproj" />
     <Project Path="tests/Bondstone.Persistence.EntityFrameworkCore.Tests/Bondstone.Persistence.EntityFrameworkCore.Tests.csproj" />
     <Project Path="tests/Bondstone.Hosting.Tests/Bondstone.Hosting.Tests.csproj" />
+    <Project Path="tests/Bondstone.Package.Tests/Bondstone.Package.Tests.csproj" />
     <Project Path="tests/Bondstone.PublicApi.Tests/Bondstone.PublicApi.Tests.csproj" />
     <Project Path="tests/Bondstone.Transport.Local.Tests/Bondstone.Transport.Local.Tests.csproj" />
     <Project Path="tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj" />

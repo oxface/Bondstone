@@ -44,10 +44,13 @@ Use these `Category` values consistently:
 - `Integration`: tests that require real infrastructure or provider behavior,
   including Testcontainers-backed databases, transports, concurrency,
   serialization, retry, inbox/outbox, or provider-specific behavior.
+- `Package`: package artifact tests that inspect produced `.nupkg` files.
+  These tests require `pnpm backend:pack` to produce a clean artifact directory
+  before they run.
 
 The default quality gate runs `Unit` and `Application` tests. `Integration`
-tests are explicit because they may require Docker or another container
-runtime.
+and `Package` tests are explicit because they may require Docker, another
+container runtime, or freshly produced package artifacts.
 
 ## Integration Tests
 
@@ -114,6 +117,7 @@ Additional test entrypoints are:
 
 - `pnpm backend:test:fast` for `Unit` and `Application` tests.
 - `pnpm backend:test:integration` for `Integration` tests.
+- `pnpm backend:pack` for package creation and `Package` artifact tests.
 - `pnpm backend:test:all` for every discovered test.
 
 `pnpm verify` is kept as an alias for `pnpm check`.

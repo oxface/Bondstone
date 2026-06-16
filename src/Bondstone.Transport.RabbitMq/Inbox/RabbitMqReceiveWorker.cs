@@ -97,6 +97,7 @@ internal sealed class RabbitMqReceiveWorker(
         catch (Exception exception)
         {
             _logger.LogError(
+                RabbitMqReceiveWorkerLogEvents.DeliveryHandlingFailed,
                 exception,
                 "RabbitMQ receive worker failed while handling delivery {DeliveryTag} from queue {QueueName}. MessageId: {MessageId}. MessageType: {MessageType}. Exchange: {Exchange}. RoutingKey: {RoutingKey}. Redelivered: {Redelivered}. Bondstone will negatively acknowledge the delivery with requeue {RequeueOnFailure}; RabbitMQ retry and dead-letter policy remain broker-owned.",
                 delivery.DeliveryTag,

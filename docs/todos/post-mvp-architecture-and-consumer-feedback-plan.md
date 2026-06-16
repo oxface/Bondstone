@@ -549,10 +549,14 @@ Applied on 2026-06-16:
 ### Then: Diagnostics Simplification
 
 1. Keep diagnostics around persistence, outbox dispatch, receive pipeline
-   execution, inbox idempotency, and operation results.
+   execution, inbox idempotency, and operation results. Applied by keeping
+   diagnostics on runtime-owned failure boundaries instead of restoring
+   provider-neutral topology reports.
 2. Add stable log event ids for the outbox worker and receive helper failure
-   paths.
+   paths. Applied for `DurableOutboxWorker` dispatch failures and RabbitMQ
+   receive worker delivery handling failures.
 3. Add a small diagnostic report only if the simplified model still needs one.
+   Deferred; the simplified model does not currently justify a new report.
 
 ### Then: Extraction Proof
 

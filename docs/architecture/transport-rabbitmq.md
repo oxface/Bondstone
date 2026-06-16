@@ -123,10 +123,11 @@ broker-native and application-owned.
 
 On receive dispatch failure, the opt-in worker logs the queue, delivery tag,
 message identity and type when available, exchange, routing key, redelivery
-flag, and configured `requeue` decision. It then negatively acknowledges the
-delivery with that configured `requeue` value. RabbitMQ redelivery, delayed
-retry, and dead-letter exchange behavior are governed by the application's
-RabbitMQ topology and client configuration, not by Bondstone.
+flag, and configured `requeue` decision with event id `3001` /
+`DeliveryHandlingFailed`. It then negatively acknowledges the delivery with
+that configured `requeue` value. RabbitMQ redelivery, delayed retry, and
+dead-letter exchange behavior are governed by the application's RabbitMQ
+topology and client configuration, not by Bondstone.
 
 ## App-Owned Setup
 

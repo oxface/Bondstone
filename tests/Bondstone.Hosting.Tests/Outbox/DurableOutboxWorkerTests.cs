@@ -1,6 +1,7 @@
 using Bondstone.Hosting.Outbox;
 using Bondstone.Persistence;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -70,6 +71,7 @@ public sealed class DurableOutboxWorkerTests
                 new InvalidOperationException("database unavailable"),
                 new DurableOutboxDispatchResult(0, 0, 0, 0, 0),
             ]);
+        var logSink = new RecordingLogSink();
         DurableOutboxWorker worker = CreateWorker(
             dispatcher,
             new DurableOutboxWorkerOptions
@@ -77,7 +79,8 @@ public sealed class DurableOutboxWorkerTests
                 WorkerId = "worker-1",
                 FailureDelay = TimeSpan.FromMilliseconds(1),
                 PollingInterval = TimeSpan.FromMinutes(10),
-            });
+            },
+            new RecordingLogger<DurableOutboxWorker>(logSink));
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await worker.StartAsync(timeout.Token);
@@ -85,6 +88,13 @@ public sealed class DurableOutboxWorkerTests
         await worker.StopAsync(timeout.Token);
 
         Assert.Equal(2, dispatcher.Calls.Count);
+        Assert.Contains(
+            logSink.Entries,
+            entry => entry.Level == LogLevel.Error
+                && entry.EventId.Id == 1001
+                && entry.EventId.Name == "DispatchBatchFailed"
+                && entry.Message.Contains("worker-1", StringComparison.Ordinal)
+                && entry.Exception is InvalidOperationException);
     }
 
     [Fact]
@@ -117,7 +127,8 @@ public sealed class DurableOutboxWorkerTests
 
     private static DurableOutboxWorker CreateWorker(
         RecordingDispatcher dispatcher,
-        DurableOutboxWorkerOptions options)
+        DurableOutboxWorkerOptions options,
+        ILogger<DurableOutboxWorker>? logger = null)
     {
         ServiceProvider serviceProvider = new ServiceCollection()
             .AddScoped<IDurableOutboxDispatcher>(_ => dispatcher)
@@ -126,7 +137,7 @@ public sealed class DurableOutboxWorkerTests
         return new DurableOutboxWorker(
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             Options.Create(options),
-            NullLogger<DurableOutboxWorker>.Instance);
+            logger ?? NullLogger<DurableOutboxWorker>.Instance);
     }
 
     private sealed class RecordingDispatcher(IReadOnlyList<object> outcomes)
@@ -183,4 +194,77 @@ public sealed class DurableOutboxWorkerTests
         string ClaimedBy,
         TimeSpan LeaseDuration,
         int MaxCount);
+
+    private sealed class RecordingLogSink
+    {
+        private readonly List<RecordingLogEntry> _entries = [];
+        private readonly Lock _lock = new();
+
+        public IReadOnlyCollection<RecordingLogEntry> Entries
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _entries.ToArray();
+                }
+            }
+        }
+
+        public void Add(
+            RecordingLogEntry entry)
+        {
+            lock (_lock)
+            {
+                _entries.Add(entry);
+            }
+        }
+    }
+
+    private sealed class RecordingLogger<T>(
+        RecordingLogSink sink)
+        : ILogger<T>
+    {
+        public IDisposable BeginScope<TState>(
+            TState state)
+            where TState : notnull
+        {
+            return NoopDisposable.Instance;
+        }
+
+        public bool IsEnabled(
+            LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            sink.Add(new RecordingLogEntry(
+                logLevel,
+                eventId,
+                formatter(state, exception),
+                exception));
+        }
+    }
+
+    private sealed record RecordingLogEntry(
+        LogLevel Level,
+        EventId EventId,
+        string Message,
+        Exception? Exception);
+
+    private sealed class NoopDisposable : IDisposable
+    {
+        public static readonly NoopDisposable Instance = new();
+
+        public void Dispose()
+        {
+        }
+    }
 }

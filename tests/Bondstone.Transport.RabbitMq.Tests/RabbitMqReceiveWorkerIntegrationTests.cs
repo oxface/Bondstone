@@ -96,6 +96,8 @@ public sealed class RabbitMqReceiveWorkerIntegrationTests(RabbitMqFixture fixtur
             Assert.Contains(
                 logs.Entries,
                 entry => entry.Level == LogLevel.Error
+                    && entry.EventId.Id == 3001
+                    && entry.EventId.Name == "DeliveryHandlingFailed"
                     && entry.Message.Contains(queueName, StringComparison.Ordinal)
                     && entry.Message.Contains("delivery 1", StringComparison.Ordinal)
                     && entry.Message.Contains(message.MessageId, StringComparison.Ordinal)
@@ -580,6 +582,7 @@ public sealed class RabbitMqReceiveWorkerIntegrationTests(RabbitMqFixture fixtur
         {
             sink.Add(new RecordingLogEntry(
                 logLevel,
+                eventId,
                 formatter(state, exception),
                 exception));
         }
@@ -587,6 +590,7 @@ public sealed class RabbitMqReceiveWorkerIntegrationTests(RabbitMqFixture fixtur
 
     private sealed record RecordingLogEntry(
         LogLevel Level,
+        EventId EventId,
         string Message,
         Exception? Exception);
 

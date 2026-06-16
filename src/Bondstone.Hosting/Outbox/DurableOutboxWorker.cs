@@ -46,6 +46,7 @@ public sealed class DurableOutboxWorker(
             catch (Exception exception)
             {
                 logger.LogError(
+                    DurableOutboxWorkerLogEvents.DispatchBatchFailed,
                     exception,
                     "Durable outbox worker {WorkerId} failed while dispatching a batch.",
                     _options.WorkerId);

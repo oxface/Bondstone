@@ -87,6 +87,10 @@ public static class BondstoneServiceCollectionExtensions
             new DurableOperationFinalizer(
                 serviceProvider.GetRequiredService<ModuleRuntimeRegistry>(),
                 serviceProvider.GetService<TimeProvider>()));
+        services.TryAddScoped<IDurableOperationExpirationProcessor>(serviceProvider =>
+            new DurableOperationExpirationProcessor(
+                serviceProvider.GetRequiredService<ModuleRuntimeRegistry>(),
+                serviceProvider.GetRequiredService<IDurableOperationFinalizer>()));
         services.TryAddScoped<IDurableCommandSender>(serviceProvider =>
             new DurableCommandSender(
                 serviceProvider.GetRequiredService<DurableModuleOutboxWriterResolver>(),

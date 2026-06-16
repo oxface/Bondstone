@@ -84,6 +84,16 @@ namespace Bondstone.Messaging
         Rejected = 2,
         Duplicate = 3,
     }
+    public sealed class DurableOperationExpirationResult : System.IEquatable<Bondstone.Messaging.DurableOperationExpirationResult>
+    {
+        public DurableOperationExpirationResult(string moduleName, System.DateTimeOffset expiresBeforeUtc, Bondstone.Messaging.DurableOperationStatus terminalStatus, System.Collections.Generic.IReadOnlyList<Bondstone.Messaging.DurableOperationFinalizationResult> finalizations) { }
+        public int CandidateCount { get; }
+        public System.DateTimeOffset ExpiresBeforeUtc { get; }
+        public System.Collections.Generic.IReadOnlyList<Bondstone.Messaging.DurableOperationFinalizationResult> Finalizations { get; }
+        public int FinalizedCount { get; }
+        public string ModuleName { get; }
+        public Bondstone.Messaging.DurableOperationStatus TerminalStatus { get; }
+    }
     public sealed class DurableOperationFinalizationResult : System.IEquatable<Bondstone.Messaging.DurableOperationFinalizationResult>
     {
         public DurableOperationFinalizationResult(Bondstone.Messaging.DurableOperationState state, bool wasFinalized) { }
@@ -150,6 +160,10 @@ namespace Bondstone.Messaging
             where TEvent : Bondstone.Messaging.IIntegrationEvent;
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableEventPublishResult> PublishAsync<TEvent>(TEvent integrationEvent, string? partitionKey, System.Guid? durableOperationId = default, Bondstone.Messaging.MessageTraceContext? traceContext = null, System.Guid? causationId = default, System.Threading.CancellationToken ct = default)
             where TEvent : Bondstone.Messaging.IIntegrationEvent;
+    }
+    public interface IDurableOperationExpirationProcessor
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationExpirationResult> MarkExpiredAsync(string moduleName, System.DateTimeOffset expiresBeforeUtc, Bondstone.Messaging.DurableOperationStatus terminalStatus, string reason, int maxCount = 100, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null, System.Threading.CancellationToken ct = default);
     }
     public interface IDurableOperationFinalizer
     {

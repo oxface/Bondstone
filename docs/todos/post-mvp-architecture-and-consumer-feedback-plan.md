@@ -517,7 +517,8 @@ Applied on 2026-06-16:
 2. Add an application-facing operation-state writer or failure marker API.
    Applied with `IDurableOperationFinalizer`.
 3. Add operation expiry/timeout policy and a maintenance worker or documented
-   application-owned job shape.
+   application-owned job shape. Applied with
+   `IDurableOperationExpirationProcessor`; hosted worker remains deferred.
 4. Add operator query APIs for terminal outbox rows.
 5. Add documented reset/replay guidance for terminal outbox rows.
 6. Add documented inspection guidance for already-received unprocessed inbox

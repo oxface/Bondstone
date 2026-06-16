@@ -659,6 +659,28 @@ idempotency, broker retry, or dead-letter behavior as automatic operation
 failure unless application or provider-specific code has made that terminal
 outcome explicit.
 
+For a recurring expiry job, calculate the cutoff in application code and call
+`IDurableOperationExpirationProcessor` for each module whose operation-state
+store should be scanned:
+
+```csharp
+DateTimeOffset expiresBeforeUtc = timeProvider.GetUtcNow()
+    .Subtract(TimeSpan.FromMinutes(30));
+
+DurableOperationExpirationResult expiration =
+    await durableOperationExpirationProcessor.MarkExpiredAsync(
+        OrderingModule.ModuleName,
+        expiresBeforeUtc,
+        DurableOperationStatus.Failed,
+        "Order creation expired before completion.",
+        maxCount: 100,
+        ct: ct);
+```
+
+Bondstone does not register a hosted expiry worker by default. Applications
+own the schedule, cutoff calculation, module list, terminal status choice,
+reason text, and alerting around `FinalizedCount`.
+
 For result polling, prefer switching on `DurableOperationResult<TResult>.State`
 when the caller needs to explain why a value is not available:
 
@@ -714,6 +736,9 @@ The durable operation id ties the send and result lookup together:
 - Application policy may explicitly write `Failed` or `Cancelled` through
   `IDurableOperationFinalizer` when the operation should stop being observed
   as pending.
+- Application expiry jobs may use `IDurableOperationExpirationProcessor` to
+  query stale pending/running states from provider stores and finalize them
+  through the same finalizer.
 - `IDurableOperationResultReader` uses the same operation id to find operation
   state and deserialize the completed result payload.
 

@@ -39,18 +39,20 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Inbox
 }
 namespace Bondstone.Persistence.EntityFrameworkCore.Operations
 {
-    public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
+    public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationExpirationStore, Bondstone.Persistence.IDurableOperationStateStore
         where TDbContext : Microsoft.EntityFrameworkCore.DbContext
     {
         public EntityFrameworkCoreDurableOperationStateStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Messaging.DurableOperationState>> FindExpirationCandidatesAsync(System.DateTimeOffset expiresBeforeUtc, int maxCount, System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default) { }
     }
-    public sealed class EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
+    public sealed class EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationExpirationStore, Bondstone.Persistence.IDurableOperationStateStore
         where TDbContext : Microsoft.EntityFrameworkCore.DbContext
     {
         public EntityFrameworkCoreModuleDurableOperationStateStore(string moduleName, TDbContext context) { }
         public string ModuleName { get; }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Messaging.DurableOperationState>> FindExpirationCandidatesAsync(System.DateTimeOffset expiresBeforeUtc, int maxCount, System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default) { }
     }

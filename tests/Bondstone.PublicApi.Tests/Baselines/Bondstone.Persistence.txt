@@ -249,6 +249,10 @@ namespace Bondstone.Persistence
         System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxRecord?> GetAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask MarkProcessedAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.DateTimeOffset processedAtUtc, System.Threading.CancellationToken ct = default);
     }
+    public interface IDurableOperationExpirationStore
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Messaging.DurableOperationState>> FindExpirationCandidatesAsync(System.DateTimeOffset expiresBeforeUtc, int maxCount, System.Threading.CancellationToken ct = default);
+    }
     public interface IDurableOperationStateStore : Bondstone.Messaging.IDurableOperationReader
     {
         System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default);

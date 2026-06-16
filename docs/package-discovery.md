@@ -96,8 +96,13 @@ Common contracts include `IDurableOutboxWriter`,
 
 `DurableMessageEnvelope`, `MessageKind`, `MessageTraceContext`,
 `DurableOperationState`, `DurableOperationStatus`,
-`IDurableOperationReader`, `IDurableOperationFinalizer`, and
-`DurableOperationFinalizationResult` are in `Bondstone.Messaging`.
+`IDurableOperationReader`, `IDurableOperationFinalizer`,
+`IDurableOperationExpirationProcessor`,
+`DurableOperationFinalizationResult`, and
+`DurableOperationExpirationResult` are in `Bondstone.Messaging`.
+
+`IDurableOperationExpirationStore` is in `Bondstone.Persistence` for provider
+stores that support app-owned operation expiry jobs.
 
 ## EF Core Mappings
 

@@ -271,6 +271,14 @@ the operation is already terminal. This API is for application-owned timeout,
 expiry, cancellation, and workflow policy; it does not infer failure from
 outbox dispatch, inbox idempotency, broker retry, or dead-letter behavior.
 
+Applications that need a repeatable expiry job can call
+`IDurableOperationExpirationProcessor`. The processor asks the named module's
+operation-state store for stale `Pending` or `Running` candidates before a UTC
+cutoff, then finalizes those candidates as `Failed` or `Cancelled` through the
+same finalizer. Bondstone does not schedule this job automatically; the app
+owns cadence, cutoff calculation, terminal status, reason text, and
+operational policy.
+
 `DurableOperationResult<TResult>` preserves the operation-state flags and adds
 a single `State` classification for consumer diagnostics:
 

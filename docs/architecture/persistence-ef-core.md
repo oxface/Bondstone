@@ -118,6 +118,13 @@ requires the operation-state entity mapping and fails with a clear
 `ApplyBondstoneOperationState()` mapping error if it is used with a DbContext
 that does not map operation state.
 
+The EF operation-state store implements the operation expiration query
+contract by returning `Pending` and `Running` states whose `UpdatedAtUtc` is at
+or before the caller's UTC cutoff, ordered by oldest update first and bounded
+by the requested maximum count. The query is for application-owned expiry
+jobs; the EF package does not schedule expiry or choose terminal status
+policy.
+
 ### Operation-State Diagnostic Column Migration
 
 The operation-state result diagnostic context uses nullable columns on the

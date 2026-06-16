@@ -227,6 +227,14 @@ use it from timeout/expiry jobs, administrative workflows, cancellation paths,
 or other policy code that has enough evidence to produce a terminal
 caller-visible outcome.
 
+`IDurableOperationExpirationStore` is the provider-side query contract for
+app-owned expiry jobs. Implementations return non-terminal `Pending` or
+`Running` operation states last updated at or before a UTC cutoff, bounded by a
+caller-supplied maximum count. `IDurableOperationExpirationProcessor` composes
+that query with `IDurableOperationFinalizer` for one named module. It is not a
+hosted scheduler, does not calculate deadlines, and does not infer failure
+from broker state.
+
 Operation reads aggregate across local module stores. This global read has no
 module identity, so it intentionally creates each configured module
 operation-state store from its runtime registration and queries all of them.

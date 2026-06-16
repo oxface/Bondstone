@@ -105,6 +105,18 @@ Operation finalization, 2026-06-16:
 - The API deliberately requires a module name and does not infer operation
   failure from outbox, inbox, retry, or broker dead-letter state.
 
+Operation expiry processing, 2026-06-16:
+
+- `IDurableOperationExpirationProcessor` is an additive user application
+  contract for running an app-owned expiry pass against one module's
+  operation-state store.
+- `DurableOperationExpirationResult` is an additive result type that reports
+  the module, cutoff, requested terminal status, and per-operation
+  finalization results.
+- `IDurableOperationExpirationStore` is an additive provider/runtime contract
+  for operation-state stores that can query stale `Pending` or `Running`
+  operation states.
+
 ## Current Scope
 
 This first pass covers all current package projects:
@@ -152,6 +164,7 @@ User application contract:
 - `IBondstoneModule`
 - `IDurableCommandSender`
 - `IDurableEventPublisher`
+- `IDurableOperationExpirationProcessor`
 - `IDurableOperationFinalizer`
 - `IDurableOperationResultReader`
 - `IDurablePayloadSerializer`
@@ -167,6 +180,7 @@ User application contract:
 - `DurableEventPublishStatus`
 - `DurableOperationResult<TResult>`
 - `DurableOperationResultDeserializationFailure`
+- `DurableOperationExpirationResult`
 - `DurableOperationFinalizationResult`
 - `DurableOperationResultState`
 - `DurablePayloadJsonOptions`
@@ -246,6 +260,7 @@ Advanced composition API:
 - `IDurableInboxHandlerExecutor`
 - `IDurableInboxRegistrar`
 - `IDurableInboxStore`
+- `IDurableOperationExpirationStore`
 - `IDurableOperationStateStore`
 - `IDurableOutboxClaimer`
 - `IDurableOutboxLeaseRenewer`

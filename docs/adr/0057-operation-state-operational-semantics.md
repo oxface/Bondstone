@@ -142,10 +142,14 @@ guidance for outbox and inbox recovery.
   finalization API. The default implementation writes `Failed` or `Cancelled`
   to the named module's operation-state store, preserves existing terminal
   state, and keeps result-reader diagnostics compatible.
-- Pending or deferred: Timeout/expiry workers, provider-specific stale
-  operation query/update primitives, provider-specific dead-letter handoff
-  helpers, module-aware operation handles, and operator recovery guidance
-  remain separate follow-up work.
+  `IDurableOperationExpirationProcessor` and
+  `IDurableOperationExpirationStore` provide the first reusable app-owned
+  expiry pass: provider stores find stale `Pending` or `Running` candidates,
+  and the processor finalizes them through the finalizer.
+- Pending or deferred: Hosted expiry workers, provider-specific bulk mutation
+  primitives, provider-specific dead-letter handoff helpers, module-aware
+  operation handles, and operator recovery guidance remain separate follow-up
+  work.
 
 ## Verification
 

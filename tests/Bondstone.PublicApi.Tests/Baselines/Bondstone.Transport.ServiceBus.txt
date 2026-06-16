@@ -1,0 +1,26 @@
+namespace Bondstone.Transport.ServiceBus
+{
+    public static class BondstoneServiceBusBuilderExtensions
+    {
+        public static Bondstone.Configuration.BondstoneBuilder UseServiceBusDispatcher(this Bondstone.Configuration.BondstoneBuilder builder, System.Action<Bondstone.Transport.ServiceBus.ServiceBusEnvelopeDispatcherOptions> configure) { }
+        public static Bondstone.Configuration.BondstoneOutboxBuilder UseServiceBusDispatcher(this Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Action<Bondstone.Transport.ServiceBus.ServiceBusEnvelopeDispatcherOptions> configure) { }
+        public static Bondstone.Configuration.BondstoneBuilder UseServiceBusReceiveWorker(this Bondstone.Configuration.BondstoneBuilder builder, System.Action<Bondstone.Transport.ServiceBus.ServiceBusReceiveWorkerOptions> configure) { }
+    }
+    public sealed class ServiceBusEnvelopeDispatcherOptions
+    {
+        public ServiceBusEnvelopeDispatcherOptions() { }
+        public string ContentType { get; set; }
+        public System.Func<Bondstone.Messaging.DurableMessageEnvelope, string>? ResolveEntityName { get; set; }
+    }
+    public sealed class ServiceBusReceiveWorkerOptions
+    {
+        public ServiceBusReceiveWorkerOptions() { }
+        public Bondstone.Messaging.DurableEnvelopeReceiveBinding? Binding { get; }
+        public Azure.Messaging.ServiceBus.ServiceBusProcessorOptions ProcessorOptions { get; }
+        public string? QueueName { get; set; }
+        public string? SubscriptionName { get; set; }
+        public string? TopicName { get; set; }
+        public Bondstone.Transport.ServiceBus.ServiceBusReceiveWorkerOptions ReceiveCommand() { }
+        public Bondstone.Transport.ServiceBus.ServiceBusReceiveWorkerOptions ReceiveEvent(string subscriberModule, string subscriberIdentity) { }
+    }
+}

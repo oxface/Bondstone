@@ -18,6 +18,8 @@ Package IDs match project names:
 - `Bondstone.Persistence.EntityFrameworkCore`
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres`
 - `Bondstone.Transport.Local`
+- `Bondstone.Transport.RabbitMq`
+- `Bondstone.Transport.ServiceBus`
 
 For a consumer-facing capability and namespace matrix, see
 [package-discovery.md](package-discovery.md).
@@ -27,14 +29,18 @@ tests, and local development. It exercises outbox/inbox receive semantics
 through the provider-neutral receive pipelines, but it is not a production
 broker adapter or hidden fallback.
 
-`Bondstone.Persistence.Postgres`, `Bondstone.Transport`, and
-`Bondstone.Transport.ServiceBus`,
-`Bondstone.Transport.RabbitMq`,
+`Bondstone.Transport.RabbitMq` and `Bondstone.Transport.ServiceBus` are thin
+broker adapters. They provide native-driver envelope dispatchers and opt-in
+receive workers, but they do not own broker topology, provisioning,
+subscription storage, retry policy, dead-letter policy, prefetch/concurrency
+strategy, or monitoring.
+
+`Bondstone.Persistence.Postgres`, `Bondstone.Transport`,
 `Bondstone.Capabilities.DomainEvents`, and
 `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` were removed from
 the active package set after MVP. Reintroducing a separate provider-neutral
-transport package, broker adapter package, or capability package requires ADR
-review and a real consumer need.
+transport package, broad broker runtime package, or capability package
+requires ADR review and a real consumer need.
 
 Module-local domain event contracts now live in `Bondstone` under
 `Bondstone.DomainEvents`. EF Core domain event collection, EF domain event
@@ -64,14 +70,21 @@ Use this dependency direction:
   may reference `Bondstone` directly for shared builder extension methods.
 - `Bondstone.Transport.Local` depends on `Bondstone`, `Bondstone.Persistence`,
   and no provider-neutral transport package.
+- `Bondstone.Transport.RabbitMq` depends on `Bondstone`,
+  `Bondstone.Persistence`, and RabbitMQ.Client.
+- `Bondstone.Transport.ServiceBus` depends on `Bondstone`,
+  `Bondstone.Persistence`, and Azure.Messaging.ServiceBus.
 
 Provider-specific packages contain provider-specific behavior only. Bondstone
-does not currently ship a broker adapter package. Applications that use Rebus,
-RabbitMQ.Client, Azure Service Bus, or another transport implement
+ships thin RabbitMQ and Azure Service Bus adapter packages for native-driver
+envelope plumbing. Applications still own native topology, provisioning,
+retry, dead-letter policy, and monitoring. Applications that use Rebus or
+another bus/runtime keep that integration app-owned: implement
 `IDurableEnvelopeDispatcher` for outgoing outbox records and call
 `IDurableEnvelopeReceiver` after mapping native deliveries into
-`DurableMessageEnvelope`. Reusable hosted worker composition belongs in
-`Bondstone.Hosting`.
+`DurableMessageEnvelope`. Reusable generic hosted worker composition belongs
+in `Bondstone.Hosting`; broker-specific receive workers live only in their
+adapter packages and are opt-in.
 Core command, messaging, and module execution abstractions stay in
 `Bondstone`. Provider-neutral durable persistence contracts are in
 `Bondstone.Persistence`; there is no active provider-neutral transport

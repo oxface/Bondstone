@@ -74,10 +74,10 @@ Keep tests grouped by package or integration boundary so they reveal package
 ownership and extraction seams.
 
 For transport adapters, prefer a layered shape: use fast in-process transport
-tests for local behavior. Bondstone does not currently ship broker adapter
-packages, so broker receive retry, settlement, delivery counts, and
-dead-letter topology belong to application or selected transport-library
-tests.
+tests for local behavior and thin adapter contract tests for broker packages.
+Broker receive retry, settlement exhaustion, delivery counts, and dead-letter
+topology belong to application or selected transport-library tests unless a
+provider-backed adapter proof is explicitly accepted.
 
 For first-class events, keep the same split. Unit and application tests should
 cover event destination resolution, publish dispatch, subscriber registration,
@@ -118,6 +118,7 @@ smoke test under `tests/Bondstone.Samples.Tests`. It is covered by
 `pnpm backend:test:integration` and intentionally stays out of the default
 fast test filter because it starts Testcontainers PostgreSQL.
 
-The non-EF PostgreSQL, Service Bus, and RabbitMQ package tests were removed
-with their packages after MVP. EF/PostgreSQL remains the provider-backed
-integration-test path.
+The non-EF PostgreSQL package tests were removed with that package after MVP.
+EF/PostgreSQL remains the provider-backed integration-test path. Thin
+RabbitMQ and Azure Service Bus package tests should stay fast until a real
+provider-backed adapter proof is explicitly accepted.

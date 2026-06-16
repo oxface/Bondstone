@@ -5,13 +5,58 @@ namespace Bondstone.Messaging;
 
 internal sealed class DurableEnvelopeReceiver(
     IModuleCommandReceivePipeline commandReceivePipeline,
-    IModuleEventReceivePipeline eventReceivePipeline)
+    IModuleEventReceivePipeline eventReceivePipeline,
+    IDurableMessageEnvelopeSerializer envelopeSerializer)
     : IDurableEnvelopeReceiver
 {
     private readonly IModuleCommandReceivePipeline _commandReceivePipeline =
         commandReceivePipeline ?? throw new ArgumentNullException(nameof(commandReceivePipeline));
     private readonly IModuleEventReceivePipeline _eventReceivePipeline =
         eventReceivePipeline ?? throw new ArgumentNullException(nameof(eventReceivePipeline));
+    private readonly IDurableMessageEnvelopeSerializer _envelopeSerializer =
+        envelopeSerializer ?? throw new ArgumentNullException(nameof(envelopeSerializer));
+
+    public async ValueTask<DurableInboxHandleResult> ReceiveAsync(
+        DurableMessageEnvelope envelope,
+        DurableEnvelopeReceiveBinding? binding = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+
+        return envelope.MessageKind switch
+        {
+            MessageKind.Command => await ReceiveCommandAsync(envelope, ct),
+            MessageKind.Event => binding is null
+                ? throw new ArgumentException(
+                    "Event receive requires subscriber module and subscriber identity binding.",
+                    nameof(binding))
+                : await ReceiveEventAsync(
+                    envelope,
+                    binding.SubscriberModule,
+                    binding.SubscriberIdentity,
+                    ct),
+            _ => throw new NotSupportedException(
+                $"Envelope receive does not support message kind '{envelope.MessageKind}'."),
+        };
+    }
+
+    public ValueTask<DurableInboxHandleResult> ReceiveAsync(
+        ReadOnlyMemory<byte> utf8Json,
+        DurableEnvelopeReceiveBinding? binding = null,
+        CancellationToken ct = default)
+    {
+        DurableMessageEnvelope envelope = _envelopeSerializer.Deserialize(utf8Json);
+        return ReceiveAsync(envelope, binding, ct);
+    }
+
+    public ValueTask<DurableInboxHandleResult> ReceiveAsync(
+        string json,
+        DurableEnvelopeReceiveBinding? binding = null,
+        CancellationToken ct = default)
+    {
+        DurableMessageEnvelope envelope = _envelopeSerializer.Deserialize(json);
+        return ReceiveAsync(envelope, binding, ct);
+    }
 
     public async ValueTask<DurableInboxHandleResult> ReceiveCommandAsync(
         DurableMessageEnvelope envelope,

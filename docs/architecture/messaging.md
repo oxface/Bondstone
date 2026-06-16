@@ -312,19 +312,21 @@ current operation-state contract.
 
 ## Transport Boundary
 
-Bondstone does not currently ship a broker adapter package. Rebus,
-RabbitMQ.Client, Azure Service Bus, Kafka, and other broker runtimes are
-app-owned choices.
+Bondstone ships thin RabbitMQ and Azure Service Bus adapter packages for
+native-driver envelope plumbing. Rebus, Kafka, and other broker/bus runtimes
+remain app-owned choices.
 
-`Bondstone.Transport.Local` is the only active transport package. It provides
-explicit local queue routing for samples, tests, and local development. It
-uses the neutral receive helper and preserves outbox/inbox semantics, but it
-is not a broker durability layer or fallback.
+`Bondstone.Transport.Local` provides explicit local queue routing for samples,
+tests, and local development. It uses the neutral receive helper and preserves
+outbox/inbox semantics, but it is not a broker durability layer or fallback.
 
-Outbound broker integrations call
+RabbitMQ and Azure Service Bus packages provide `IDurableEnvelopeDispatcher`
+implementations and opt-in receive workers over the native drivers. They do
+not declare exchanges, queues, topics, subscriptions, rules, bindings,
+provisioning, retry policy, dead-letter policy, or monitoring. Custom
+outbound broker integrations can still call
 `UseDurableEnvelopeDispatcher<TDispatcher>()` and implement
-`IDurableEnvelopeDispatcher` to publish claimed outbox records through the
-chosen native transport. Advanced integrations may also compose
+`IDurableEnvelopeDispatcher`. Advanced integrations may also compose
 `IDurableEnvelopeDispatchRoute` with `RoutedDurableEnvelopeDispatcher`, which
 dispatches a claimed outbox record only when exactly one route matches the
 message. Zero matches and ambiguous matches are loud dispatch-time errors.
@@ -344,7 +346,8 @@ client retry configuration remain application-owned and provider-native.
 
 Bondstone does not create a provider-neutral receive retry policy, receive
 DLQ abstraction, subscription store, receive topology DSL, or broker worker
-runtime.
+runtime. Broker-specific receive workers exist only inside thin adapter
+packages and only when explicitly registered by the host.
 
 ## Diagnostics
 

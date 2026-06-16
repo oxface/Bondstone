@@ -431,6 +431,54 @@ and call `IDurableEnvelopeReceiver` from the native receive handler. Commands
 route by `TargetModule`; event receive calls must provide the selected
 subscriber module and stable subscriber identity.
 
+RabbitMQ and Azure Service Bus have thin adapter packages when the app wants
+driver-level envelope plumbing without a transport DSL:
+
+```csharp
+bondstone.UseRabbitMqDispatcher(options =>
+{
+    options.ResolveDestination = envelope =>
+        envelope.MessageKind == MessageKind.Command
+            ? new RabbitMqEnvelopeDestination(
+                "bondstone.commands",
+                $"{envelope.TargetModule}.commands")
+            : new RabbitMqEnvelopeDestination(
+                "bondstone.events",
+                envelope.MessageTypeName);
+});
+
+bondstone.UseRabbitMqReceiveWorker(options =>
+{
+    options.QueueName = "fulfillment.commands";
+    options.ReceiveCommand();
+});
+```
+
+```csharp
+bondstone.UseServiceBusDispatcher(options =>
+{
+    options.ResolveEntityName = envelope =>
+        envelope.MessageKind == MessageKind.Command
+            ? $"{envelope.TargetModule}-commands"
+            : "integration-events";
+});
+
+bondstone.UseServiceBusReceiveWorker(options =>
+{
+    options.TopicName = "integration-events";
+    options.SubscriptionName = "billing-order-placed";
+    options.ReceiveEvent(
+        BillingModule.ModuleName,
+        "billing.order-invoice-projection.v1");
+});
+```
+
+The app still registers RabbitMQ `IChannel` or Azure `ServiceBusClient`, owns
+native entities and bindings, and chooses retry/dead-letter behavior. Rebus is
+not a Bondstone package; use Rebus-owned routing and handlers around
+`IDurableEnvelopeDispatcher` and `IDurableEnvelopeReceiver` if an app chooses
+Rebus.
+
 Bondstone owns retry and terminal failure for outgoing persisted outbox
 records. Current outbox status semantics are described in
 [architecture/persistence-core.md](architecture/persistence-core.md); they are

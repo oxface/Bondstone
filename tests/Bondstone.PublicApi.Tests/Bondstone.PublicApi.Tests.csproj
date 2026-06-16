@@ -6,6 +6,8 @@
     <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore\Bondstone.Persistence.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore.Postgres\Bondstone.Persistence.EntityFrameworkCore.Postgres.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Transport.Local\Bondstone.Transport.Local.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Transport.RabbitMq\Bondstone.Transport.RabbitMq.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Transport.ServiceBus\Bondstone.Transport.ServiceBus.csproj" />
   </ItemGroup>
 
   <ItemGroup>

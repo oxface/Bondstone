@@ -535,6 +535,25 @@ Applied on 2026-06-16:
   lettering, prefetch, credentials, and monitoring outside Bondstone for this
   MVP.
 
+### Applied: Thin RabbitMQ And Service Bus Adapters
+
+- Accepted ADR
+  [0008 Thin Broker Adapters](../adr/0008-thin-broker-adapters.md) after the
+  app-owned broker boundary stabilized.
+- Reintroduced `Bondstone.Transport.RabbitMq` and
+  `Bondstone.Transport.ServiceBus` as thin native-driver packages, not broker
+  runtimes.
+- Added dispatcher registrations over app-supplied RabbitMQ `IChannel` and
+  Azure `ServiceBusClient` instances.
+- Added explicitly registered receive workers that read an existing native
+  queue/entity and pass durable envelope payloads to the shared
+  `IDurableEnvelopeReceiver`.
+- Kept topology, provisioning, retry, dead lettering, subscriptions, prefetch,
+  concurrency, credentials, and monitoring in the application or broker
+  library.
+- Deferred Rebus packaging because Rebus already owns bus routing, handlers,
+  subscriptions, retries, serialization, and endpoint runtime.
+
 ### Applied: Transport Diagnostics Package Removal
 
 - Removed the separate `Bondstone.Transport` package and its public API
@@ -588,9 +607,8 @@ Applied on 2026-06-16:
    diagnostics on runtime-owned failure boundaries instead of restoring
    provider-neutral topology reports.
 2. Add stable log event ids for the outbox worker and receive helper failure
-   paths. Applied for `DurableOutboxWorker` dispatch failures; receive helper
-   failures remain simple thrown boundary errors until a broker adapter is
-   accepted again.
+   paths. Applied for `DurableOutboxWorker` dispatch failures; RabbitMQ and
+   Service Bus receive worker failures are logged at the adapter boundary.
 3. Add a small diagnostic report only if the simplified model still needs one.
    Deferred; the simplified model does not currently justify a new report.
 

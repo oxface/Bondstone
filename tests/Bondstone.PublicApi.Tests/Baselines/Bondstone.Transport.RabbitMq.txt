@@ -1,0 +1,32 @@
+namespace Bondstone.Transport.RabbitMq
+{
+    public static class BondstoneRabbitMqBuilderExtensions
+    {
+        public static Bondstone.Configuration.BondstoneBuilder UseRabbitMqDispatcher(this Bondstone.Configuration.BondstoneBuilder builder, System.Action<Bondstone.Transport.RabbitMq.RabbitMqEnvelopeDispatcherOptions> configure) { }
+        public static Bondstone.Configuration.BondstoneOutboxBuilder UseRabbitMqDispatcher(this Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Action<Bondstone.Transport.RabbitMq.RabbitMqEnvelopeDispatcherOptions> configure) { }
+        public static Bondstone.Configuration.BondstoneBuilder UseRabbitMqReceiveWorker(this Bondstone.Configuration.BondstoneBuilder builder, System.Action<Bondstone.Transport.RabbitMq.RabbitMqReceiveWorkerOptions> configure) { }
+    }
+    public sealed class RabbitMqEnvelopeDestination : System.IEquatable<Bondstone.Transport.RabbitMq.RabbitMqEnvelopeDestination>
+    {
+        public RabbitMqEnvelopeDestination(string Exchange, string RoutingKey) { }
+        public string Exchange { get; init; }
+        public string RoutingKey { get; init; }
+    }
+    public sealed class RabbitMqEnvelopeDispatcherOptions
+    {
+        public RabbitMqEnvelopeDispatcherOptions() { }
+        public bool Mandatory { get; set; }
+        public System.Func<Bondstone.Messaging.DurableMessageEnvelope, Bondstone.Transport.RabbitMq.RabbitMqEnvelopeDestination>? ResolveDestination { get; set; }
+    }
+    public sealed class RabbitMqReceiveWorkerOptions
+    {
+        public RabbitMqReceiveWorkerOptions() { }
+        public bool AutoAck { get; set; }
+        public Bondstone.Messaging.DurableEnvelopeReceiveBinding? Binding { get; }
+        public string? ConsumerTag { get; set; }
+        public string? QueueName { get; set; }
+        public bool RequeueOnFailure { get; set; }
+        public Bondstone.Transport.RabbitMq.RabbitMqReceiveWorkerOptions ReceiveCommand() { }
+        public Bondstone.Transport.RabbitMq.RabbitMqReceiveWorkerOptions ReceiveEvent(string subscriberModule, string subscriberIdentity) { }
+    }
+}

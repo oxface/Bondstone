@@ -98,6 +98,17 @@ Post-MVP transport simplification, 2026-06-16:
 - This is an intentional compatibility-breaking public API cleanup made while
   external usage is still bounded.
 
+Thin broker adapters, 2026-06-16:
+
+- `Bondstone.Transport.RabbitMq` and `Bondstone.Transport.ServiceBus` are
+  active thin adapter packages again, but only for native-driver envelope
+  dispatch and explicitly registered receive workers.
+- The public surface is intentionally limited to builder extensions,
+  dispatcher options, receive worker options, and small destination/binding
+  values.
+- Topology, provisioning, retry, dead-letter, prefetch, concurrency,
+  credentials, monitoring, and Rebus integration remain outside Bondstone.
+
 Operation finalization, 2026-06-16:
 
 - `IDurableOperationFinalizer` is an additive user application contract for
@@ -207,10 +218,13 @@ This first pass covers all current package projects:
 - `Bondstone.Persistence.EntityFrameworkCore`
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres`
 - `Bondstone.Transport.Local`
+- `Bondstone.Transport.RabbitMq`
+- `Bondstone.Transport.ServiceBus`
 
 `Bondstone.Persistence.Postgres`, `Bondstone.Transport`, and
-`Bondstone.Transport.ServiceBus` were removed from the active product surface
-and are not covered by the current default public API baseline.
+the old broad `Bondstone.Transport.ServiceBus` surface were removed from the
+active product surface. The current RabbitMQ and Service Bus packages are thin
+adapter packages and are covered by the current default public API baseline.
 
 ## Bondstone
 
@@ -259,6 +273,7 @@ User application contract:
 - `DurableCommandIdentityAttribute`
 - `IntegrationEventIdentityAttribute`
 - `DurableOperationDiagnosticContext`
+- `DurableEnvelopeReceiveBinding`
 - `MessageTypeRegistration`
 - `DurableCommandSendResult`
 - `DurableCommandSendStatus`
@@ -451,3 +466,20 @@ Normal setup API:
 - `BondstoneLocalModuleRouteBuilder`
 - `BondstoneLocalEventRouteBuilder`
 - `BondstoneLocalQueueBuilder`
+
+## Bondstone.Transport.RabbitMq
+
+Normal setup API:
+
+- `BondstoneRabbitMqBuilderExtensions`
+- `RabbitMqEnvelopeDispatcherOptions`
+- `RabbitMqEnvelopeDestination`
+- `RabbitMqReceiveWorkerOptions`
+
+## Bondstone.Transport.ServiceBus
+
+Normal setup API:
+
+- `BondstoneServiceBusBuilderExtensions`
+- `ServiceBusEnvelopeDispatcherOptions`
+- `ServiceBusReceiveWorkerOptions`

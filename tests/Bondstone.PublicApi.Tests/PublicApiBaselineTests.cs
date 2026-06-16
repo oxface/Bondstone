@@ -48,6 +48,8 @@ public sealed class PublicApiBaselineTests
             "Bondstone.Persistence.EntityFrameworkCore",
             "Bondstone.Persistence.EntityFrameworkCore.Postgres",
             "Bondstone.Transport.Local",
+            "Bondstone.Transport.RabbitMq",
+            "Bondstone.Transport.ServiceBus",
         ];
     }
 

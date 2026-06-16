@@ -90,6 +90,27 @@ payloads, and call `IDurableEnvelopeReceiver` from their native receive
 handler. Reintroducing broker adapter packages requires a new ADR or amendment
 based on real usage pressure.
 
+## Amendment 2026-06-16 Thin Broker Adapter Packages
+
+[ADR 0008](0008-thin-broker-adapters.md) reintroduced broker adapter packages
+only for thin native-driver envelope integration. The active package set is
+now:
+
+- `Bondstone`;
+- `Bondstone.Persistence`;
+- `Bondstone.Persistence.EntityFrameworkCore`;
+- `Bondstone.Persistence.EntityFrameworkCore.Postgres`;
+- `Bondstone.Hosting`;
+- `Bondstone.Transport.Local`;
+- `Bondstone.Transport.RabbitMq`;
+- `Bondstone.Transport.ServiceBus`.
+
+`Bondstone.Transport.RabbitMq` and `Bondstone.Transport.ServiceBus` are
+adapter packages, not broker runtimes. They may provide native-driver envelope
+dispatchers and opt-in receive workers, but applications continue to own
+native topology, provisioning, retry, dead-letter, monitoring, and operational
+policy.
+
 ## Related Decisions
 
 - Supersedes the active package and compatibility posture from the archived
@@ -115,10 +136,10 @@ based on real usage pressure.
   changes.
 - Application evidence: removed packages are absent from the solution and
   package discovery; active packages are covered by package artifact tests.
-  `Bondstone.Transport.RabbitMq` was removed from the active solution and
-  package inventory by the 2026-06-16 broker adapter removal amendment.
-- Pending or deferred: further public API cleanup is planned as a cleanup
-  sweep, not as compatibility preservation.
+  Thin RabbitMQ and Azure Service Bus packages were added by the 2026-06-16
+  thin broker adapter amendment.
+- Pending or deferred: Rebus remains app-owned; further public API cleanup is
+  planned as a cleanup sweep, not as compatibility preservation.
 
 ## Verification
 

@@ -87,6 +87,22 @@ policy, prefetch, concurrency, and monitoring. Event receive remains explicit:
 the app supplies the subscriber module and stable subscriber identity selected
 by its native subscription.
 
+## Amendment 2026-06-16 Thin Native Broker Adapters
+
+[ADR 0008](0008-thin-broker-adapters.md) reintroduced
+`Bondstone.Transport.RabbitMq` and `Bondstone.Transport.ServiceBus` as thin
+native-driver adapter packages.
+
+This does not change the transport boundary. Bondstone still does not own
+broker topology, provisioning, retry, dead-letter policy, subscription
+storage, or provider-neutral diagnostics. The adapter packages may register
+native-driver `IDurableEnvelopeDispatcher` implementations and explicitly
+registered receive workers that hand durable envelope payloads to the shared
+`IDurableEnvelopeReceiver`.
+
+Rebus and other bus abstractions remain app-owned until a real consumer need
+proves that a package can add value without fighting the selected bus.
+
 ## Related Decisions
 
 - Supersedes the active transport direction from the archived ADR sequence.
@@ -102,7 +118,8 @@ by its native subscription.
 
 - Current contract: local transport behavior is documented in
   [docs/architecture/transport-local.md](../architecture/transport-local.md).
-  App-owned broker integration is documented in
+  Thin RabbitMQ and Azure Service Bus adapter behavior, plus app-owned broker
+  integration for other transports, is documented in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/setup.md](../setup.md), and
   [docs/package-discovery.md](../package-discovery.md).
@@ -111,12 +128,12 @@ by its native subscription.
 - Agent guidance: root [AGENTS.md](../../AGENTS.md) requires ADR review before
   transport support, provider behavior, package-boundary, public API, or
   compatibility changes.
-- Application evidence: provider-neutral transport diagnostics, old topology
-  ownership, and the RabbitMQ adapter package were removed. Local transport is
-  covered by the modular monolith sample integration tests.
-- Pending or deferred: future broker adapter packages are deferred until a
-  real consumer need justifies adding ergonomic wrappers around the app-owned
-  broker boundary.
+- Application evidence: provider-neutral transport diagnostics and old
+  topology ownership were removed. Local transport is covered by the modular
+  monolith sample integration tests. RabbitMQ and Azure Service Bus adapters
+  are covered by fast registration tests and public API baselines.
+- Pending or deferred: Rebus and provider-backed broker integration tests are
+  deferred until real consumer use proves the next step.
 
 ## Verification
 

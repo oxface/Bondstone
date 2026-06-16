@@ -78,6 +78,18 @@ reintroduced by ADR.
 Provider-backed confidence currently means EF/PostgreSQL integration coverage.
 Broker provider-backed tests are deferred with broker adapter packages.
 
+## Amendment 2026-06-16 Thin Broker Adapter Packages
+
+[ADR 0008](0008-thin-broker-adapters.md) adds thin RabbitMQ and Azure Service
+Bus adapter packages without restoring a broker matrix sample. The modular
+monolith sample remains focused on EF/PostgreSQL and local transport, while
+setup docs show the thin adapter registration shape.
+
+The broker adapter packages start with fast unit/application tests for
+registration and option validation. Provider-backed RabbitMQ and Azure Service
+Bus tests remain deferred until real usage proves the thin APIs are stable
+enough to justify infrastructure-backed coverage.
+
 ## Related Decisions
 
 - Supersedes the active sample, testing, package artifact, and docs governance

@@ -58,6 +58,69 @@ public sealed class DurableEnvelopeReceiverTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task ReceiveAsync_WhenEnvelopeIsCommand_UsesCommandPipeline()
+    {
+        var commandPipeline = new RecordingCommandReceivePipeline();
+        var eventPipeline = new RecordingEventReceivePipeline();
+        using ServiceProvider serviceProvider = CreateServiceProvider(
+            commandPipeline,
+            eventPipeline);
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IDurableEnvelopeReceiver receiver =
+            scope.ServiceProvider.GetRequiredService<IDurableEnvelopeReceiver>();
+        DurableMessageEnvelope envelope = CreateCommandEnvelope();
+
+        DurableInboxHandleResult result = await receiver.ReceiveAsync(envelope);
+
+        Assert.Same(commandPipeline.Result, result);
+        Assert.Same(envelope, commandPipeline.Envelope);
+        Assert.Null(eventPipeline.Envelope);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ReceiveAsync_WhenUtf8EnvelopeIsEvent_UsesEventPipeline()
+    {
+        var commandPipeline = new RecordingCommandReceivePipeline();
+        var eventPipeline = new RecordingEventReceivePipeline();
+        using ServiceProvider serviceProvider = CreateServiceProvider(
+            commandPipeline,
+            eventPipeline);
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IDurableEnvelopeReceiver receiver =
+            scope.ServiceProvider.GetRequiredService<IDurableEnvelopeReceiver>();
+        IDurableMessageEnvelopeSerializer serializer =
+            scope.ServiceProvider.GetRequiredService<IDurableMessageEnvelopeSerializer>();
+        DurableMessageEnvelope envelope = CreateEventEnvelope();
+
+        DurableInboxHandleResult result = await receiver.ReceiveAsync(
+            serializer.SerializeToUtf8Bytes(envelope),
+            new DurableEnvelopeReceiveBinding("billing", "billing.order-placed.v1"));
+
+        Assert.Same(eventPipeline.Result, result);
+        Assert.Equal(envelope, eventPipeline.Envelope);
+        Assert.Equal("billing", eventPipeline.SubscriberModule);
+        Assert.Equal("billing.order-placed.v1", eventPipeline.SubscriberIdentity);
+        Assert.Null(commandPipeline.Envelope);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ReceiveAsync_WhenEnvelopeIsEventWithoutBinding_Throws()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider(
+            new RecordingCommandReceivePipeline(),
+            new RecordingEventReceivePipeline());
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IDurableEnvelopeReceiver receiver =
+            scope.ServiceProvider.GetRequiredService<IDurableEnvelopeReceiver>();
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            async () => await receiver.ReceiveAsync(CreateEventEnvelope()));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task ReceiveCommandAsync_WhenEnvelopeIsEvent_Throws()
     {
         using ServiceProvider serviceProvider = CreateServiceProvider(

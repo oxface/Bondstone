@@ -103,6 +103,12 @@ namespace Bondstone.Messaging
         Rejected = 2,
         Duplicate = 3,
     }
+    public sealed class DurableEnvelopeReceiveBinding : System.IEquatable<Bondstone.Messaging.DurableEnvelopeReceiveBinding>
+    {
+        public DurableEnvelopeReceiveBinding(string SubscriberModule, string SubscriberIdentity) { }
+        public string SubscriberIdentity { get; init; }
+        public string SubscriberModule { get; init; }
+    }
     public sealed class DurableEventPublishResult : System.IEquatable<Bondstone.Messaging.DurableEventPublishResult>
     {
         public DurableEventPublishResult(System.Guid publishId, System.Guid? durableOperationId, Bondstone.Messaging.DurableEventPublishStatus status) { }
@@ -188,6 +194,9 @@ namespace Bondstone.Messaging
     }
     public interface IDurableEnvelopeReceiver
     {
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, Bondstone.Messaging.DurableEnvelopeReceiveBinding? binding = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveAsync(System.ReadOnlyMemory<byte> utf8Json, Bondstone.Messaging.DurableEnvelopeReceiveBinding? binding = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveAsync(string json, Bondstone.Messaging.DurableEnvelopeReceiveBinding? binding = null, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveCommandAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveEventAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, string subscriberModule, string subscriberIdentity, System.Threading.CancellationToken ct = default);
     }

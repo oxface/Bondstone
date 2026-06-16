@@ -40,6 +40,8 @@ already-received, or already-processed results without using duplicate
 exceptions as the public flow. It does not implement inbox leases, stale
 receive recovery, failed receive states, or row mutation helpers for
 already-received unprocessed rows.
+Read-only inspection for unprocessed inbox rows is provided through the
+EF-backed inspection store.
 
 `AddBondstonePostgreSqlPersistence<TDbContext>` configures Npgsql for a
 consumer-owned DbContext and composes the provider-neutral EF registrations,
@@ -60,17 +62,18 @@ binds PostgreSQL durable components for that module's EF context. Root-level
 module bindings provide source-module outbox writing, target-module inbox
 handling, target-module operation-state persistence, transaction pipeline
 participation, per-module outbox dispatch, and read-only terminal outbox
-inspection. The app-facing dispatcher can aggregate dispatch results across
-configured local module outboxes while each underlying claim, lease, and
-dispatch-record update remains scoped to one module's PostgreSQL tables. The
-aggregate worker topology does not change PostgreSQL ownership: module
-dispatchers still perform provider-specific claim, lease renewal, and outcome
-recording for their module, while the aggregate dispatcher only chooses the
-sequential call order and shared batch budget.
+inspection and unprocessed inbox inspection. The app-facing dispatcher can
+aggregate dispatch results across configured local module outboxes while each
+underlying claim, lease, and dispatch-record update remains scoped to one
+module's PostgreSQL tables. The aggregate worker topology does not change
+PostgreSQL ownership: module dispatchers still perform provider-specific
+claim, lease renewal, and outcome recording for their module, while the
+aggregate dispatcher only chooses the sequential call order and shared batch
+budget.
 
 Command and receive execution use passive durable module runtime registrations
 for the module writer, inbox executor, operation-state store, outbox
-dispatcher, and outbox inspection store stored in
+dispatcher, inbox inspection store, and outbox inspection store stored in
 `DurableModulePersistenceRegistrationRegistry`. Those registrations carry the
 module name and create EF-backed executable services only for the selected
 module inside the current DI scope, so resolving another module's runtime
@@ -87,6 +90,8 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
 - transaction commit/rollback;
 - savepoint rollback after duplicate inbox inserts;
 - inbox processed timestamps and registration outcomes;
+- read-only unprocessed inbox inspection through the EF-backed inspection
+  store;
 - operation-state updates, including nullable result diagnostic context;
 - outbox claim lease columns;
 - `FOR UPDATE SKIP LOCKED` selection;

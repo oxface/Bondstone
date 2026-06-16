@@ -19,6 +19,8 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
             _persistenceRegistrationRegistry.OutboxWriterRegistrations.ToArray();
         DurableModuleInboxHandlerExecutorRegistration[] inboxExecutors =
             _persistenceRegistrationRegistry.InboxHandlerExecutorRegistrations.ToArray();
+        DurableModuleInboxInspectionStoreRegistration[] inboxInspectionStores =
+            _persistenceRegistrationRegistry.InboxInspectionStoreRegistrations.ToArray();
         DurableModuleOperationStateStoreRegistration[] operationStateStores =
             _persistenceRegistrationRegistry.OperationStateStoreRegistrations.ToArray();
         DurableModuleOutboxDispatcherRegistration[] outboxDispatchers =
@@ -28,6 +30,7 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
 
         if (outboxWriters.Length == 0
             && inboxExecutors.Length == 0
+            && inboxInspectionStores.Length == 0
             && operationStateStores.Length == 0
             && outboxDispatchers.Length == 0
             && outboxInspectionStores.Length == 0)
@@ -39,6 +42,7 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
             context,
             outboxWriters.Select(static registration => registration.ModuleName)
                 .Concat(inboxExecutors.Select(static registration => registration.ModuleName))
+                .Concat(inboxInspectionStores.Select(static registration => registration.ModuleName))
                 .Concat(operationStateStores.Select(static registration => registration.ModuleName))
                 .Concat(outboxDispatchers.Select(static registration => registration.ModuleName))
                 .Concat(outboxInspectionStores.Select(static registration => registration.ModuleName)));

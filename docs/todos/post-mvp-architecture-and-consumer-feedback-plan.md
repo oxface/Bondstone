@@ -525,7 +525,9 @@ Applied on 2026-06-16:
 5. Add documented reset/replay guidance for terminal outbox rows. Applied as
    read-only inspection guidance; reset/replay remains application-owned.
 6. Add documented inspection guidance for already-received unprocessed inbox
-   rows.
+   rows. Applied with `IDurableInboxInspector` and
+   `IDurableInboxInspectionStore`; row mutation and handler replay remain
+   application-owned.
 7. Add tests proving `Failed` operation results are observable and do not poll
    forever.
 

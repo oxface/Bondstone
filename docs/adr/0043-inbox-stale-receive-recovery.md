@@ -92,6 +92,24 @@ This amendment keeps the stale receive decision unchanged: already-received
 but unprocessed rows remain loud, and Bondstone still does not provide default
 stale-row recovery.
 
+## Amendment 2026-06-16: Read-Only Inbox Inspection
+
+Operational recovery needs a supported way to find already-received but
+unprocessed inbox rows without making Bondstone responsible for deciding
+whether handler re-execution is safe. Bondstone will therefore provide
+read-only inbox inspection contracts for unprocessed inbox rows.
+
+Provider stores may expose unprocessed rows with optional module and
+received-at cutoff filters. The app-facing inspector resolves the named
+module's inbox inspection store so operator queries use the same module
+persistence boundary as receive execution.
+
+Bondstone will not provide a provider-neutral mutation API for stale inbox
+rows in this slice. Marking a row processed, deleting a row, re-running a
+handler, moving a broker message, or applying a compensating action remains
+application-owned operational policy because only the application can prove
+what side effects happened during the ambiguous receive attempt.
+
 ## Related Decisions
 
 - [0014 Inbox Registration Contract](0014-inbox-registration-contract.md)
@@ -104,14 +122,15 @@ stale-row recovery.
   operationally loud in the module receive pipelines. Bondstone does not
   silently re-run handlers or provide default stale-row recovery. The inbox
   executor no longer accepts a commit delegate; transaction and save ownership
-  is outside the executor.
+  is outside the executor. Bondstone exposes read-only inbox inspection for
+  operator visibility, but stale inbox row mutation and handler re-execution
+  remain application-owned.
 - Stable docs: the current rule is reflected in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/persistence.md](../architecture/persistence.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
   [docs/architecture/persistence-ef-core.md](../architecture/persistence-ef-core.md),
   [docs/architecture/persistence-postgresql.md](../architecture/persistence-postgresql.md),
-  [docs/architecture/persistence-postgres.md](../architecture/persistence-postgres.md),
   and [docs/setup.md](../setup.md).
 - Agent guidance: root [AGENTS.md](../../AGENTS.md) already requires ADR
   review before broad durable behavior, provider support, transport strategy,
@@ -122,9 +141,11 @@ stale-row recovery.
   receive pipelines throw `DurableInboxAlreadyReceivedException` for that
   status; RabbitMQ and Service Bus workers settle only after receive dispatch
   succeeds and hand failures back to provider-native retry/dead-letter policy.
+  `IDurableInboxInspectionStore` and `IDurableInboxInspector` expose read-only
+  unprocessed inbox row queries.
 - Pending or deferred: any Bondstone-owned lease, recovery hook, maintenance
-  worker, failed receive state, or inbox row mutation helper needs a later ADR
-  and implementation.
+  worker, failed receive state, handler replay, or inbox row mutation helper
+  needs a later ADR and implementation.
 
 ## Verification
 
@@ -143,3 +164,8 @@ stale-row recovery.
   - `pnpm backend:test:fast`
   - `pnpm backend:test:integration`
   - `dotnet test tests/Bondstone.EntityFrameworkCore.Postgres.Tests/Bondstone.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --no-build --filter "Category=Integration"`
+- For the 2026-06-16 inspection amendment:
+  - `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+  - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~DurableInboxInspectorTests|FullyQualifiedName~DurableModulePersistenceRegistrationTests" --disable-build-servers`
+  - `dotnet test tests/Bondstone.Persistence.EntityFrameworkCore.Tests/Bondstone.Persistence.EntityFrameworkCore.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~EntityFrameworkCoreDurableInboxInspectionStoreTests" --disable-build-servers`
+  - `dotnet test tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~AddBondstonePostgreSqlPersistence_WhenResolved_UsesPostgreSqlStores" --disable-build-servers`

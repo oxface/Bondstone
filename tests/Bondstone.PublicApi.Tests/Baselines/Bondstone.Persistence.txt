@@ -124,6 +124,12 @@ namespace Bondstone.Persistence
         public string ModuleName { get; }
         public Bondstone.Persistence.IDurableInboxHandlerExecutor CreateExecutor(System.IServiceProvider serviceProvider) { }
     }
+    public sealed class DurableModuleInboxInspectionStoreRegistration
+    {
+        public DurableModuleInboxInspectionStoreRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableInboxInspectionStore> createStore) { }
+        public string ModuleName { get; }
+        public Bondstone.Persistence.IDurableInboxInspectionStore CreateStore(System.IServiceProvider serviceProvider) { }
+    }
     public sealed class DurableModuleOperationStateStoreRegistration
     {
         public DurableModuleOperationStateStoreRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableOperationStateStore> createStore) { }
@@ -157,11 +163,13 @@ namespace Bondstone.Persistence
     {
         public DurableModulePersistenceRegistrationRegistry() { }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleInboxHandlerExecutorRegistration> InboxHandlerExecutorRegistrations { get; }
+        public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleInboxInspectionStoreRegistration> InboxInspectionStoreRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOperationStateStoreRegistration> OperationStateStoreRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOutboxDispatcherRegistration> OutboxDispatcherRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOutboxInspectionStoreRegistration> OutboxInspectionStoreRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOutboxWriterRegistration> OutboxWriterRegistrations { get; }
         public void AddInboxHandlerExecutor(Bondstone.Persistence.DurableModuleInboxHandlerExecutorRegistration registration) { }
+        public void AddInboxInspectionStore(Bondstone.Persistence.DurableModuleInboxInspectionStoreRegistration registration) { }
         public void AddOperationStateStore(Bondstone.Persistence.DurableModuleOperationStateStoreRegistration registration) { }
         public void AddOutboxDispatcher(Bondstone.Persistence.DurableModuleOutboxDispatcherRegistration registration) { }
         public void AddOutboxInspectionStore(Bondstone.Persistence.DurableModuleOutboxInspectionStoreRegistration registration) { }
@@ -246,6 +254,14 @@ namespace Bondstone.Persistence
     public interface IDurableInboxHandlerExecutor
     {
         System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> HandleOnceAsync(Bondstone.Persistence.DurableInboxRecord record, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> handler, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableInboxInspectionStore
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableInboxRecord>> FindUnprocessedAsync(int maxCount = 100, System.DateTimeOffset? receivedAtOrBeforeUtc = default, string? moduleName = null, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableInboxInspector
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableInboxRecord>> FindUnprocessedAsync(string moduleName, int maxCount = 100, System.DateTimeOffset? receivedAtOrBeforeUtc = default, System.Threading.CancellationToken ct = default);
     }
     public interface IDurableInboxRegistrar
     {

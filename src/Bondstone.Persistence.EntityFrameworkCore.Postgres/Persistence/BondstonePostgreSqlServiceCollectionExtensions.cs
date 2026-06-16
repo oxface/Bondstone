@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Persistence.EntityFrameworkCore.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox;
@@ -132,6 +133,10 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
                 serviceProvider.GetRequiredService<TDbContext>(),
                 serviceProvider.GetService<TimeProvider>(),
                 schema)));
+        registry.AddInboxInspectionStore(new DurableModuleInboxInspectionStoreRegistration(
+            moduleName,
+            serviceProvider => new EntityFrameworkCoreDurableInboxInspectionStore<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>())));
         registry.AddOperationStateStore(new DurableModuleOperationStateStoreRegistration(
             moduleName,
             serviceProvider => new EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>(

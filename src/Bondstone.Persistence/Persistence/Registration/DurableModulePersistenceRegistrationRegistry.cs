@@ -14,6 +14,8 @@ public sealed class DurableModulePersistenceRegistrationRegistry
         _outboxInspectionStoreRegistrations = [];
     private readonly List<DurableModuleInboxHandlerExecutorRegistration>
         _inboxHandlerExecutorRegistrations = [];
+    private readonly List<DurableModuleInboxInspectionStoreRegistration>
+        _inboxInspectionStoreRegistrations = [];
     private readonly List<DurableModuleOperationStateStoreRegistration>
         _operationStateStoreRegistrations = [];
 
@@ -60,6 +62,18 @@ public sealed class DurableModulePersistenceRegistrationRegistry
             lock (_syncRoot)
             {
                 return _inboxHandlerExecutorRegistrations.ToArray();
+            }
+        }
+    }
+
+    public IReadOnlyList<DurableModuleInboxInspectionStoreRegistration>
+        InboxInspectionStoreRegistrations
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _inboxInspectionStoreRegistrations.ToArray();
             }
         }
     }
@@ -135,6 +149,22 @@ public sealed class DurableModulePersistenceRegistrationRegistry
                 static existing => existing.ModuleName,
                 "durable module inbox handler executor");
             _inboxHandlerExecutorRegistrations.Add(registration);
+        }
+    }
+
+    public void AddInboxInspectionStore(
+        DurableModuleInboxInspectionStoreRegistration registration)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+
+        lock (_syncRoot)
+        {
+            ValidateNoExistingRegistration(
+                _inboxInspectionStoreRegistrations,
+                registration.ModuleName,
+                static existing => existing.ModuleName,
+                "durable module inbox inspection store");
+            _inboxInspectionStoreRegistrations.Add(registration);
         }
     }
 

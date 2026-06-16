@@ -1,5 +1,11 @@
 namespace Bondstone.Persistence.EntityFrameworkCore.Inbox
 {
+    public sealed class EntityFrameworkCoreDurableInboxInspectionStore<TDbContext> : Bondstone.Persistence.IDurableInboxInspectionStore
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreDurableInboxInspectionStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableInboxRecord>> FindUnprocessedAsync(int maxCount = 100, System.DateTimeOffset? receivedAtOrBeforeUtc = default, string? moduleName = null, System.Threading.CancellationToken ct = default) { }
+    }
     public sealed class EntityFrameworkCoreDurableInboxStore<TDbContext> : Bondstone.Persistence.IDurableInboxStore
         where TDbContext : Microsoft.EntityFrameworkCore.DbContext
     {

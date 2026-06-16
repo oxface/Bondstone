@@ -130,6 +130,19 @@ Terminal outbox inspection, 2026-06-16:
 - The API is intentionally read-only; it does not add reset, replay, purge, or
   archival mutation contracts.
 
+Inbox inspection, 2026-06-16:
+
+- `IDurableInboxInspector` is an additive user application contract for
+  reading unprocessed inbox records from a named module's persistence
+  boundary.
+- `IDurableInboxInspectionStore` is an additive provider/runtime contract for
+  querying unprocessed inbox rows with optional module and received-at cutoff
+  filters.
+- `DurableModuleInboxInspectionStoreRegistration` is an additive advanced
+  module runtime registration type for provider packages.
+- The API is intentionally read-only; it does not add row mutation, handler
+  replay, broker action, purge, or archival contracts.
+
 ## Current Scope
 
 This first pass covers all current package projects:

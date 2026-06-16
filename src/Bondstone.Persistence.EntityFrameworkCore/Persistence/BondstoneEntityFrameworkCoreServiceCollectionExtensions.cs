@@ -33,6 +33,9 @@ public static class BondstoneEntityFrameworkCoreServiceCollectionExtensions
             new EntityFrameworkCoreDurableOutboxInspectionStore<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>()));
         services.TryAddScoped<IDurableInboxStore, EntityFrameworkCoreDurableInboxStore<TDbContext>>();
+        services.TryAddScoped<IDurableInboxInspectionStore>(serviceProvider =>
+            new EntityFrameworkCoreDurableInboxInspectionStore<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>()));
         services.TryAddScoped<IDurableOperationStateStore, EntityFrameworkCoreDurableOperationStateStore<TDbContext>>();
         services.TryAddScoped<
             IEntityFrameworkCorePersistenceScope,

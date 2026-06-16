@@ -94,6 +94,9 @@ public static class BondstoneServiceCollectionExtensions
         services.TryAddScoped<IDurableOutboxInspector>(serviceProvider =>
             new DurableOutboxInspector(
                 serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
+        services.TryAddScoped<IDurableInboxInspector>(serviceProvider =>
+            new DurableInboxInspector(
+                serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
         services.TryAddScoped<IDurableCommandSender>(serviceProvider =>
             new DurableCommandSender(
                 serviceProvider.GetRequiredService<DurableModuleOutboxWriterResolver>(),

@@ -49,6 +49,25 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void InboxInspector_WhenDuplicateModuleInspectionStoresAreRegistered_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        RegisterInboxInspectionStore(services, new DurableModuleInboxInspectionStoreRegistration(
+            "fulfillment",
+            _ => new TestModuleInboxInspectionStore()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => RegisterInboxInspectionStore(services, new DurableModuleInboxInspectionStoreRegistration(
+                " fulfillment ",
+                _ => new TestModuleInboxInspectionStore())));
+
+        Assert.Contains("durable module inbox inspection store", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("exactly one", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void OperationReader_WhenDuplicateModuleOperationStoresAreRegistered_ThrowsClearError()
     {
         var services = new ServiceCollection();
@@ -386,6 +405,14 @@ public sealed class DurableModulePersistenceRegistrationTests
             .AddInboxHandlerExecutor(registration);
     }
 
+    private static void RegisterInboxInspectionStore(
+        IServiceCollection services,
+        DurableModuleInboxInspectionStoreRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddInboxInspectionStore(registration);
+    }
+
     private static void RegisterOutboxDispatcher(
         IServiceCollection services,
         DurableModuleOutboxDispatcherRegistration registration)
@@ -594,6 +621,19 @@ public sealed class DurableModulePersistenceRegistrationTests
         public ValueTask<DurableInboxHandleResult> HandleOnceAsync(
             DurableInboxRecord record,
             Func<CancellationToken, ValueTask> handler,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class TestModuleInboxInspectionStore
+        : IDurableInboxInspectionStore
+    {
+        public ValueTask<IReadOnlyList<DurableInboxRecord>> FindUnprocessedAsync(
+            int maxCount = 100,
+            DateTimeOffset? receivedAtOrBeforeUtc = null,
+            string? moduleName = null,
             CancellationToken ct = default)
         {
             throw new NotSupportedException();

@@ -827,7 +827,22 @@ processed, Bondstone fails the module receive with
 `DurableInboxAlreadyReceivedException` instead of re-running the handler. The
 provider worker then uses its normal failure handoff, such as RabbitMQ negative
 acknowledgement. Recovery of the stale inbox row is an operator or application
-procedure.
+procedure. Operators can inspect unprocessed inbox rows through
+`IDurableInboxInspector`:
+
+```csharp
+IReadOnlyList<DurableInboxRecord> staleReceives = await inboxInspector
+    .FindUnprocessedAsync(
+        moduleName: FulfillmentModule.ModuleName,
+        maxCount: 50,
+        receivedAtOrBeforeUtc: DateTimeOffset.UtcNow.AddMinutes(-5),
+        ct);
+```
+
+Inspection is read-only. Marking rows processed, deleting rows, re-running a
+handler, moving broker messages, or issuing a compensating action remains an
+application/operator runbook decision because the application must prove what
+happened during the ambiguous receive attempt.
 
 The RabbitMQ package also exposes `RabbitMqReceivedMessageMapper` for
 app-owned consumers before they call the Bondstone dispatcher.

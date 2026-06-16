@@ -11,6 +11,8 @@ internal sealed class ModuleRuntimeRegistry
         _outboxWriterRegistrations;
     private readonly Lazy<IReadOnlyDictionary<string, DurableModuleInboxHandlerExecutorRegistration>>
         _inboxHandlerExecutorRegistrations;
+    private readonly Lazy<IReadOnlyDictionary<string, DurableModuleInboxInspectionStoreRegistration>>
+        _inboxInspectionStoreRegistrations;
     private readonly Lazy<IReadOnlyDictionary<string, DurableModuleOperationStateStoreRegistration>>
         _operationStateStoreRegistrations;
     private readonly Lazy<IReadOnlyDictionary<string, DurableModuleOutboxInspectionStoreRegistration>>
@@ -37,6 +39,12 @@ internal sealed class ModuleRuntimeRegistry
                     persistenceRegistrationRegistry.InboxHandlerExecutorRegistrations,
                     static registration => registration.ModuleName,
                     "durable module inbox handler executor"));
+        _inboxInspectionStoreRegistrations =
+            new Lazy<IReadOnlyDictionary<string, DurableModuleInboxInspectionStoreRegistration>>(
+                () => ToModuleMap(
+                    persistenceRegistrationRegistry.InboxInspectionStoreRegistrations,
+                    static registration => registration.ModuleName,
+                    "durable module inbox inspection store"));
         _operationStateStoreRegistrations =
             new Lazy<IReadOnlyDictionary<string, DurableModuleOperationStateStoreRegistration>>(
                 () => ToModuleMap(
@@ -56,6 +64,9 @@ internal sealed class ModuleRuntimeRegistry
     public bool HasDurableInboxHandlerExecutors =>
         _inboxHandlerExecutorRegistrations.Value.Count > 0;
 
+    public bool HasDurableInboxInspectionStores =>
+        _inboxInspectionStoreRegistrations.Value.Count > 0;
+
     public bool HasDurableOperationStateStores =>
         _operationStateStoreRegistrations.Value.Count > 0;
 
@@ -65,6 +76,7 @@ internal sealed class ModuleRuntimeRegistry
     public bool HasDurableModulePersistenceRegistrations =>
         HasDurableOutboxWriters
         || HasDurableInboxHandlerExecutors
+        || HasDurableInboxInspectionStores
         || HasDurableOperationStateStores
         || HasDurableOutboxInspectionStores;
 
@@ -76,6 +88,11 @@ internal sealed class ModuleRuntimeRegistry
     public void ValidateDurableInboxHandlerExecutors()
     {
         _ = _inboxHandlerExecutorRegistrations.Value;
+    }
+
+    public void ValidateDurableInboxInspectionStores()
+    {
+        _ = _inboxInspectionStoreRegistrations.Value;
     }
 
     public void ValidateDurableOperationStateStores()
@@ -124,6 +141,11 @@ internal sealed class ModuleRuntimeRegistry
                     _inboxHandlerExecutorRegistrations.Value,
                     module.Name,
                     registration => registration.CreateExecutor(_serviceProvider))),
+            new Lazy<IDurableInboxInspectionStore?>(
+                () => CreateModuleService(
+                    _inboxInspectionStoreRegistrations.Value,
+                    module.Name,
+                    registration => registration.CreateStore(_serviceProvider))),
             new Lazy<IDurableOperationStateStore?>(
                 () => CreateModuleService(
                     _operationStateStoreRegistrations.Value,

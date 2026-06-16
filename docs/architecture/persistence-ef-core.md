@@ -51,6 +51,7 @@ provider-neutral EF Core implementations for:
 - `IDurableOutboxWriter`;
 - `IDurableOutboxInspectionStore`;
 - `IDurableInboxStore`;
+- `IDurableInboxInspectionStore`;
 - `IDurableOperationStateStore`;
 - `IEntityFrameworkCorePersistenceScope`.
 
@@ -115,6 +116,12 @@ must be verified with integration tests.
 
 Already-received but unprocessed inbox rows remain a loud receive outcome, not
 an EF Core stale-row recovery feature.
+
+`EntityFrameworkCoreDurableInboxInspectionStore<TDbContext>` reads
+unprocessed inbox rows with optional module and received-at cutoff filters. It
+orders oldest receives first and returns `DurableInboxRecord` values without
+tracking entities. It does not mark rows processed, delete rows, re-run
+handlers, or settle transport messages.
 
 `EntityFrameworkCoreDurableOperationStateStore<TDbContext>` reads and stages
 durable operation state in the current EF Core `DbContext`. Operation-state

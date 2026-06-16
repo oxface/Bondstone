@@ -110,11 +110,12 @@ outcome-recording contracts remain per persistence boundary.
 Provider packages contribute module-owned command and receive runtime
 persistence through passive durable module runtime registrations. Each
 registration carries a module name plus a factory for the executable
-`IDurableOutboxWriter`, `IDurableInboxHandlerExecutor`, or
-`IDurableOperationStateStore` used by that module, plus factories for the
-module's executable `IDurableOutboxDispatcher` when the provider supports
-local outbox dispatch and `IDurableOutboxInspectionStore` when the provider
-supports terminal-row inspection. Providers store these
+`IDurableOutboxWriter`, `IDurableInboxHandlerExecutor`,
+`IDurableInboxInspectionStore`, or `IDurableOperationStateStore` used by that
+module, plus factories for the module's executable `IDurableOutboxDispatcher`
+when the provider supports local outbox dispatch and
+`IDurableOutboxInspectionStore` when the provider supports terminal-row
+inspection. Providers store these
 records in `DurableModulePersistenceRegistrationRegistry`; individual module
 runtime registrations are not service descriptors. Provider packages should
 use Bondstone's advanced service-collection helper to get or create that
@@ -129,12 +130,13 @@ should not create owned disposable resources outside DI ownership.
 
 Provider packages must register at most one runtime registration for each
 module command/receive durable role, at most one module outbox dispatcher
-registration for each local module outbox, and at most one module outbox
-inspection-store registration for each module store. The durable runtime registry
+registration for each local module outbox, at most one module inbox
+inspection-store registration for each module store, and at most one module
+outbox inspection-store registration for each module store. The durable runtime registry
 rejects duplicate module outbox writer, inbox handler executor,
-operation-state store, outbox dispatcher, and outbox inspection-store
-registrations when provider setup adds them; the runtime map keeps defensive
-duplicate validation when those
+inbox inspection-store, operation-state store, outbox dispatcher, and outbox
+inspection-store registrations when provider setup adds them; the runtime map
+keeps defensive duplicate validation when those
 services are resolved. Provider
 composition errors therefore fail with module-specific diagnostics. When a
 module declares
@@ -209,9 +211,26 @@ acknowledging the message as successfully processed.
 
 Bondstone does not currently provide inbox leases, stale-row recovery hooks,
 maintenance workers, failed receive states, or provider-neutral inbox row
-mutation helpers. Applications may build their own operational recovery around
-the persisted inbox table, but that recovery owns the safety proof for any
-row mutation or handler re-execution.
+mutation helpers. Bondstone provides read-only inbox inspection, but not
+provider-neutral stale-row recovery. Applications may build their own
+operational recovery around the persisted inbox table, but that recovery owns
+the safety proof for any row mutation or handler re-execution.
+
+`IDurableInboxInspectionStore` is the provider-side read contract for operator
+inspection of unprocessed inbox rows. Implementations return records whose
+`ProcessedAtUtc` is null, optionally filtered by module and received-at
+cutoff, ordered by oldest receive first and bounded by the requested maximum
+count. The query does not mark rows processed, delete rows, re-run handlers,
+settle broker messages, or decide whether a receive attempt is safe to
+recover.
+
+`IDurableInboxInspector` is the app-facing module-aware inspection contract.
+It resolves the named module's inbox inspection store and delegates the
+read-only unprocessed-row query to that module's persistence boundary.
+Applications can use those records for dashboards, alerts, or operator
+runbooks. Any re-run, row mutation, broker action, purge, archival, or
+compensation remains application-owned because only the application can prove
+what happened during the ambiguous receive attempt.
 
 `IDurableInboxStore` exposes lower-level inbox store operations: read a record,
 add a receive record, and mark it processed. Provider implementations own the

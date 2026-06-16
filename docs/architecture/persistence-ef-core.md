@@ -157,9 +157,9 @@ The columns are diagnostic only. They are not part of the operation-state key,
 are not indexed by Bondstone, and do not change operation-state precedence,
 completion, or result deserialization behavior.
 
-ADR 0028 accepts EF Core as the first provider implementation for optional
-module-local domain event collection and persistence. ADR 0058 moves that
-implementation into `Bondstone.Persistence.EntityFrameworkCore`.
+EF Core is the first provider implementation for optional module-local domain
+event collection and persistence. That implementation lives in
+`Bondstone.Persistence.EntityFrameworkCore`.
 
 The accepted EF collection mechanism is narrow: the module transaction
 behavior collects domain events through `DbContext.ChangeTracker` entries

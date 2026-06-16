@@ -1,8 +1,8 @@
 # Public API Surface
 
 This document records the current public API classification for Bondstone
-packages as cleanup work applies ADR 0046. It is an inventory and guidance
-document, not a source of new compatibility promises.
+packages as cleanup work continues. It is an inventory and guidance document,
+not a source of new compatibility promises.
 
 ## Automated Baseline
 
@@ -39,8 +39,8 @@ replace ADR review, or replace release-note treatment.
   placement should be reviewed before stronger compatibility expectations.
 
 Public API removal, visibility reduction, renaming, or broad contract movement
-remains compatibility-sensitive and requires the ADR 0046 planning path before
-implementation.
+requires ADR review before implementation when it changes the durable package
+or compatibility contract.
 
 ## Decision Notes
 
@@ -91,8 +91,8 @@ Post-MVP transport simplification, 2026-06-16:
 - The renamed envelope dispatcher contract uses `DispatchAsync(...)` to make
   the neutral handoff about dispatching persisted Bondstone envelopes, not
   owning broker transport runtime.
-- This is an intentional compatibility-breaking public API cleanup under ADR
-  0056 while external usage is still bounded.
+- This is an intentional compatibility-breaking public API cleanup made while
+  external usage is still bounded.
 
 Operation finalization, 2026-06-16:
 

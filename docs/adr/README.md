@@ -7,6 +7,16 @@ sample architecture, compatibility, or repository workflow.
 
 ADRs answer why. Stable docs answer how the repository currently works.
 
+## Active Baseline
+
+The active ADR set was restarted on 2026-06-16 after the public-MVP
+architecture pivot. The previous ADR sequence is retained under
+[`archive/pre-restart-2026-06-16/`](archive/pre-restart-2026-06-16/) for
+traceability, but it is not the active decision navigation path.
+
+Use the active ADR files in this folder for current decisions. Consult the
+archive only when older context is needed.
+
 ## Location And Naming
 
 Accepted and proposed ADRs live in this folder.
@@ -19,8 +29,10 @@ Use sequential numbering:
 ```
 
 Archive removed or obsolete ADR material under `archive/` only when preserving
-it in place would confuse current navigation. Prefer superseding an ADR over
-deleting it.
+it in place would confuse current navigation. Prefer superseding an active ADR
+over deleting it. The pre-restart archive is a bounded exception approved by
+the maintainer to make the post-MVP baseline readable while preserving the old
+trail.
 
 ## Statuses
 
@@ -139,6 +151,10 @@ When creating, updating, superseding, or archiving an ADR:
 5. Apply the current accepted rule into stable docs.
 6. Apply agent-facing effects into relevant AGENTS files or skills.
 7. Report verification and any deliberately deferred docs.
+
+When changing current architecture after the restart, update or supersede the
+active baseline ADR that owns the decision. Do not edit archived ADRs to make
+them describe current behavior.
 
 ## Affected Durable Docs
 

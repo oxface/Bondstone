@@ -12,3 +12,8 @@ Start with:
 Use repository ADR skills for repeated ADR workflows. Preserve accepted ADR
 history: add dated amendments for compatible clarification and supersede when
 a decision changes.
+
+The active ADR sequence was restarted on 2026-06-16. Treat
+`archive/pre-restart-2026-06-16/` as traceability-only material. Update or
+supersede active ADRs in this folder for current decisions; do not edit
+archived ADRs to describe current behavior.

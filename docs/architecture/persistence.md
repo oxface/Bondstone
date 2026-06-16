@@ -81,10 +81,11 @@ it reads only from configured module-owned operation-state stores.
 
 ## Domain Event Persistence
 
-ADR 0028 accepts optional module-local domain event persistence. Domain event
-persistence records private module facts inside the owning module persistence
-boundary; it does not write outgoing outbox messages, create inbox records,
-publish transport events, or expose domain events as integration contracts.
+Bondstone supports optional module-local domain event persistence. Domain
+event persistence records private module facts inside the owning module
+persistence boundary; it does not write outgoing outbox messages, create inbox
+records, publish transport events, or expose domain events as integration
+contracts.
 
 The core shape is intentionally small and lives under `Bondstone.DomainEvents`
 in the core `Bondstone` package: module domain objects may implement

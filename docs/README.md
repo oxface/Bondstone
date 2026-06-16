@@ -18,7 +18,7 @@ duplicating durable rules.
 - [package-discovery.md](package-discovery.md) maps common consumer-facing
   capabilities to package IDs and namespaces.
 - [public-api.md](public-api.md) records the current public API surface
-  classification used by ADR 0046 cleanup work.
+  classification used during cleanup work.
 - [repository.md](repository.md) records current repository layout and tooling
   direction.
 - [samples.md](samples.md) records current sample application direction.

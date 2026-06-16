@@ -106,7 +106,8 @@ imminent.
 ## Pipeline Scope
 
 The module runtime now uses fixed internal command and event subscriber
-sequences, accepted in ADR 0059.
+sequences, captured in active ADR
+[0003 Module Boundaries Runtime And Domain Events](../adr/0003-module-boundaries-runtime-and-domain-events.md).
 
 Command execution runs:
 
@@ -533,8 +534,9 @@ Applied on 2026-06-16:
 
 ### Next: Operational MVP
 
-1. Create an ADR for operation-state semantics after publication. Accepted and
-   applied as ADR 0057.
+1. Create an ADR for operation-state semantics after publication. Applied and
+   captured in active ADR
+   [0004 Persistence Operation State And Results](../adr/0004-persistence-operation-state-and-results.md).
 2. Add an application-facing operation-state writer or failure marker API.
    Applied with `IDurableOperationFinalizer`.
 3. Add operation expiry/timeout policy and a maintenance worker or documented
@@ -594,13 +596,14 @@ Preparatory work applied on 2026-06-16:
 
 Applied on 2026-06-16:
 
-- Accepted ADR 0059 for the fixed module runtime sequence.
+- Accepted the fixed module runtime sequence during the pre-restart ADR
+  sequence.
 - Removed public module pipeline contribution records, contribution registry,
   public step-kind/order types, and module builder contribution methods.
 - Replaced contribution registry/planner selection with fixed command and
   event subscriber runtime sequences.
-- Superseded ADR 0059 with ADR 0060 and removed public application pipeline
-  behavior contracts.
+- Superseded the fixed-slot pipeline model during the pre-restart ADR
+  sequence and removed public application pipeline behavior contracts.
 - Replaced fixed-slot pipeline behavior contracts with direct runtime
   services.
 - Moved EF transaction behavior from generic pipeline contribution to a
@@ -636,24 +639,25 @@ Applied on 2026-06-16:
 - Should terminal outbox replay stay only documented app-owned SQL/provider
   procedure, or should a future provider-specific mutation helper be accepted
   after a real runbook emerges?
-- Should XML API docs be required by a pack artifact test for every package
+- Resolved: XML API docs are required by package artifact tests for every
+  active packable package.
 
 ## Added Pivot Work
 
-### ADR History Restart
+### Applied: ADR History Restart
 
-After the current simplification plan is implemented and verified, rebuild the
-active ADR set from the applied architecture rather than continuing to layer
-new amendments on top of the existing circular history.
+Applied on 2026-06-16. The active ADR set was rebuilt from the applied
+architecture rather than continuing to layer new amendments on top of the
+existing circular history.
 
 Intent:
 
-- create a small current ADR set that describes the architecture Bondstone is
+- Created a small current ADR set that describes the architecture Bondstone is
   actually keeping;
-- archive or supersede stale, deferred, amended, and superseded ADR material
+- archived stale, deferred, amended, and superseded ADR material
   while preserving traceability;
-- keep stable docs as the current operating contract;
-- make future decisions easier to navigate for humans and agents.
+- kept stable docs as the current operating contract;
+- made future decisions easier to navigate for humans and agents.
 
 Constraints:
 
@@ -664,16 +668,15 @@ Constraints:
 - New ADRs should describe current durable decisions and near-term planned
   direction, not every discarded experiment.
 
-Candidate new ADR groups:
+Applied ADR groups:
 
-- module communication and modular-monolith boundaries;
-- durable command/event envelope model;
-- EF/PostgreSQL persistence and provider boundaries;
-- operation state, handles, polling, finalization, and expiry;
-- transport adapter ownership;
-- domain event persistence;
-- runtime sequence and provider runtime hooks;
-- package surface and compatibility posture.
+- [0001 Restart ADR History Around Current Baseline](../adr/0001-restart-adr-history-around-current-baseline.md)
+- [0002 Library Scope And Package Surface](../adr/0002-library-scope-and-package-surface.md)
+- [0003 Module Boundaries Runtime And Domain Events](../adr/0003-module-boundaries-runtime-and-domain-events.md)
+- [0004 Persistence Operation State And Results](../adr/0004-persistence-operation-state-and-results.md)
+- [0005 Transport Adapters And Receive Helpers](../adr/0005-transport-adapters-and-receive-helpers.md)
+- [0006 Samples Testing Packaging And Docs](../adr/0006-samples-testing-packaging-and-docs.md)
+- [0007 Keep Orchestration App Owned For Now](../adr/0007-keep-orchestration-app-owned-for-now.md)
 
 ### Cleanup Sweeps
 
@@ -700,7 +703,6 @@ Test cleanup sweep:
 - remove tests that only verify deleted extension points;
 - keep focused regression tests for local transport, inbox/outbox, operation
   handles, result polling, EF transactions, and domain event persistence.
-  before publication?
 
 ## Non-Goals For The Next Slice
 

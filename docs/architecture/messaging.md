@@ -88,9 +88,8 @@ work.
 Domain events are module-local facts. They are distinct from integration
 events and must not be treated as durable cross-module contracts by default.
 
-ADR 0028 accepts a small Bondstone-owned domain event contract. ADR 0058 moves
-the active contracts into the core `Bondstone` package under the
-`Bondstone.DomainEvents` namespace:
+Bondstone owns a small module-local domain event contract in the core
+`Bondstone` package under the `Bondstone.DomainEvents` namespace:
 
 - `IDomainEvent` marks a module-local domain fact;
 - `DomainEventIdentityAttribute` provides a stable module-local identity for

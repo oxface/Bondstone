@@ -1,9 +1,9 @@
 # GitHub Work Tracking
 
 This document records the current Bondstone GitHub Issues and Projects
-workflow. It applies ADR 0053: stable docs describe current behavior, ADRs
-preserve durable decisions, and GitHub Issues/Projects track backlog work,
-real-project findings, cleanup tasks, prioritization, and ownership.
+workflow. Stable docs describe current behavior, ADRs preserve durable
+decisions, and GitHub Issues/Projects track backlog work, real-project
+findings, cleanup tasks, prioritization, and ownership.
 
 ## Project Status
 

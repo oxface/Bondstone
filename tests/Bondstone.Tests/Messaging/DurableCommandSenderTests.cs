@@ -133,6 +133,52 @@ public sealed class DurableCommandSenderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenDurableOperationIdIsSupplied_ReturnsOperationHandle()
+    {
+        var outboxWriter = new CapturingOutboxWriter();
+        var operationStore = new CapturingOperationStateStore();
+        var sendResultSink = new CapturingSendResultSink();
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableOutboxWriter>(outboxWriter);
+        services.AddSingleton<IDurableOperationStateStore>(operationStore);
+        services.AddSingleton(sendResultSink);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<
+                    SubmitTrackedCapturedOrderCommand,
+                    SubmitTrackedCapturedOrderHandler>();
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new SubmitTrackedCapturedOrderCommand("order-123", durableOperationId));
+
+        DurableCommandSendResult sendResult = Assert.Single(sendResultSink.Results);
+        Assert.Equal(DurableCommandSendStatus.Accepted, sendResult.Status);
+        Assert.Equal(durableOperationId, sendResult.DurableOperationId);
+        Assert.NotNull(sendResult.Operation);
+        Assert.Equal(durableOperationId, sendResult.Operation.DurableOperationId);
+        Assert.Equal("sales", sendResult.Operation.SourceModule);
+        Assert.Equal("fulfillment", sendResult.Operation.TargetModule);
+        Assert.Equal("sales", sendResult.SourceModule);
+        Assert.Equal("fulfillment", sendResult.TargetModule);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task SendAsync_WhenDurableOperationAlreadyExists_DoesNotDowngradeState()
     {
         var outboxWriter = new CapturingOutboxWriter();
@@ -399,6 +445,31 @@ public sealed class DurableCommandSenderTests
         }
     }
 
+    [DurableCommandIdentity("sales.order.submit-tracked-captured.v1")]
+    public sealed record SubmitTrackedCapturedOrderCommand(
+        string OrderId,
+        Guid DurableOperationId) : IDurableCommand;
+
+    public sealed class SubmitTrackedCapturedOrderHandler(
+        IDurableCommandSender sender,
+        CapturingSendResultSink sendResultSink)
+        : ICommandHandler<SubmitTrackedCapturedOrderCommand>
+    {
+        public async ValueTask HandleAsync(
+            SubmitTrackedCapturedOrderCommand command,
+            CancellationToken ct = default)
+        {
+            DurableCommandSendResult result = await sender.SendAsync(
+                new ReserveOrderCommand(command.OrderId),
+                "fulfillment",
+                partitionKey: command.OrderId,
+                durableOperationId: command.DurableOperationId,
+                ct: ct);
+
+            sendResultSink.Results.Add(result);
+        }
+    }
+
     [DurableCommandIdentity("sales.order.reserve.v1")]
     public sealed record ReserveOrderCommand(string OrderId) : IDurableCommand;
 
@@ -484,6 +555,11 @@ public sealed class DurableCommandSenderTests
             Envelopes.Add(envelope);
             return ValueTask.CompletedTask;
         }
+    }
+
+    public sealed class CapturingSendResultSink
+    {
+        public List<DurableCommandSendResult> Results { get; } = [];
     }
 
     private static void RegisterOutboxWriter(

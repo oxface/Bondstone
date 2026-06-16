@@ -35,8 +35,8 @@ using Bondstone.DomainEvents; // IDomainEvent, IDomainEventSource
 `Bondstone.Messaging` also contains durable message identity attributes,
 `IDurableCommandSender`, `IDurableEventPublisher`,
 `IDurableOperationResultReader`, durable send/publish results, operation
-result types, durable operation state records, durable message envelopes, and
-trace context records.
+result types, durable operation handles and state records, durable message
+envelopes, and trace context records.
 
 `Bondstone.Modules` contains module registration and execution contracts:
 `IBondstoneModule`, `BondstoneModuleBuilder`, `ICommandHandler<TCommand>`,
@@ -97,7 +97,7 @@ Common contracts include `IDurableOutboxWriter`,
 
 `DurableMessageEnvelope`, `MessageKind`, `MessageTraceContext`,
 `DurableOperationState`, `DurableOperationStatus`,
-`IDurableOperationReader`, `IDurableOperationFinalizer`,
+`DurableOperationHandle`, `IDurableOperationReader`, `IDurableOperationFinalizer`,
 `IDurableOperationExpirationProcessor`,
 `DurableOperationFinalizationResult`, and
 `DurableOperationExpirationResult` are in `Bondstone.Messaging`.

@@ -6,6 +6,31 @@ public sealed record DurableCommandSendResult
         Guid sendId,
         Guid? durableOperationId,
         DurableCommandSendStatus status)
+        : this(
+            sendId,
+            durableOperationId,
+            operation: null,
+            status)
+    {
+    }
+
+    public DurableCommandSendResult(
+        Guid sendId,
+        DurableOperationHandle? operation,
+        DurableCommandSendStatus status)
+        : this(
+            sendId,
+            operation?.DurableOperationId,
+            operation,
+            status)
+    {
+    }
+
+    private DurableCommandSendResult(
+        Guid sendId,
+        Guid? durableOperationId,
+        DurableOperationHandle? operation,
+        DurableCommandSendStatus status)
     {
         if (sendId == Guid.Empty)
         {
@@ -19,12 +44,19 @@ public sealed record DurableCommandSendResult
 
         SendId = sendId;
         DurableOperationId = durableOperationId;
+        Operation = operation;
         Status = status;
     }
 
     public Guid SendId { get; }
 
     public Guid? DurableOperationId { get; }
+
+    public DurableOperationHandle? Operation { get; }
+
+    public string? SourceModule => Operation?.SourceModule;
+
+    public string? TargetModule => Operation?.TargetModule;
 
     public DurableCommandSendStatus Status { get; }
 }

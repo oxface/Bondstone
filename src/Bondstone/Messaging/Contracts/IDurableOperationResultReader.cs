@@ -33,6 +33,25 @@ public interface IDurableOperationResultReader
     }
 
     /// <summary>
+    /// Reads the current state of a durable operation using the target-module hint carried by a durable operation handle.
+    /// </summary>
+    /// <typeparam name="TResult">The expected result payload type.</typeparam>
+    /// <param name="operation">The durable operation handle returned when the command was sent.</param>
+    /// <param name="ct">A cancellation token for the read operation.</param>
+    /// <returns>The current durable operation result state.</returns>
+    ValueTask<DurableOperationResult<TResult>> GetResultAsync<TResult>(
+        DurableOperationHandle operation,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        return GetResultAsync<TResult>(
+            operation.DurableOperationId,
+            operation.TargetModule,
+            ct);
+    }
+
+    /// <summary>
     /// Polls operation state until the durable operation reaches a terminal state or the timeout expires.
     /// </summary>
     /// <typeparam name="TResult">The expected result payload type.</typeparam>
@@ -66,6 +85,31 @@ public interface IDurableOperationResultReader
     {
         return WaitForResultAsync<TResult>(
             durableOperationId,
+            timeout,
+            pollInterval,
+            ct);
+    }
+
+    /// <summary>
+    /// Polls the target module named by a durable operation handle until the operation reaches a terminal state or the timeout expires.
+    /// </summary>
+    /// <typeparam name="TResult">The expected result payload type.</typeparam>
+    /// <param name="operation">The durable operation handle returned when the command was sent.</param>
+    /// <param name="timeout">The maximum time to wait for a terminal operation state.</param>
+    /// <param name="pollInterval">An optional polling interval. When omitted, the reader uses its default interval.</param>
+    /// <param name="ct">A cancellation token for the wait operation.</param>
+    /// <returns>The terminal durable operation result state, or a timeout result if the operation did not complete in time.</returns>
+    ValueTask<DurableOperationResult<TResult>> WaitForResultAsync<TResult>(
+        DurableOperationHandle operation,
+        TimeSpan timeout,
+        TimeSpan? pollInterval = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        return WaitForResultAsync<TResult>(
+            operation.DurableOperationId,
+            operation.TargetModule,
             timeout,
             pollInterval,
             ct);

@@ -98,9 +98,16 @@ internal sealed class DurableCommandSender(
                 ct);
         }
 
+        DurableOperationHandle? operation = durableOperationId is Guid operationIdToReturn
+            ? new DurableOperationHandle(
+                operationIdToReturn,
+                envelope.SourceModule,
+                envelope.TargetModule!)
+            : null;
+
         return new DurableCommandSendResult(
             messageId,
-            durableOperationId,
+            operation,
             DurableCommandSendStatus.Accepted);
     }
 

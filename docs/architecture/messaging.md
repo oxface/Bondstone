@@ -32,8 +32,10 @@ and optional metadata such as partition key, durable operation id, trace
 context, and causation id. The default sender requires a current module
 execution context, uses the executing module as the source module, serializes
 the command through `IDurablePayloadSerializer`, and stages a command envelope
-through `IDurableOutboxWriter`. It is not a general background-work API and
-does not expose a public source-module override.
+through `IDurableOutboxWriter`. When a durable operation id is supplied, the
+send result carries a `DurableOperationHandle` with the operation id, source
+module, and target module. It is not a general background-work API and does
+not expose a public source-module override.
 
 Module command execution is registered through module command routes and
 executed through `IModuleCommandExecutor`. The executor runs typed
@@ -246,7 +248,10 @@ durable results through `IDurableOperationResultReader`:
 `GetResultAsync<TResult>()` reads current state once, while
 `WaitForResultAsync<TResult>()` performs explicit timeout-bounded polling
 until the operation reaches a terminal state. `IDurableOperationReader`
-remains available as the lower-level state reader.
+remains available as the lower-level state reader. When available, pass
+`DurableCommandSendResult.Operation` to these readers. Handle-based reads query
+the target module's operation-state store. Operation-id-only reads remain
+available as the global aggregate compatibility path.
 
 Applications can mark explicit terminal non-success outcomes through
 `IDurableOperationFinalizer`. The finalizer writes `Failed` or `Cancelled` to

@@ -195,6 +195,44 @@ public sealed class DurableOperationResultReaderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task GetResultAsync_WhenOperationHandleIsProvided_ReadsOnlyTargetModuleStore()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var salesStore = new CapturingModuleOperationStateStore("sales")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+        };
+        var fulfillmentStore = new CapturingModuleOperationStateStore("fulfillment")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":"payload-A-100","accepted":true}"""),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            salesStore,
+            fulfillmentStore);
+        var operation = new DurableOperationHandle(
+            durableOperationId,
+            "sales",
+            "fulfillment");
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .GetResultAsync<ReserveOrderResult>(operation);
+
+        Assert.Equal(DurableOperationResultState.CompletedWithResult, result.State);
+        Assert.Equal(new ReserveOrderResult(new DurableOrderId("A-100"), Accepted: true), result.Result);
+        Assert.Equal(0, salesStore.ReadCount);
+        Assert.Equal(1, fulfillmentStore.ReadCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task GetResultAsync_WhenOperationCancelled_ReturnsTerminalCancelledWithoutResult()
     {
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
@@ -361,6 +399,49 @@ public sealed class DurableOperationResultReaderTests
         Assert.Equal(DurableOperationResultState.Failed, result.State);
         Assert.Equal("expired", result.FailureReason);
         Assert.Equal(1, store.ReadCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task WaitForResultAsync_WhenOperationHandleIsProvided_PollsTargetModuleStore()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var salesStore = new CapturingModuleOperationStateStore("sales")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+        };
+        var fulfillmentStore = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":"payload-A-100","accepted":true}"""));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            salesStore,
+            fulfillmentStore);
+        var operation = new DurableOperationHandle(
+            durableOperationId,
+            "sales",
+            "fulfillment");
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .WaitForResultAsync<ReserveOrderResult>(
+                operation,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromMilliseconds(1));
+
+        Assert.Equal(DurableOperationResultState.CompletedWithResult, result.State);
+        Assert.Equal(0, salesStore.ReadCount);
+        Assert.True(fulfillmentStore.ReadCount >= 2);
     }
 
     private static ServiceProvider CreateServiceProvider(

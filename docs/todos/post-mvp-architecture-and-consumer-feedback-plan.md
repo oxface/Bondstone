@@ -400,7 +400,8 @@ Introduce a way to avoid querying every module store for every operation read.
 Candidate approaches:
 
 - Return a `DurableOperationHandle` or equivalent source/target module
-  metadata in `DurableCommandSendResult`.
+  metadata in `DurableCommandSendResult`. Applied with
+  `DurableCommandSendResult.Operation`.
 - Add optional module hints to `IDurableOperationReader` and
   `IDurableOperationResultReader`.
 - Persist a lightweight operation locator row in the source module store when
@@ -417,6 +418,8 @@ Recommended first step:
   hinted reads.
 - Treat the target module as the owner of completed/failed result state. Source
   module `Pending` state is an acceptance receipt.
+  Applied: handle-based reads use the target module hint from
+  `DurableOperationHandle`.
 
 ### Result-Returning Commands
 
@@ -625,14 +628,78 @@ Applied on 2026-06-16:
 
 - Should operation-state expiry be package-owned in `Bondstone.Hosting`, or
   provider-owned beside operation-state stores?
-- Should `DurableOperationHandle` be a first-class public value, or should
-  `DurableCommandSendResult` simply carry source/target module metadata?
+- Resolved: `DurableOperationHandle` is a first-class public value and
+  `DurableCommandSendResult.Operation` carries it when a durable operation id
+  is supplied.
 - Should receive failure attempts be persisted in a new receive-failure table,
   or should Bondstone avoid that until a provider-specific need is proven?
 - Should terminal outbox replay stay only documented app-owned SQL/provider
   procedure, or should a future provider-specific mutation helper be accepted
   after a real runbook emerges?
 - Should XML API docs be required by a pack artifact test for every package
+
+## Added Pivot Work
+
+### ADR History Restart
+
+After the current simplification plan is implemented and verified, rebuild the
+active ADR set from the applied architecture rather than continuing to layer
+new amendments on top of the existing circular history.
+
+Intent:
+
+- create a small current ADR set that describes the architecture Bondstone is
+  actually keeping;
+- archive or supersede stale, deferred, amended, and superseded ADR material
+  while preserving traceability;
+- keep stable docs as the current operating contract;
+- make future decisions easier to navigate for humans and agents.
+
+Constraints:
+
+- This is explicitly approved as an unusual repository reset step.
+- Do not erase accepted decision history; move obsolete material to archive or
+  mark it superseded.
+- Use repository ADR skills for the consolidation workflow.
+- New ADRs should describe current durable decisions and near-term planned
+  direction, not every discarded experiment.
+
+Candidate new ADR groups:
+
+- module communication and modular-monolith boundaries;
+- durable command/event envelope model;
+- EF/PostgreSQL persistence and provider boundaries;
+- operation state, handles, polling, finalization, and expiry;
+- transport adapter ownership;
+- domain event persistence;
+- runtime sequence and provider runtime hooks;
+- package surface and compatibility posture.
+
+### Cleanup Sweeps
+
+Run two broad cleanup passes after the feature/pivot slices settle.
+
+Code cleanup sweep:
+
+- remove dead types, stale names, unused tests, and obsolete helpers;
+- dedupe similar diagnostics and registration validation paths;
+- reduce public API where it is still merely accidental;
+- keep provider/runtime contracts only when cross-package collaboration truly
+  requires them.
+
+Documentation cleanup sweep:
+
+- collapse duplicated setup/package/architecture language;
+- remove stale transport, pipeline, and direct PostgreSQL guidance;
+- align samples with the simplified library story;
+- ensure package discovery, public API inventory, ADRs, and setup docs agree.
+
+Test cleanup sweep:
+
+- rename stale pipeline-era test names;
+- remove tests that only verify deleted extension points;
+- keep focused regression tests for local transport, inbox/outbox, operation
+  handles, result polling, EF transactions, and domain event persistence.
   before publication?
 
 ## Non-Goals For The Next Slice

@@ -75,10 +75,14 @@ namespace Bondstone.Messaging
     }
     public sealed class DurableCommandSendResult : System.IEquatable<Bondstone.Messaging.DurableCommandSendResult>
     {
+        public DurableCommandSendResult(System.Guid sendId, Bondstone.Messaging.DurableOperationHandle? operation, Bondstone.Messaging.DurableCommandSendStatus status) { }
         public DurableCommandSendResult(System.Guid sendId, System.Guid? durableOperationId, Bondstone.Messaging.DurableCommandSendStatus status) { }
         public System.Guid? DurableOperationId { get; }
+        public Bondstone.Messaging.DurableOperationHandle? Operation { get; }
         public System.Guid SendId { get; }
+        public string? SourceModule { get; }
         public Bondstone.Messaging.DurableCommandSendStatus Status { get; }
+        public string? TargetModule { get; }
     }
     public enum DurableCommandSendStatus
     {
@@ -187,8 +191,10 @@ namespace Bondstone.Messaging
     }
     public interface IDurableOperationResultReader
     {
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> GetResultAsync<TResult>(Bondstone.Messaging.DurableOperationHandle operation, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> GetResultAsync<TResult>(System.Guid durableOperationId, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> GetResultAsync<TResult>(System.Guid durableOperationId, string moduleName, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> WaitForResultAsync<TResult>(Bondstone.Messaging.DurableOperationHandle operation, System.TimeSpan timeout, System.TimeSpan? pollInterval = default, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> WaitForResultAsync<TResult>(System.Guid durableOperationId, System.TimeSpan timeout, System.TimeSpan? pollInterval = default, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> WaitForResultAsync<TResult>(System.Guid durableOperationId, string moduleName, System.TimeSpan timeout, System.TimeSpan? pollInterval = default, System.Threading.CancellationToken ct = default);
     }

@@ -23,6 +23,13 @@ namespace Bondstone.Messaging
         public string? MessageTypeName { get; }
         public string? ModuleName { get; }
     }
+    public sealed class DurableOperationHandle : System.IEquatable<Bondstone.Messaging.DurableOperationHandle>
+    {
+        public DurableOperationHandle(System.Guid durableOperationId, string sourceModule, string targetModule) { }
+        public System.Guid DurableOperationId { get; }
+        public string SourceModule { get; }
+        public string TargetModule { get; }
+    }
     public sealed class DurableOperationState : System.IEquatable<Bondstone.Messaging.DurableOperationState>
     {
         public DurableOperationState(System.Guid durableOperationId, Bondstone.Messaging.DurableOperationStatus status, System.DateTimeOffset updatedAtUtc, string? resultPayload = null, string? failureReason = null, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null) { }
@@ -43,6 +50,7 @@ namespace Bondstone.Messaging
     }
     public interface IDurableOperationReader
     {
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(Bondstone.Messaging.DurableOperationHandle operation, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, string moduleName, System.Threading.CancellationToken ct = default);
     }

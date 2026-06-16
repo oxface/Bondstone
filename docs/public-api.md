@@ -156,6 +156,16 @@ TimeSpan, TimeSpan?, CancellationToken)` are additive module-hinted result
 - Existing operation-id-only reads remain the global aggregate compatibility
   path.
 
+Durable operation handles, 2026-06-16:
+
+- `DurableOperationHandle` is an additive `Bondstone.Persistence` user
+  application contract carrying a durable operation id, source module, and
+  target module.
+- `DurableCommandSendResult.Operation`, `.SourceModule`, and `.TargetModule`
+  are additive metadata for durable sends that include an operation id.
+- Handle-based `IDurableOperationReader` and `IDurableOperationResultReader`
+  overloads are additive convenience paths that query the target module store.
+
 Public API curation, 2026-06-16:
 
 - The current persistence inspection contracts are intentionally split between
@@ -280,6 +290,7 @@ Public implementation detail exposed for now:
 User application contract:
 
 - `IDurableOperationReader`
+- `DurableOperationHandle`
 - `DurableOperationState`
 - `DurableOperationDiagnosticContext`
 - `DurableOperationStatus`

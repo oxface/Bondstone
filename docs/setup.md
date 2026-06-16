@@ -600,7 +600,7 @@ DurableCommandSendResult sendResult = await durableCommandSender.SendAsync(
 
 DurableOperationResult<CreateOrderResult> durableResult =
     await durableOperationResultReader.WaitForResultAsync<CreateOrderResult>(
-        sendResult.DurableOperationId!.Value,
+        sendResult.Operation!,
         timeout: TimeSpan.FromSeconds(30),
         pollInterval: TimeSpan.FromMilliseconds(250),
         ct: ct);
@@ -706,7 +706,9 @@ The durable operation id ties the send and result lookup together:
 
 - The caller supplies or records the operation id when sending durable work.
 - `IDurableCommandSender.SendAsync` returns `DurableCommandSendResult` with the
-  send id, accepted status, and the supplied `DurableOperationId`.
+  send id, accepted status, supplied `DurableOperationId`, and an `Operation`
+  handle containing the source and target module when an operation id was
+  supplied.
 - When the sending module has operation-state persistence, Bondstone stages
   the operation as `Pending` if the operation is not already known.
 - When the target module receives a durable `IDurableCommand` that also
@@ -722,7 +724,9 @@ The durable operation id ties the send and result lookup together:
   query stale pending/running states from provider stores and finalize them
   through the same finalizer.
 - `IDurableOperationResultReader` uses the same operation id to find operation
-  state and deserialize the completed result payload.
+  state and deserialize the completed result payload. Prefer passing
+  `sendResult.Operation` when it is available so the reader queries the target
+  module's operation-state store directly.
 - When the caller knows the result-owning module, pass that module name to
   `IDurableOperationResultReader` so Bondstone queries only that module's
   operation-state store instead of aggregating across every configured module.

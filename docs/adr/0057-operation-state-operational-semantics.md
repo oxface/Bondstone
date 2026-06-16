@@ -117,6 +117,27 @@ diagnostic style as other module-owned persistence gaps. A future operation
 handle may carry module ownership metadata, but this amendment does not add a
 new handle type or locator table.
 
+## Amendment 2026-06-16: Durable Operation Handles
+
+Module-hinted overloads are useful but still require callers to remember which
+module owns the eventual result. Durable command sending now returns a
+first-class `DurableOperationHandle` when the caller supplies a durable
+operation id.
+
+The handle carries the durable operation id, the source module that staged the
+acceptance receipt, and the target module that owns the eventual committed
+command outcome. `DurableCommandSendResult.Operation` is null when the send is
+not associated with a durable operation id. When it is present, callers should
+prefer passing the handle to `IDurableOperationReader` or
+`IDurableOperationResultReader` instead of passing only the operation id.
+Handle-based reads query the target module's operation-state store and avoid
+the global aggregate scan.
+
+This does not introduce an operation locator table and does not change
+operation ownership: source persistence owns `Pending` acceptance, while
+target persistence owns `Completed`, `Failed`, `Cancelled`, and result
+payloads.
+
 ## Consequences
 
 Operation state remains understandable: it answers "what outcome should the
@@ -172,10 +193,11 @@ guidance for outbox and inbox recovery.
   expiry pass: provider stores find stale `Pending` or `Running` candidates,
   and the processor finalizes them through the finalizer.
   Module-hinted operation reader and result-reader overloads are applied.
+  Durable operation handles are applied on durable command send results and
+  accepted by operation state/result readers.
 - Pending or deferred: Hosted expiry workers, provider-specific bulk mutation
-  primitives, provider-specific dead-letter handoff helpers, first-class
-  operation handles or locator tables, and operator recovery guidance remain
-  separate follow-up work.
+  primitives, provider-specific dead-letter handoff helpers, locator tables,
+  and operator recovery guidance remain separate follow-up work.
 
 ## Verification
 
@@ -195,3 +217,8 @@ For the 2026-06-16 module-hinted read amendment, verified with:
 
 - `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
 - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~DurableOperationReaderTests|FullyQualifiedName~DurableOperationResultReaderTests" --disable-build-servers`
+
+For the 2026-06-16 durable operation handle amendment, verified with:
+
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --no-build --disable-build-servers --filter "FullyQualifiedName~DurableOperationHandleTests|FullyQualifiedName~DurableCommandSendResultTests|FullyQualifiedName~DurableCommandSenderTests|FullyQualifiedName~DurableOperationReaderTests|FullyQualifiedName~DurableOperationResultReaderTests"`

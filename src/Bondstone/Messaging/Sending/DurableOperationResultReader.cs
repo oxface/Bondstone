@@ -52,6 +52,18 @@ internal sealed class DurableOperationResultReader(
             state);
     }
 
+    public async ValueTask<DurableOperationResult<TResult>> GetResultAsync<TResult>(
+        DurableOperationHandle operation,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        return await GetResultAsync<TResult>(
+            operation.DurableOperationId,
+            operation.TargetModule,
+            ct);
+    }
+
     public async ValueTask<DurableOperationResult<TResult>> WaitForResultAsync<TResult>(
         Guid durableOperationId,
         TimeSpan timeout,
@@ -141,6 +153,22 @@ internal sealed class DurableOperationResultReader(
                 _timeProvider,
                 ct);
         }
+    }
+
+    public async ValueTask<DurableOperationResult<TResult>> WaitForResultAsync<TResult>(
+        DurableOperationHandle operation,
+        TimeSpan timeout,
+        TimeSpan? pollInterval = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        return await WaitForResultAsync<TResult>(
+            operation.DurableOperationId,
+            operation.TargetModule,
+            timeout,
+            pollInterval,
+            ct);
     }
 
     private DurableOperationResult<TResult> CreateResult<TResult>(

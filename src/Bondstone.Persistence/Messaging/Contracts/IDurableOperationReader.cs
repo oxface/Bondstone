@@ -29,4 +29,22 @@ public interface IDurableOperationReader
     {
         return GetStateAsync(durableOperationId, ct);
     }
+
+    /// <summary>
+    /// Reads an operation state using the target-module hint carried by a durable operation handle.
+    /// </summary>
+    /// <param name="operation">The durable operation handle returned when the command was sent.</param>
+    /// <param name="ct">A cancellation token for the read operation.</param>
+    /// <returns>The operation state when found; otherwise, <see langword="null"/>.</returns>
+    ValueTask<DurableOperationState?> GetStateAsync(
+        DurableOperationHandle operation,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        return GetStateAsync(
+            operation.DurableOperationId,
+            operation.TargetModule,
+            ct);
+    }
 }

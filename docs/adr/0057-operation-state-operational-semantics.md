@@ -1,6 +1,6 @@
 # 0057 Operation State Operational Semantics
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-16
 
@@ -94,6 +94,29 @@ result observation does not need to query every module store. Global operation
 reads may remain compatibility behavior for small hosts, tests, and callers
 that only have an operation id.
 
+## Amendment 2026-06-16: Module-Hinted Operation Reads
+
+Operation result observation can avoid scanning every configured module store
+when the caller knows the module that owns the desired operation state.
+Bondstone will therefore add module-hinted operation read overloads while
+keeping global reads as compatibility behavior.
+
+`IDurableOperationReader.GetStateAsync(operationId, moduleName, ...)` reads
+only the named module's operation-state store in the default module-aware
+reader. `IDurableOperationResultReader.GetResultAsync<TResult>(operationId,
+moduleName, ...)` and
+`IDurableOperationResultReader.WaitForResultAsync<TResult>(operationId,
+moduleName, ...)` use the same module hint before deserializing or polling the
+result. The existing overloads that accept only an operation id continue to
+aggregate across module stores.
+
+The module hint is an explicit persistence-boundary hint, not operation-owner
+discovery. If the named module is not registered or does not have an
+operation-state store, the default reader fails with the same module-specific
+diagnostic style as other module-owned persistence gaps. A future operation
+handle may carry module ownership metadata, but this amendment does not add a
+new handle type or locator table.
+
 ## Consequences
 
 Operation state remains understandable: it answers "what outcome should the
@@ -128,7 +151,9 @@ guidance for outbox and inbox recovery.
   command loop. Applications can explicitly mark operations `Failed` or
   `Cancelled` for a module-owned operation-state store through
   `IDurableOperationFinalizer`. `Running` remains a storage/read-model value
-  for application-owned policy.
+  for application-owned policy. Operation reads can use an optional module
+  hint to query one module-owned operation-state store; operation-id-only
+  reads continue to aggregate across configured module stores.
 - Stable docs: Current behavior is documented in
   [docs/architecture/messaging.md](../architecture/messaging.md),
   [docs/architecture/persistence-core.md](../architecture/persistence-core.md),
@@ -146,10 +171,11 @@ guidance for outbox and inbox recovery.
   `IDurableOperationExpirationStore` provide the first reusable app-owned
   expiry pass: provider stores find stale `Pending` or `Running` candidates,
   and the processor finalizes them through the finalizer.
+  Module-hinted operation reader and result-reader overloads are applied.
 - Pending or deferred: Hosted expiry workers, provider-specific bulk mutation
-  primitives, provider-specific dead-letter handoff helpers, module-aware
-  operation handles, and operator recovery guidance remain separate follow-up
-  work.
+  primitives, provider-specific dead-letter handoff helpers, first-class
+  operation handles or locator tables, and operator recovery guidance remain
+  separate follow-up work.
 
 ## Verification
 
@@ -164,3 +190,8 @@ Created and applied this ADR after reading:
 Verified application with focused operation finalizer tests, public API
 baseline refresh/check, build, fast tests, formatting, package verification,
 and `git diff --check`.
+
+For the 2026-06-16 module-hinted read amendment, verified with:
+
+- `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+- `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~DurableOperationReaderTests|FullyQualifiedName~DurableOperationResultReaderTests" --disable-build-servers`

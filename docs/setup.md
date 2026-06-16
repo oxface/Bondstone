@@ -756,6 +756,9 @@ The durable operation id ties the send and result lookup together:
   through the same finalizer.
 - `IDurableOperationResultReader` uses the same operation id to find operation
   state and deserialize the completed result payload.
+- When the caller knows the result-owning module, pass that module name to
+  `IDurableOperationResultReader` so Bondstone queries only that module's
+  operation-state store instead of aggregating across every configured module.
 
 Durable command payload serialization uses `IDurablePayloadSerializer`. The
 default serializer and the built-in durable operation result payload serializer

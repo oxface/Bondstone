@@ -160,6 +160,41 @@ public sealed class DurableOperationResultReaderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task GetResultAsync_WhenModuleHintIsProvided_ReadsOnlyHintedModuleStore()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var salesStore = new CapturingModuleOperationStateStore("sales")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+        };
+        var fulfillmentStore = new CapturingModuleOperationStateStore("fulfillment")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":"payload-A-100","accepted":true}"""),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            salesStore,
+            fulfillmentStore);
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .GetResultAsync<ReserveOrderResult>(
+                durableOperationId,
+                " sales ");
+
+        Assert.Equal(DurableOperationResultState.Pending, result.State);
+        Assert.Equal(1, salesStore.ReadCount);
+        Assert.Equal(0, fulfillmentStore.ReadCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task GetResultAsync_WhenOperationCancelled_ReturnsTerminalCancelledWithoutResult()
     {
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
@@ -300,6 +335,34 @@ public sealed class DurableOperationResultReaderTests
         Assert.True(store.ReadCount >= 2);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task WaitForResultAsync_WhenOperationIsFailed_ReturnsFailureWithoutPollingForever()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Failed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                failureReason: "expired"));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .WaitForResultAsync<ReserveOrderResult>(
+                durableOperationId,
+                "fulfillment",
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromMilliseconds(1));
+
+        Assert.True(result.IsTerminal);
+        Assert.Equal(DurableOperationResultState.Failed, result.State);
+        Assert.Equal("expired", result.FailureReason);
+        Assert.Equal(1, store.ReadCount);
+    }
+
     private static ServiceProvider CreateServiceProvider(
         params IModuleOperationStateStore[] stores)
     {
@@ -336,10 +399,13 @@ public sealed class DurableOperationResultReaderTests
 
         public DurableOperationState? State { get; init; }
 
+        public int ReadCount { get; private set; }
+
         public ValueTask<DurableOperationState?> GetStateAsync(
             Guid durableOperationId,
             CancellationToken ct = default)
         {
+            ReadCount++;
             return ValueTask.FromResult(State);
         }
 

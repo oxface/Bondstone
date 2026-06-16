@@ -284,6 +284,14 @@ writes only `Pending`
 and `Completed`; other statuses are read-model/storage values for
 application-owned operation policies.
 
+Operation reads can also use a module hint. The default
+`IDurableOperationReader.GetStateAsync(operationId, moduleName, ...)` resolves
+only the named module's operation-state store and does not query unrelated
+module stores. `IDurableOperationResultReader` exposes matching hinted
+single-read and wait overloads. Use hinted reads when the caller already knows
+the module that owns the operation result; keep global reads for small hosts,
+tests, or callers that only have an operation id.
+
 Diagnostic context fields are nullable for compatibility with old rows,
 manually-created operation states, and operation states written before the
 result diagnostic context contract existed. The finalizer preserves existing

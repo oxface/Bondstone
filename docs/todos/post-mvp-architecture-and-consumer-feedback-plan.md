@@ -529,12 +529,12 @@ Applied on 2026-06-16:
    `IDurableInboxInspectionStore`; row mutation and handler replay remain
    application-owned.
 7. Add tests proving `Failed` operation results are observable and do not poll
-   forever.
+   forever. Applied.
 
 ### Then: Scalability And API Curation
 
-1. Add module-hinted operation result read overloads.
-2. Keep global operation reads as compatibility behavior.
+1. Add module-hinted operation result read overloads. Applied.
+2. Keep global operation reads as compatibility behavior. Applied.
 3. Review public implementation types and classify cleanup candidates.
 4. Reduce public exposure where compatibility allows.
 5. Add XML docs for normal setup and user application contracts first.

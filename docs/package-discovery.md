@@ -102,6 +102,8 @@ Common contracts include `IDurableOutboxWriter`,
 `IDurableOperationExpirationProcessor`,
 `DurableOperationFinalizationResult`, and
 `DurableOperationExpirationResult` are in `Bondstone.Messaging`.
+`IDurableOperationReader` and `IDurableOperationResultReader` include
+module-hinted read overloads for callers that know the result-owning module.
 
 `IDurableOperationExpirationStore` is in `Bondstone.Persistence` for provider
 stores that support app-owned operation expiry jobs.

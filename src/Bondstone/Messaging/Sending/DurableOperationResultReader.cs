@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Bondstone.Persistence;
+using Bondstone.Utility;
 
 namespace Bondstone.Messaging;
 
@@ -24,6 +25,26 @@ internal sealed class DurableOperationResultReader(
 
         DurableOperationState? state = await _operationReader.GetStateAsync(
             durableOperationId,
+            ct);
+
+        return CreateResult<TResult>(
+            durableOperationId,
+            state);
+    }
+
+    public async ValueTask<DurableOperationResult<TResult>> GetResultAsync<TResult>(
+        Guid durableOperationId,
+        string moduleName,
+        CancellationToken ct = default)
+    {
+        ValidateOperationId(durableOperationId);
+        string normalizedModuleName = moduleName.NormalizeRequired(
+            nameof(moduleName),
+            "Module name");
+
+        DurableOperationState? state = await _operationReader.GetStateAsync(
+            durableOperationId,
+            normalizedModuleName,
             ct);
 
         return CreateResult<TResult>(
@@ -62,6 +83,54 @@ internal sealed class DurableOperationResultReader(
             {
                 throw new TimeoutException(
                     $"Durable operation '{durableOperationId}' did not reach a terminal state before timeout '{timeout}'.");
+            }
+
+            TimeSpan delay = remaining < effectivePollInterval
+                ? remaining
+                : effectivePollInterval;
+            await Task.Delay(
+                delay,
+                _timeProvider,
+                ct);
+        }
+    }
+
+    public async ValueTask<DurableOperationResult<TResult>> WaitForResultAsync<TResult>(
+        Guid durableOperationId,
+        string moduleName,
+        TimeSpan timeout,
+        TimeSpan? pollInterval = null,
+        CancellationToken ct = default)
+    {
+        ValidateOperationId(durableOperationId);
+        string normalizedModuleName = moduleName.NormalizeRequired(
+            nameof(moduleName),
+            "Module name");
+        ValidatePositive(timeout, nameof(timeout));
+
+        TimeSpan effectivePollInterval = pollInterval ?? DefaultPollInterval;
+        ValidatePositive(effectivePollInterval, nameof(pollInterval));
+
+        DateTimeOffset deadlineUtc = _timeProvider.GetUtcNow().Add(timeout);
+        DurableOperationResult<TResult> lastResult;
+
+        while (true)
+        {
+            lastResult = await GetResultAsync<TResult>(
+                durableOperationId,
+                normalizedModuleName,
+                ct);
+
+            if (lastResult.IsTerminal)
+            {
+                return lastResult;
+            }
+
+            TimeSpan remaining = deadlineUtc - _timeProvider.GetUtcNow();
+            if (remaining <= TimeSpan.Zero)
+            {
+                throw new TimeoutException(
+                    $"Durable operation '{durableOperationId}' in module '{normalizedModuleName}' did not reach a terminal state before timeout '{timeout}'.");
             }
 
             TimeSpan delay = remaining < effectivePollInterval

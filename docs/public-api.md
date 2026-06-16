@@ -143,6 +143,19 @@ Inbox inspection, 2026-06-16:
 - The API is intentionally read-only; it does not add row mutation, handler
   replay, broker action, purge, or archival contracts.
 
+Module-hinted operation reads, 2026-06-16:
+
+- `IDurableOperationReader.GetStateAsync(Guid, string, CancellationToken)` is
+  an additive module-hinted read overload. The default module-aware reader uses
+  it to query one named module operation-state store.
+- `IDurableOperationResultReader.GetResultAsync<TResult>(Guid, string,
+CancellationToken)` and
+  `IDurableOperationResultReader.WaitForResultAsync<TResult>(Guid, string,
+TimeSpan, TimeSpan?, CancellationToken)` are additive module-hinted result
+  observation overloads.
+- Existing operation-id-only reads remain the global aggregate compatibility
+  path.
+
 ## Current Scope
 
 This first pass covers all current package projects:

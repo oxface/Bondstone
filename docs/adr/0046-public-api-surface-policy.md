@@ -1,6 +1,6 @@
 # 0046 Public API Surface Policy
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-10
 
@@ -38,6 +38,20 @@ release-note treatment, and, for broad cleanup, follow-up ADR review.
 
 Bondstone should add a public API inventory or baseline before making
 compatibility promises stronger or performing broad surface reduction.
+
+Amendment, 2026-06-16:
+
+The post-MVP persistence inspection APIs use a deliberate public split:
+application-facing inspectors remain normal user contracts, while provider
+inspection stores and module inspection-store registrations remain
+provider/runtime contracts. The registration types may stay public when they
+are the explicit collaboration point between Bondstone runtime and provider
+packages, but they should be hidden from normal IntelliSense and documented as
+advanced/provider hooks.
+
+Public implementation types should not be reduced one at a time only because
+they are concrete. Reduction should remove an obsolete capability, package, or
+misleading setup path, or introduce a clearer provider contract first.
 
 ## Consequences
 
@@ -83,6 +97,11 @@ an inventory and compatibility plan.
   tracked in GitHub Issues and GitHub Projects. Those changes still require
   compatibility planning, ADR review when public API shape or package
   boundaries change, baseline diffs, and release-note treatment.
+- 2026-06-16 curation: persistence inspection contracts are classified in
+  [docs/public-api.md](../public-api.md). The inspection registrations remain
+  public provider/runtime hooks and are hidden from normal IntelliSense.
+  No additional concrete implementation types were removed during this
+  curation pass.
 
 ## Verification
 
@@ -92,3 +111,6 @@ Read back this ADR and affected stable docs. The baseline application and
 - `dotnet test tests/Bondstone.PublicApi.Tests/Bondstone.PublicApi.Tests.csproj --configuration Release`
 - `pnpm check`
 - `git diff --check`
+
+The 2026-06-16 curation amendment was verified by reading the public API
+inventory and running the default repository check gate.

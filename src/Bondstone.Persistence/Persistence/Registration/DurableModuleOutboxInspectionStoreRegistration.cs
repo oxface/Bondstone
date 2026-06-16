@@ -3,11 +3,24 @@ using System.ComponentModel;
 
 namespace Bondstone.Persistence;
 
+/// <summary>
+/// Registers the provider-side outbox inspection store for one module.
+/// </summary>
+/// <remarks>
+/// This type is public for provider and advanced composition packages, but is
+/// hidden from normal IntelliSense. Application setup should prefer the module
+/// persistence extension methods that create these registrations.
+/// </remarks>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class DurableModuleOutboxInspectionStoreRegistration
 {
     private readonly Func<IServiceProvider, IDurableOutboxInspectionStore> _createStore;
 
+    /// <summary>
+    /// Initializes the registration for one module outbox inspection store.
+    /// </summary>
+    /// <param name="moduleName">The module that owns the inspection store.</param>
+    /// <param name="createStore">The scoped factory that resolves the provider inspection store.</param>
     /// <remarks>
     /// The factory runs inside the current DI scope for the selected module.
     /// It should return a lightweight wrapper over DI-owned scoped services and
@@ -21,8 +34,16 @@ public sealed class DurableModuleOutboxInspectionStoreRegistration
         _createStore = createStore ?? throw new ArgumentNullException(nameof(createStore));
     }
 
+    /// <summary>
+    /// Gets the module that owns the inspection store.
+    /// </summary>
     public string ModuleName { get; }
 
+    /// <summary>
+    /// Creates the inspection store from the current DI scope.
+    /// </summary>
+    /// <param name="serviceProvider">The current scoped service provider.</param>
+    /// <returns>The provider-side outbox inspection store.</returns>
     public IDurableOutboxInspectionStore CreateStore(IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);

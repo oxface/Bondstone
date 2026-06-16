@@ -156,6 +156,22 @@ TimeSpan, TimeSpan?, CancellationToken)` are additive module-hinted result
 - Existing operation-id-only reads remain the global aggregate compatibility
   path.
 
+Public API curation, 2026-06-16:
+
+- The current persistence inspection contracts are intentionally split between
+  app-facing inspectors and provider-side stores. `IDurableOutboxInspector`
+  and `IDurableInboxInspector` are user application contracts;
+  `IDurableOutboxInspectionStore` and `IDurableInboxInspectionStore` are
+  provider/runtime contracts.
+- `DurableModuleOutboxInspectionStoreRegistration` and
+  `DurableModuleInboxInspectionStoreRegistration` remain public because
+  provider packages need to register module-owned stores through explicit
+  contracts. They are hidden from normal IntelliSense and documented as
+  provider/runtime registration hooks, not normal app setup APIs.
+- No additional public implementation type is promoted to cleanup candidate in
+  this slice. The next reduction should remove an entire obsolete capability
+  or package surface, not rename individual concrete types for tidiness.
+
 ## Current Scope
 
 This first pass covers all current package projects:
@@ -271,10 +287,13 @@ User application contract:
 
 - `IDurableOperationReader`
 - `DurableOperationState`
+- `DurableOperationDiagnosticContext`
 - `DurableOperationStatus`
 - `DurableMessageEnvelope`
 - `MessageTraceContext`
 - `MessageKind`
+- `IDurableOutboxInspector`
+- `IDurableInboxInspector`
 - `DurableInboxAlreadyReceivedException`
 - `DurableInboxHandleResult`
 - `DurableInboxHandleStatus`
@@ -304,6 +323,8 @@ Advanced composition API:
 - `IDurableOutboxClaimer`
 - `IDurableOutboxLeaseRenewer`
 - `IDurableOutboxDispatchRecorder`
+- `IDurableOutboxInspectionStore`
+- `IDurableInboxInspectionStore`
 - `DurableInboxHandlerExecutor`
 - `DurableOutboxDispatcher`
 - `DurableOutboxFailurePolicy`
@@ -315,8 +336,10 @@ Provider/runtime contract:
 - `DurableModulePersistenceRegistrationRegistry`
 - `DurableModuleOutboxWriterRegistration`
 - `DurableModuleInboxHandlerExecutorRegistration`
+- `DurableModuleInboxInspectionStoreRegistration`
 - `DurableModuleOperationStateStoreRegistration`
 - `DurableModuleOutboxDispatcherRegistration`
+- `DurableModuleOutboxInspectionStoreRegistration`
 - `DurableModuleOutboxDispatchAggregator`
 
 ## Bondstone.Persistence.EntityFrameworkCore
@@ -337,12 +360,14 @@ Provider/runtime contract:
 
 Public implementation detail exposed for now:
 
+- `EntityFrameworkCoreDurableInboxInspectionStore<TDbContext>`
 - `EntityFrameworkCorePersistenceScope<TDbContext>`
 - `EntityFrameworkCoreDurableOutboxWriter<TDbContext>`
 - `EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext>`
 - `EntityFrameworkCoreDurableInboxStore<TDbContext>`
 - `EntityFrameworkCoreDurableOperationStateStore<TDbContext>`
 - `EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>`
+- `EntityFrameworkCoreDurableOutboxInspectionStore<TDbContext>`
 - `OutboxMessageEntity`
 - `OutboxMessageEntityConfiguration`
 - `OutboxMessageEntityConfiguration.Columns`

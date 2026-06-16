@@ -536,10 +536,15 @@ Applied on 2026-06-16:
 1. Add module-hinted operation result read overloads. Applied.
 2. Keep global operation reads as compatibility behavior. Applied.
 3. Review public implementation types and classify cleanup candidates.
-4. Reduce public exposure where compatibility allows.
+   Applied for the current persistence inspection surface; no additional
+   concrete implementation type is promoted to cleanup candidate yet.
+4. Reduce public exposure where compatibility allows. Deferred until a whole
+   obsolete capability, package, or misleading setup path is identified.
 5. Add XML docs for normal setup and user application contracts first.
+   Applied for operation-state reads, inbox inspection, and outbox inspection.
 6. Keep advanced/provider public APIs documented as advanced rather than
-   preferred setup paths.
+   preferred setup paths. Applied for inspection stores and module
+   inspection-store registrations.
 
 ### Then: Diagnostics Simplification
 

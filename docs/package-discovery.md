@@ -91,8 +91,8 @@ Common contracts include `IDurableOutboxWriter`,
 `IDurableInboxRegistrar`, `IDurableInboxStore`,
 `IDurableOperationStateStore`, `IDurableOutboxClaimer`,
 `IDurableOutboxLeaseRenewer`, `IDurableOutboxDispatchRecorder`,
-`IDurableOutboxFailurePolicy`, `IModuleTransactionFeature`,
-`DurableInboxMessageKey`, `DurableInboxRecord`, `DurableOutboxRecord`,
+`IDurableOutboxFailurePolicy`, `DurableInboxMessageKey`,
+`DurableInboxRecord`, `DurableOutboxRecord`,
 `DurableOutboxDispatchState`, and `DurableInboxAlreadyReceivedException`.
 
 `DurableMessageEnvelope`, `MessageKind`, `MessageTraceContext`,

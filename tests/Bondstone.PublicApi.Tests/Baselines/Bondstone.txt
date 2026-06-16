@@ -412,8 +412,13 @@ namespace Bondstone.Modules
     }
     public interface IModuleRuntimeExecutionContext
     {
-        Bondstone.Modules.ModuleRuntimeFeatureCollection Features { get; }
         string ModuleName { get; }
+        bool ObservesTransactionOutcome { get; }
+        System.Threading.Tasks.ValueTask NotifyTransactionCommittedAsync(System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask NotifyTransactionRolledBackAsync(System.Threading.CancellationToken ct = default);
+        System.IDisposable ObserveTransactionOutcome();
+        void OnTransactionCommitted(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> callback);
+        void OnTransactionRolledBack(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> callback);
     }
     public interface IModuleTransactionRunner
     {
@@ -479,13 +484,5 @@ namespace Bondstone.Modules
         public string MessageTypeName { get; }
         public Bondstone.Messaging.MessageTypeRegistration MessageTypeRegistration { get; }
         public string ModuleName { get; }
-    }
-    public sealed class ModuleRuntimeFeatureCollection
-    {
-        public ModuleRuntimeFeatureCollection() { }
-        public System.IDisposable Push<TFeature>(TFeature feature)
-            where TFeature :  class { }
-        public bool TryGet<TFeature>(out TFeature? feature)
-            where TFeature :  class { }
     }
 }

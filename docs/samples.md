@@ -40,7 +40,7 @@ Ordering, fulfillment, and billing use separate module-owned EF Core
 `DbContext` types and PostgreSQL schemas. Ordering publishes `OrderPlacedEvent` and sends a durable
 result-returning command to fulfillment. Fulfillment handles the command,
 records state, persists a module-local domain event record through the EF
-domain-event capability, publishes `InventoryReservedEvent`, and stores the
+domain-event persistence opt-in, publishes `InventoryReservedEvent`, and stores the
 reservation result in durable operation state. Ordering and billing subscribe
 to integration events and record projections/invoices through their own module
 persistence boundaries.

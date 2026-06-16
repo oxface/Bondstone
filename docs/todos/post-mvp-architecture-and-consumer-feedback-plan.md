@@ -133,10 +133,10 @@ auditing, and metrics belong in handlers, DI decorators, endpoint filters,
 host middleware, or application frameworks selected by the consumer app.
 Generalized public capability pipeline contributions, named runtime slots, and
 contribution ordering were removed.
-`ModuleRuntimeFeatureCollection`, `IModuleRuntimeExecutionContext`, and
-`IModuleTransactionFeature` remain as hidden provider/runtime coordination
-contracts until EF transaction and EF domain event behavior no longer need
-cross-package observed-commit coordination.
+The generic runtime feature bag and transaction feature were removed. The
+remaining hidden provider/runtime coordination surface is the narrow
+observed-transaction callback API on `IModuleRuntimeExecutionContext`, plus the
+transaction runner and post-handler action contracts needed by EF.
 
 ## Consumer Feedback From 1.2.1
 
@@ -610,10 +610,9 @@ Applied on 2026-06-16:
   hidden transaction runner.
 - Moved EF domain event persistence from generalized capability contribution
   to EF-owned module opt-in metadata plus a hidden post-handler action.
-- Kept `ModuleRuntimeFeatureCollection`, `IModuleRuntimeExecutionContext`,
-  and `IModuleTransactionFeature` as hidden provider/runtime contracts because
-  EF transaction and EF domain event behavior still need cross-package
-  observed-commit coordination.
+- Removed `ModuleRuntimeFeatureCollection` and `IModuleTransactionFeature`;
+  observed-commit coordination now uses the narrow callback surface on
+  `IModuleRuntimeExecutionContext`.
 - Refreshed public API baselines, module architecture docs,
   EF/domain-event architecture docs, and affected runtime tests.
 

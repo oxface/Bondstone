@@ -5,7 +5,7 @@ namespace Bondstone.Modules;
 internal sealed class ModuleCommandExecutionContext(
     ModuleCommandRoute route,
     ModuleCommandReceiveContext? receiveContext = null)
-    : IModuleRuntimeExecutionContext
+    : ModuleRuntimeExecutionContextBase
 {
     public ModuleCommandRoute Route { get; } =
         route ?? throw new ArgumentNullException(nameof(route));
@@ -20,13 +20,11 @@ internal sealed class ModuleCommandExecutionContext(
 
     internal string? DurableOperationResultPayload { get; private set; }
 
-    public string ModuleName => Route.ModuleName;
+    public override string ModuleName => Route.ModuleName;
 
     public string? MessageTypeName => Route.MessageTypeName;
 
     public string? HandlerIdentity => Route.HandlerIdentity;
-
-    public ModuleRuntimeFeatureCollection Features { get; } = new();
 
     internal void SetReceiveInboxResult(DurableInboxHandleResult result)
     {

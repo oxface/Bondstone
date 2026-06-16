@@ -143,6 +143,17 @@ Inbox inspection, 2026-06-16:
 - The API is intentionally read-only; it does not add row mutation, handler
   replay, broker action, purge, or archival contracts.
 
+Runtime coordination cleanup, 2026-06-16:
+
+- `ModuleRuntimeFeatureCollection` was removed from the public core surface.
+  The generic feature bag was broader than the remaining runtime coordination
+  need.
+- `IModuleTransactionFeature` was removed from `Bondstone.Persistence`.
+- `IModuleRuntimeExecutionContext` now exposes the narrow observed-transaction
+  callback surface used by provider transaction runners and provider
+  post-handler actions. This keeps EF transaction/domain-event coordination
+  possible without a generic runtime feature collection.
+
 Module-hinted operation reads, 2026-06-16:
 
 - `IDurableOperationReader.GetStateAsync(Guid, string, CancellationToken)` is
@@ -278,7 +289,6 @@ Provider/runtime contract:
 - `IModuleRuntimeExecutionContext`
 - `IModuleTransactionRunner`
 - `IModulePostHandlerAction`
-- `ModuleRuntimeFeatureCollection`
 
 Public implementation detail exposed for now:
 
@@ -335,9 +345,6 @@ Advanced composition API:
 - `DurableOutboxFailurePolicy`
 - `RoutedDurableEnvelopeDispatcher`
 
-Provider/runtime contract:
-
-- `IModuleTransactionFeature`
 - `DurableModulePersistenceRegistrationRegistry`
 - `DurableModuleOutboxWriterRegistration`
 - `DurableModuleInboxHandlerExecutorRegistration`

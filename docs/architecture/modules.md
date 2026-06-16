@@ -170,18 +170,13 @@ packages use hidden transaction-runner and post-handler-action contracts only
 for package-owned runtime concerns such as EF transactions and EF domain event
 persistence.
 
-Command and event subscriber execution contexts carry a
-`ModuleRuntimeFeatureCollection`. This is an advanced provider/runtime
-coordination surface, not an application extension path. Provider runtime
-services can push typed features for the current execution and other provider
-runtime services can read the nearest active feature without relying on scoped
-mutable state. Features are stored under the exact pushed contract type, so
-provider coordination should use shared interfaces rather than concrete
-implementation types. Feature scopes are per module execution and must be
-disposed in reverse order across the whole collection. Nested module command
-or event subscriber executions create independent execution contexts and do
-not inherit active features from the caller's execution; cross-execution
-feature inheritance is not part of the current contract.
+Command and event subscriber execution contexts expose a narrow
+provider/runtime transaction callback surface. Provider transaction runners can
+mark that Bondstone observes the current transaction outcome, and post-handler
+actions can register lightweight callbacks for observed commit or rollback.
+This exists for package-owned runtime coordination such as EF-backed domain
+event source clearing. It is not an application extension point and must not
+be treated as a durable work boundary.
 
 ## Runtime Sequence
 
@@ -212,11 +207,10 @@ cross-package runtime collaboration is required. EF Core persistence uses a
 transaction runner. EF-backed domain event persistence uses a post-handler
 action, activates only for EF-backed modules that call
 `UseEntityFrameworkCoreDomainEventPersistence()`, and requires EF persistence
-to be declared first. EF Core transaction behavior publishes a
-provider-neutral transaction feature into the current execution; EF domain
-event persistence consumes that feature to clear pending domain events only
-after an observed commit. It does not invoke local domain event handlers or map
-domain events to integration events.
+to be declared first. EF Core transaction behavior opens the observed
+transaction callback scope; EF domain event persistence uses that scope to
+clear pending domain events only after an observed commit. It does not invoke
+local domain event handlers or map domain events to integration events.
 
 ## Execution Context Limits
 

@@ -44,12 +44,11 @@ aggregate dispatch, dispatch timeouts, and per-module concurrency controls are
 not part of the current worker contract.
 
 `AddBondstone` is the preferred host registration path. Package-specific
-extensions mark what they contribute, and the builder rejects hosted outbox
-processing when persistence or transport capability is missing. Runtime
+extensions register provider, transport, and worker services. Runtime
 packages can also register configuration validators with the shared builder so
-cross-package host topology checks run once after host configuration completes.
-These validators are for composed Bondstone graph checks, such as modules,
-routes, capabilities, and transport topology. Normal .NET options objects
+cross-package graph checks run once after host configuration completes. These
+validators are for composed Bondstone setup checks such as module-owned
+persistence and required dispatcher services. Normal .NET options objects
 should continue to use `IValidateOptions<TOptions>` or equivalent options
 validation.
 

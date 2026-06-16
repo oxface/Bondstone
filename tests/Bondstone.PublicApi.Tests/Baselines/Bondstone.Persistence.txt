@@ -324,12 +324,6 @@ namespace Bondstone.Persistence
     {
         System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default);
     }
-    public interface IModuleTransactionFeature
-    {
-        bool ObservesCommit { get; }
-        void OnCommitted(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> callback);
-        void OnRolledBack(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> callback);
-    }
     public sealed class RoutedDurableEnvelopeDispatcher : Bondstone.Persistence.IDurableEnvelopeDispatcher
     {
         public RoutedDurableEnvelopeDispatcher(System.Collections.Generic.IEnumerable<Bondstone.Persistence.IDurableEnvelopeDispatchRoute> routes) { }

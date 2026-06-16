@@ -110,9 +110,11 @@ message bus.
   runtime, durable behavior, public API, or provider changes.
 - Application evidence: public pipeline behavior/contribution APIs were
   removed; direct command/event subscriber executors and EF post-handler action
-  support are applied; domain event contracts live in core.
-- Pending or deferred: further runtime feature/public API cleanup may remove
-  remaining provider coordination surface if EF no longer needs it.
+  support are applied; domain event contracts live in core. The generic
+  runtime feature collection and transaction feature were removed; EF
+  transaction/domain-event coordination now uses the narrow observed-transaction
+  callback surface on `IModuleRuntimeExecutionContext`.
+- Pending or deferred: none for the current runtime simplification baseline.
 
 ## Verification
 

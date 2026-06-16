@@ -9,8 +9,8 @@ lightweight `AddBondstone` composition surface.
 
 ## Quick Path
 
-Start here for every Bondstone host, then add hosting, persistence, capability,
-and transport packages as needed. Normal application setup should use
+Start here for every Bondstone host, then add hosting, persistence, and
+transport packages as needed. Normal application setup should use
 `AddBondstone` with module-owned registration helpers as shown in
 [the setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md).
 

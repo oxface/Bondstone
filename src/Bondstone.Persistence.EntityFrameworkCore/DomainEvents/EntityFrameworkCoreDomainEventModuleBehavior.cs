@@ -2,7 +2,6 @@ using Bondstone.Modules;
 using Bondstone.Messaging;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.DomainEvents;
-using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -56,11 +55,9 @@ internal sealed class EntityFrameworkCoreDomainEventModulePostHandlerAction(
             return ValueTask.CompletedTask;
         }
 
-        if (context.Features.TryGet(
-                out IModuleTransactionFeature? transactionFeature)
-            && transactionFeature is { ObservesCommit: true })
+        if (context.ObservesTransactionOutcome)
         {
-            transactionFeature.OnCommitted(_ =>
+            context.OnTransactionCommitted(_ =>
             {
                 foreach (IDomainEventSource source in sources)
                 {

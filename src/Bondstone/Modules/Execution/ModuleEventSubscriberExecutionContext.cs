@@ -5,7 +5,7 @@ namespace Bondstone.Modules;
 internal sealed class ModuleEventSubscriberExecutionContext(
     ModuleEventSubscriberRegistration subscriber,
     ModuleEventSubscriberReceiveContext? receiveContext = null)
-    : IModuleRuntimeExecutionContext
+    : ModuleRuntimeExecutionContextBase
 {
     public ModuleEventSubscriberRegistration Subscriber { get; } =
         subscriber ?? throw new ArgumentNullException(nameof(subscriber));
@@ -18,13 +18,11 @@ internal sealed class ModuleEventSubscriberExecutionContext(
 
     public DurableInboxHandleResult? ReceiveInboxResult { get; private set; }
 
-    public string ModuleName => Subscriber.ModuleName;
+    public override string ModuleName => Subscriber.ModuleName;
 
     public string MessageTypeName => Subscriber.MessageTypeName;
 
     public string SubscriberIdentity => Subscriber.SubscriberIdentity;
-
-    public ModuleRuntimeFeatureCollection Features { get; } = new();
 
     internal void SetReceiveInboxResult(DurableInboxHandleResult result)
     {

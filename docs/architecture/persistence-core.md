@@ -146,17 +146,17 @@ setup gaps are easier to identify. Application code should normally configure
 module-owned persistence through provider setup helpers rather than directly
 registering provider-facing runtime registrations.
 
-Provider transaction behaviors can publish an `IModuleTransactionFeature` into
-the current module execution context's feature collection. This is an advanced
-provider/runtime coordination contract. Optional runtime behaviors can register
-commit or rollback callbacks through that feature without depending on the
-concrete provider transaction implementation. The feature exposes whether
-Bondstone observes commit; when a provider joins an application-owned
-transaction that Bondstone cannot observe, behaviors must not treat later local
-pipeline completion as durable commit evidence. Commit and rollback callbacks
-are lightweight runtime coordination hooks, not durable work boundaries.
-Callback failures can surface after the underlying transaction has already
-committed or rolled back.
+Provider transaction runners can open an observed-transaction callback scope
+on the current module execution context. This is an advanced provider/runtime
+coordination contract. Optional runtime behaviors can register commit or
+rollback callbacks through the execution context without depending on the
+concrete provider transaction implementation. The context exposes whether
+Bondstone observes the current transaction outcome; when a provider joins an
+application-owned transaction that Bondstone cannot observe, behaviors must
+not treat later local runtime completion as durable commit evidence. Commit
+and rollback callbacks are lightweight runtime coordination hooks, not durable
+work boundaries. Callback failures can surface after the underlying
+transaction has already committed or rolled back.
 
 If no module-owned runtime registrations are registered at all, core can fall
 back to root-level non-module persistence services for low-level send and

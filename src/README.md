@@ -7,7 +7,7 @@ documented in [../docs/packaging.md](../docs/packaging.md).
 
 Start with [../docs/setup.md](../docs/setup.md) for normal host composition.
 Use the package READMEs below to choose the package set for a module,
-persistence provider, transport adapter, or optional capability.
+persistence provider, or transport adapter.
 
 ## Packages
 

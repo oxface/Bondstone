@@ -45,34 +45,40 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
 
         IEntityFrameworkCorePersistenceScope persistenceScope = CreatePersistenceScope(dbContextType);
 
-        var transactionFeature = new EntityFrameworkCoreModuleTransactionFeature(
-            observesCommit: !transactionAlreadyActive);
-        using IDisposable transactionFeatureScope = context.Features.Push<IModuleTransactionFeature>(
-            transactionFeature);
+        IDisposable? observedTransactionScope = transactionAlreadyActive
+            ? null
+            : context.ObserveTransactionOutcome();
 
         try
         {
-            await persistenceScope.ExecuteAsync(
-                async (scope, scopeCt) =>
-                {
-                    await next(scopeCt);
-                    await scope.SaveChangesAsync(scopeCt);
-                },
-                ct);
-        }
-        catch
-        {
-            if (!transactionAlreadyActive)
+            try
             {
-                await transactionFeature.RolledBackAsync(ct);
+                await persistenceScope.ExecuteAsync(
+                    async (scope, scopeCt) =>
+                    {
+                        await next(scopeCt);
+                        await scope.SaveChangesAsync(scopeCt);
+                    },
+                    ct);
+            }
+            catch
+            {
+                if (!transactionAlreadyActive)
+                {
+                    await context.NotifyTransactionRolledBackAsync(ct);
+                }
+
+                throw;
             }
 
-            throw;
+            if (!transactionAlreadyActive)
+            {
+                await context.NotifyTransactionCommittedAsync(ct);
+            }
         }
-
-        if (!transactionAlreadyActive)
+        finally
         {
-            await transactionFeature.CommittedAsync(ct);
+            observedTransactionScope?.Dispose();
         }
     }
 

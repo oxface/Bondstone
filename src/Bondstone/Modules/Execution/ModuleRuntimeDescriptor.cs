@@ -6,7 +6,8 @@ internal sealed class ModuleRuntimeDescriptor(
     BondstoneModuleRegistration module,
     Lazy<IDurableOutboxWriter?> durableOutboxWriter,
     Lazy<IDurableInboxHandlerExecutor?> durableInboxHandlerExecutor,
-    Lazy<IDurableOperationStateStore?> durableOperationStateStore)
+    Lazy<IDurableOperationStateStore?> durableOperationStateStore,
+    Lazy<IDurableOutboxInspectionStore?> durableOutboxInspectionStore)
 {
     private readonly Lazy<IDurableOutboxWriter?> _durableOutboxWriter =
         durableOutboxWriter ?? throw new ArgumentNullException(nameof(durableOutboxWriter));
@@ -16,6 +17,9 @@ internal sealed class ModuleRuntimeDescriptor(
     private readonly Lazy<IDurableOperationStateStore?> _durableOperationStateStore =
         durableOperationStateStore
         ?? throw new ArgumentNullException(nameof(durableOperationStateStore));
+    private readonly Lazy<IDurableOutboxInspectionStore?> _durableOutboxInspectionStore =
+        durableOutboxInspectionStore
+        ?? throw new ArgumentNullException(nameof(durableOutboxInspectionStore));
 
     public BondstoneModuleRegistration Module { get; } =
         module ?? throw new ArgumentNullException(nameof(module));
@@ -39,6 +43,13 @@ internal sealed class ModuleRuntimeDescriptor(
         out IDurableOperationStateStore? store)
     {
         store = _durableOperationStateStore.Value;
+        return store is not null;
+    }
+
+    public bool TryGetDurableOutboxInspectionStore(
+        out IDurableOutboxInspectionStore? store)
+    {
+        store = _durableOutboxInspectionStore.Value;
         return store is not null;
     }
 }

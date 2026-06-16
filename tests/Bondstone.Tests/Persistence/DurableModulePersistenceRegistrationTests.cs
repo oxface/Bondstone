@@ -87,6 +87,25 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void OutboxInspector_WhenDuplicateModuleInspectionStoresAreRegistered_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        RegisterOutboxInspectionStore(services, new DurableModuleOutboxInspectionStoreRegistration(
+            "sales",
+            _ => new TestModuleOutboxInspectionStore()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => RegisterOutboxInspectionStore(services, new DurableModuleOutboxInspectionStoreRegistration(
+                " sales ",
+                _ => new TestModuleOutboxInspectionStore())));
+
+        Assert.Contains("durable module outbox inspection store", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("exactly one", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task CommandSender_WhenModuleOutboxWriterIsMissing_ThrowsProviderSpecificError()
     {
         var services = new ServiceCollection();
@@ -375,6 +394,14 @@ public sealed class DurableModulePersistenceRegistrationTests
             .AddOutboxDispatcher(registration);
     }
 
+    private static void RegisterOutboxInspectionStore(
+        IServiceCollection services,
+        DurableModuleOutboxInspectionStoreRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxInspectionStore(registration);
+    }
+
     private static void RegisterOperationStateStore(
         IServiceCollection services,
         DurableModuleOperationStateStoreRegistration registration)
@@ -503,6 +530,19 @@ public sealed class DurableModulePersistenceRegistrationTests
             string claimedBy,
             TimeSpan leaseDuration,
             int maxCount = 100,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class TestModuleOutboxInspectionStore
+        : IDurableOutboxInspectionStore
+    {
+        public ValueTask<IReadOnlyList<DurableOutboxRecord>> FindTerminalFailedAsync(
+            int maxCount = 100,
+            DateTimeOffset? failedAtOrBeforeUtc = null,
+            string? sourceModuleName = null,
             CancellationToken ct = default)
         {
             throw new NotSupportedException();

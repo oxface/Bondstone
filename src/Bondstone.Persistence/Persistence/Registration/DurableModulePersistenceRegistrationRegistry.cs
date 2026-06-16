@@ -10,6 +10,8 @@ public sealed class DurableModulePersistenceRegistrationRegistry
     private readonly List<DurableModuleOutboxWriterRegistration> _outboxWriterRegistrations = [];
     private readonly List<DurableModuleOutboxDispatcherRegistration>
         _outboxDispatcherRegistrations = [];
+    private readonly List<DurableModuleOutboxInspectionStoreRegistration>
+        _outboxInspectionStoreRegistrations = [];
     private readonly List<DurableModuleInboxHandlerExecutorRegistration>
         _inboxHandlerExecutorRegistrations = [];
     private readonly List<DurableModuleOperationStateStoreRegistration>
@@ -34,6 +36,18 @@ public sealed class DurableModulePersistenceRegistrationRegistry
             lock (_syncRoot)
             {
                 return _outboxDispatcherRegistrations.ToArray();
+            }
+        }
+    }
+
+    public IReadOnlyList<DurableModuleOutboxInspectionStoreRegistration>
+        OutboxInspectionStoreRegistrations
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _outboxInspectionStoreRegistrations.ToArray();
             }
         }
     }
@@ -89,6 +103,22 @@ public sealed class DurableModulePersistenceRegistrationRegistry
                 static existing => existing.ModuleName,
                 "durable module outbox dispatcher");
             _outboxDispatcherRegistrations.Add(registration);
+        }
+    }
+
+    public void AddOutboxInspectionStore(
+        DurableModuleOutboxInspectionStoreRegistration registration)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+
+        lock (_syncRoot)
+        {
+            ValidateNoExistingRegistration(
+                _outboxInspectionStoreRegistrations,
+                registration.ModuleName,
+                static existing => existing.ModuleName,
+                "durable module outbox inspection store");
+            _outboxInspectionStoreRegistrations.Add(registration);
         }
     }
 

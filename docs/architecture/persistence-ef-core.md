@@ -49,6 +49,7 @@ event records explicitly with that package's `ApplyBondstoneDomainEvents()`.
 provider-neutral EF Core implementations for:
 
 - `IDurableOutboxWriter`;
+- `IDurableOutboxInspectionStore`;
 - `IDurableInboxStore`;
 - `IDurableOperationStateStore`;
 - `IEntityFrameworkCorePersistenceScope`.
@@ -99,6 +100,12 @@ operation id. It does not use root-level EF operation stores as a read fallback.
 messages in the current EF Core `DbContext`. It does not call
 `SaveChangesAsync`; callers keep control of the transaction that commits
 source state and outbox messages atomically.
+
+`EntityFrameworkCoreDurableOutboxInspectionStore<TDbContext>` reads
+`TerminalFailed` outbox rows with optional source-module and failed-at cutoff
+filters. It orders oldest terminal failures first and returns
+`DurableOutboxRecord` values without tracking entities. It does not claim,
+reset, replay, purge, or archive rows.
 
 `EntityFrameworkCoreDurableInboxStore<TDbContext>` reads and stages inbox
 records in the current EF Core `DbContext`. It does not treat a fast

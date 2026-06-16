@@ -59,17 +59,18 @@ binds PostgreSQL durable components for that module's EF context. Root-level
 ...)` delegates to the same module-level setup for the named module. Those
 module bindings provide source-module outbox writing, target-module inbox
 handling, target-module operation-state persistence, transaction pipeline
-participation, and per-module outbox dispatch. The app-facing dispatcher can
-aggregate dispatch results across configured local module outboxes while each
-underlying claim, lease, and dispatch-record update remains scoped to one
-module's PostgreSQL tables. The aggregate worker topology does not change
-PostgreSQL ownership: module dispatchers still perform provider-specific
-claim, lease renewal, and outcome recording for their module, while the
-aggregate dispatcher only chooses the sequential call order and shared batch
-budget.
+participation, per-module outbox dispatch, and read-only terminal outbox
+inspection. The app-facing dispatcher can aggregate dispatch results across
+configured local module outboxes while each underlying claim, lease, and
+dispatch-record update remains scoped to one module's PostgreSQL tables. The
+aggregate worker topology does not change PostgreSQL ownership: module
+dispatchers still perform provider-specific claim, lease renewal, and outcome
+recording for their module, while the aggregate dispatcher only chooses the
+sequential call order and shared batch budget.
 
 Command and receive execution use passive durable module runtime registrations
-for the module writer, inbox executor, and operation-state store stored in
+for the module writer, inbox executor, operation-state store, outbox
+dispatcher, and outbox inspection store stored in
 `DurableModulePersistenceRegistrationRegistry`. Those registrations carry the
 module name and create EF-backed executable services only for the selected
 module inside the current DI scope, so resolving another module's runtime
@@ -95,6 +96,7 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
   non-processing rows;
 - outbox dispatch success, retry, terminal failure, stale claimant, and
   expired lease outcomes;
+- read-only terminal outbox inspection through the EF-backed inspection store;
 - outbox dispatcher composition using real PostgreSQL claim, lease renewal,
   and dispatch outcome recording with fake transport success and failure;
 - schema-aware provider registration and composition with the EF persistence

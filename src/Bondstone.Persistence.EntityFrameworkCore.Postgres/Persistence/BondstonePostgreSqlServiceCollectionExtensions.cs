@@ -121,6 +121,10 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
                 moduleName,
                 serviceProvider.GetRequiredService<TDbContext>(),
                 serviceProvider.GetService<TimeProvider>())));
+        registry.AddOutboxInspectionStore(new DurableModuleOutboxInspectionStoreRegistration(
+            moduleName,
+            serviceProvider => new EntityFrameworkCoreDurableOutboxInspectionStore<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>())));
         registry.AddInboxHandlerExecutor(new DurableModuleInboxHandlerExecutorRegistration(
             moduleName,
             serviceProvider => new PostgreSqlModuleDurableInboxHandlerExecutor<TDbContext>(

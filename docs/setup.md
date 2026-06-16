@@ -462,7 +462,22 @@ fails instead of guessing.
 Bondstone owns retry and terminal failure for outgoing persisted outbox
 records. Current outbox status semantics are described in
 [architecture/persistence-core.md](architecture/persistence-core.md); they are
-separate from provider-native receive DLQs.
+separate from provider-native receive DLQs. Operators can inspect terminal
+outbox rows through `IDurableOutboxInspector`:
+
+```csharp
+IReadOnlyList<DurableOutboxRecord> failedRows = await inspector
+    .FindTerminalFailedAsync(
+        moduleName: FulfillmentModule.ModuleName,
+        maxCount: 50,
+        failedAtOrBeforeUtc: DateTimeOffset.UtcNow.AddMinutes(-5),
+        ct);
+```
+
+Inspection is read-only. Resetting a terminal row, replaying a message,
+purging old rows, archiving them, or issuing a compensating command remains an
+application/operator runbook decision because the application must prove
+whether the downstream side effect already happened.
 
 ## Module Registration
 

@@ -89,6 +89,26 @@ This amendment narrows the compatibility consequences above. It does not
 change the boundary between Bondstone-owned outgoing outbox terminal failure
 and provider-owned receive-side broker dead-letter policy.
 
+## Amendment 2026-06-16: Read-Only Terminal Outbox Inspection
+
+Operational recovery needs a supported way to find outgoing outbox rows that
+reached Bondstone's terminal failure state, but a generic replay/reset API
+would hide the important safety decision: the operator or application must
+decide whether the downstream side effect happened, whether re-dispatch is
+safe, and what retention policy applies.
+
+Bondstone will therefore provide read-only terminal outbox inspection contracts
+for persisted `TerminalFailed` rows. Provider stores may expose terminal rows
+with optional source-module and failed-at cutoff filters. The app-facing
+inspector resolves the named module's outbox inspection store so operator
+queries use the same module persistence boundary as module-owned outbox
+dispatch.
+
+Bondstone will not provide a provider-neutral mutation API for terminal
+outbox rows in this slice. Reset, replay, purge, archival, compensating
+commands, and manual SQL/admin tooling remain application-owned operational
+policy.
+
 ## Related Decisions
 
 - [0011 Outbox Claim Lease State](0011-outbox-claim-lease-state.md)
@@ -100,12 +120,14 @@ and provider-owned receive-side broker dead-letter policy.
 
 - Current contract: Bondstone writes and reads `TerminalFailed` for outgoing
   persisted outbox records that exhaust Bondstone-owned retry. Provider-native
-  receive retry and DLQ behavior remains outside Bondstone.
+  receive retry and DLQ behavior remains outside Bondstone. Bondstone exposes
+  read-only terminal outbox inspection for operator visibility, but terminal
+  row mutation, replay, reset, purge, and archival remain application-owned.
 - Stable docs: applied in
   [messaging.md](../architecture/messaging.md),
   [persistence-core.md](../architecture/persistence-core.md),
   [persistence-postgresql.md](../architecture/persistence-postgresql.md),
-  [persistence-postgres.md](../architecture/persistence-postgres.md), and
+  [persistence-ef-core.md](../architecture/persistence-ef-core.md), and
   [setup.md](../setup.md).
 - Agent guidance: applied in [AGENTS.md](../../AGENTS.md).
 - Application evidence: core public names now include
@@ -113,10 +135,12 @@ and provider-owned receive-side broker dead-letter policy.
   `DurableOutboxFailureDecisionKind.TerminalFailure`,
   `DurableOutboxFailureDecision.TerminalFailure(...)`,
   `ShouldTerminalFail`, `TerminalFailedCount`, and
-  `IDurableOutboxDispatchRecorder.MarkTerminalFailedAsync(...)`. Built-in
-  PostgreSQL recorders write `TerminalFailed`.
-- Pending or deferred: none for this decision. Future retention or archival
-  tooling remains outside this ADR.
+  `IDurableOutboxDispatchRecorder.MarkTerminalFailedAsync(...)`.
+  `IDurableOutboxInspectionStore` and `IDurableOutboxInspector` expose
+  read-only terminal row queries. Built-in PostgreSQL recorders write
+  `TerminalFailed`, and EF-backed stores can inspect terminal rows.
+- Pending or deferred: provider-neutral terminal outbox mutation, reset,
+  replay, purge, and archival tooling remain outside this ADR.
 
 ## Verification
 
@@ -124,3 +148,11 @@ and provider-owned receive-side broker dead-letter policy.
 - `pnpm backend:build`
 - `pnpm backend:test:fast`
 - `pnpm backend:test:integration`
+- For the 2026-06-16 inspection amendment:
+  - `dotnet build Bondstone.slnx --configuration Release --no-restore --disable-build-servers`
+  - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~DurableOutboxInspectorTests|FullyQualifiedName~DurableModulePersistenceRegistrationTests" --disable-build-servers`
+  - `dotnet test tests/Bondstone.Persistence.EntityFrameworkCore.Tests/Bondstone.Persistence.EntityFrameworkCore.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~EntityFrameworkCoreDurableOutboxInspectionStoreTests" --disable-build-servers`
+  - `dotnet test tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~AddBondstonePostgreSqlPersistence_WhenResolved_UsesPostgreSqlStores" --disable-build-servers`
+  - `dotnet test tests/Bondstone.PublicApi.Tests/Bondstone.PublicApi.Tests.csproj --configuration Release --filter "Category=Unit" --disable-build-servers`
+  - `pnpm backend:test`
+  - `pnpm backend:pack`

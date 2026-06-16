@@ -217,7 +217,8 @@ observation, but incomplete for production incidents:
 - successful durable command receive writes `Completed`;
 - default command receive does not write `Failed`;
 - transport/broker dead-letter outcomes do not update operation state;
-- terminal outbox rows do not have a first-class query/reset/replay API;
+- terminal outbox rows now have a first-class read-only inspection API, but no
+  reset/replay mutation API;
 - already-received but unprocessed inbox rows are intentionally loud, but
   operator recovery is fully application-owned.
 
@@ -519,8 +520,10 @@ Applied on 2026-06-16:
 3. Add operation expiry/timeout policy and a maintenance worker or documented
    application-owned job shape. Applied with
    `IDurableOperationExpirationProcessor`; hosted worker remains deferred.
-4. Add operator query APIs for terminal outbox rows.
-5. Add documented reset/replay guidance for terminal outbox rows.
+4. Add operator query APIs for terminal outbox rows. Applied with
+   `IDurableOutboxInspector` and `IDurableOutboxInspectionStore`.
+5. Add documented reset/replay guidance for terminal outbox rows. Applied as
+   read-only inspection guidance; reset/replay remains application-owned.
 6. Add documented inspection guidance for already-received unprocessed inbox
    rows.
 7. Add tests proving `Failed` operation results are observable and do not poll
@@ -562,8 +565,9 @@ Applied on 2026-06-16:
   `DurableCommandSendResult` simply carry source/target module metadata?
 - Should receive failure attempts be persisted in a new receive-failure table,
   or should Bondstone avoid that until a provider-specific need is proven?
-- Should terminal outbox replay be a public mutation API, or only documented
-  SQL/provider helpers?
+- Should terminal outbox replay stay only documented app-owned SQL/provider
+  procedure, or should a future provider-specific mutation helper be accepted
+  after a real runbook emerges?
 - Should XML API docs be required by a pack artifact test for every package
   before publication?
 - Should EF domain event persistence be folded directly into EF transaction

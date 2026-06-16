@@ -29,6 +29,9 @@ public static class BondstoneEntityFrameworkCoreServiceCollectionExtensions
             new EntityFrameworkCoreDurableOutboxWriter<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>(),
                 serviceProvider.GetService<TimeProvider>()));
+        services.TryAddScoped<IDurableOutboxInspectionStore>(serviceProvider =>
+            new EntityFrameworkCoreDurableOutboxInspectionStore<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>()));
         services.TryAddScoped<IDurableInboxStore, EntityFrameworkCoreDurableInboxStore<TDbContext>>();
         services.TryAddScoped<IDurableOperationStateStore, EntityFrameworkCoreDurableOperationStateStore<TDbContext>>();
         services.TryAddScoped<

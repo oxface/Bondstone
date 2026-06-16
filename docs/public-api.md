@@ -117,6 +117,19 @@ Operation expiry processing, 2026-06-16:
   for operation-state stores that can query stale `Pending` or `Running`
   operation states.
 
+Terminal outbox inspection, 2026-06-16:
+
+- `IDurableOutboxInspector` is an additive user application contract for
+  reading `TerminalFailed` outbox records from a named module's persistence
+  boundary.
+- `IDurableOutboxInspectionStore` is an additive provider/runtime contract for
+  querying terminal outbox rows with optional source-module and failed-at
+  cutoff filters.
+- `DurableModuleOutboxInspectionStoreRegistration` is an additive advanced
+  module runtime registration type for provider packages.
+- The API is intentionally read-only; it does not add reset, replay, purge, or
+  archival mutation contracts.
+
 ## Current Scope
 
 This first pass covers all current package projects:

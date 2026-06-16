@@ -49,9 +49,24 @@ failure state for an outgoing local outbox record. It does not mean Bondstone
 creates or owns a provider-native broker dead-letter queue. Broker receive
 retry and dead-letter policy remains transport/provider-owned.
 Terminal rows remain persisted until the application or operator applies its
-own retention, archival, purge, reset, or replay procedure. Bondstone does not
-currently provide terminal-outbox recovery helpers or a provider-neutral
-operator mutation API.
+own retention, archival, purge, reset, or replay procedure. Bondstone provides
+read-only terminal outbox inspection, but it does not provide a
+provider-neutral operator mutation API.
+
+`IDurableOutboxInspectionStore` is the provider-side read contract for
+operator inspection of persisted terminal outbox rows. Implementations return
+`TerminalFailed` records, optionally filtered by source module and failed-at
+cutoff, ordered by oldest terminal failure first and bounded by the requested
+maximum count. The query does not claim rows, reset status, replay messages,
+purge rows, archive rows, or decide whether re-dispatch is safe.
+
+`IDurableOutboxInspector` is the app-facing module-aware inspection contract.
+It resolves the named module's outbox inspection store and delegates the
+read-only terminal query to that module's persistence boundary. Applications
+can use those records for dashboards, alerts, retention workflows, or
+operator runbooks. Any replay, reset, purge, archival, or compensation remains
+application-owned because only the application can prove whether the
+downstream side effect already happened.
 
 `IDurableOutboxFailurePolicy` decides whether a failed claimed delivery attempt
 should be retried or terminally failed. The default
@@ -96,9 +111,10 @@ Provider packages contribute module-owned command and receive runtime
 persistence through passive durable module runtime registrations. Each
 registration carries a module name plus a factory for the executable
 `IDurableOutboxWriter`, `IDurableInboxHandlerExecutor`, or
-`IDurableOperationStateStore` used by that module, plus a factory for the
+`IDurableOperationStateStore` used by that module, plus factories for the
 module's executable `IDurableOutboxDispatcher` when the provider supports
-local outbox dispatch. Providers store these
+local outbox dispatch and `IDurableOutboxInspectionStore` when the provider
+supports terminal-row inspection. Providers store these
 records in `DurableModulePersistenceRegistrationRegistry`; individual module
 runtime registrations are not service descriptors. Provider packages should
 use Bondstone's advanced service-collection helper to get or create that
@@ -112,11 +128,13 @@ lightweight wrappers around services resolved from the current DI scope and
 should not create owned disposable resources outside DI ownership.
 
 Provider packages must register at most one runtime registration for each
-module command/receive durable role, and at most one module outbox dispatcher
-registration for each local module outbox. The durable runtime registry
+module command/receive durable role, at most one module outbox dispatcher
+registration for each local module outbox, and at most one module outbox
+inspection-store registration for each module store. The durable runtime registry
 rejects duplicate module outbox writer, inbox handler executor,
-operation-state store, and outbox dispatcher registrations when provider setup
-adds them; the runtime map keeps defensive duplicate validation when those
+operation-state store, outbox dispatcher, and outbox inspection-store
+registrations when provider setup adds them; the runtime map keeps defensive
+duplicate validation when those
 services are resolved. Provider
 composition errors therefore fail with module-specific diagnostics. When a
 module declares

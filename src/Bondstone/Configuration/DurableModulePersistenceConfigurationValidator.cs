@@ -23,11 +23,14 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
             _persistenceRegistrationRegistry.OperationStateStoreRegistrations.ToArray();
         DurableModuleOutboxDispatcherRegistration[] outboxDispatchers =
             _persistenceRegistrationRegistry.OutboxDispatcherRegistrations.ToArray();
+        DurableModuleOutboxInspectionStoreRegistration[] outboxInspectionStores =
+            _persistenceRegistrationRegistry.OutboxInspectionStoreRegistrations.ToArray();
 
         if (outboxWriters.Length == 0
             && inboxExecutors.Length == 0
             && operationStateStores.Length == 0
-            && outboxDispatchers.Length == 0)
+            && outboxDispatchers.Length == 0
+            && outboxInspectionStores.Length == 0)
         {
             return;
         }
@@ -37,7 +40,8 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
             outboxWriters.Select(static registration => registration.ModuleName)
                 .Concat(inboxExecutors.Select(static registration => registration.ModuleName))
                 .Concat(operationStateStores.Select(static registration => registration.ModuleName))
-                .Concat(outboxDispatchers.Select(static registration => registration.ModuleName)));
+                .Concat(outboxDispatchers.Select(static registration => registration.ModuleName))
+                .Concat(outboxInspectionStores.Select(static registration => registration.ModuleName)));
 
         HashSet<string> modulesWithOutboxWriter = outboxWriters
             .Select(static registration => registration.ModuleName)

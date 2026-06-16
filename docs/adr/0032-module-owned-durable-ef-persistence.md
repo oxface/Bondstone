@@ -124,9 +124,11 @@ outer EF transaction may still be open.
   pending operation-state persistence. Target-module receives resolve
   module-specific inbox handling, successful operation completion, handler
   state, and outgoing outbox persistence. Local module outbox dispatch and
-  operation reads aggregate across configured module stores. PostgreSQL
-  provider binding should be available from the module builder as the
-  preferred public setup shape.
+  operation reads aggregate across configured module stores. Terminal outbox
+  inspection resolves the named module's inspection store so operator queries
+  use the same module persistence boundary as dispatch. PostgreSQL provider
+  binding should be available from the module builder as the preferred public
+  setup shape.
 - Stable docs: Current module-owned durable persistence behavior is described
   in [docs/architecture/modules.md](../architecture/modules.md),
   [docs/architecture/messaging.md](../architecture/messaging.md),
@@ -144,8 +146,9 @@ outer EF transaction may still be open.
   operation-state stores, aggregate operation reading, and aggregate outbox
   dispatch through `DurableModuleOutboxDispatchAggregator`. EF Core module
   outbox writer and operation-state store wrappers are applied. PostgreSQL
-  module-specific inbox handler executor and outbox dispatcher bindings are
-  applied. The modular monolith adoption-proof sample now uses separate
+  module-specific inbox handler executor, outbox dispatcher, and outbox
+  inspection-store bindings are applied. The modular monolith adoption-proof
+  sample now uses separate
   `OrderingDbContext` and `FulfillmentDbContext` types with separate
   PostgreSQL schemas. Module-bound PostgreSQL provider registration is applied
   through `module.UsePostgreSqlPersistence<TDbContext>(...)`. The sample is now

@@ -658,7 +658,10 @@ Use `GetResultAsync<TResult>()` when an API endpoint should read the current
 operation state once. Use `WaitForResultAsync<TResult>()` only where an
 explicit, timeout-bounded wait is acceptable for the caller. Applications still
 own endpoint policy, timeout choice, polling cadence, and what to do with
-unknown, pending, failed, or cancelled operation state.
+unknown, pending, failed, or cancelled operation state. When
+`WaitForResultAsync<TResult>()` reaches its timeout before the operation is
+terminal, it throws `TimeoutException`; the timeout does not by itself write a
+durable operation state.
 
 When application policy has enough evidence that a workflow should stop
 polling, use `IDurableOperationFinalizer` to mark the operation terminal in
@@ -859,6 +862,8 @@ handler, moving broker messages, or issuing a compensating action remains an
 application/operator runbook decision because the application must prove what
 happened during the ambiguous receive attempt.
 
-The current sample uses explicit `Bondstone.Transport.Local` queue routing.
-Broker examples should live in application or sample code until a real adapter
-need justifies reintroducing a broker package.
+The default modular monolith sample uses explicit `Bondstone.Transport.Local`
+queue routing for local development and fast adoption. RabbitMQ and Azure
+Service Bus examples use the thin native-driver adapter packages where the app
+still owns broker topology, retry, dead-letter policy, and operational
+monitoring.

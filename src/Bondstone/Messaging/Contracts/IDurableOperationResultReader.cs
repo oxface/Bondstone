@@ -52,14 +52,15 @@ public interface IDurableOperationResultReader
     }
 
     /// <summary>
-    /// Polls operation state until the durable operation reaches a terminal state or the timeout expires.
+    /// Polls operation state until the durable operation reaches a terminal state.
     /// </summary>
     /// <typeparam name="TResult">The expected result payload type.</typeparam>
     /// <param name="durableOperationId">The durable operation identifier returned or supplied when the command was sent.</param>
     /// <param name="timeout">The maximum time to wait for a terminal operation state.</param>
     /// <param name="pollInterval">An optional polling interval. When omitted, the reader uses its default interval.</param>
     /// <param name="ct">A cancellation token for the wait operation.</param>
-    /// <returns>The terminal durable operation result state, or a timeout result if the operation did not complete in time.</returns>
+    /// <returns>The terminal durable operation result state.</returns>
+    /// <exception cref="TimeoutException">Thrown when the operation does not reach a terminal state before <paramref name="timeout"/> expires.</exception>
     ValueTask<DurableOperationResult<TResult>> WaitForResultAsync<TResult>(
         Guid durableOperationId,
         TimeSpan timeout,
@@ -67,7 +68,7 @@ public interface IDurableOperationResultReader
         CancellationToken ct = default);
 
     /// <summary>
-    /// Polls one hinted module's operation state until the durable operation reaches a terminal state or the timeout expires.
+    /// Polls one hinted module's operation state until the durable operation reaches a terminal state.
     /// </summary>
     /// <typeparam name="TResult">The expected result payload type.</typeparam>
     /// <param name="durableOperationId">The durable operation identifier returned or supplied when the command was sent.</param>
@@ -75,7 +76,8 @@ public interface IDurableOperationResultReader
     /// <param name="timeout">The maximum time to wait for a terminal operation state.</param>
     /// <param name="pollInterval">An optional polling interval. When omitted, the reader uses its default interval.</param>
     /// <param name="ct">A cancellation token for the wait operation.</param>
-    /// <returns>The terminal durable operation result state, or a timeout result if the operation did not complete in time.</returns>
+    /// <returns>The terminal durable operation result state.</returns>
+    /// <exception cref="TimeoutException">Thrown when the operation does not reach a terminal state before <paramref name="timeout"/> expires.</exception>
     ValueTask<DurableOperationResult<TResult>> WaitForResultAsync<TResult>(
         Guid durableOperationId,
         string moduleName,
@@ -91,14 +93,15 @@ public interface IDurableOperationResultReader
     }
 
     /// <summary>
-    /// Polls the target module named by a durable operation handle until the operation reaches a terminal state or the timeout expires.
+    /// Polls the target module named by a durable operation handle until the operation reaches a terminal state.
     /// </summary>
     /// <typeparam name="TResult">The expected result payload type.</typeparam>
     /// <param name="operation">The durable operation handle returned when the command was sent.</param>
     /// <param name="timeout">The maximum time to wait for a terminal operation state.</param>
     /// <param name="pollInterval">An optional polling interval. When omitted, the reader uses its default interval.</param>
     /// <param name="ct">A cancellation token for the wait operation.</param>
-    /// <returns>The terminal durable operation result state, or a timeout result if the operation did not complete in time.</returns>
+    /// <returns>The terminal durable operation result state.</returns>
+    /// <exception cref="TimeoutException">Thrown when the operation does not reach a terminal state before <paramref name="timeout"/> expires.</exception>
     ValueTask<DurableOperationResult<TResult>> WaitForResultAsync<TResult>(
         DurableOperationHandle operation,
         TimeSpan timeout,

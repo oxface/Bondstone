@@ -403,6 +403,33 @@ public sealed class DurableOperationResultReaderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task WaitForResultAsync_WhenOperationDoesNotReachTerminalState_ThrowsTimeoutException()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        TimeoutException exception = await Assert.ThrowsAsync<TimeoutException>(
+            async () => await serviceProvider
+                .GetRequiredService<IDurableOperationResultReader>()
+                .WaitForResultAsync<ReserveOrderResult>(
+                    durableOperationId,
+                    "fulfillment",
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromMilliseconds(1)));
+
+        Assert.Contains(durableOperationId.ToString(), exception.Message);
+        Assert.Contains("fulfillment", exception.Message);
+        Assert.True(store.ReadCount >= 1);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task WaitForResultAsync_WhenOperationHandleIsProvided_PollsTargetModuleStore()
     {
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");

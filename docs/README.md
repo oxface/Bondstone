@@ -17,6 +17,8 @@ duplicating durable rules.
   package artifact policy, and package dependency direction.
 - [package-discovery.md](package-discovery.md) maps common consumer-facing
   capabilities to package IDs and namespaces.
+- [plans/README.md](plans/README.md) records short-lived planning handoffs
+  that must be converted into ADRs, stable docs, or GitHub Issues/Projects.
 - [public-api.md](public-api.md) records the current public API surface
   classification used during cleanup work.
 - [repository.md](repository.md) records current repository layout and tooling
@@ -32,9 +34,10 @@ duplicating durable rules.
   exists.
 - GitHub Issues and GitHub Projects track backlog work, real-project findings,
   cleanup tasks, and prioritization.
-- Temporary planning notes should not live under `docs/`; convert durable
-  decisions into ADRs/stable docs and backlog work into GitHub Issues or
-  Projects.
+- Long-lived planning notes should not live under `docs/`. Short-lived
+  planning handoffs may live under `docs/plans/` when useful, but durable
+  decisions must move into ADRs/stable docs and backlog work must move into
+  GitHub Issues or Projects.
 - README files orient human maintainers to a folder or workflow.
 - AGENTS files orient agents to the relevant docs, local constraints, and
   verification expectations for a folder or workflow.
@@ -54,6 +57,8 @@ files with the local context each audience needs.
   package artifact policy, versioning, and publishing policy.
 - `package-discovery.md` owns package and namespace discovery guidance for
   common consumer-facing APIs.
+- `plans/` owns short-lived planning handoffs only. It must not become a
+  parallel architecture or backlog system.
 - `github-workflow.md` owns GitHub issue, project, label, and completion
   comment conventions.
 - `public-api.md` owns current package public API classification notes.

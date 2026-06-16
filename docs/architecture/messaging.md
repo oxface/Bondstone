@@ -252,8 +252,12 @@ name, durable message type name, and handler identity. Callers can observe
 durable results through `IDurableOperationResultReader`:
 `GetResultAsync<TResult>()` reads current state once, while
 `WaitForResultAsync<TResult>()` performs explicit timeout-bounded polling
-until the operation reaches a terminal state. `IDurableOperationReader`
-remains available as the lower-level state reader. When available, pass
+until the operation reaches a terminal state. If the timeout expires before a
+terminal state is observed, `WaitForResultAsync<TResult>()` throws
+`TimeoutException`. Timeout is caller patience, not stored operation state; use
+application policy such as `IDurableOperationFinalizer` when the operation
+itself should become `Failed` or `Cancelled`. `IDurableOperationReader` remains
+available as the lower-level state reader. When available, pass
 `DurableCommandSendResult.Operation` to these readers. Handle-based reads query
 the target module's operation-state store. Operation-id-only reads remain
 available as the global aggregate compatibility path.

@@ -73,18 +73,17 @@ ownership and extraction seams.
 For transport adapters, prefer a layered shape: use fast in-process transport
 tests for the broad behavior matrix, and keep a small number of
 Testcontainers-backed transport tests for the real provider handoff contract:
-acknowledgement/completion after success, negative acknowledgement or abandon
-after failure, and broker-owned dead-letter behavior where the adapter promises
-that handoff.
+acknowledgement after success, negative acknowledgement after failure, and
+broker-owned dead-letter behavior where the adapter promises that handoff.
 
 Receive retry-policy tests should assert Bondstone's provider boundary rather
 than expecting Bondstone to own broker retry policy. Fast tests should cover
 native mapping, dispatch, and settlement ordering. Provider-backed integration
 tests should prove the native handoff that Bondstone performs: RabbitMQ
-negative acknowledgement with the configured `requeue` value and Service Bus
-abandon/complete behavior. Broker retry schedules, max delivery count, and
-dead-letter topology are app/provider configuration and should be tested only
-where the adapter explicitly promises that handoff.
+negative acknowledgement with the configured `requeue` value. Broker retry
+schedules, max delivery count, and dead-letter topology are app/provider
+configuration and should be tested only where the adapter explicitly promises
+that handoff.
 
 For first-class events, keep the same split. Unit and application tests should
 cover event route/topic resolution, publish dispatch, subscriber registration,
@@ -124,7 +123,6 @@ smoke test under `tests/Bondstone.Samples.Tests`. It is covered by
 `pnpm backend:test:integration` and intentionally stays out of the default
 fast test filter because it starts Testcontainers PostgreSQL.
 
-The PostgreSQL non-EF persistence package has explicit `Integration` tests under
-`tests/Bondstone.Persistence.Postgres.Tests` because the package depends
-on real PostgreSQL schema, transaction, inbox, outbox, and operation-state
-behavior.
+The non-EF PostgreSQL and Service Bus package tests were removed with their
+packages after MVP. EF/PostgreSQL and RabbitMQ remain the provider-backed
+integration-test paths.

@@ -306,17 +306,14 @@ not a supported transport package.
 Current direct transport packages:
 
 - `Bondstone.Transport.RabbitMq`
-- `Bondstone.Transport.ServiceBus`
 - `Bondstone.Transport.Local`
 
-RabbitMQ and Azure Service Bus are the production-oriented direct provider
-adapters. Their implemented scope includes outgoing durable outbox dispatch,
-provider-native receive topology, opt-in hosted receive workers, and
-provider-backed receive tests. RabbitMQ uses exchange, routing-key, and queue
-vocabulary. Azure Service Bus uses queue, topic, subscription, and event
-destination vocabulary. Provider connection, credentials,
-queue/topic/exchange/binding creation, retry, dead-letter, serializer, and
-administration remain app-owned or provider-native.
+RabbitMQ is the remaining direct broker adapter. Its implemented scope
+includes outgoing durable outbox dispatch, provider-native receive topology,
+opt-in hosted receive workers, and provider-backed receive tests. RabbitMQ
+uses exchange, routing-key, and queue vocabulary. Provider connection,
+credentials, queue/exchange/binding creation, retry, dead-letter, serializer,
+and administration remain app-owned or provider-native.
 
 `Bondstone.Transport.Local` is explicit local queue routing for samples, tests,
 and local development. It uses the neutral receive pipelines and preserves
@@ -327,35 +324,34 @@ Direct transport packages contribute `IDurableOutboxTransportRoute` entries.
 one provider route matches the message. Zero matches and ambiguous matches are
 loud configuration errors.
 
-Local, RabbitMQ, and Service Bus contribute startup topology diagnostics for
-outbound durable route ownership. When transport diagnostic sources are
-configured, registered durable command target modules and registered published
-events must have exactly one outbound transport route. Zero matches and
-multiple matches fail during `AddBondstone`, before outbox dispatch.
+Local and RabbitMQ contribute startup topology diagnostics for outbound
+durable route ownership. When transport diagnostic sources are configured,
+registered durable command target modules and registered published events must
+have exactly one outbound transport route. Zero matches and multiple matches
+fail during `AddBondstone`, before outbox dispatch.
 Normal host setup should use provider transport extensions on the main
 `BondstoneBuilder`, because that path registers the provider topology
 diagnostic sources and configuration validators. The lower-level
 `BondstoneOutboxBuilder` transport overloads register transport services only
 and are advanced composition APIs for manual dispatch setups.
 
-RabbitMQ and Service Bus also validate their provider receive bindings.
-Provider receive bindings always validate that accepted command modules have
-registered durable command handlers and event subscription bindings have
-matching registered subscribers. In a single-transport host, provider
-validators also fail when registered event subscribers have no receive binding.
-They also validate queue-style event destinations against receive bindings:
-same-queue in-process fan-out remains valid, but direct queue event routing
-fails startup when receive bindings for that event are on another receive
-entity or spread across multiple receive entities. Split subscribers should use
-provider-native broker fan-out, such as RabbitMQ exchange bindings or Service
-Bus topic subscriptions.
+RabbitMQ also validates provider receive bindings. Receive bindings validate
+that accepted command modules have registered durable command handlers and
+event subscription bindings have matching registered subscribers. In a
+single-transport host, the provider validator also fails when registered event
+subscribers have no receive binding. It also validates queue-style event
+destinations against receive bindings: same-queue in-process fan-out remains
+valid, but direct queue event routing fails startup when receive bindings for
+that event are on another receive entity or spread across multiple receive
+entities. Split subscribers should use provider-native broker fan-out, such as
+RabbitMQ exchange bindings.
 
-RabbitMQ and Service Bus map received provider-native messages into the neutral
-receive pipelines. Provider packages also expose native received message
-mappers so app-owned consumers/processors can convert broker messages before
-dispatch, plus handler helpers that invoke caller-supplied native settlement
-only after dispatch succeeds. RabbitMQ and Service Bus also expose opt-in
-hosted receive lifecycle helpers over configured receive topology.
+RabbitMQ maps received provider-native messages into the neutral receive
+pipelines. The package also exposes native received message mappers so
+app-owned consumers can convert broker messages before dispatch, plus handler
+helpers that invoke caller-supplied native settlement only after dispatch
+succeeds. RabbitMQ also exposes opt-in hosted receive lifecycle helpers over
+configured receive topology.
 Provider-backed integration tests cover successful receive settlement,
 dead-letter handoff after failed dispatch, and event subscriber fan-out.
 
@@ -366,11 +362,10 @@ own settlement ordering and operational diagnostics, but broker retry
 schedules, delivery counts, dead-letter policy, and provider client retry
 configuration remain application-owned and provider-native.
 
-Applications bind Bondstone receive topology to provider-native queues and
-subscriptions where their retry/DLQ policy is already configured. RabbitMQ
-exposes the worker failure `requeue` decision. Service Bus exposes processor
-concurrency and lock renewal settings. Bondstone does not create a
-provider-neutral receive retry policy or receive DLQ abstraction.
+Applications bind Bondstone receive topology to provider-native queues where
+their retry/DLQ policy is already configured. RabbitMQ exposes the worker
+failure `requeue` decision. Bondstone does not create a provider-neutral
+receive retry policy or receive DLQ abstraction.
 
 ## Diagnostics
 
@@ -383,12 +378,10 @@ packages expose provider-native diagnostic details.
 Startup topology validation should use those diagnostics for fail-fast
 configuration errors while remaining separate from broker provisioning.
 Validation does not create RabbitMQ exchanges, queues, or bindings, and does
-not create Service Bus queues, topics, subscriptions, or rules.
+not create broker topology.
 
 Receive recovery diagnostics should explain the native settlement handoff after
 failed Bondstone dispatch. RabbitMQ diagnostics should include the queue,
 delivery identity, routing facts, and configured negative-acknowledgement
-requeue decision. Service Bus diagnostics should include the receive source,
-message identity, delivery count when available, and abandon handoff. These
-logs document what Bondstone did; they do not imply Bondstone owns broker
-retry or dead-letter policy.
+requeue decision. These logs document what Bondstone did; they do not imply
+Bondstone owns broker retry or dead-letter policy.

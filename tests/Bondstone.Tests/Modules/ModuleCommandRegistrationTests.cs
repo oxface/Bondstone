@@ -255,6 +255,84 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task ModuleCommands_WhenHandlerExecutesSameModuleCommand_AllowsNestedLocalExecution()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.Commands.RegisterHandler<
+                    SameModuleOuterCommand,
+                    SameModuleOuterHandler>();
+                module.Commands.RegisterHandler<
+                    SameModuleInnerCommand,
+                    SameModuleInnerHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new SameModuleOuterCommand("order-123"));
+
+        Assert.Equal(
+            ["outer-before:order-123", "inner:order-123", "outer-after:order-123"],
+            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ModuleCommands_WhenHandlerExecutesDifferentModuleCommand_Throws()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<CommandCallLog>();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.Commands.RegisterHandler<
+                    CrossModuleOuterCommand,
+                    CrossModuleOuterHandler>();
+            });
+            bondstone.Module("fulfillment", module =>
+            {
+                ConfigureDurableMessaging(module);
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "sales",
+                    new CrossModuleOuterCommand("order-123")));
+
+        Assert.Contains(
+            "Local module command execution cannot cross module boundaries",
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("module 'fulfillment'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Send a durable command", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(
+            ["cross-before:order-123"],
+            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task ModuleCommands_WhenRuntimeAndApplicationBehaviorsAreRegistered_RunsRuntimeByOrderFirst()
     {
         var services = new ServiceCollection();
@@ -823,6 +901,60 @@ public sealed class ModuleCommandRegistrationTests
         {
             log.Calls.Add($"context:{executionContextAccessor.Current?.ModuleName}");
             return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed record SameModuleOuterCommand(string OrderId) : ICommand;
+
+    public sealed class SameModuleOuterHandler(
+        IModuleCommandExecutor executor,
+        CommandCallLog log)
+        : ICommandHandler<SameModuleOuterCommand>
+    {
+        public async ValueTask HandleAsync(
+            SameModuleOuterCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"outer-before:{command.OrderId}");
+            await executor.ExecuteAsync(
+                "sales",
+                new SameModuleInnerCommand(command.OrderId),
+                ct);
+            log.Calls.Add($"outer-after:{command.OrderId}");
+        }
+    }
+
+    public sealed record SameModuleInnerCommand(string OrderId) : ICommand;
+
+    public sealed class SameModuleInnerHandler(CommandCallLog log)
+        : ICommandHandler<SameModuleInnerCommand>
+    {
+        public ValueTask HandleAsync(
+            SameModuleInnerCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"inner:{command.OrderId}");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed record CrossModuleOuterCommand(string OrderId) : ICommand;
+
+    public sealed class CrossModuleOuterHandler(
+        IModuleCommandExecutor executor,
+        CommandCallLog log)
+        : ICommandHandler<CrossModuleOuterCommand>
+    {
+        public async ValueTask HandleAsync(
+            CrossModuleOuterCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"cross-before:{command.OrderId}");
+            await executor.ExecuteAsync(
+                "fulfillment",
+                new ReserveOrderCommand(command.OrderId),
+                ct);
+            log.Calls.Add($"cross-after:{command.OrderId}");
         }
     }
 

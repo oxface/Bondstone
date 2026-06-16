@@ -10,8 +10,8 @@ public sealed class RoutedDurableOutboxTransportTests
     [Trait("Category", "Unit")]
     public async Task SendAsync_WhenOneRouteMatches_SendsThroughMatchingRoute()
     {
-        var matchingRoute = new CapturingRoute("RabbitMq", canSend: true);
-        var skippedRoute = new CapturingRoute("ServiceBus", canSend: false);
+        var matchingRoute = new CapturingRoute("PrimaryRoute", canSend: true);
+        var skippedRoute = new CapturingRoute("AlternateRoute", canSend: false);
         var transport = new RoutedDurableOutboxTransport(
             [matchingRoute, skippedRoute]);
         DurableOutboxRecord record = CreateRecord();
@@ -28,16 +28,16 @@ public sealed class RoutedDurableOutboxTransportTests
     {
         var transport = new RoutedDurableOutboxTransport(
             [
-                new CapturingRoute("RabbitMq", canSend: true),
-                new CapturingRoute("ServiceBus", canSend: true),
+                new CapturingRoute("PrimaryRoute", canSend: true),
+                new CapturingRoute("AlternateRoute", canSend: true),
             ]);
 
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await transport.SendAsync(CreateRecord()));
 
         Assert.Contains("Multiple durable outbox transport routes", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("RabbitMq", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("ServiceBus", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("PrimaryRoute", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("AlternateRoute", exception.Message, StringComparison.Ordinal);
     }
 
     private static DurableOutboxRecord CreateRecord()

@@ -20,12 +20,10 @@ Install the packages needed for the host:
   module transaction behavior.
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
   classification and provider registration.
-- `Bondstone.Persistence.Postgres` for PostgreSQL non-EF durable module
-  persistence.
 - `Bondstone.Transport` for provider-neutral topology diagnostics used by
   custom transport adapters.
-- `Bondstone.Transport.RabbitMq` or `Bondstone.Transport.ServiceBus` when the
-  host dispatches durable outbox records through a direct provider adapter.
+- `Bondstone.Transport.RabbitMq` when the host dispatches durable outbox
+  records through the remaining direct broker adapter.
 - `Bondstone.Transport.Local` when a sample, test, or local development host
   explicitly wants in-process queue routing through the durable receive
   pipelines.
@@ -40,11 +38,8 @@ For a normal PostgreSQL-backed host, start with:
 - `Bondstone.Persistence.EntityFrameworkCore` and
   `Bondstone.Persistence.EntityFrameworkCore.Postgres` for EF-backed module
   persistence;
-- `Bondstone.Persistence.Postgres` only for modules that intentionally avoid
-  EF Core while still using PostgreSQL durable persistence;
-- one direct transport adapter, either `Bondstone.Transport.RabbitMq` or
-  `Bondstone.Transport.ServiceBus`, when messages leave the process through a
-  broker.
+- `Bondstone.Transport.RabbitMq` when messages leave the process through the
+  remaining direct broker adapter.
 
 Add optional capability packages only when the module uses that capability.
 For example, EF-backed module-local domain event persistence uses
@@ -444,24 +439,19 @@ builder.Services.AddBondstone(bondstone =>
 });
 ```
 
-Azure Service Bus uses the same Bondstone composition shape with
-`UseServiceBusTransport`, queues for commands, and topic or queue
-destinations for integration events.
-
 Provider transport route conventions are outbound-only. RabbitMQ
-`UseModuleRoutingKeyConvention()` and Service Bus `UseModuleQueueConvention()`
-resolve where commands are sent, but hosts that receive commands still need
-explicit receive bindings such as `ReceiveQueue(...).AcceptModule(...)`.
+`UseModuleRoutingKeyConvention()` resolves where commands are sent, but hosts
+that receive commands still need explicit receive bindings such as
+`ReceiveQueue(...).AcceptModule(...)`.
 `Bondstone.Transport.Local` is the local-development exception: its
 `UseModuleQueueConvention()` configures complete in-process command topology
 because there is no broker queue or binding to provision.
 
 Use provider transport extensions on the main `BondstoneBuilder` for normal
-host setup. The lower-level `bondstone.Outbox.UseRabbitMqTransport(...)` and
-`bondstone.Outbox.UseServiceBusTransport(...)` overloads are advanced
-composition APIs for manual outbox transport registration; they do not add the
-provider configuration validators and topology diagnostic sources that the
-normal setup path adds.
+host setup. The lower-level `bondstone.Outbox.UseRabbitMqTransport(...)`
+overload is an advanced composition API for manual outbox transport
+registration; it does not add the provider configuration validators and
+topology diagnostic sources that the normal setup path adds.
 
 When more than one direct transport is registered, Bondstone routes each
 claimed outbox record through the provider whose topology matches that
@@ -520,25 +510,9 @@ record module persistence metadata and register the module-owned runtime
 factories in Bondstone runtime registries, plus transaction behavior and
 dispatch services used by durable messaging.
 
-Modules that do not use EF Core can use `Bondstone.Persistence.Postgres`:
-
-```csharp
-public sealed class BillingBondstoneModule(string connectionString)
-    : IBondstoneModule
-{
-    public string Name => BillingModule.ModuleName;
-
-    public void Configure(BondstoneModuleBuilder module)
-    {
-        module.UseDurableMessaging();
-        module.UsePostgresPersistence(
-            connectionString,
-            schema: BillingModule.ModuleName);
-        module.Events.RegisterSubscriber<OrderPlacedEvent, RecordBillingInvoiceHandler>(
-            "billing.order-invoice-projection.v1");
-    }
-}
-```
+The direct non-EF `Bondstone.Persistence.Postgres` package was removed after
+MVP. New PostgreSQL modules should use EF Core persistence unless an ADR
+reintroduces a non-EF provider for a real consumer need.
 
 ## Application Pipeline Behaviors
 
@@ -773,41 +747,30 @@ Core exposes provider-neutral module receive pipelines over
 Direct provider receive adapters should parse their provider-native message
 body into the neutral durable envelope, acknowledge only after the receive
 pipeline completes, and let failures flow to provider-native retry and
-dead-letter policy. RabbitMQ exposes `IRabbitMqReceivedMessageDispatcher`, and
-Service Bus exposes `IServiceBusReceivedMessageDispatcher`. Both providers
-also expose opt-in hosted receive helpers. Bondstone's receive responsibility
-is the native settlement handoff; broker retry schedules, delivery counts, and
-DLQ settings remain provider/app-owned.
+dead-letter policy. RabbitMQ exposes `IRabbitMqReceivedMessageDispatcher` and
+opt-in hosted receive helpers. Bondstone's receive responsibility is the
+native settlement handoff; broker retry schedules, delivery counts, and DLQ
+settings remain provider/app-owned.
 
 If a receive attempt finds an inbox row that was already received but not
 processed, Bondstone fails the module receive with
 `DurableInboxAlreadyReceivedException` instead of re-running the handler. The
 provider worker then uses its normal failure handoff, such as RabbitMQ negative
-acknowledgement or Service Bus abandon. Recovery of the stale inbox row is an
-operator or application procedure.
+acknowledgement. Recovery of the stale inbox row is an operator or application
+procedure.
 
-Provider packages also expose native receive message mappers:
+The RabbitMQ package also exposes `RabbitMqReceivedMessageMapper` for
+app-owned consumers before they call the Bondstone dispatcher.
 
-- `RabbitMqReceivedMessageMapper` for RabbitMQ deliveries;
-- `ServiceBusReceivedMessageMapper` for Service Bus received messages.
+RabbitMQ also exposes `IRabbitMqReceivedMessageHandler`. This helper calls the
+mapper and dispatcher, then invokes a caller-supplied acknowledge delegate only
+after dispatch succeeds. It still does not start hosted consumers.
 
-Use those mappers inside app-owned consumers/processors before calling the
-Bondstone dispatcher.
-
-Provider packages also expose small handler helpers:
-
-- `IRabbitMqReceivedMessageHandler`
-- `IServiceBusReceivedMessageHandler`
-
-These helpers call the mapper and dispatcher, then invoke a caller-supplied
-acknowledge/complete delegate only after dispatch succeeds. They still do not
-start hosted consumers or processors.
-
-For hosts that want Bondstone to run the native receive loop, RabbitMQ and
-Service Bus expose opt-in `UseReceiveWorker(...)` helpers on their transport
-builders. These helpers run consumers/processors for configured receive
-topology, but broker entities, credentials, bindings, retry policy, and
-dead-letter setup remain application-owned.
+For hosts that want Bondstone to run the native receive loop, RabbitMQ exposes
+an opt-in `UseReceiveWorker(...)` helper on its transport builder. This helper
+runs consumers for configured receive topology, but broker entities,
+credentials, bindings, retry policy, and dead-letter setup remain
+application-owned.
 
 The current sample uses explicit `Bondstone.Transport.Local` queue routing by
 default and also exposes `AddModularMonolithSampleWithRabbitMq(...)` for one

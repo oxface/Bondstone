@@ -84,5 +84,4 @@ handed to a broker retry or DLQ mechanism.
 
 Use this package when a sample needs to prove Bondstone's durable loop before
 choosing a real broker receive adapter. Production broker paths should use
-direct provider adapters such as `Bondstone.Transport.RabbitMq` or
-`Bondstone.Transport.ServiceBus`.
+direct provider adapters such as `Bondstone.Transport.RabbitMq`.

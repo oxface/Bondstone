@@ -28,18 +28,18 @@ because a module moves from in-process composition to a separate service.
 - Service extraction should be a supported evolution path, not a separate
   rewrite story.
 
-## Direct Provider Adapters
+## Transport And Persistence Surface
 
-Bondstone transport packages adapt broker/client SDKs directly while keeping
-provider-native topology vocabulary and app-owned broker setup. The supported
-production-oriented direct transport adapters are
-`Bondstone.Transport.ServiceBus` and `Bondstone.Transport.RabbitMq`. They
-include outgoing durable outbox dispatch, provider-native receive topology,
-opt-in hosted receive workers, and provider-backed receive integration tests.
-Bondstone owns persisted outbox retry and terminal failure state, while direct
-provider receive adapters own settlement ordering and diagnostics without
-owning broker retry/dead-letter policy. See
-[transport-servicebus.md](transport-servicebus.md) and
+Bondstone is simplifying after MVP around EF Core/PostgreSQL durable
+persistence and smaller transport adapter boundaries. The supported durable
+persistence path is `Bondstone.Persistence.EntityFrameworkCore` plus
+`Bondstone.Persistence.EntityFrameworkCore.Postgres`.
+
+`Bondstone.Transport.RabbitMq` remains the only active direct broker adapter.
+It keeps provider-native vocabulary and app-owned broker setup while the
+transport surface is simplified. Bondstone owns persisted outbox retry and
+terminal failure state; broker retry, dead-letter policy, topology, and
+consumer lifecycle remain app-owned. See
 [transport-rabbitmq.md](transport-rabbitmq.md).
 
 Provider-neutral durable persistence contracts live in `Bondstone.Persistence`
@@ -51,10 +51,6 @@ contracts.
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
 tests, and local development. It is not a fallback and does not replace broker
 durability. See [transport-local.md](transport-local.md).
-
-`Bondstone.Persistence.Postgres` is PostgreSQL-specific, Dapper-backed
-internally, and provides durable module messaging persistence without EF Core.
-See [persistence-postgres.md](persistence-postgres.md).
 
 `Bondstone.Capabilities.DomainEvents` contains small module-local domain event
 capability contracts. It is not a transport, message bus, or provider runtime
@@ -76,10 +72,6 @@ persistence.
   store, and persistence-scope rules.
 - [persistence-postgresql.md](persistence-postgresql.md) records PostgreSQL
   provider behavior.
-- [persistence-postgres.md](persistence-postgres.md) records
-  PostgreSQL-specific non-EF persistence proof behavior.
-- [transport-servicebus.md](transport-servicebus.md) records Azure Service Bus
-  direct transport behavior.
 - [transport-rabbitmq.md](transport-rabbitmq.md) records RabbitMQ direct
   transport behavior.
 - [transport-local.md](transport-local.md) records explicit local queue

@@ -47,8 +47,7 @@ app-owned.
 `module.UseDurableMessaging()` marks a module as participating in durable
 commands or integration events. Durable messaging modules must also declare
 persistence through `module.UsePersistence(...)` or a provider-specific helper
-such as `UsePostgreSqlPersistence<TDbContext>()` or
-`UsePostgresPersistence(...)`.
+such as `UsePostgreSqlPersistence<TDbContext>()`.
 
 The current module registration records persistence with a provider name and,
 for EF Core-backed modules, an optional context type. The provider name is the
@@ -264,9 +263,9 @@ Core module receive is provider-neutral:
 
 Transport adapters should parse provider-native messages into
 `DurableMessageEnvelope` and call the appropriate receive pipeline inside the
-provider acknowledgement boundary. Direct RabbitMQ and Service Bus adapters
-provide native message mappers, receive dispatchers, settlement handler
-helpers, and opt-in hosted receive workers over configured receive topology.
+provider acknowledgement boundary. The active RabbitMQ adapter provides native
+message mappers, receive dispatchers, settlement handler helpers, and opt-in
+hosted receive workers over configured receive topology.
 
 ## Persistence Boundaries
 
@@ -275,16 +274,10 @@ Core modules, command and event subscriber transaction behavior saves handler
 state, inbox markers, operation state when applicable, and outgoing outbox
 messages in the module persistence boundary.
 
-`Bondstone.Persistence.Postgres` supplies equivalent durable outbox, inbox,
-operation-state, and transaction behavior without EF Core for modules that opt
-into that PostgreSQL provider. Dapper is an internal implementation helper for
-that package, not the app-facing provider identity.
-
 Provider transaction behaviors are registered through passive module pipeline
 contributions when modules opt into a provider and activate only for modules
-that declare that provider's persistence capability. EF Core and direct
-PostgreSQL can coexist in one host container because the planner selects the
-provider contribution from module metadata before behavior construction.
+that declare that provider's persistence capability. EF Core/PostgreSQL is the
+supported durable persistence path in the active product surface.
 
 EF Core domain event persistence belongs inside the same module command and
 event subscriber transaction boundary. It collects and stages domain events

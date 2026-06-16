@@ -7,7 +7,6 @@ using Bondstone.Hosting.Outbox;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
-using Bondstone.Persistence.Postgres.Persistence;
 using Bondstone.Samples.ModularMonolith.Billing;
 using Bondstone.Samples.ModularMonolith.Fulfillment;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
@@ -21,7 +20,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 using RabbitMQ.Client;
 
 namespace Bondstone.Samples.ModularMonolith;
@@ -200,6 +198,8 @@ public static class ModularMonolithApplication
             scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
         FulfillmentDbContext fulfillmentContext =
             scope.ServiceProvider.GetRequiredService<FulfillmentDbContext>();
+        BillingDbContext billingContext =
+            scope.ServiceProvider.GetRequiredService<BillingDbContext>();
 
         if (resetDatabase)
         {
@@ -210,7 +210,9 @@ public static class ModularMonolithApplication
         await fulfillmentContext.Database.ExecuteSqlRawAsync(
             fulfillmentContext.Database.GenerateCreateScript(),
             ct);
-        await serviceProvider.EnsureBillingDatabaseAsync(ct);
+        await billingContext.Database.ExecuteSqlRawAsync(
+            billingContext.Database.GenerateCreateScript(),
+            ct);
     }
 
     public static async Task<OrderStatusResult> ReadOrderStatusAsync(
@@ -226,6 +228,8 @@ public static class ModularMonolithApplication
             scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
         FulfillmentDbContext fulfillmentContext =
             scope.ServiceProvider.GetRequiredService<FulfillmentDbContext>();
+        BillingDbContext billingContext =
+            scope.ServiceProvider.GetRequiredService<BillingDbContext>();
         IDurableOperationReader operationReader =
             scope.ServiceProvider.GetRequiredService<IDurableOperationReader>();
         IDurableOperationResultReader operationResultReader =
@@ -244,7 +248,9 @@ public static class ModularMonolithApplication
             + await orderingContext
                 .Set<InboxMessageEntity>()
                 .CountAsync(entity => entity.ProcessedAtUtc != null, ct)
-            + await serviceProvider.CountBillingProcessedInboxAsync(ct);
+            + await billingContext
+                .Set<InboxMessageEntity>()
+                .CountAsync(entity => entity.ProcessedAtUtc != null, ct);
         int dispatchedOutboxCount =
             await orderingContext
                 .Set<OutboxMessageEntity>()
@@ -271,7 +277,7 @@ public static class ModularMonolithApplication
             await fulfillmentContext.Reservations.CountAsync(ct),
             await fulfillmentContext.OrderEvents.CountAsync(ct),
             await orderingContext.InventoryReservations.CountAsync(ct),
-            await serviceProvider.CountBillingInvoicesAsync(ct),
+            await billingContext.Invoices.CountAsync(ct),
             processedInboxCount,
             dispatchedOutboxCount,
             fulfillmentDomainEventRecordCount,
@@ -281,70 +287,6 @@ public static class ModularMonolithApplication
             operationState?.Status);
     }
 
-    private static async Task EnsureBillingDatabaseAsync(
-        this IServiceProvider serviceProvider,
-        CancellationToken ct)
-    {
-        await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
-        NpgsqlDataSource dataSource =
-            scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
-
-        await PostgresSchema.EnsureDurableMessagingTablesAsync(
-            dataSource,
-            BillingModule.ModuleName,
-            ct);
-        await using NpgsqlConnection connection =
-            await dataSource.OpenConnectionAsync(ct);
-        await using NpgsqlCommand command = connection.CreateCommand();
-        command.CommandText =
-            """
-            CREATE TABLE IF NOT EXISTS billing.invoices (
-                "Id" uuid NOT NULL,
-                "OrderId" uuid NOT NULL,
-                "Sku" text NOT NULL,
-                "Quantity" integer NOT NULL,
-                CONSTRAINT "PK_billing_invoices" PRIMARY KEY ("Id")
-            )
-            """;
-        await command.ExecuteNonQueryAsync(ct);
-    }
-
-    private static async Task<int> CountBillingInvoicesAsync(
-        this IServiceProvider serviceProvider,
-        CancellationToken ct)
-    {
-        await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
-        NpgsqlDataSource dataSource =
-            scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
-        await using NpgsqlConnection connection =
-            await dataSource.OpenConnectionAsync(ct);
-        await using NpgsqlCommand command = connection.CreateCommand();
-        command.CommandText = """SELECT COUNT(*) FROM billing.invoices""";
-        object? result = await command.ExecuteScalarAsync(ct);
-
-        return Convert.ToInt32(result, provider: null);
-    }
-
-    private static async Task<int> CountBillingProcessedInboxAsync(
-        this IServiceProvider serviceProvider,
-        CancellationToken ct)
-    {
-        await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
-        NpgsqlDataSource dataSource =
-            scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
-        await using NpgsqlConnection connection =
-            await dataSource.OpenConnectionAsync(ct);
-        await using NpgsqlCommand command = connection.CreateCommand();
-        command.CommandText =
-            """
-            SELECT COUNT(*)
-            FROM billing.inbox_messages
-            WHERE "ProcessedAtUtc" IS NOT NULL
-            """;
-        object? result = await command.ExecuteScalarAsync(ct);
-
-        return Convert.ToInt32(result, provider: null);
-    }
 }
 
 public sealed record PlaceOrderRequest(

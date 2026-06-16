@@ -23,15 +23,11 @@ persistence provider, transport adapter, or optional capability.
   Core persistence mappings and boundaries.
 - [Bondstone.Persistence.EntityFrameworkCore.Postgres](Bondstone.Persistence.EntityFrameworkCore.Postgres)
   contains PostgreSQL-specific EF Core integration.
-- [Bondstone.Persistence.Postgres](Bondstone.Persistence.Postgres) contains
-  PostgreSQL non-EF durable module persistence.
 - [Bondstone.Transport](Bondstone.Transport) contains provider-neutral
   transport topology diagnostic contracts.
 - [Bondstone.Transport.Local](Bondstone.Transport.Local) contains explicit
   local queue routing for samples, tests, and local development.
 - [Bondstone.Transport.RabbitMq](Bondstone.Transport.RabbitMq) contains the
   RabbitMQ direct transport adapter.
-- [Bondstone.Transport.ServiceBus](Bondstone.Transport.ServiceBus) contains the
-  Azure Service Bus direct transport adapter.
 
 See [../tests](../tests) for package and integration-boundary tests.

@@ -8,20 +8,18 @@ policy, see [packaging.md](packaging.md).
 
 ## Capability Matrix
 
-| Capability                                                                                                                    | Package ID                                                | Common namespaces                                                               | Notes                                                                                                                                                      |
-| ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Host composition, module registration, command/event contracts, durable send/publish, module execution, payload serialization | `Bondstone`                                               | `Bondstone.Configuration`, `Bondstone.Modules`, `Bondstone.Messaging`           | The normal entrypoint is `services.AddBondstone(...)`; modules register commands, events, durable messaging, and optional persistence through the builder. |
-| Provider-neutral durable persistence contracts, envelopes, outbox, inbox, operation state, dispatcher contracts               | `Bondstone.Persistence`                                   | `Bondstone.Persistence`, `Bondstone.Messaging`                                  | Use directly for custom persistence, custom dispatch composition, low-level inbox/outbox work, and operation-state reads.                                  |
-| EF Core durable persistence mappings and module transaction behavior                                                          | `Bondstone.Persistence.EntityFrameworkCore`               | `Bondstone.Persistence.EntityFrameworkCore.Persistence`                         | Provides `ApplyBondstonePersistence(...)`, granular EF mapping helpers, and `UseEntityFrameworkCorePersistence<TDbContext>()`.                             |
-| EF Core plus PostgreSQL durable persistence helpers                                                                           | `Bondstone.Persistence.EntityFrameworkCore.Postgres`      | `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence`                | Preferred EF/PostgreSQL module setup is `module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: ...)`.                                      |
-| Non-EF PostgreSQL durable module persistence                                                                                  | `Bondstone.Persistence.Postgres`                          | `Bondstone.Persistence.Postgres.Persistence`                                    | Provides `UsePostgresPersistence(...)`, `IPostgresModuleSession`, and `PostgresSchema` proof/test helpers.                                                 |
-| Hosted durable outbox worker and default dispatcher registration                                                              | `Bondstone.Hosting`                                       | `Bondstone.Hosting.Outbox`                                                      | Normal hosts use `bondstone.Outbox.UseWorker(...)`; advanced schedulers can use the dispatcher registration separately.                                    |
-| Provider-neutral transport diagnostics and topology contracts                                                                 | `Bondstone.Transport`                                     | `Bondstone.Configuration`, `Bondstone.Messaging`                                | Used by transport adapters and custom diagnostics; normal app setup usually references a concrete transport package.                                       |
-| Explicit local in-process transport for samples, tests, and local development                                                 | `Bondstone.Transport.Local`                               | `Bondstone.Transport.Local.Outbox`                                              | Use `UseLocalTransport(...)` when the host intentionally routes through local queues and Bondstone receive pipelines.                                      |
-| RabbitMQ direct transport adapter                                                                                             | `Bondstone.Transport.RabbitMq`                            | `Bondstone.Transport.RabbitMq.Outbox`, `Bondstone.Transport.RabbitMq.Inbox`     | Production-oriented direct adapter with provider-native topology vocabulary and opt-in receive workers.                                                    |
-| Azure Service Bus direct transport adapter                                                                                    | `Bondstone.Transport.ServiceBus`                          | `Bondstone.Transport.ServiceBus.Outbox`, `Bondstone.Transport.ServiceBus.Inbox` | Production-oriented direct adapter with queue, topic, subscription, and receive-source vocabulary.                                                         |
-| Module-local domain event contracts                                                                                           | `Bondstone.Capabilities.DomainEvents`                     | `Bondstone.Capabilities.DomainEvents`                                           | Contains `IDomainEvent`, `DomainEventIdentityAttribute`, `IDomainEventSource`, and `IDomainEventHandler<TDomainEvent>`. It is not a transport bus.         |
-| EF Core module-local domain event persistence bridge                                                                          | `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` | `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence`           | Adds `UseEntityFrameworkCoreDomainEventPersistence()` and `ApplyBondstoneDomainEvents(...)` for EF-backed modules.                                         |
+| Capability                                                                                                                    | Package ID                                                | Common namespaces                                                           | Notes                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Host composition, module registration, command/event contracts, durable send/publish, module execution, payload serialization | `Bondstone`                                               | `Bondstone.Configuration`, `Bondstone.Modules`, `Bondstone.Messaging`       | The normal entrypoint is `services.AddBondstone(...)`; modules register commands, events, durable messaging, and optional persistence through the builder. |
+| Provider-neutral durable persistence contracts, envelopes, outbox, inbox, operation state, dispatcher contracts               | `Bondstone.Persistence`                                   | `Bondstone.Persistence`, `Bondstone.Messaging`                              | Use directly for custom persistence, custom dispatch composition, low-level inbox/outbox work, and operation-state reads.                                  |
+| EF Core durable persistence mappings and module transaction behavior                                                          | `Bondstone.Persistence.EntityFrameworkCore`               | `Bondstone.Persistence.EntityFrameworkCore.Persistence`                     | Provides `ApplyBondstonePersistence(...)`, granular EF mapping helpers, and `UseEntityFrameworkCorePersistence<TDbContext>()`.                             |
+| EF Core plus PostgreSQL durable persistence helpers                                                                           | `Bondstone.Persistence.EntityFrameworkCore.Postgres`      | `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence`            | Preferred EF/PostgreSQL module setup is `module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: ...)`.                                      |
+| Hosted durable outbox worker and default dispatcher registration                                                              | `Bondstone.Hosting`                                       | `Bondstone.Hosting.Outbox`                                                  | Normal hosts use `bondstone.Outbox.UseWorker(...)`; advanced schedulers can use the dispatcher registration separately.                                    |
+| Provider-neutral transport diagnostics and topology contracts                                                                 | `Bondstone.Transport`                                     | `Bondstone.Configuration`, `Bondstone.Messaging`                            | Used by transport adapters and custom diagnostics; normal app setup usually references a concrete transport package.                                       |
+| Explicit local in-process transport for samples, tests, and local development                                                 | `Bondstone.Transport.Local`                               | `Bondstone.Transport.Local.Outbox`                                          | Use `UseLocalTransport(...)` when the host intentionally routes through local queues and Bondstone receive pipelines.                                      |
+| RabbitMQ direct transport adapter                                                                                             | `Bondstone.Transport.RabbitMq`                            | `Bondstone.Transport.RabbitMq.Outbox`, `Bondstone.Transport.RabbitMq.Inbox` | Thin direct adapter and sample broker path with provider-native vocabulary and opt-in receive workers.                                                     |
+| Module-local domain event contracts                                                                                           | `Bondstone.Capabilities.DomainEvents`                     | `Bondstone.Capabilities.DomainEvents`                                       | Contains `IDomainEvent`, `DomainEventIdentityAttribute`, `IDomainEventSource`, and `IDomainEventHandler<TDomainEvent>`. It is not a transport bus.         |
+| EF Core module-local domain event persistence bridge                                                                          | `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` | `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence`       | Adds `UseEntityFrameworkCoreDomainEventPersistence()` and `ApplyBondstoneDomainEvents(...)` for EF-backed modules.                                         |
 
 Package IDs match project names. The full package inventory and dependency
 direction live in [packaging.md](packaging.md).
@@ -145,20 +143,9 @@ Common APIs include:
   `services.AddBondstonePostgreSqlModulePersistence<TDbContext>(...)` for
   advanced composition.
 
-For direct non-EF PostgreSQL module persistence, import:
-
-```csharp
-using Bondstone.Persistence.Postgres.Persistence;
-```
-
-Common APIs include:
-
-- `module.UsePostgresPersistence(connectionString, schema: ...)`;
-- `bondstone.UsePostgresPersistence(moduleName, connectionString, schema: ...)`;
-- `IPostgresModuleSession` for handler SQL inside the current module
-  transaction;
-- `PostgresSchema.EnsureDurableMessagingTablesAsync(...)` for explicit
-  proof, test, or sample schema creation helpers.
+The direct non-EF `Bondstone.Persistence.Postgres` package was removed after
+MVP. EF Core plus `Bondstone.Persistence.EntityFrameworkCore.Postgres` is the
+supported PostgreSQL persistence path.
 
 ## Hosting And Outbox Worker
 
@@ -250,8 +237,6 @@ records, not outbox records.
   describes EF Core mappings and transaction behavior.
 - [architecture/persistence-postgresql.md](architecture/persistence-postgresql.md)
   describes EF/PostgreSQL provider behavior.
-- [architecture/persistence-postgres.md](architecture/persistence-postgres.md)
-  describes non-EF PostgreSQL persistence behavior.
 - [architecture/hosting.md](architecture/hosting.md) describes the durable
   outbox worker.
 - [architecture/transport-local.md](architecture/transport-local.md)

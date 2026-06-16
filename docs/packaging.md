@@ -9,7 +9,8 @@ Bondstone targets `net10.0`.
 
 ## Package Set
 
-Ship one NuGet package per package project. Package IDs match project names:
+Ship one NuGet package per active package project included in `Bondstone.slnx`.
+Package IDs match project names:
 
 - `Bondstone`
 - `Bondstone.Capabilities.DomainEvents`
@@ -18,30 +19,28 @@ Ship one NuGet package per package project. Package IDs match project names:
 - `Bondstone.Persistence`
 - `Bondstone.Persistence.EntityFrameworkCore`
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres`
-- `Bondstone.Persistence.Postgres`
 - `Bondstone.Transport`
 - `Bondstone.Transport.Local`
-- `Bondstone.Transport.ServiceBus`
 - `Bondstone.Transport.RabbitMq`
 
 For a consumer-facing capability and namespace matrix, see
 [package-discovery.md](package-discovery.md).
 
-`Bondstone.Transport.ServiceBus` and `Bondstone.Transport.RabbitMq` are the
-production-oriented direct transport adapters. They include outgoing durable
-outbox dispatch, provider-native receive topology, opt-in hosted receive
-workers, and provider-backed receive integration tests. Broker administration
-remains app-owned. Multi-transport outbox selection is implemented through
-provider route candidates and `RoutedDurableOutboxTransport`.
+`Bondstone.Transport.RabbitMq` is the remaining direct broker adapter in the
+active package set. It includes outgoing durable outbox dispatch,
+provider-native receive topology, opt-in hosted receive workers, and
+provider-backed receive integration tests. Broker administration remains
+app-owned. RabbitMQ stays a thin adapter/sample path while the post-MVP
+transport model is simplified.
 
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
 tests, and local development. It exercises outbox/inbox receive semantics
 through the provider-neutral receive pipelines, but it is not a production
 broker adapter or hidden fallback.
 
-`Bondstone.Persistence.Postgres` is PostgreSQL-specific and Dapper-backed
-internally. It provides durable module messaging persistence without EF Core;
-it is not a generic Dapper provider abstraction.
+`Bondstone.Persistence.Postgres` and `Bondstone.Transport.ServiceBus` were
+removed from the active package set after MVP. Reintroducing either package
+requires ADR review and a real consumer need.
 
 `Bondstone.Capabilities.DomainEvents` is intentionally small. It contains
 module-local domain event capability contracts only; it is not a domain event
@@ -83,13 +82,8 @@ Use this dependency direction:
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres` depends on
   `Bondstone.Persistence.EntityFrameworkCore`, `Bondstone.Persistence`, and
   may reference `Bondstone` directly for shared builder extension methods.
-- `Bondstone.Persistence.Postgres` depends on `Bondstone`,
-  `Bondstone.Persistence`, `Dapper`, and `Npgsql`.
 - `Bondstone.Transport.Local` depends on `Bondstone`, `Bondstone.Persistence`,
   and `Bondstone.Transport`.
-- `Bondstone.Transport.ServiceBus` depends on `Bondstone`,
-  `Bondstone.Persistence`, `Bondstone.Transport`, and
-  `Azure.Messaging.ServiceBus`.
 - `Bondstone.Transport.RabbitMq` depends on `Bondstone`,
   `Bondstone.Persistence`, `Bondstone.Transport`, and `RabbitMQ.Client`.
 

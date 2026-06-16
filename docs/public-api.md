@@ -92,11 +92,13 @@ This first pass covers all current package projects:
 - `Bondstone.Persistence`
 - `Bondstone.Persistence.EntityFrameworkCore`
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres`
-- `Bondstone.Persistence.Postgres`
 - `Bondstone.Transport`
 - `Bondstone.Transport.Local`
 - `Bondstone.Transport.RabbitMq`
-- `Bondstone.Transport.ServiceBus`
+
+`Bondstone.Persistence.Postgres` and `Bondstone.Transport.ServiceBus` were
+removed from the active product surface and are not covered by the current
+default public API baseline.
 
 ## Bondstone
 
@@ -291,36 +293,6 @@ Public implementation detail exposed for now:
 - `PostgreSqlDurableOutboxDispatchRecorder<TDbContext>`
 - `PostgreSqlModuleDurableOutboxDispatcher<TDbContext>`
 
-## Bondstone.Persistence.Postgres
-
-Normal setup API:
-
-- `BondstonePostgresBuilderExtensions`
-- `BondstonePostgresServiceCollectionExtensions`
-
-User application contract:
-
-- `IPostgresModuleSession`
-
-Advanced composition API:
-
-- `PostgresSchema`
-
-Public implementation detail exposed for now:
-
-- `PostgresModuleSession`
-- `PostgresDurableOutboxWriter`
-- `PostgresModuleDurableOutboxWriter`
-- `PostgresDurableInboxRegistrar`
-- `PostgresDurableInboxStore`
-- `PostgresModuleDurableInboxHandlerExecutor`
-- `PostgresDurableOperationStateStore`
-- `PostgresModuleDurableOperationStateStore`
-- `PostgresDurableOutboxClaimer`
-- `PostgresDurableOutboxLeaseRenewer`
-- `PostgresDurableOutboxDispatchRecorder`
-- `PostgresModuleDurableOutboxDispatcher`
-
 ## Bondstone.Hosting
 
 Normal setup API:
@@ -357,54 +329,6 @@ Normal setup API:
 - `BondstoneLocalModuleRouteBuilder`
 - `BondstoneLocalEventRouteBuilder`
 - `BondstoneLocalQueueBuilder`
-
-## Bondstone.Transport.ServiceBus
-
-Normal setup API:
-
-- `BondstoneServiceBusBuilderExtensions`
-  (`BondstoneBuilder.UseServiceBusTransport(...)` overload)
-- `BondstoneServiceBusServiceCollectionExtensions`
-- `BondstoneServiceBusTransportBuilder`
-- `BondstoneServiceBusModuleRouteBuilder`
-- `BondstoneServiceBusEventRouteBuilder`
-- `BondstoneServiceBusReceiveSourceBuilder`
-- `ServiceBusReceiveWorkerOptions`
-
-User application contract:
-
-- `ServiceBusCommandDestinationDiagnostic`
-- `ServiceBusCommandDestinationSource`
-- `ServiceBusEventDestination`
-- `ServiceBusEventDestinationDiagnostic`
-- `ServiceBusEventDestinationKind`
-- `ServiceBusEventDestinationSource`
-- `ServiceBusReceiveSourceDiagnostic`
-- `ServiceBusReceiveSourceEventSubscriptionDiagnostic`
-
-Advanced composition API:
-
-- `BondstoneServiceBusBuilderExtensions`
-  (`BondstoneOutboxBuilder.UseServiceBusTransport(...)` overload)
-- `IServiceBusReceivedMessageDispatcher`
-- `IServiceBusReceivedMessageHandler`
-- `ServiceBusReceivedMessageMapper`
-- `ServiceBusReceiveSource`
-- `ServiceBusReceiveSourceKind`
-- `ServiceBusTransportMessage`
-
-Provider/runtime contract:
-
-- `IServiceBusMessageSender`
-- `IServiceBusOutboxDestinationResolver`
-- `IServiceBusOutboxEventDestinationResolver`
-- `IServiceBusTopologyDiagnostics`
-
-Public implementation detail exposed for now:
-
-- `BondstoneServiceBusHeaders`
-- `ServiceBusDurableMessageEnvelope`
-- `ServiceBusDurableOutboxTransport`
 
 ## Bondstone.Transport.RabbitMq
 

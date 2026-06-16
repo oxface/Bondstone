@@ -10,8 +10,7 @@ without pretending to provide production broker durability.
 
 Use this package for samples, tests, and local development that need explicit
 in-process queue routing. Production-oriented hosts should use a direct
-broker adapter such as `Bondstone.Transport.RabbitMq` or
-`Bondstone.Transport.ServiceBus`.
+broker adapter such as `Bondstone.Transport.RabbitMq`.
 
 Install this package only when the host intentionally routes durable messages
 through local queues and Bondstone receive pipelines. It is not a production

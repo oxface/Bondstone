@@ -235,9 +235,9 @@ result diagnostic context contract existed.
 ## Provider Boundaries
 
 Persistence contracts are intentionally provider-neutral.
-`Bondstone.Persistence.Postgres` is the PostgreSQL-specific non-EF persistence
-provider. It implements these contracts directly, owns its PostgreSQL-specific
-connection/session and transaction boundary in its own package, and commits
-outside core orchestration primitives.
-Non-EF providers should not depend on EF entity mappings,
-`DbContext`, or `IEntityFrameworkCorePersistenceScope`.
+EF Core with PostgreSQL-specific behavior is the supported provider path in
+the active product surface. Provider-neutral contracts remain where they keep
+EF/PostgreSQL honest and support outbox, inbox, operation-state, and receive
+pipeline composition. The previous direct non-EF PostgreSQL provider was
+removed after MVP; future non-EF providers should not depend on EF entity
+mappings, `DbContext`, or `IEntityFrameworkCorePersistenceScope`.

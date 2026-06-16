@@ -6,15 +6,14 @@
 sample. It proves the current durable command and integration event loop with:
 
 - module registration for `ordering`, `fulfillment`, and `billing`;
-- mixed persistence with EF-backed ordering/fulfillment modules and a
-  `Bondstone.Persistence.Postgres` billing module;
+- EF-backed ordering, fulfillment, and billing modules;
 - module-owned assemblies with `IBondstoneModule` registration objects,
   assembly-scanned command handler registration, and explicit event
   registration;
 - ordering and fulfillment contract assemblies that publish
   `OrderPlacedEvent` and `InventoryReservedEvent`;
 - separate module-owned EF Core `DbContext` types and PostgreSQL schemas;
-- a billing schema using `Bondstone.Persistence.Postgres`;
+- a billing schema using EF Core/PostgreSQL persistence;
 - EF-backed module-local domain event persistence in fulfillment;
 - outbox-backed durable command sending from ordering to fulfillment;
 - outbox-backed durable event publishing from ordering and fulfillment;

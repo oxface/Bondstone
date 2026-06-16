@@ -5,8 +5,8 @@ using Bondstone.Hosting.Outbox;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
+using Bondstone.Transport.Local.Outbox;
 using Bondstone.Transport.RabbitMq.Outbox;
-using Bondstone.Transport.ServiceBus.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -69,51 +69,10 @@ public sealed class AddBondstoneCompositionTests
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task AddBondstone_WithTwoTransports_RoutesOutboxRecordsByProviderTopology()
-    {
-        var rabbitMqPublisher = new RecordingRabbitMqMessagePublisher();
-        var serviceBusSender = new RecordingServiceBusMessageSender();
-        var services = new ServiceCollection();
-        services.AddSingleton<IRabbitMqMessagePublisher>(rabbitMqPublisher);
-        services.AddSingleton<IServiceBusMessageSender>(serviceBusSender);
-
-        services.AddBondstone(bondstone =>
-        {
-            bondstone.UseRabbitMqTransport(rabbitMq =>
-            {
-                rabbitMq.UseCommandExchange("bondstone.commands");
-                rabbitMq.RouteModule("fulfillment").ToRoutingKey("fulfillment.commands");
-            });
-            bondstone.UseServiceBusTransport(serviceBus =>
-                serviceBus.RouteModule("billing").ToQueue("billing-commands"));
-        });
-
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider(
-            new ServiceProviderOptions
-            {
-                ValidateOnBuild = true,
-                ValidateScopes = true,
-            });
-        IDurableOutboxTransport transport =
-            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
-
-        await transport.SendAsync(CreateOutboxRecord(targetModule: "fulfillment"));
-
-        Assert.Equal("fulfillment.commands", rabbitMqPublisher.Destination?.RoutingKey);
-        Assert.Null(serviceBusSender.EntityName);
-
-        await transport.SendAsync(CreateOutboxRecord(targetModule: "billing"));
-
-        Assert.Equal("billing-commands", serviceBusSender.EntityName);
-    }
-
-    [Fact]
-    [Trait("Category", "Application")]
     public void AddBondstone_WithTwoTransportsAndNoMatchingCommandRoute_ThrowsAtStartup()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
-        services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
@@ -126,19 +85,19 @@ public sealed class AddBondstoneCompositionTests
                 });
                 bondstone.UseRabbitMqTransport(
                     rabbitMq => rabbitMq.UseCommandExchange("bondstone.commands"));
-                bondstone.UseServiceBusTransport(_ => { });
+                bondstone.UseLocalTransport(_ => { });
             }));
 
         Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("module 'fulfillment'", exception.Message, StringComparison.Ordinal);
         Assert.Contains("RabbitMq", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("ServiceBus", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Local", exception.Message, StringComparison.Ordinal);
         Assert.Contains(
             "No RabbitMQ routing key is configured for target module 'fulfillment'.",
             exception.Message,
             StringComparison.Ordinal);
         Assert.Contains(
-            "No Service Bus queue is configured for target module 'fulfillment'.",
+            "Local transport has no queue binding for target module 'fulfillment'.",
             exception.Message,
             StringComparison.Ordinal);
     }
@@ -149,7 +108,6 @@ public sealed class AddBondstoneCompositionTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
-        services.AddSingleton<IServiceBusMessageSender>(new RecordingServiceBusMessageSender());
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
@@ -162,14 +120,21 @@ public sealed class AddBondstoneCompositionTests
                 });
                 bondstone.UseRabbitMqTransport(
                     rabbitMq => rabbitMq.RouteEvent("composition.event.v1").ToQueue("events"));
-                bondstone.UseServiceBusTransport(
-                    serviceBus => serviceBus.RouteEvent("composition.event.v1").ToQueue("events"));
+                bondstone.UseLocalTransport(local =>
+                {
+                    local.RouteEvent("composition.event.v1").ToQueue("events");
+                    local.Queue("events")
+                        .SubscribeEvent(
+                            "composition.event.v1",
+                            "sales",
+                            "sales.composition-projection.v1");
+                });
             }));
 
         Assert.Contains("Multiple durable outbox transport routes", exception.Message, StringComparison.Ordinal);
         Assert.Contains("composition.event.v1", exception.Message, StringComparison.Ordinal);
         Assert.Contains("RabbitMq", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("ServiceBus", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Local", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -229,28 +194,6 @@ public sealed class AddBondstoneCompositionTests
             traceContext: new MessageTraceContext(
                 "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00"),
             partitionKey: "orders/A-100");
-    }
-
-    private static DurableOutboxRecord CreateOutboxRecord(
-        string targetModule)
-    {
-        var envelope = new DurableMessageEnvelope(
-            Guid.NewGuid(),
-            MessageKind.Command,
-            "fulfillment.order.reserve.v1",
-            "sales",
-            targetModule,
-            """{"orderId":"A-100"}""",
-            DateTimeOffset.Parse("2026-06-05T12:00:00+00:00"));
-
-        return new DurableOutboxRecord(
-            envelope,
-            DateTimeOffset.Parse("2026-06-05T12:00:01+00:00"),
-            new DurableOutboxDispatchState(
-                DurableOutboxStatus.Processing,
-                attemptCount: 1,
-                claimedBy: "worker-1",
-                claimedUntilUtc: DateTimeOffset.Parse("2026-06-05T12:05:00+00:00")));
     }
 
     private sealed class CompositionDbContext(DbContextOptions<CompositionDbContext> options)
@@ -331,17 +274,4 @@ public sealed class AddBondstoneCompositionTests
         }
     }
 
-    private sealed class RecordingServiceBusMessageSender : IServiceBusMessageSender
-    {
-        public string? EntityName { get; private set; }
-
-        public ValueTask SendAsync(
-            string entityName,
-            ServiceBusTransportMessage message,
-            CancellationToken ct = default)
-        {
-            EntityName = entityName;
-            return ValueTask.CompletedTask;
-        }
-    }
 }

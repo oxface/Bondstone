@@ -9,8 +9,6 @@ Persistence docs are split by ownership boundary:
   EF Core mappings, stores, and the EF persistence scope.
 - [persistence-postgresql.md](persistence-postgresql.md) describes
   PostgreSQL-specific registration, SQL behavior, and integration coverage.
-- [persistence-postgres.md](persistence-postgres.md) describes
-  the PostgreSQL-specific non-EF persistence proof.
 
 Current package ownership is recorded in [../packaging.md](../packaging.md).
 
@@ -57,9 +55,9 @@ provider name marks that the module declares persistence and lets provider
 transaction behaviors decide whether they own command or event subscriber
 execution. EF Core module persistence also records the module `DbContext` type
 so EF transaction behavior can resolve the context and validate required
-durable messaging mappings. Non-EF providers keep provider-specific metadata
-such as schema, session, connection, and SQL configuration in provider-owned
-services.
+durable messaging mappings. Future non-EF providers should keep
+provider-specific metadata such as schema, session, connection, and SQL
+configuration in provider-owned services.
 
 Provider module helpers contribute passive durable module runtime
 registrations into `DurableModulePersistenceRegistrationRegistry` rather than
@@ -127,9 +125,7 @@ Capability bridge packages own their persisted shapes and provider-specific
 tests. Provider-owned SQL should reuse table, column, and constraint names
 from the bridge mappings when those mappings define the persisted shape.
 
-`Bondstone.Persistence.Postgres` is PostgreSQL-specific and Dapper-backed, but
-Dapper is an internal implementation helper rather than the public
-abstraction. The package implements the `Bondstone.Persistence` contracts
-directly and owns its connection/session and transaction boundary without
-depending on EF entity mappings, `DbContext`, or
-`IEntityFrameworkCorePersistenceScope`.
+EF Core with PostgreSQL durability semantics is the supported persistence path
+for the post-MVP MVP. The previous direct non-EF
+`Bondstone.Persistence.Postgres` proof was removed after MVP. Future non-EF
+persistence work should come from real consumer need and ADR review.

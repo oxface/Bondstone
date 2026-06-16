@@ -5,9 +5,10 @@ durable messaging.
 
 ## Quick Path
 
-Most applications should install a concrete transport package such as
-`Bondstone.Transport.RabbitMq` or `Bondstone.Transport.ServiceBus` and use its
-`AddBondstone` transport extension from
+Most applications should install the concrete `Bondstone.Transport.RabbitMq`
+transport package when using the remaining direct broker adapter, or use
+`Bondstone.Transport.Local` for samples, tests, and local development. Use the
+transport extension from
 [the setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md).
 Use this package directly for custom transport adapters or diagnostic tooling.
 

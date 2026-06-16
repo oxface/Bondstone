@@ -208,6 +208,54 @@ Public API curation, 2026-06-16:
   this slice. The next reduction should remove an entire obsolete capability
   or package surface, not rename individual concrete types for tidiness.
 
+V2 public API cleanup start, 2026-06-16:
+
+- The inventory is package-based. Types that appear in one package baseline
+  only because a public member references another package's public type should
+  be classified where the type is defined.
+- Documented normal setup APIs stay public unless a replacement setup path is
+  approved. Cleanup should not hide broad setup builders simply because they
+  are convenient.
+- Provider/runtime contracts may remain public when package collaboration needs
+  explicit contracts. Prefer small, named contracts over production
+  `InternalsVisibleTo`.
+- Public concrete implementation types remain cleanup candidates only when a
+  v2 decision can either hide them, replace them with a deliberate contract, or
+  document them as advanced composition.
+- Receive worker settlement options remain decision candidates. The current
+  RabbitMQ `AutoAck` option is provider-native and unsafe for production
+  durable receive paths that rely on Bondstone's inbox/outbox transaction, but
+  renaming or removing it is a breaking adapter API decision.
+
+Transport receive settlement cleanup, 2026-06-16:
+
+- `RabbitMqReceiveWorkerOptions.AutoAck` was removed. The RabbitMQ receive
+  worker now always consumes with manual acknowledgement and acknowledges only
+  after Bondstone durable receive succeeds.
+- `RabbitMqReceiveWorkerOptions.RequeueOnFailure` remains a bool because it is
+  only the native RabbitMQ nack requeue flag. Bondstone still does not own
+  broker retry, delivery-count, dead-letter, or requeue policy.
+- `ServiceBusReceiveWorkerOptions.ProcessorOptions` remains public as the
+  deliberate advanced native-driver escape hatch for the opt-in receive
+  worker. `AutoCompleteMessages = true` is rejected during worker registration
+  because Bondstone requires manual completion after durable receive succeeds.
+
+Remaining v2 decisions for approval:
+
+- EF Core entity and configuration types: decide which are deliberate mapping
+  contracts and which can become internal once mapping helpers cover normal
+  use.
+- Provider concrete stores and dispatchers: decide whether advanced manual
+  composition needs direct construction, or whether public interfaces plus
+  service registration helpers are enough.
+- Hosting concrete worker types: decide whether direct construction remains an
+  advanced scheduler/testing contract or should be hidden behind registration
+  helpers.
+- `SystemTextJsonDurablePayloadSerializer` and
+  `SystemTextJsonDurableMessageEnvelopeSerializer`: decide whether these
+  default implementations are deliberate app-facing defaults or only DI
+  implementation details.
+
 ## Current Scope
 
 This first pass covers all current package projects:
@@ -272,7 +320,6 @@ User application contract:
 - `IModuleExecutionContextAccessor`
 - `DurableCommandIdentityAttribute`
 - `IntegrationEventIdentityAttribute`
-- `DurableOperationDiagnosticContext`
 - `DurableEnvelopeReceiveBinding`
 - `MessageTypeRegistration`
 - `DurableCommandSendResult`
@@ -356,6 +403,11 @@ Advanced composition API:
 - `IDurableOutboxFailurePolicy`
 - `IDurableEnvelopeDispatcher`
 - `IDurableEnvelopeDispatchRoute`
+- `DurableOutboxFailurePolicy`
+- `RoutedDurableEnvelopeDispatcher`
+
+Provider/runtime contract:
+
 - `IDurableOutboxWriter`
 - `IDurableInboxHandlerExecutor`
 - `IDurableInboxRegistrar`
@@ -367,11 +419,6 @@ Advanced composition API:
 - `IDurableOutboxDispatchRecorder`
 - `IDurableOutboxInspectionStore`
 - `IDurableInboxInspectionStore`
-- `DurableInboxHandlerExecutor`
-- `DurableOutboxDispatcher`
-- `DurableOutboxFailurePolicy`
-- `RoutedDurableEnvelopeDispatcher`
-
 - `DurableModulePersistenceRegistrationRegistry`
 - `DurableModuleOutboxWriterRegistration`
 - `DurableModuleInboxHandlerExecutorRegistration`
@@ -379,6 +426,12 @@ Advanced composition API:
 - `DurableModuleOperationStateStoreRegistration`
 - `DurableModuleOutboxDispatcherRegistration`
 - `DurableModuleOutboxInspectionStoreRegistration`
+
+Public implementation detail exposed for now:
+
+- `DurableInboxHandlerExecutor`
+- `DurableOutboxDispatcher`
+- `SystemTextJsonDurableMessageEnvelopeSerializer`
 - `DurableModuleOutboxDispatchAggregator`
 
 ## Bondstone.Persistence.EntityFrameworkCore

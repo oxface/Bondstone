@@ -1,6 +1,6 @@
 # 0008 Thin Broker Adapters
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-16
 
@@ -55,6 +55,24 @@ workers pass native message bodies plus optional
 native success settlement. Failure settlement remains native and option-based
 inside the explicitly registered worker.
 
+## Amendment 2026-06-16 Receive Worker Settlement Options
+
+RabbitMQ receive workers must use manual acknowledgement. The public
+`RabbitMqReceiveWorkerOptions.AutoAck` escape hatch was removed for v2 because
+provider-native automatic acknowledgement settles the broker delivery before
+Bondstone can prove durable receive through the module transaction. The worker
+now always passes `autoAck: false`, acknowledges after
+`IDurableEnvelopeReceiver` succeeds, and nacks failed receives.
+
+`RabbitMqReceiveWorkerOptions.RequeueOnFailure` remains the RabbitMQ failure
+handoff option. It is intentionally only the native nack requeue flag, not a
+Bondstone retry, delivery-count, or dead-letter policy abstraction.
+
+`ServiceBusReceiveWorkerOptions.ProcessorOptions` remains public as the
+deliberate advanced native-driver escape hatch for the opt-in Service Bus
+receive worker. The worker requires `AutoCompleteMessages = false` so
+Bondstone completes native messages only after durable receive succeeds.
+
 ## Consequences
 
 The adapter packages make common driver integrations easier without changing
@@ -96,7 +114,10 @@ shows a package can add value without fighting Rebus's own bus model.
   registration tests, Testcontainers-backed adapter integration tests, public
   API baselines, package documentation, setup examples, and sample-level
   extracted-service broker tests. Core receive helpers accept durable
-  envelopes and serialized durable envelope payloads.
+  envelopes and serialized durable envelope payloads. The v2 settlement
+  cleanup removed RabbitMQ auto-ack from the receive worker, kept RabbitMQ
+  failure requeue as a native nack flag, and kept Service Bus processor
+  options with a manual-completion guard.
 - Pending or deferred: Rebus adapter package remains deferred. Broker retry,
   settlement exhaustion, delivery counts, and dead-letter topology remain
   app-owned unless a narrower Bondstone-owned behavior is accepted.
@@ -115,3 +136,7 @@ Verified with:
 - `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~ModularMonolithBrokerAdapterSampleTests" --disable-build-servers`
 - `pnpm backend:test:integration`
 - `pnpm check`
+
+On 2026-06-16, the receive-worker settlement amendment was applied to code,
+stable docs, and public API baselines, with focused RabbitMQ and Service Bus
+unit tests added for option defaults and manual-completion validation.

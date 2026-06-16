@@ -20,6 +20,12 @@ Install the packages needed for the host:
 - `Bondstone.Transport.Local` when a sample, test, or local development host
   explicitly wants in-process queue routing through the durable receive
   pipelines.
+- `Bondstone.Transport.RabbitMq` when a host already owns RabbitMQ topology and
+  wants thin native-driver envelope dispatch or an explicitly registered
+  receive worker.
+- `Bondstone.Transport.ServiceBus` when a host already owns Azure Service Bus
+  entities and wants thin native-driver envelope dispatch or an explicitly
+  registered receive worker.
 
 ## Adoption Path
 
@@ -37,15 +43,19 @@ Domain event contracts are in the core `Bondstone` package. EF-backed
 module-local domain event persistence uses
 `Bondstone.Persistence.EntityFrameworkCore` and remains explicit opt-in.
 
-Use `Bondstone.Transport.Local` for the quick-start path. Real broker
-integrations are app-owned: register outbound publishing with
-`UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
+Use `Bondstone.Transport.Local` for the quick-start path. Broker integrations
+remain app-owned even when a host uses the thin RabbitMQ or Azure Service Bus
+adapter packages. For fully custom broker plumbing, register outbound
+publishing with `UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
 `IDurableEnvelopeDispatcher`, serialize `DurableMessageEnvelope` with
 `IDurableMessageEnvelopeSerializer`, and call `IDurableEnvelopeReceiver` from
-the chosen transport's receive handler. Broker topology, consumers, retry,
-and dead-letter policy remain application-owned. Lower-level persistence,
-receive, dispatcher, and local transport types remain available for advanced
-composition and tests, but they are not the quick-start path.
+the chosen transport's receive handler. Broker topology, consumers, retry, and
+dead-letter policy remain application-owned. The built-in broker receive
+workers settle native messages only after Bondstone durable receive succeeds;
+RabbitMQ failure requeue and Service Bus processor settings remain native
+driver knobs, not Bondstone retry policy. Lower-level persistence, receive,
+dispatcher, and local transport types remain available for advanced composition
+and tests, but they are not the quick-start path.
 
 After composing a host, use the modular monolith sample as the adoption proof
 and [testing.md](testing.md) for verification entrypoints. Use

@@ -21,7 +21,6 @@ namespace Bondstone.Transport.RabbitMq
     public sealed class RabbitMqReceiveWorkerOptions
     {
         public RabbitMqReceiveWorkerOptions() { }
-        public bool AutoAck { get; set; }
         public Bondstone.Messaging.DurableEnvelopeReceiveBinding? Binding { get; }
         public string? ConsumerTag { get; set; }
         public string? QueueName { get; set; }

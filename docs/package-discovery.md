@@ -143,6 +143,12 @@ native consumers, ack/nack/settlement, retry, dead-letter policy, prefetch,
 and monitoring. Bondstone-owned receive, settlement, stale inbox, and terminal
 outbox guidance is centralized in [operations.md](operations.md).
 
+The built-in RabbitMQ receive worker consumes with manual acknowledgement and
+uses `RequeueOnFailure` only as the native nack requeue flag. The built-in
+Azure Service Bus receive worker exposes native `ServiceBusProcessorOptions`
+for advanced driver configuration, but requires `AutoCompleteMessages = false`
+so Bondstone completes messages after durable receive succeeds.
+
 Rebus remains app-owned guidance rather than a Bondstone package because Rebus
 already owns bus routing, handlers, subscriptions, retries, error queues,
 serialization, and endpoint lifecycle.

@@ -59,15 +59,19 @@ internal sealed class ServiceBusReceiveWorker(
     private ServiceBusProcessor CreateProcessor(
         ServiceBusReceiveWorkerRegistration registration)
     {
+        ServiceBusProcessorOptions processorOptions =
+            ServiceBusReceiveWorkerOptions.CloneManualCompletionProcessorOptions(
+                registration.ProcessorOptions);
+
         ServiceBusProcessor processor =
             registration.QueueName is not null
                 ? _client.CreateProcessor(
                     registration.QueueName,
-                    registration.ProcessorOptions)
+                    processorOptions)
                 : _client.CreateProcessor(
                     registration.TopicName,
                     registration.SubscriptionName,
-                    registration.ProcessorOptions);
+                    processorOptions);
 
         processor.ProcessMessageAsync += args =>
             ProcessMessageAsync(args, registration);

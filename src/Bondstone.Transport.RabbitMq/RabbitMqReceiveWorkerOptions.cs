@@ -8,8 +8,6 @@ public sealed class RabbitMqReceiveWorkerOptions
 
     public DurableEnvelopeReceiveBinding? Binding { get; private set; }
 
-    public bool AutoAck { get; set; }
-
     public bool RequeueOnFailure { get; set; }
 
     public string? ConsumerTag { get; set; }
@@ -41,7 +39,6 @@ public sealed class RabbitMqReceiveWorkerOptions
         return new RabbitMqReceiveWorkerRegistration(
             QueueName,
             Binding,
-            AutoAck,
             RequeueOnFailure,
             ConsumerTag);
     }

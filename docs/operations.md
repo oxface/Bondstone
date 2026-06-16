@@ -70,16 +70,17 @@ is not current behavior.
 ## Broker Settlement
 
 Broker receive adapters should settle native deliveries only after Bondstone
-receive succeeds. The thin RabbitMQ receive worker acknowledges after
-`IDurableEnvelopeReceiver` completes when `AutoAck` is disabled. On failure it
-logs and nacks according to its options. The thin Azure Service Bus receive
-worker completes the message after receive completes; receive exceptions flow
-to the Service Bus processor error path and provider-native retry behavior.
+receive succeeds. The thin RabbitMQ receive worker always consumes with manual
+acknowledgement, acknowledges after `IDurableEnvelopeReceiver` completes, and
+nacks failed receives according to `RequeueOnFailure`. That option maps only
+to RabbitMQ's native nack requeue flag; broker retry and dead-letter behavior
+remain topology and policy owned by the application.
 
-RabbitMQ `AutoAck` is provider-native automatic acknowledgement. When enabled,
-the broker considers the delivery acknowledged before Bondstone receive has
-proved the module transaction. Do not use `AutoAck` for production receive
-paths that rely on Bondstone inbox/outbox durability.
+The thin Azure Service Bus receive worker completes the message after receive
+completes. Its exposed `ProcessorOptions` is an advanced native-driver escape
+hatch, but `AutoCompleteMessages` must remain `false` so Bondstone can
+complete messages only after durable receive succeeds. Receive exceptions flow
+to the Service Bus processor error path and provider-native retry behavior.
 
 If the module transaction commits but native settlement fails, broker
 redelivery should find the processed inbox row and skip the handler. If

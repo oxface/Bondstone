@@ -53,6 +53,31 @@ public sealed class ServiceBusReceiveWorkerOptions
             TopicName,
             SubscriptionName,
             Binding,
-            ProcessorOptions);
+            CloneManualCompletionProcessorOptions(ProcessorOptions));
+    }
+
+    internal static ServiceBusProcessorOptions CloneManualCompletionProcessorOptions(
+        ServiceBusProcessorOptions processorOptions)
+    {
+        ArgumentNullException.ThrowIfNull(processorOptions);
+
+        var clone = new ServiceBusProcessorOptions
+        {
+            AutoCompleteMessages = processorOptions.AutoCompleteMessages,
+            Identifier = processorOptions.Identifier,
+            MaxAutoLockRenewalDuration = processorOptions.MaxAutoLockRenewalDuration,
+            MaxConcurrentCalls = processorOptions.MaxConcurrentCalls,
+            PrefetchCount = processorOptions.PrefetchCount,
+            ReceiveMode = processorOptions.ReceiveMode,
+            SubQueue = processorOptions.SubQueue,
+        };
+
+        if (clone.AutoCompleteMessages)
+        {
+            throw new InvalidOperationException(
+                "Service Bus receive worker requires ProcessorOptions.AutoCompleteMessages to be false so Bondstone can complete messages after durable receive succeeds.");
+        }
+
+        return clone;
     }
 }

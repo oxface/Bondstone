@@ -53,6 +53,15 @@ public sealed class RabbitMqBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void ReceiveWorkerOptions_DefaultsToNativeNackWithoutRequeue()
+    {
+        var options = new RabbitMqReceiveWorkerOptions();
+
+        Assert.False(options.RequeueOnFailure);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void UseRabbitMqReceiveWorker_WhenConfigured_RegistersHostedWorker()
     {
         var services = new ServiceCollection();

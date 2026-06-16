@@ -40,7 +40,7 @@ internal sealed class RabbitMqReceiveWorker(
 
             string consumerTag = await _channel.BasicConsumeAsync(
                 queue: registration.QueueName,
-                autoAck: registration.AutoAck,
+                autoAck: false,
                 consumerTag: registration.ConsumerTag ?? string.Empty,
                 noLocal: false,
                 exclusive: false,
@@ -85,13 +85,10 @@ internal sealed class RabbitMqReceiveWorker(
                 registration.Binding,
                 stoppingToken);
 
-            if (!registration.AutoAck)
-            {
-                await _channel.BasicAckAsync(
-                    args.DeliveryTag,
-                    multiple: false,
-                    cancellationToken: stoppingToken);
-            }
+            await _channel.BasicAckAsync(
+                args.DeliveryTag,
+                multiple: false,
+                cancellationToken: stoppingToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -100,14 +97,11 @@ internal sealed class RabbitMqReceiveWorker(
                 "RabbitMQ receive worker failed for queue '{QueueName}'.",
                 registration.QueueName);
 
-            if (!registration.AutoAck)
-            {
-                await _channel.BasicNackAsync(
-                    args.DeliveryTag,
-                    multiple: false,
-                    requeue: registration.RequeueOnFailure,
-                    cancellationToken: CancellationToken.None);
-            }
+            await _channel.BasicNackAsync(
+                args.DeliveryTag,
+                multiple: false,
+                requeue: registration.RequeueOnFailure,
+                cancellationToken: CancellationToken.None);
         }
     }
 }

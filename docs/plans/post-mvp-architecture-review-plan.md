@@ -113,6 +113,10 @@ Deliverables:
   domain event records;
 - consider a non-throwing durable operation wait API after endpoint ergonomics
   are better understood;
+- after v2 ships, add .NET package validation or ApiCompat against the latest
+  stable v2 package as the compatibility guard, while keeping the current
+  `PublicApiGenerator` baseline test as the human-readable public surface
+  review tool;
 - keep `net10.0` as the intentional target framework unless a later ADR
   changes platform strategy.
 
@@ -132,13 +136,16 @@ Deliverables:
 - Should the durable receive buffer be accepted before the first extraction
   project starts, or designed now and implemented after the pure modular
   monolith validates the default receive path?
-- Should RabbitMQ `AutoAck` remain an option, become explicitly documented as
-  unsafe for Bondstone durability, or be removed in a compatibility-sensitive
-  release?
 - Should operation expiration get a built-in hosted worker, or remain an
   application-scheduled processor for now?
 - Which operational queries should be documented as canonical examples for
   PostgreSQL-backed EF Core stores?
+
+## Completed Decisions
+
+- RabbitMQ `AutoAck` was removed from the Bondstone receive worker for v2.
+  RabbitMQ receive workers now use manual acknowledgement and settle only
+  after Bondstone durable receive succeeds.
 
 ## Verification
 

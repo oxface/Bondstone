@@ -111,12 +111,31 @@ dispatchers and opt-in receive workers, but applications continue to own
 native topology, provisioning, retry, dead-letter, monitoring, and operational
 policy.
 
+## Amendment 2026-06-16 V2 Public API Cleanup Guardrails
+
+The v2 public API cleanup should make the package surface tell the truth about
+Bondstone's boundaries rather than make every implementation type internal.
+Documented normal setup APIs remain public unless a replacement setup path is
+approved. Documented advanced composition APIs and provider/runtime contracts
+may remain public when they are the explicit collaboration surface between
+Bondstone packages, transport adapters, persistence providers, custom
+schedulers, or app-owned broker integration code.
+
+Public implementation details should not grow new surface casually. Before v2
+compatibility expectations strengthen, each remaining public concrete
+implementation type should either be documented as a deliberate advanced
+composition API, replaced by a narrower public contract, or hidden when no
+consumer or package-collaboration need remains. Renames and removals that are
+not obvious must be captured as a short approval list before implementation.
+
 ## Related Decisions
 
 - Supersedes the active package and compatibility posture from the archived
   pre-restart ADR sequence summarized by
   [0001](0001-restart-adr-history-around-current-baseline.md) and pruned by
   [0009](0009-prune-pre-restart-archive-and-planning-notes.md).
+- Amended by the thin RabbitMQ and Azure Service Bus adapter direction in
+  [0008](0008-thin-broker-adapters.md).
 
 ## Application Notes
 
@@ -132,11 +151,18 @@ policy.
 - Application evidence: removed packages are absent from the solution and
   package discovery; active packages are covered by package artifact tests.
   Thin RabbitMQ and Azure Service Bus packages were added by the 2026-06-16
-  thin broker adapter amendment.
+  thin broker adapter amendment. The v2 cleanup start inventoried the current
+  public API baselines against package discovery, setup, and public API docs.
 - Pending or deferred: Rebus remains app-owned; further public API cleanup is
-  planned as a cleanup sweep, not as compatibility preservation.
+  planned as a cleanup sweep, not as compatibility preservation. EF entity
+  visibility reductions, provider concrete store visibility, hosting worker
+  visibility, and default serializer visibility remain approval-list
+  decisions. Receive-worker settlement options were resolved by the 2026-06-16
+  amendment to [ADR 0008](0008-thin-broker-adapters.md).
 
 ## Verification
 
-Read current packaging, package discovery, public API, and architecture docs.
-Package verification is covered by `pnpm backend:pack`.
+Read current packaging, package discovery, setup, public API, operations,
+observability, and public API baseline docs. Package verification is covered by
+`pnpm backend:pack`; the public API cleanup slice should also run the
+`Bondstone.PublicApi.Tests` project.

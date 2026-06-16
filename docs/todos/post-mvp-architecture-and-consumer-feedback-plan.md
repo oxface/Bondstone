@@ -474,12 +474,16 @@ Applied on 2026-06-16:
    delivery.
 7. Document the operation-state diagnostic column migration.
 
-### Next: Product Surface Cut
+### Applied: RabbitMQ Transport DSL Cut
 
-1. Replace direct provider transport topology DSLs with a small envelope
-   dispatcher and receive helper shape.
-2. Keep local transport as the correctness baseline over outbox dispatch and
-   receive pipelines.
+- Removed RabbitMQ command exchange, module route, event route, and outbound
+  convention DSLs.
+- Replaced outbound RabbitMQ routing with `DispatchCommandsTo(...)` and
+  `DispatchEventsTo(...)` destination functions over the durable envelope.
+- Kept RabbitMQ receive queue bindings as adapter-local routing metadata for
+  receive helpers and the opt-in worker.
+- Kept local transport as the correctness baseline over outbox dispatch and
+  receive pipelines.
 
 ### Applied: Transport Diagnostics Package Removal
 

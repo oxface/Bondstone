@@ -2,7 +2,7 @@
 
 RabbitMQ transport adapter integration for Bondstone durable messaging.
 
-This package owns RabbitMQ-specific outbox publishing, receive topology,
+This package owns RabbitMQ-specific outbox publishing, receive bindings,
 message mapping, settlement helpers, and opt-in hosted receive worker
 composition.
 

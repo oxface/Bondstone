@@ -26,11 +26,11 @@ For a consumer-facing capability and namespace matrix, see
 [package-discovery.md](package-discovery.md).
 
 `Bondstone.Transport.RabbitMq` is the remaining direct broker adapter in the
-active package set. It includes outgoing durable outbox dispatch,
-provider-native receive topology, opt-in hosted receive workers, and
-provider-backed receive integration tests. Broker administration remains
-app-owned. RabbitMQ stays a thin adapter/sample path while the post-MVP
-transport model is simplified.
+active package set. It includes outgoing durable outbox dispatch through
+application-supplied destination functions, native receive helpers, opt-in
+hosted receive workers, and provider-backed receive integration tests. Broker
+administration remains app-owned. RabbitMQ stays a thin adapter/sample path
+while the post-MVP transport model is simplified.
 
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
 tests, and local development. It exercises outbox/inbox receive semantics

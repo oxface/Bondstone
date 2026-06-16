@@ -34,10 +34,14 @@ public sealed class AddBondstoneCompositionTests
                 "Host=localhost;Database=bondstone");
             bondstone.UseRabbitMqTransport(rabbitMq =>
             {
-                rabbitMq.UseCommandExchange("bondstone.commands");
-                rabbitMq.UseEventExchange("bondstone.events");
-                rabbitMq.UseModuleRoutingKeyConvention();
-                rabbitMq.UseEventRoutingKeyConvention();
+                rabbitMq.DispatchCommandsTo(envelope =>
+                    new RabbitMqPublishDestination(
+                        "bondstone.commands",
+                        $"{envelope.TargetModule}.commands"));
+                rabbitMq.DispatchEventsTo(envelope =>
+                    new RabbitMqPublishDestination(
+                        "bondstone.events",
+                        envelope.MessageTypeName));
             });
             bondstone.Outbox.UseWorker(options =>
             {

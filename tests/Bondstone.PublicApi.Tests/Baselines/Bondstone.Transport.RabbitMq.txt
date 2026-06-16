@@ -28,12 +28,6 @@ namespace Bondstone.Transport.RabbitMq.Outbox
         public static Bondstone.Configuration.BondstoneBuilder UseRabbitMqTransport(this Bondstone.Configuration.BondstoneBuilder builder, System.Action<Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder> configure) { }
         public static Bondstone.Configuration.BondstoneOutboxBuilder UseRabbitMqTransport(this Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Action<Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder> configure) { }
     }
-    public sealed class BondstoneRabbitMqEventRouteBuilder
-    {
-        public BondstoneRabbitMqEventRouteBuilder(Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder transportBuilder, string messageTypeName) { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder ToQueue(string queueName) { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder ToRoutingKey(string routingKey) { }
-    }
     public static class BondstoneRabbitMqHeaders
     {
         public const string Baggage = "baggage";
@@ -48,14 +42,8 @@ namespace Bondstone.Transport.RabbitMq.Outbox
         public const string TraceParent = "traceparent";
         public const string TraceState = "tracestate";
     }
-    public sealed class BondstoneRabbitMqModuleRouteBuilder
-    {
-        public BondstoneRabbitMqModuleRouteBuilder(Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder transportBuilder, string targetModule) { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder ToRoutingKey(string routingKey) { }
-    }
     public sealed class BondstoneRabbitMqReceiveQueueBuilder
     {
-        public BondstoneRabbitMqReceiveQueueBuilder(Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder transportBuilder, string queueName) { }
         public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqReceiveQueueBuilder AcceptModule(string moduleName) { }
         public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqReceiveQueueBuilder SubscribeEvent(string messageTypeName, string subscriberModule, string subscriberIdentity) { }
     }
@@ -66,35 +54,14 @@ namespace Bondstone.Transport.RabbitMq.Outbox
     public sealed class BondstoneRabbitMqTransportBuilder
     {
         public BondstoneRabbitMqTransportBuilder() { }
+        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder DispatchCommandsTo(System.Func<Bondstone.Messaging.DurableMessageEnvelope, Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination?> resolveDestination) { }
+        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder DispatchEventsTo(System.Func<Bondstone.Messaging.DurableMessageEnvelope, Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination?> resolveDestination) { }
         public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqReceiveQueueBuilder ReceiveQueue(string queueName) { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqEventRouteBuilder RouteEvent(string messageTypeName) { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqModuleRouteBuilder RouteModule(string targetModule) { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseCommandExchange(string exchangeName) { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseEventExchange(string exchangeName) { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseEventQueueConvention() { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseEventQueueConvention(System.Func<string, string> queueNameFactory) { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseEventRoutingKeyConvention() { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseEventRoutingKeyConvention(System.Func<string, string> routingKeyFactory) { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseModuleRoutingKeyConvention() { }
-        public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseModuleRoutingKeyConvention(System.Func<string, string> routingKeyFactory) { }
         public Bondstone.Transport.RabbitMq.Outbox.BondstoneRabbitMqTransportBuilder UseReceiveWorker(System.Action<Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveWorkerOptions>? configureOptions = null) { }
     }
     public interface IRabbitMqMessagePublisher
     {
         System.Threading.Tasks.ValueTask PublishAsync(Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination destination, Bondstone.Transport.RabbitMq.Outbox.RabbitMqTransportMessage message, System.Threading.CancellationToken ct = default);
-    }
-    public interface IRabbitMqOutboxCommandRouteResolver
-    {
-        Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination ResolveDestination(Bondstone.Persistence.DurableOutboxRecord record);
-    }
-    public interface IRabbitMqOutboxEventRouteResolver
-    {
-        Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination ResolveDestination(Bondstone.Persistence.DurableOutboxRecord record);
-    }
-    public sealed class RabbitMqDurableEnvelopeDispatcher : Bondstone.Persistence.IDurableEnvelopeDispatcher
-    {
-        public RabbitMqDurableEnvelopeDispatcher(Bondstone.Transport.RabbitMq.Outbox.IRabbitMqMessagePublisher publisher, Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxCommandRouteResolver commandRouteResolver, Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxEventRouteResolver eventRouteResolver) { }
-        public System.Threading.Tasks.ValueTask DispatchAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default) { }
     }
     public sealed class RabbitMqDurableMessageEnvelope : System.IEquatable<Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope>
     {

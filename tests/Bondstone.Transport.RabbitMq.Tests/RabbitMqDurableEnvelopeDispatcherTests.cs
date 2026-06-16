@@ -18,8 +18,10 @@ public sealed class RabbitMqDurableEnvelopeDispatcherTests
             publisher,
             rabbitMq =>
             {
-                rabbitMq.UseCommandExchange("bondstone.commands");
-                rabbitMq.RouteModule("fulfillment").ToRoutingKey("fulfillment.commands");
+                rabbitMq.DispatchCommandsTo(_ =>
+                    new RabbitMqPublishDestination(
+                        "bondstone.commands",
+                        "fulfillment.commands"));
             });
         IDurableEnvelopeDispatcher dispatcher =
             serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
@@ -67,8 +69,10 @@ public sealed class RabbitMqDurableEnvelopeDispatcherTests
             publisher,
             rabbitMq =>
             {
-                rabbitMq.UseEventExchange("bondstone.events");
-                rabbitMq.RouteEvent("sales.order.submitted.v1").ToRoutingKey("sales.order.submitted");
+                rabbitMq.DispatchEventsTo(_ =>
+                    new RabbitMqPublishDestination(
+                        "bondstone.events",
+                        "sales.order.submitted"));
             });
         IDurableEnvelopeDispatcher dispatcher =
             serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
@@ -94,7 +98,8 @@ public sealed class RabbitMqDurableEnvelopeDispatcherTests
         var publisher = new RecordingRabbitMqMessagePublisher();
         await using ServiceProvider serviceProvider = CreateServiceProvider(
             publisher,
-            rabbitMq => rabbitMq.RouteEvent("sales.order.submitted.v1").ToQueue("sales-events"));
+            rabbitMq => rabbitMq.DispatchEventsTo(_ =>
+                RabbitMqPublishDestination.ForQueue("sales-events")));
         IDurableEnvelopeDispatcher dispatcher =
             serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
 

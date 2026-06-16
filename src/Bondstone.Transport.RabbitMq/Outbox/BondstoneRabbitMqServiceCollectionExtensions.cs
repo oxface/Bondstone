@@ -24,25 +24,16 @@ public static class BondstoneRabbitMqServiceCollectionExtensions
 
     internal static IServiceCollection AddBondstoneRabbitMqEnvelopeDispatcher(
         this IServiceCollection services,
-        RabbitMqCommandRoutingTopology commandTopology,
-        RabbitMqEventRoutingTopology eventTopology,
+        RabbitMqEnvelopeDestinationResolver destinationResolver,
         RabbitMqReceiveTopology receiveTopology,
         RabbitMqReceiveWorkerRegistration? receiveWorkerRegistration)
     {
         ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(commandTopology);
-        ArgumentNullException.ThrowIfNull(eventTopology);
+        ArgumentNullException.ThrowIfNull(destinationResolver);
         ArgumentNullException.ThrowIfNull(receiveTopology);
 
-        services.AddSingleton(commandTopology);
-        services.AddSingleton(eventTopology);
+        services.AddSingleton(destinationResolver);
         services.AddSingleton(receiveTopology);
-        services.AddTransient<IRabbitMqOutboxCommandRouteResolver>(
-            serviceProvider => new RabbitMqCommandRouteResolver(
-                serviceProvider.GetRequiredService<RabbitMqCommandRoutingTopology>()));
-        services.AddTransient<IRabbitMqOutboxEventRouteResolver>(
-            serviceProvider => new RabbitMqEventRouteResolver(
-                serviceProvider.GetRequiredService<RabbitMqEventRoutingTopology>()));
         services.TryAddScoped<IRabbitMqReceivedMessageDispatcher, RabbitMqReceivedMessageDispatcher>();
         services.TryAddScoped<IRabbitMqReceivedMessageHandler, RabbitMqReceivedMessageHandler>();
         if (receiveWorkerRegistration is not null)
@@ -56,7 +47,10 @@ public static class BondstoneRabbitMqServiceCollectionExtensions
             services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHostedService, RabbitMqReceiveWorker>());
         }
-        services.AddTransient<IDurableEnvelopeDispatchRoute, RabbitMqDurableEnvelopeDispatchRoute>();
+        if (destinationResolver.HasOutboundResolver)
+        {
+            services.AddTransient<IDurableEnvelopeDispatchRoute, RabbitMqDurableEnvelopeDispatchRoute>();
+        }
         services.TryAddTransient<IDurableEnvelopeDispatcher, RoutedDurableEnvelopeDispatcher>();
 
         return services;

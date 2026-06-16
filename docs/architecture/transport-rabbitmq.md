@@ -5,45 +5,45 @@ behavior.
 
 ## Current Scope
 
-The current adapter covers outgoing durable envelope dispatch, receive queue
-topology, receive dispatchers, native message mapping, settlement handler
-helpers, and an opt-in hosted receive worker.
+The current adapter covers outgoing durable envelope dispatch through
+application-supplied destination resolvers, receive queue bindings for
+Bondstone receive helpers, native message mapping, settlement handler helpers,
+and an opt-in hosted receive worker.
 `RabbitMqDurableEnvelopeDispatcher` implements
 `IDurableEnvelopeDispatcher` for claimed outbox records and maps Bondstone
 durable envelopes to RabbitMQ publish messages through a provider-local
 envelope mapper.
 
-Commands publish to a configured command exchange with a routing key resolved
-by target module. Integration events publish to event destinations resolved by
-stable event identity. Event destinations can be a configured event exchange
-with a routing key, or a direct queue publish through RabbitMQ's default
-exchange. This keeps RabbitMQ exchange/routing-key/queue vocabulary native
-while preserving Bondstone's durable command versus integration event
-semantics.
+Commands and integration events publish to destinations resolved by host code.
+Destination functions receive the Bondstone durable envelope and return a
+RabbitMQ exchange/routing-key destination, a direct queue destination through
+RabbitMQ's default exchange, or `null` when this adapter does not own that
+message. This keeps RabbitMQ exchange/routing-key/queue vocabulary native
+while avoiding a Bondstone-owned broker topology DSL.
 
-Applications configure topology with the RabbitMQ transport builder:
+Applications configure outbound dispatch with destination functions:
 
 ```csharp
 bondstone.UseRabbitMqTransport(rabbitMq =>
 {
-    rabbitMq
-        .UseCommandExchange("bondstone.commands")
-        .UseEventExchange("bondstone.events")
-        .UseModuleRoutingKeyConvention()
-        .RouteEvent("ordering.order.placed.v1")
-        .ToRoutingKey("ordering.order.placed.v1");
+    rabbitMq.DispatchCommandsTo(envelope =>
+        new RabbitMqPublishDestination(
+            "bondstone.commands",
+            $"{envelope.TargetModule}.commands"));
+
+    rabbitMq.DispatchEventsTo(envelope =>
+        envelope.MessageTypeName == "ordering.order.placed.v1"
+            ? new RabbitMqPublishDestination(
+                "bondstone.events",
+                "ordering.order.placed.v1")
+            : null);
 });
 ```
 
-Explicit module and event routing keys override conventions. The same routing
-metadata is used by dispatch, so missing exchanges, routing keys, queue
-destinations, or receive bindings fail when the corresponding outbound or
-receive helper is used.
-
-Module routing-key conventions configure outbound command destinations only.
-They do not declare broker queues, create bindings, configure consumers, or
-authorize this host to receive commands for matching modules. Hosts that
-receive commands must still declare receive topology with
+Destination functions configure outbound publish destinations only. They do
+not declare broker queues, create bindings, configure consumers, or authorize
+this host to receive commands for matching modules. Hosts that receive
+commands must still declare receive bindings with
 `ReceiveQueue(...).AcceptModule(...)`.
 
 RabbitMQ no longer contributes provider-neutral startup topology diagnostics.
@@ -55,8 +55,8 @@ declared on the same receive queue; split subscribers should use an exchange
 route with application-owned queue bindings. None of this declares RabbitMQ
 exchanges, queues, bindings, DLX, retry queues, or policies.
 
-Use `.ToQueue(...)` or `UseEventQueueConvention(...)` when an event should be
-sent directly to a queue.
+Use `RabbitMqPublishDestination.ForQueue(...)` when an event should be sent
+directly to a queue.
 
 Receive topology is declared with provider-native queue vocabulary:
 

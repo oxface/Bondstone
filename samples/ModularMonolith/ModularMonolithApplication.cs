@@ -81,14 +81,23 @@ public static class ModularMonolithApplication
             connectionString,
             bondstone => bondstone.UseRabbitMqTransport(rabbitMq =>
             {
-                rabbitMq.UseCommandExchange("bondstone.commands");
-                rabbitMq.RouteModule(FulfillmentModule.ModuleName)
-                    .ToRoutingKey("fulfillment.commands");
+                rabbitMq.DispatchCommandsTo(envelope =>
+                    envelope.TargetModule == FulfillmentModule.ModuleName
+                        ? new RabbitMqPublishDestination(
+                            "bondstone.commands",
+                            "fulfillment.commands")
+                        : null);
                 rabbitMq.ReceiveQueue("fulfillment.commands")
                     .AcceptModule(FulfillmentModule.ModuleName);
 
-                rabbitMq.RouteEvent(OrderingIntegrationEvents.OrderPlaced)
-                    .ToQueue("ordering.order-placed");
+                rabbitMq.DispatchEventsTo(envelope => envelope.MessageTypeName switch
+                {
+                    OrderingIntegrationEvents.OrderPlaced =>
+                        RabbitMqPublishDestination.ForQueue("ordering.order-placed"),
+                    FulfillmentIntegrationEvents.InventoryReserved =>
+                        RabbitMqPublishDestination.ForQueue("fulfillment.inventory-reserved"),
+                    _ => null,
+                });
                 rabbitMq.ReceiveQueue("ordering.order-placed")
                     .SubscribeEvent(
                         OrderingIntegrationEvents.OrderPlaced,
@@ -99,8 +108,6 @@ public static class ModularMonolithApplication
                         BillingModule.ModuleName,
                         "billing.order-invoice-projection.v1");
 
-                rabbitMq.RouteEvent(FulfillmentIntegrationEvents.InventoryReserved)
-                    .ToQueue("fulfillment.inventory-reserved");
                 rabbitMq.ReceiveQueue("fulfillment.inventory-reserved")
                     .SubscribeEvent(
                         FulfillmentIntegrationEvents.InventoryReserved,

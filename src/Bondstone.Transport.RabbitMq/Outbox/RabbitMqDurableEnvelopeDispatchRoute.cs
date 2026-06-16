@@ -1,23 +1,18 @@
-using Bondstone.Messaging;
 using Bondstone.Persistence;
 
 namespace Bondstone.Transport.RabbitMq.Outbox;
 
 internal sealed class RabbitMqDurableEnvelopeDispatchRoute(
     IRabbitMqMessagePublisher publisher,
-    RabbitMqCommandRoutingTopology commandTopology,
-    RabbitMqEventRoutingTopology eventTopology)
+    RabbitMqEnvelopeDestinationResolver destinationResolver)
     : IDurableEnvelopeDispatchRoute
 {
     private readonly RabbitMqDurableEnvelopeDispatcher _dispatcher =
         new(
             publisher ?? throw new ArgumentNullException(nameof(publisher)),
-            new RabbitMqCommandRouteResolver(commandTopology),
-            new RabbitMqEventRouteResolver(eventTopology));
-    private readonly RabbitMqCommandRoutingTopology _commandTopology =
-        commandTopology ?? throw new ArgumentNullException(nameof(commandTopology));
-    private readonly RabbitMqEventRoutingTopology _eventTopology =
-        eventTopology ?? throw new ArgumentNullException(nameof(eventTopology));
+            destinationResolver ?? throw new ArgumentNullException(nameof(destinationResolver)));
+    private readonly RabbitMqEnvelopeDestinationResolver _destinationResolver =
+        destinationResolver ?? throw new ArgumentNullException(nameof(destinationResolver));
 
     public string TransportName => "RabbitMq";
 
@@ -26,18 +21,7 @@ internal sealed class RabbitMqDurableEnvelopeDispatchRoute(
     {
         ArgumentNullException.ThrowIfNull(record);
 
-        DurableMessageEnvelope envelope = record.Envelope;
-        if (envelope.MessageKind == MessageKind.Command)
-        {
-            return _commandTopology.DescribeRoute(envelope.TargetModule!).HasRoute;
-        }
-
-        if (envelope.MessageKind == MessageKind.Event)
-        {
-            return _eventTopology.DescribeRoute(envelope.MessageTypeName).HasRoute;
-        }
-
-        return false;
+        return _destinationResolver.CanResolve(record);
     }
 
     public ValueTask DispatchAsync(

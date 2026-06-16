@@ -13,13 +13,17 @@ public static class BondstoneRabbitMqBuilderExtensions
 
         var rabbitMq = new BondstoneRabbitMqTransportBuilder();
         configure(rabbitMq);
+        RabbitMqEnvelopeDestinationResolver destinationResolver =
+            rabbitMq.DestinationResolver;
 
         builder.Services.AddBondstoneRabbitMqEnvelopeDispatcher(
-            rabbitMq.CommandRoutingTopology,
-            rabbitMq.EventRoutingTopology,
+            destinationResolver,
             rabbitMq.ReceiveTopology,
             rabbitMq.ReceiveWorkerRegistration);
-        builder.Outbox.MarkTransport("RabbitMq");
+        if (destinationResolver.HasOutboundResolver)
+        {
+            builder.Outbox.MarkTransport("RabbitMq");
+        }
 
         return builder;
     }
@@ -33,13 +37,17 @@ public static class BondstoneRabbitMqBuilderExtensions
 
         var rabbitMq = new BondstoneRabbitMqTransportBuilder();
         configure(rabbitMq);
+        RabbitMqEnvelopeDestinationResolver destinationResolver =
+            rabbitMq.DestinationResolver;
 
         outbox.Services.AddBondstoneRabbitMqEnvelopeDispatcher(
-            rabbitMq.CommandRoutingTopology,
-            rabbitMq.EventRoutingTopology,
+            destinationResolver,
             rabbitMq.ReceiveTopology,
             rabbitMq.ReceiveWorkerRegistration);
-        outbox.MarkTransport("RabbitMq");
+        if (destinationResolver.HasOutboundResolver)
+        {
+            outbox.MarkTransport("RabbitMq");
+        }
 
         return outbox;
     }

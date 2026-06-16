@@ -404,15 +404,19 @@ builder.Services.AddBondstone(bondstone =>
 
     bondstone.UseRabbitMqTransport(rabbitMq =>
     {
-        rabbitMq.UseCommandExchange("bondstone.commands");
-
-        rabbitMq.RouteModule("fulfillment")
-            .ToRoutingKey("fulfillment.commands");
+        rabbitMq.DispatchCommandsTo(envelope =>
+            envelope.TargetModule == "fulfillment"
+                ? new RabbitMqPublishDestination(
+                    "bondstone.commands",
+                    "fulfillment.commands")
+                : null);
         rabbitMq.ReceiveQueue("fulfillment.commands")
             .AcceptModule("fulfillment");
 
-        rabbitMq.RouteEvent("ordering.order-placed.v1")
-            .ToQueue("ordering.order-placed");
+        rabbitMq.DispatchEventsTo(envelope =>
+            envelope.MessageTypeName == "ordering.order-placed.v1"
+                ? RabbitMqPublishDestination.ForQueue("ordering.order-placed")
+                : null);
         rabbitMq.ReceiveQueue("ordering.order-placed")
             .SubscribeEvent(
                 "ordering.order-placed.v1",
@@ -438,10 +442,9 @@ builder.Services.AddBondstone(bondstone =>
 });
 ```
 
-Provider adapter route conventions are outbound-only. RabbitMQ
-`UseModuleRoutingKeyConvention()` resolves where commands are sent, but hosts
-that receive commands still need explicit receive bindings such as
-`ReceiveQueue(...).AcceptModule(...)`.
+RabbitMQ outbound destination functions are outbound-only. They resolve where
+commands and events are published, but hosts that receive commands still need
+explicit receive bindings such as `ReceiveQueue(...).AcceptModule(...)`.
 `Bondstone.Transport.Local` is the local-development exception: its
 `UseModuleQueueConvention()` configures complete in-process command topology
 because there is no broker queue or binding to provision.
@@ -452,9 +455,9 @@ overload is an advanced composition API for manual envelope dispatcher
 registration.
 
 When more than one direct transport is registered, Bondstone routes each
-claimed outbox record through the provider whose topology matches that
-message. If no provider or more than one provider matches, dispatch fails
-instead of guessing.
+claimed outbox record through the provider whose route reports a destination
+for that message. If no provider or more than one provider matches, dispatch
+fails instead of guessing.
 
 Bondstone owns retry and terminal failure for outgoing persisted outbox
 records. Current outbox status semantics are described in
@@ -766,7 +769,7 @@ after dispatch succeeds. It still does not start hosted consumers.
 
 For hosts that want Bondstone to run the native receive loop, RabbitMQ exposes
 an opt-in `UseReceiveWorker(...)` helper on its transport builder. This helper
-runs consumers for configured receive topology, but broker entities,
+runs consumers for configured receive bindings, but broker entities,
 credentials, bindings, retry policy, and dead-letter setup remain
 application-owned.
 

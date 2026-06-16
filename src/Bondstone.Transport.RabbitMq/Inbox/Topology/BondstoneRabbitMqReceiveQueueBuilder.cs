@@ -1,13 +1,22 @@
 namespace Bondstone.Transport.RabbitMq.Outbox;
 
-public sealed class BondstoneRabbitMqReceiveQueueBuilder(
-    BondstoneRabbitMqTransportBuilder transportBuilder,
-    string queueName)
+public sealed class BondstoneRabbitMqReceiveQueueBuilder
 {
+    private readonly BondstoneRabbitMqTransportBuilder _transportBuilder;
+    private readonly string _queueName;
+
+    internal BondstoneRabbitMqReceiveQueueBuilder(
+        BondstoneRabbitMqTransportBuilder transportBuilder,
+        string queueName)
+    {
+        _transportBuilder = transportBuilder;
+        _queueName = queueName;
+    }
+
     public BondstoneRabbitMqReceiveQueueBuilder AcceptModule(
         string moduleName)
     {
-        transportBuilder.AddReceiveQueueAcceptedModule(queueName, moduleName);
+        _transportBuilder.AddReceiveQueueAcceptedModule(_queueName, moduleName);
         return this;
     }
 
@@ -16,8 +25,8 @@ public sealed class BondstoneRabbitMqReceiveQueueBuilder(
         string subscriberModule,
         string subscriberIdentity)
     {
-        transportBuilder.AddReceiveQueueEventSubscription(
-            queueName,
+        _transportBuilder.AddReceiveQueueEventSubscription(
+            _queueName,
             messageTypeName,
             subscriberModule,
             subscriberIdentity);

@@ -339,8 +339,6 @@ Normal setup API:
   (`BondstoneBuilder.UseRabbitMqTransport(...)` overload)
 - `BondstoneRabbitMqServiceCollectionExtensions`
 - `BondstoneRabbitMqTransportBuilder`
-- `BondstoneRabbitMqModuleRouteBuilder`
-- `BondstoneRabbitMqEventRouteBuilder`
 - `BondstoneRabbitMqReceiveQueueBuilder`
 - `RabbitMqReceiveWorkerOptions`
 
@@ -361,8 +359,6 @@ Advanced composition API:
 Provider/runtime contract:
 
 - `IRabbitMqMessagePublisher`
-- `IRabbitMqOutboxCommandRouteResolver`
-- `IRabbitMqOutboxEventRouteResolver`
 
 Public implementation detail exposed for now:
 

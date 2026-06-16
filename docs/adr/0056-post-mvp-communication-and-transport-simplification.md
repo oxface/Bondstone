@@ -186,11 +186,13 @@ narrow.
   separate `Bondstone.Transport` package, removes the core aggregate startup
   topology diagnostics layer, removes RabbitMQ topology diagnostics from the
   public/service surface, and makes Local/RabbitMQ route validation a
-  dispatch/receive-time concern.
-- Pending or deferred: Replacing provider transport topology DSLs with thinner
-  envelope dispatch/receive helpers, module-aware operation handles, operation
-  failure policy, pipeline simplification, local transport correctness fixes,
-  and broader public API cleanup remain follow-up work.
+  dispatch/receive-time concern. The fifth implementation slice replaces the
+  RabbitMQ outbound topology DSL with command/event destination functions over
+  durable envelopes while keeping receive queue bindings as adapter-local
+  helper metadata.
+- Pending or deferred: Module-aware operation handles, operation failure
+  policy, pipeline simplification, local transport correctness fixes, and
+  broader public API cleanup remain follow-up work.
 
 ## Verification
 

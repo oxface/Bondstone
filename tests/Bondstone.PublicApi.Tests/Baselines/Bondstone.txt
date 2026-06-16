@@ -84,6 +84,15 @@ namespace Bondstone.Messaging
         Rejected = 2,
         Duplicate = 3,
     }
+    public sealed class DurableOperationFinalizationResult : System.IEquatable<Bondstone.Messaging.DurableOperationFinalizationResult>
+    {
+        public DurableOperationFinalizationResult(Bondstone.Messaging.DurableOperationState state, bool wasFinalized) { }
+        public System.Guid DurableOperationId { get; }
+        public bool IsTerminal { get; }
+        public Bondstone.Messaging.DurableOperationState State { get; }
+        public Bondstone.Messaging.DurableOperationStatus Status { get; }
+        public bool WasFinalized { get; }
+    }
     public sealed class DurableOperationResultDeserializationFailure : System.IEquatable<Bondstone.Messaging.DurableOperationResultDeserializationFailure>
     {
         public DurableOperationResultDeserializationFailure(System.Guid durableOperationId, string resultTypeName, string message, string? exceptionTypeName = null, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null) { }
@@ -141,6 +150,11 @@ namespace Bondstone.Messaging
             where TEvent : Bondstone.Messaging.IIntegrationEvent;
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableEventPublishResult> PublishAsync<TEvent>(TEvent integrationEvent, string? partitionKey, System.Guid? durableOperationId = default, Bondstone.Messaging.MessageTraceContext? traceContext = null, System.Guid? causationId = default, System.Threading.CancellationToken ct = default)
             where TEvent : Bondstone.Messaging.IIntegrationEvent;
+    }
+    public interface IDurableOperationFinalizer
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationFinalizationResult> MarkCancelledAsync(string moduleName, System.Guid durableOperationId, string cancellationReason, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationFinalizationResult> MarkFailedAsync(string moduleName, System.Guid durableOperationId, string failureReason, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null, System.Threading.CancellationToken ct = default);
     }
     public interface IDurableOperationResultReader
     {

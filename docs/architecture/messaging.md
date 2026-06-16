@@ -263,6 +263,14 @@ durable results through `IDurableOperationResultReader`:
 until the operation reaches a terminal state. `IDurableOperationReader`
 remains available as the lower-level state reader.
 
+Applications can mark explicit terminal non-success outcomes through
+`IDurableOperationFinalizer`. The finalizer writes `Failed` or `Cancelled` to
+the named module's operation-state store when the operation is unknown,
+`Pending`, or `Running`. It returns the existing state without overwriting when
+the operation is already terminal. This API is for application-owned timeout,
+expiry, cancellation, and workflow policy; it does not infer failure from
+outbox dispatch, inbox idempotency, broker retry, or dead-letter behavior.
+
 `DurableOperationResult<TResult>` preserves the operation-state flags and adds
 a single `State` classification for consumer diagnostics:
 
@@ -290,13 +298,14 @@ provider schemas that have not been migrated. Result diagnostics remain useful
 without it by including the operation id and requested result type when those
 values are known.
 
-`Running`, `Failed`, and `Cancelled` remain storage/read-model values for
-application-owned operation policies; Bondstone's default command loop does
-not infer them from broker retry or handler exceptions. Callers choose polling
-cadence, timeout, and API endpoint policy when using the result reader.
-Generated operation ids, retry state, stale receive recovery, default
-failure/cancellation transitions, and provider-specific operation concurrency
-are outside the current operation-state contract.
+`Running` remains a storage/read-model value for application-owned operation
+policies. `Failed` and `Cancelled` can be written explicitly by application
+policy through the finalizer. Bondstone's default command loop does not infer
+terminal failure from broker retry or handler exceptions. Callers choose
+polling cadence, timeout, and API endpoint policy when using the result
+reader. Generated operation ids, retry state, stale receive recovery, default
+timeout policies, and provider-specific operation concurrency are outside the
+current operation-state contract.
 
 ## Transport Adapters
 

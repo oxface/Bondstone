@@ -99,6 +99,14 @@ runtime contributions and application pipeline behaviors. Void commands use
 `ModuleCommandExecutionResult<TResult>`. The executor is not a generic
 mediator for arbitrary in-process calls.
 
+When a handler is already executing inside a module execution context,
+`IModuleCommandExecutor` may execute another command in the same module, but
+it must not synchronously execute a different module's command. Cross-module
+work should cross the durable boundary through `IDurableCommandSender` or an
+explicit integration event instead. This keeps module-local transactions from
+committing side effects in another module before the current module's handler
+has committed or rolled back.
+
 Command execution is assembled by an internal runtime planner. The current
 plan selects ordered system and capability contribution records for the
 executing module first, creates only those runtime behaviors, then runs

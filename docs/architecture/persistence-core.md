@@ -213,9 +213,19 @@ request carries a caller-supplied durable operation id. Command send stages
 stages `Completed` inside module command execution. Result-returning durable
 command receive also stores the serialized result payload and optional
 diagnostic context from the receive route: module name, durable message type
-name, and handler identity. Failure states, running states, retry state, stale
-receive recovery, and cancellation are not written by Bondstone's default
-command loop.
+name, and handler identity. Running state, retry state, stale receive
+recovery, timeout policy, and cancellation are not written by Bondstone's
+default command loop.
+
+`IDurableOperationFinalizer` is the application-facing terminal outcome API.
+It resolves the named module's operation-state store and writes explicit
+`Failed` or `Cancelled` state for unknown, `Pending`, or `Running` operations.
+It returns the existing state without overwriting when an operation is already
+terminal. The finalizer is intentionally module-scoped so the write target is
+explicit and matches the module-owned operation reader model. Applications can
+use it from timeout/expiry jobs, administrative workflows, cancellation paths,
+or other policy code that has enough evidence to produce a terminal
+caller-visible outcome.
 
 Operation reads aggregate across local module stores. This global read has no
 module identity, so it intentionally creates each configured module
@@ -231,7 +241,8 @@ application-owned operation policies.
 
 Diagnostic context fields are nullable for compatibility with old rows,
 manually-created operation states, and operation states written before the
-result diagnostic context contract existed.
+result diagnostic context contract existed. The finalizer preserves existing
+diagnostic context when the caller does not provide a replacement.
 
 ## Provider Boundaries
 

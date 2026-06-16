@@ -118,6 +118,28 @@ requires the operation-state entity mapping and fails with a clear
 `ApplyBondstoneOperationState()` mapping error if it is used with a DbContext
 that does not map operation state.
 
+### Operation-State Diagnostic Column Migration
+
+The operation-state result diagnostic context uses nullable columns on the
+`operation_states` table:
+
+| Column            | CLR property                           | Max length |
+| ----------------- | -------------------------------------- | ---------- |
+| `ModuleName`      | `OperationStateEntity.ModuleName`      | 128        |
+| `MessageTypeName` | `OperationStateEntity.MessageTypeName` | 256        |
+| `HandlerIdentity` | `OperationStateEntity.HandlerIdentity` | 512        |
+
+Consumers own EF migrations. Applications upgrading a database created before
+these columns existed should add the nullable columns to every mapped
+operation-state table, including per-module schemas when modules map
+Bondstone persistence separately. No backfill is required. Existing operation
+rows without diagnostic context remain valid and result-reader diagnostics
+fall back to the operation id and requested result type.
+
+The columns are diagnostic only. They are not part of the operation-state key,
+are not indexed by Bondstone, and do not change operation-state precedence,
+completion, or result deserialization behavior.
+
 ADR 0028 accepts EF Core as the first provider bridge for optional
 module-local domain event collection and persistence. The implementation lives
 in `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`, not in the base

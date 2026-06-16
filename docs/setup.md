@@ -635,6 +635,30 @@ explicit, timeout-bounded wait is acceptable for the caller. Applications still
 own endpoint policy, timeout choice, polling cadence, and what to do with
 unknown, pending, failed, or cancelled operation state.
 
+When application policy has enough evidence that a workflow should stop
+polling, use `IDurableOperationFinalizer` to mark the operation terminal in
+the module that owns the operation-state store:
+
+```csharp
+DurableOperationFinalizationResult finalization =
+    await durableOperationFinalizer.MarkFailedAsync(
+        OrderingModule.ModuleName,
+        durableOperationId,
+        "Order creation expired before completion.",
+        ct: ct);
+
+if (!finalization.WasFinalized)
+{
+    DurableOperationStatus existingStatus = finalization.Status;
+}
+```
+
+Use this for explicit application timeout, expiry, cancellation, or
+administrative policy. Do not treat outbox terminal dispatch failure, inbox
+idempotency, broker retry, or dead-letter behavior as automatic operation
+failure unless application or provider-specific code has made that terminal
+outcome explicit.
+
 For result polling, prefer switching on `DurableOperationResult<TResult>.State`
 when the caller needs to explain why a value is not available:
 
@@ -660,10 +684,12 @@ payload was successfully deserialized as `TResult`. A completed operation can
 therefore have `HasResult == false` when no payload was stored or when payload
 deserialization failed.
 
-Deserialization diagnostics include the operation id and requested result type.
-The current operation-state reader does not carry module name, durable message
-type name, or handler identity, so those values are not included in result
-reader diagnostics today.
+Deserialization diagnostics include the operation id and requested result
+type. When the stored operation state carries diagnostic context, result-reader
+diagnostics also include the module name, durable message type name, and
+handler identity. Old operation rows or schemas that have not added the
+nullable diagnostic columns still work; those diagnostics fall back to the
+operation id and requested result type.
 
 Bondstone intentionally keeps the in-process and durable result paths
 separate. If an application exposes one business-facing service method for
@@ -685,6 +711,9 @@ The durable operation id ties the send and result lookup together:
 - After the handler and surrounding pipeline succeed, Bondstone stores
   `Completed` plus the serialized result payload inside the target module
   receive transaction.
+- Application policy may explicitly write `Failed` or `Cancelled` through
+  `IDurableOperationFinalizer` when the operation should stop being observed
+  as pending.
 - `IDurableOperationResultReader` uses the same operation id to find operation
   state and deserialize the completed result payload.
 

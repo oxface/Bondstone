@@ -94,6 +94,17 @@ Post-MVP transport simplification, 2026-06-16:
 - This is an intentional compatibility-breaking public API cleanup under ADR
   0056 while external usage is still bounded.
 
+Operation finalization, 2026-06-16:
+
+- `IDurableOperationFinalizer` is an additive user application contract for
+  marking explicit `Failed` or `Cancelled` operation outcomes in a named
+  module's operation-state store.
+- `DurableOperationFinalizationResult` is an additive result type that reports
+  the resulting operation state and whether the finalizer wrote a new terminal
+  state.
+- The API deliberately requires a module name and does not infer operation
+  failure from outbox, inbox, retry, or broker dead-letter state.
+
 ## Current Scope
 
 This first pass covers all current package projects:
@@ -141,6 +152,7 @@ User application contract:
 - `IBondstoneModule`
 - `IDurableCommandSender`
 - `IDurableEventPublisher`
+- `IDurableOperationFinalizer`
 - `IDurableOperationResultReader`
 - `IDurablePayloadSerializer`
 - `IMessageTypeRegistry`
@@ -155,6 +167,7 @@ User application contract:
 - `DurableEventPublishStatus`
 - `DurableOperationResult<TResult>`
 - `DurableOperationResultDeserializationFailure`
+- `DurableOperationFinalizationResult`
 - `DurableOperationResultState`
 - `DurablePayloadJsonOptions`
 - `ModuleCommandExecutionResult`

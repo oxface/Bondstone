@@ -468,14 +468,26 @@ Applied on 2026-06-16:
 1. Create ADR coverage for the post-MVP communication and transport
    simplification.
 2. Add a guardrail that prevents module handlers from synchronously executing
-   another module's command through `IModuleCommandExecutor`.
+   another module's command through `IModuleCommandExecutor`. Applied.
 3. Verify XML docs are produced and included in `.nupkg` files. Applied.
 4. Add package artifact tests for XML docs beside DLLs. Applied.
 5. Fix local transport delivery so worker dispatch preserves consumer inbox
-   persistence.
+   persistence. Applied.
 6. Add local transport integration tests for first delivery and duplicate
-   delivery.
-7. Document the operation-state diagnostic column migration.
+   delivery. Applied.
+7. Document the operation-state diagnostic column migration. Applied.
+
+### Applied: Consumer-Visible 1.2.x Gaps
+
+- Cross-module synchronous command execution through
+  `IModuleCommandExecutor` is blocked while a module handler is already
+  running. Same-module nested local execution remains allowed.
+- Package verification now opens produced `.nupkg` files and asserts XML
+  documentation files sit beside package assemblies under `lib/net10.0/`.
+- Local transport delivery preserves target-module receive inbox persistence
+  and duplicate delivery idempotency through the same receive pipeline.
+- Operation-state diagnostic columns are documented as nullable EF migration
+  additions with no required backfill.
 
 ### Applied: RabbitMQ Transport DSL Cut
 
@@ -500,8 +512,10 @@ Applied on 2026-06-16:
 
 ### Next: Operational MVP
 
-1. Create an ADR for operation-state semantics after publication.
+1. Create an ADR for operation-state semantics after publication. Accepted and
+   applied as ADR 0057.
 2. Add an application-facing operation-state writer or failure marker API.
+   Applied with `IDurableOperationFinalizer`.
 3. Add operation expiry/timeout policy and a maintenance worker or documented
    application-owned job shape.
 4. Add operator query APIs for terminal outbox rows.

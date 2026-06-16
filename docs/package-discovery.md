@@ -95,8 +95,9 @@ Common contracts include `IDurableOutboxWriter`,
 `DurableOutboxDispatchState`, and `DurableInboxAlreadyReceivedException`.
 
 `DurableMessageEnvelope`, `MessageKind`, `MessageTraceContext`,
-`DurableOperationState`, `DurableOperationStatus`, and
-`IDurableOperationReader` are in `Bondstone.Messaging`.
+`DurableOperationState`, `DurableOperationStatus`,
+`IDurableOperationReader`, `IDurableOperationFinalizer`, and
+`DurableOperationFinalizationResult` are in `Bondstone.Messaging`.
 
 ## EF Core Mappings
 

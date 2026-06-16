@@ -326,16 +326,27 @@ not declare exchanges, queues, topics, subscriptions, rules, bindings,
 provisioning, retry policy, dead-letter policy, or monitoring. Custom
 outbound broker integrations can still call
 `UseDurableEnvelopeDispatcher<TDispatcher>()` and implement
-`IDurableEnvelopeDispatcher`. Advanced integrations may also compose
-`IDurableEnvelopeDispatchRoute` with `RoutedDurableEnvelopeDispatcher`, which
-dispatches a claimed outbox record only when exactly one route matches the
-message. Zero matches and ambiguous matches are loud dispatch-time errors.
+`IDurableEnvelopeDispatcher`.
+
+Normal host composition uses one outbound dispatcher per service provider:
+local transport, RabbitMQ, Service Bus, or an app-owned dispatcher. A host
+that needs more than one outbound transport should register one explicit
+aggregate dispatcher instead of accumulating built-in dispatcher registrations.
+Advanced integrations may compose `IDurableEnvelopeDispatchRoute` with
+`RoutedDurableEnvelopeDispatcher`, which dispatches a claimed outbox record
+only when exactly one route matches the durable envelope. Route predicates
+should use durable envelope data such as `MessageKind`, stable
+`MessageTypeName`, source module, target module for commands, partition key,
+or explicit metadata. Zero matches and ambiguous matches are loud
+dispatch-time errors. This is route-aware dispatch, not a broker topology map.
 
 Inbound broker integrations should use `IDurableMessageEnvelopeSerializer` to
 read the durable envelope body and `IDurableEnvelopeReceiver` to execute
 module receive. Command envelopes route by `TargetModule`. Event receive is
 explicit: the app supplies the subscriber module and stable subscriber
-identity selected by its native subscription.
+identity selected by its native subscription. Multiple native receive workers
+may coexist when explicitly registered, but Bondstone does not maintain a
+provider-neutral receive topology map.
 
 Bondstone owns persisted outbox retry and terminal failure state. The outgoing
 outbox terminal status is documented in

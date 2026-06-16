@@ -1,11 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Bondstone.Transport.RabbitMq\Bondstone.Transport.RabbitMq.csproj" />
+    <ProjectReference Include="..\..\src\Bondstone.Transport.ServiceBus\Bondstone.Transport.ServiceBus.csproj" />
     <ProjectReference Include="..\..\samples\ModularMonolith\Bondstone.Samples.ModularMonolith.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Messaging.ServiceBus" />
+    <PackageReference Include="RabbitMQ.Client" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.RabbitMq" />
+    <PackageReference Include="Testcontainers.ServiceBus" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
@@ -15,5 +22,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="ServiceBusEmulatorConfig.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

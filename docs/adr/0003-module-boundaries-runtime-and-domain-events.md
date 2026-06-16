@@ -90,14 +90,9 @@ message bus.
 ## Related Decisions
 
 - Supersedes the active module-runtime and domain-event direction from the
-  archived ADR sequence.
-- See archived ADRs
-  [0025](archive/pre-restart-2026-06-16/0025-module-command-execution-boundary.md),
-  [0028](archive/pre-restart-2026-06-16/0028-domain-event-persistence-capability.md),
-  [0058](archive/pre-restart-2026-06-16/0058-domain-events-in-core-and-ef-persistence.md),
-  and
-  [0060](archive/pre-restart-2026-06-16/0060-direct-module-runtime-execution.md)
-  for prior context.
+  pre-restart ADR sequence summarized by
+  [0001](0001-restart-adr-history-around-current-baseline.md) and pruned by
+  [0009](0009-prune-pre-restart-archive-and-planning-notes.md).
 
 ## Application Notes
 

@@ -429,7 +429,10 @@ policy. Register outbound publishing with
 `IDurableMessageEnvelopeSerializer` to write/read `DurableMessageEnvelope`,
 and call `IDurableEnvelopeReceiver` from the native receive handler. Commands
 route by `TargetModule`; event receive calls must provide the selected
-subscriber module and stable subscriber identity.
+subscriber module and stable subscriber identity. Normal host composition uses
+one outbound dispatcher per service provider. If a host needs more than one
+outbound transport, register one explicit aggregate dispatcher rather than
+stacking built-in dispatcher registrations.
 
 RabbitMQ and Azure Service Bus have thin adapter packages when the app wants
 driver-level envelope plumbing without a transport DSL:
@@ -477,7 +480,11 @@ The app still registers RabbitMQ `IChannel` or Azure `ServiceBusClient`, owns
 native entities and bindings, and chooses retry/dead-letter behavior. Rebus is
 not a Bondstone package; use Rebus-owned routing and handlers around
 `IDurableEnvelopeDispatcher` and `IDurableEnvelopeReceiver` if an app chooses
-Rebus.
+Rebus. Advanced multi-transport hosts can compose
+`IDurableEnvelopeDispatchRoute` with `RoutedDurableEnvelopeDispatcher` so
+exactly one route owns each durable envelope based on envelope data such as
+message kind, stable message type identity, source module, target module, or
+partition metadata.
 
 Bondstone owns retry and terminal failure for outgoing persisted outbox
 records. Current outbox status semantics are described in

@@ -61,9 +61,9 @@ tests, UI refresh loops, and bounded synchronous waits with timeouts.
   [0004 Persistence Operation State And Results](0004-persistence-operation-state-and-results.md)
   and
   [0005 Transport Adapters And Receive Helpers](0005-transport-adapters-and-receive-helpers.md).
-- See archived ADR
-  [0057](archive/pre-restart-2026-06-16/0057-operation-state-operational-semantics.md)
-  for prior operation-state context.
+- Prior operation-state context is summarized by
+  [0001](0001-restart-adr-history-around-current-baseline.md) and pruned by
+  [0009](0009-prune-pre-restart-archive-and-planning-notes.md).
 
 ## Application Notes
 

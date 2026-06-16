@@ -20,10 +20,10 @@ public sealed class RabbitMqEnvelopeDispatcherOptions
         }
 
         RabbitMqEnvelopeDestination destination = ResolveDestination(envelope);
-        if (string.IsNullOrWhiteSpace(destination.Exchange))
+        if (destination.Exchange is null)
         {
             throw new InvalidOperationException(
-                $"{nameof(ResolveDestination)} returned an empty RabbitMQ exchange for message '{envelope.MessageId}'.");
+                $"{nameof(ResolveDestination)} returned a null RabbitMQ exchange for message '{envelope.MessageId}'.");
         }
 
         if (string.IsNullOrWhiteSpace(destination.RoutingKey))

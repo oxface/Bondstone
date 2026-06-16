@@ -95,8 +95,13 @@ story is:
 - keep broker provisioning, deployment, authentication, and product UI outside
   the sample.
 
-The integration proof uses a test-owned in-memory broker bridge that serializes
-`DurableMessageEnvelope` values and calls the receiving service's
-`IDurableEnvelopeReceiver`. It intentionally avoids a broker/provider matrix;
-real hosts can replace that bridge with Rebus, RabbitMQ.Client, Azure Service
-Bus, Kafka, or another app-owned transport runtime.
+The integration proof includes both a test-owned in-memory broker bridge and
+thin-adapter broker proofs for RabbitMQ and Azure Service Bus. The broker
+adapter tests run ordering and fulfillment in separate service providers,
+dispatch durable envelopes through the real adapter packages, receive commands
+and events through broker-backed workers, and observe the durable command
+result from the target fulfillment module. They still do not make the sample
+own broker topology as product behavior; the tests create the minimal topology
+needed for verification. Each sample host still uses one outbound dispatcher.
+If a future sample needs outbound multi-transport, it should demonstrate an
+explicit aggregate dispatcher rather than implicit adapter stacking.

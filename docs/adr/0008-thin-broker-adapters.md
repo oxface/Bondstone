@@ -93,12 +93,13 @@ shows a package can add value without fighting Rebus's own bus model.
   changing transport support or package boundaries.
 - Application evidence: `Bondstone.Transport.RabbitMq` and
   `Bondstone.Transport.ServiceBus` are active solution packages with fast
-  registration tests, public API baselines, package documentation, and setup
-  examples. Core receive helpers accept durable envelopes and serialized
-  durable envelope payloads.
-- Pending or deferred: Rebus adapter package remains deferred; provider-backed
-  broker integration tests are deferred until the thin shape survives initial
-  consumer use or a real infrastructure proof is requested.
+  registration tests, Testcontainers-backed adapter integration tests, public
+  API baselines, package documentation, setup examples, and sample-level
+  extracted-service broker tests. Core receive helpers accept durable
+  envelopes and serialized durable envelope payloads.
+- Pending or deferred: Rebus adapter package remains deferred. Broker retry,
+  settlement exhaustion, delivery counts, and dead-letter topology remain
+  app-owned unless a narrower Bondstone-owned behavior is accepted.
 
 ## Verification
 
@@ -109,4 +110,8 @@ Verified with:
 - `dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~DurableEnvelopeReceiverTests" --disable-build-servers`
 - `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Unit" --disable-build-servers`
 - `dotnet test tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj --configuration Release --no-build --filter "Category=Unit" --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.RabbitMq.Tests/Bondstone.Transport.RabbitMq.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
+- `dotnet test tests/Bondstone.Transport.ServiceBus.Tests/Bondstone.Transport.ServiceBus.Tests.csproj --configuration Release --no-build --filter "Category=Integration" --disable-build-servers`
+- `dotnet test tests/Bondstone.Samples.Tests/Bondstone.Samples.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~ModularMonolithBrokerAdapterSampleTests" --disable-build-servers`
+- `pnpm backend:test:integration`
 - `pnpm check`

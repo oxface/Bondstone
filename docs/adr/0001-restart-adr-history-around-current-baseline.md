@@ -60,13 +60,23 @@ understanding why Bondstone moved away from older choices.
 
 ## Related Decisions
 
-- Archives the pre-restart ADR sequence in
-  [archive/pre-restart-2026-06-16](archive/pre-restart-2026-06-16).
+- Initially archived the pre-restart ADR sequence under
+  `archive/pre-restart-2026-06-16`.
+- Amended by
+  [0009 Prune Pre-Restart Archive And Planning Notes](0009-prune-pre-restart-archive-and-planning-notes.md).
+
+## Amendment 2026-06-16 Prune Detailed Archive
+
+ADR 0009 removes the detailed pre-restart archive after the active ADR set and
+stable docs captured the current applied architecture. The old sequence remains
+traceable through this ADR, ADR 0009, and Git history, but no longer exists as
+an in-repository navigation surface.
 
 ## Application Notes
 
-- Current contract: active ADRs describe the post-MVP baseline; archived ADRs
-  preserve the previous decision trail.
+- Current contract: active ADRs describe the post-MVP baseline; ADR 0009
+  prunes the detailed archive and keeps old-sequence archaeology in Git
+  history.
 - Stable docs: [docs/adr/README.md](README.md) describes the active/archive
   split, and [docs/README.md](../README.md) continues to point stable behavior
   readers toward architecture, packaging, setup, samples, and testing docs.
@@ -74,7 +84,9 @@ understanding why Bondstone moved away from older choices.
   review before broad architecture, package, provider, transport, public API,
   compatibility, sample, and release changes.
 - Application evidence: previous ADR files were moved to the pre-restart
-  archive and the new active baseline ADR set was created.
+  archive during the restart, the new active baseline ADR set was created, and
+  ADR 0009 later removed the detailed archive after current decisions were
+  reflected in active docs.
 - Pending or deferred: none.
 
 ## Verification

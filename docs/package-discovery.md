@@ -115,6 +115,11 @@ envelope plumbing. Those packages do not own topology, provisioning,
 subscription storage, retry, dead-letter policy, prefetch/concurrency, or
 monitoring.
 
+Normal hosts register one outbound `IDurableEnvelopeDispatcher`. If a host
+needs more than one outbound transport, compose one explicit aggregate
+dispatcher instead of registering multiple built-in dispatchers and expecting
+Bondstone to infer ownership.
+
 Custom or app-owned broker integrations normally use:
 
 - `UseDurableEnvelopeDispatcher<TDispatcher>()` from `Bondstone.Configuration`
@@ -122,6 +127,9 @@ Custom or app-owned broker integrations normally use:
   validation;
 - `IDurableEnvelopeDispatcher` from `Bondstone.Persistence` to publish claimed
   outbox records through the chosen transport;
+- `IDurableEnvelopeDispatchRoute` and `RoutedDurableEnvelopeDispatcher` from
+  `Bondstone.Persistence` when the app explicitly needs route-aware outbound
+  dispatch across more than one transport;
 - `IDurableMessageEnvelopeSerializer` from `Bondstone.Messaging` to write and
   read `DurableMessageEnvelope` payloads;
 - `IDurableEnvelopeReceiver` from `Bondstone.Messaging` to execute received

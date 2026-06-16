@@ -32,6 +32,9 @@ duplicating durable rules.
   exists.
 - GitHub Issues and GitHub Projects track backlog work, real-project findings,
   cleanup tasks, and prioritization.
+- Temporary planning notes should not live under `docs/`; convert durable
+  decisions into ADRs/stable docs and backlog work into GitHub Issues or
+  Projects.
 - README files orient human maintainers to a folder or workflow.
 - AGENTS files orient agents to the relevant docs, local constraints, and
   verification expectations for a folder or workflow.

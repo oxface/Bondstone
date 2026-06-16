@@ -114,14 +114,9 @@ policy.
 ## Related Decisions
 
 - Supersedes the active package and compatibility posture from the archived
-  ADR sequence.
-- See archived ADRs
-  [0036](archive/pre-restart-2026-06-16/0036-direct-transport-adapters-and-rebus-removal.md),
-  [0051](archive/pre-restart-2026-06-16/0051-package-boundary-split.md),
-  [0056](archive/pre-restart-2026-06-16/0056-post-mvp-communication-and-transport-simplification.md),
-  and
-  [0060](archive/pre-restart-2026-06-16/0060-direct-module-runtime-execution.md)
-  for prior context.
+  pre-restart ADR sequence summarized by
+  [0001](0001-restart-adr-history-around-current-baseline.md) and pruned by
+  [0009](0009-prune-pre-restart-archive-and-planning-notes.md).
 
 ## Application Notes
 

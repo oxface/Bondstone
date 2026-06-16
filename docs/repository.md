@@ -51,6 +51,10 @@ changes current behavior, update stable docs in the same change.
 Issue formats, project statuses, label conventions, and completion comments
 are recorded in [github-workflow.md](github-workflow.md).
 
+Do not keep long-lived transitional plans under `docs/`. Once a plan is
+accepted or implemented, move durable decisions into ADRs/stable docs and
+remaining work into GitHub Issues or Projects.
+
 ## Tooling
 
 Use root `package.json`, pnpm, Husky, commitlint, Prettier, and lightweight

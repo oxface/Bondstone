@@ -85,22 +85,19 @@ Bus adapter packages without restoring a broker matrix sample. The modular
 monolith sample remains focused on EF/PostgreSQL and local transport, while
 setup docs show the thin adapter registration shape.
 
-The broker adapter packages start with fast unit/application tests for
-registration and option validation. Provider-backed RabbitMQ and Azure Service
-Bus tests remain deferred until real usage proves the thin APIs are stable
-enough to justify infrastructure-backed coverage.
+The broker adapter packages include fast unit/application tests for
+registration and option validation plus Testcontainers-backed integration tests
+for native-driver dispatcher publish and opt-in receive-worker handoff into
+Bondstone's receiver boundary. The modular monolith sample tests also prove
+RabbitMQ and Azure Service Bus adapter-backed extracted-service flows with
+durable operation result observation.
 
 ## Related Decisions
 
 - Supersedes the active sample, testing, package artifact, and docs governance
-  direction from the archived ADR sequence.
-- See archived ADRs
-  [0006](archive/pre-restart-2026-06-16/0006-testing-strategy.md),
-  [0007](archive/pre-restart-2026-06-16/0007-early-sample-application.md),
-  [0053](archive/pre-restart-2026-06-16/0053-github-tracked-work-and-current-docs.md),
-  and
-  [0055](archive/pre-restart-2026-06-16/0055-package-readme-and-xml-doc-artifacts.md)
-  for prior context.
+  direction from the pre-restart ADR sequence summarized by
+  [0001](0001-restart-adr-history-around-current-baseline.md) and pruned by
+  [0009](0009-prune-pre-restart-archive-and-planning-notes.md).
 
 ## Application Notes
 
@@ -114,7 +111,9 @@ enough to justify infrastructure-backed coverage.
   ADRs, testing, samples, packaging, and GitHub workflow docs before changing
   those areas.
 - Application evidence: package artifact tests assert XML docs; the local
-  modular monolith sample integration test covers the current sample path.
+  modular monolith sample integration test covers the current sample path; and
+  RabbitMQ/Service Bus adapter and sample integration tests prove the thin
+  broker handoff.
 - Pending or deferred: a cleanup sweep should remove redundant docs/tests and
   dedupe stale guidance after the architecture pivot settles.
 

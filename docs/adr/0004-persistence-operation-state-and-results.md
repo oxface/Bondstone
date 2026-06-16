@@ -79,13 +79,9 @@ failure.
 ## Related Decisions
 
 - Supersedes the active operation-state and result-command direction from the
-  archived ADR sequence.
-- See archived ADRs
-  [0031](archive/pre-restart-2026-06-16/0031-durable-operation-state-integration.md),
-  [0054](archive/pre-restart-2026-06-16/0054-result-returning-command-model.md),
-  and
-  [0057](archive/pre-restart-2026-06-16/0057-operation-state-operational-semantics.md)
-  for prior context.
+  pre-restart ADR sequence summarized by
+  [0001](0001-restart-adr-history-around-current-baseline.md) and pruned by
+  [0009](0009-prune-pre-restart-archive-and-planning-notes.md).
 
 ## Application Notes
 

@@ -106,13 +106,9 @@ proves that a package can add value without fighting the selected bus.
 ## Related Decisions
 
 - Supersedes the active transport direction from the archived ADR sequence.
-- See archived ADRs
-  [0036](archive/pre-restart-2026-06-16/0036-direct-transport-adapters-and-rebus-removal.md),
-  [0038](archive/pre-restart-2026-06-16/0038-provider-retry-recovery-and-settlement-boundaries.md),
-  [0039](archive/pre-restart-2026-06-16/0039-startup-transport-topology-validation.md),
-  and
-  [0056](archive/pre-restart-2026-06-16/0056-post-mvp-communication-and-transport-simplification.md)
-  for prior context.
+- Prior context is summarized by
+  [0001](0001-restart-adr-history-around-current-baseline.md) and pruned by
+  [0009](0009-prune-pre-restart-archive-and-planning-notes.md).
 
 ## Application Notes
 
@@ -132,8 +128,9 @@ proves that a package can add value without fighting the selected bus.
   topology ownership were removed. Local transport is covered by the modular
   monolith sample integration tests. RabbitMQ and Azure Service Bus adapters
   are covered by fast registration tests and public API baselines.
-- Pending or deferred: Rebus and provider-backed broker integration tests are
-  deferred until real consumer use proves the next step.
+- Pending or deferred: Rebus remains app-owned. Broker retry, settlement
+  exhaustion, delivery counts, and dead-letter topology remain app-owned unless
+  a narrower Bondstone-owned behavior is accepted.
 
 ## Verification
 

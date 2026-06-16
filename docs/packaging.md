@@ -33,7 +33,9 @@ broker adapter or hidden fallback.
 broker adapters. They provide native-driver envelope dispatchers and opt-in
 receive workers, but they do not own broker topology, provisioning,
 subscription storage, retry policy, dead-letter policy, prefetch/concurrency
-strategy, or monitoring.
+strategy, or monitoring. Normal host composition uses one outbound dispatcher
+per service provider. Multi-transport outbound dispatch is an explicit
+advanced composition scenario, not implicit built-in adapter accumulation.
 
 `Bondstone.Persistence.Postgres`, `Bondstone.Transport`,
 `Bondstone.Capabilities.DomainEvents`, and
@@ -84,7 +86,11 @@ another bus/runtime keep that integration app-owned: implement
 `IDurableEnvelopeReceiver` after mapping native deliveries into
 `DurableMessageEnvelope`. Reusable generic hosted worker composition belongs
 in `Bondstone.Hosting`; broker-specific receive workers live only in their
-adapter packages and are opt-in.
+adapter packages and are opt-in. When an app needs outbound routing across
+more than one transport, it should compose a single aggregate
+`IDurableEnvelopeDispatcher`, typically using `IDurableEnvelopeDispatchRoute`
+and `RoutedDurableEnvelopeDispatcher`, so one dispatcher service still owns
+the outbox boundary.
 Core command, messaging, and module execution abstractions stay in
 `Bondstone`. Provider-neutral durable persistence contracts are in
 `Bondstone.Persistence`; there is no active provider-neutral transport

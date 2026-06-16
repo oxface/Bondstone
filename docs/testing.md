@@ -75,9 +75,17 @@ ownership and extraction seams.
 
 For transport adapters, prefer a layered shape: use fast in-process transport
 tests for local behavior and thin adapter contract tests for broker packages.
-Broker receive retry, settlement exhaustion, delivery counts, and dead-letter
-topology belong to application or selected transport-library tests unless a
-provider-backed adapter proof is explicitly accepted.
+RabbitMQ and Azure Service Bus adapter packages also have Testcontainers-backed
+integration tests that prove native-driver dispatcher publish and opt-in
+receive-worker handoff into Bondstone's receiver boundary. Broker receive
+retry, settlement exhaustion, delivery counts, and dead-letter topology belong
+to application or selected transport-library tests unless a narrower
+Bondstone-owned behavior is accepted.
+
+The modular monolith sample integration suite also has broker-backed
+extraction proofs for RabbitMQ and Azure Service Bus. Those tests verify the
+sample's ordering-to-fulfillment durable command flow, event return path, and
+target-module operation result observation over the real adapter packages.
 
 For first-class events, keep the same split. Unit and application tests should
 cover event destination resolution, publish dispatch, subscriber registration,
@@ -89,7 +97,6 @@ Transport adapter routing is fast behavior. Cover missing command routes,
 missing published-event destinations, ambiguous multi-adapter dispatch route
 ownership, and missing receive bindings at dispatch or receive time with
 `Unit` or `Application` tests unless the assertion depends on a real broker.
-handoff.
 
 ## Verification Surface
 

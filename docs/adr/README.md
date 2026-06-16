@@ -10,12 +10,15 @@ ADRs answer why. Stable docs answer how the repository currently works.
 ## Active Baseline
 
 The active ADR set was restarted on 2026-06-16 after the public-MVP
-architecture pivot. The previous ADR sequence is retained under
-[`archive/pre-restart-2026-06-16/`](archive/pre-restart-2026-06-16/) for
-traceability, but it is not the active decision navigation path.
+architecture pivot. The previous ADR sequence was initially archived for
+traceability, then pruned after current decisions were moved into the active
+ADR set and stable docs. ADR
+[0001](0001-restart-adr-history-around-current-baseline.md) and ADR
+[0009](0009-prune-pre-restart-archive-and-planning-notes.md) summarize that
+transition.
 
-Use the active ADR files in this folder for current decisions. Consult the
-archive only when older context is needed.
+Use the active ADR files in this folder for current decisions. Consult Git
+history only when older discarded context is genuinely needed.
 
 ## Location And Naming
 
@@ -30,9 +33,9 @@ Use sequential numbering:
 
 Archive removed or obsolete ADR material under `archive/` only when preserving
 it in place would confuse current navigation. Prefer superseding an active ADR
-over deleting it. The pre-restart archive is a bounded exception approved by
-the maintainer to make the post-MVP baseline readable while preserving the old
-trail.
+over deleting it. The detailed pre-restart archive was pruned by ADR 0009;
+future archive additions require the same care around stable docs and active
+ADR traceability.
 
 ## Statuses
 

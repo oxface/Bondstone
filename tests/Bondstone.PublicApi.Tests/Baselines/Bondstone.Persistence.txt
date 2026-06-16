@@ -184,7 +184,7 @@ namespace Bondstone.Persistence
     }
     public sealed class DurableOutboxDispatcher : Bondstone.Persistence.IDurableOutboxDispatcher
     {
-        public DurableOutboxDispatcher(Bondstone.Persistence.IDurableOutboxClaimer claimer, Bondstone.Persistence.IDurableOutboxLeaseRenewer leaseRenewer, Bondstone.Persistence.IDurableOutboxTransport transport, Bondstone.Persistence.IDurableOutboxFailurePolicy failurePolicy, Bondstone.Persistence.IDurableOutboxDispatchRecorder dispatchRecorder, System.TimeProvider? timeProvider = null) { }
+        public DurableOutboxDispatcher(Bondstone.Persistence.IDurableOutboxClaimer claimer, Bondstone.Persistence.IDurableOutboxLeaseRenewer leaseRenewer, Bondstone.Persistence.IDurableEnvelopeDispatcher envelopeDispatcher, Bondstone.Persistence.IDurableOutboxFailurePolicy failurePolicy, Bondstone.Persistence.IDurableOutboxDispatchRecorder dispatchRecorder, System.TimeProvider? timeProvider = null) { }
         public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableOutboxDispatchResult> DispatchAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default) { }
     }
     public sealed class DurableOutboxFailureDecision : System.IEquatable<Bondstone.Persistence.DurableOutboxFailureDecision>
@@ -224,6 +224,16 @@ namespace Bondstone.Persistence
         Dispatched = 3,
         Failed = 4,
         TerminalFailed = 5,
+    }
+    public interface IDurableEnvelopeDispatchRoute
+    {
+        string TransportName { get; }
+        bool CanSend(Bondstone.Persistence.DurableOutboxRecord record);
+        System.Threading.Tasks.ValueTask DispatchAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableEnvelopeDispatcher
+    {
+        System.Threading.Tasks.ValueTask DispatchAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default);
     }
     public interface IDurableInboxHandlerExecutor
     {
@@ -265,16 +275,6 @@ namespace Bondstone.Persistence
     {
         System.Threading.Tasks.ValueTask<bool> RenewAsync(System.Guid messageId, string claimedBy, System.TimeSpan leaseDuration, System.Threading.CancellationToken ct = default);
     }
-    public interface IDurableOutboxTransport
-    {
-        System.Threading.Tasks.ValueTask SendAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default);
-    }
-    public interface IDurableOutboxTransportRoute
-    {
-        string TransportName { get; }
-        bool CanSend(Bondstone.Persistence.DurableOutboxRecord record);
-        System.Threading.Tasks.ValueTask SendAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default);
-    }
     public interface IDurableOutboxWriter
     {
         System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default);
@@ -285,9 +285,9 @@ namespace Bondstone.Persistence
         void OnCommitted(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> callback);
         void OnRolledBack(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> callback);
     }
-    public sealed class RoutedDurableOutboxTransport : Bondstone.Persistence.IDurableOutboxTransport
+    public sealed class RoutedDurableEnvelopeDispatcher : Bondstone.Persistence.IDurableEnvelopeDispatcher
     {
-        public RoutedDurableOutboxTransport(System.Collections.Generic.IEnumerable<Bondstone.Persistence.IDurableOutboxTransportRoute> routes) { }
-        public System.Threading.Tasks.ValueTask SendAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default) { }
+        public RoutedDurableEnvelopeDispatcher(System.Collections.Generic.IEnumerable<Bondstone.Persistence.IDurableEnvelopeDispatchRoute> routes) { }
+        public System.Threading.Tasks.ValueTask DispatchAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default) { }
     }
 }

@@ -130,6 +130,11 @@ namespace Bondstone.Transport.RabbitMq.Outbox
         ExplicitRoutingKey = 1,
         RoutingKeyConvention = 2,
     }
+    public sealed class RabbitMqDurableEnvelopeDispatcher : Bondstone.Persistence.IDurableEnvelopeDispatcher
+    {
+        public RabbitMqDurableEnvelopeDispatcher(Bondstone.Transport.RabbitMq.Outbox.IRabbitMqMessagePublisher publisher, Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxCommandRouteResolver commandRouteResolver, Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxEventRouteResolver eventRouteResolver) { }
+        public System.Threading.Tasks.ValueTask DispatchAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default) { }
+    }
     public sealed class RabbitMqDurableMessageEnvelope : System.IEquatable<Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope>
     {
         public RabbitMqDurableMessageEnvelope(System.Guid MessageId, string MessageKind, string MessageTypeName, string SourceModule, string? TargetModule, string Payload, string? Metadata, System.DateTimeOffset CreatedAtUtc, System.Guid? DurableOperationId, string? TraceParent, string? TraceState, string? TraceBaggage, System.Guid? CausationId, string? PartitionKey) { }
@@ -148,11 +153,6 @@ namespace Bondstone.Transport.RabbitMq.Outbox
         public string? TraceParent { get; init; }
         public string? TraceState { get; init; }
         public static Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope From(Bondstone.Messaging.DurableMessageEnvelope envelope) { }
-    }
-    public sealed class RabbitMqDurableOutboxTransport : Bondstone.Persistence.IDurableOutboxTransport
-    {
-        public RabbitMqDurableOutboxTransport(Bondstone.Transport.RabbitMq.Outbox.IRabbitMqMessagePublisher publisher, Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxCommandRouteResolver commandRouteResolver, Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxEventRouteResolver eventRouteResolver) { }
-        public System.Threading.Tasks.ValueTask SendAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default) { }
     }
     public sealed class RabbitMqEventRoutingDiagnostic
     {

@@ -22,7 +22,7 @@ public static class BondstoneRabbitMqServiceCollectionExtensions
         return services;
     }
 
-    internal static IServiceCollection AddBondstoneRabbitMqOutboxTransport(
+    internal static IServiceCollection AddBondstoneRabbitMqEnvelopeDispatcher(
         this IServiceCollection services,
         RabbitMqCommandRoutingTopology commandTopology,
         RabbitMqEventRoutingTopology eventTopology,
@@ -58,8 +58,8 @@ public static class BondstoneRabbitMqServiceCollectionExtensions
             services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHostedService, RabbitMqReceiveWorker>());
         }
-        services.AddTransient<IDurableOutboxTransportRoute, RabbitMqDurableOutboxTransportRoute>();
-        services.TryAddTransient<IDurableOutboxTransport, RoutedDurableOutboxTransport>();
+        services.AddTransient<IDurableEnvelopeDispatchRoute, RabbitMqDurableEnvelopeDispatchRoute>();
+        services.TryAddTransient<IDurableEnvelopeDispatcher, RoutedDurableEnvelopeDispatcher>();
 
         return services;
     }

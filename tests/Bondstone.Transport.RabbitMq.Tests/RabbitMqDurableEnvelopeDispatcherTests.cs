@@ -7,11 +7,11 @@ using Xunit;
 
 namespace Bondstone.Transport.RabbitMq.Tests;
 
-public sealed class RabbitMqDurableOutboxTransportTests
+public sealed class RabbitMqDurableEnvelopeDispatcherTests
 {
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task SendAsync_WhenCommandIsClaimed_PublishesMessageToResolvedRoute()
+    public async Task DispatchAsync_WhenCommandIsClaimed_PublishesMessageToResolvedRoute()
     {
         var publisher = new RecordingRabbitMqMessagePublisher();
         await using ServiceProvider serviceProvider = CreateServiceProvider(
@@ -21,10 +21,10 @@ public sealed class RabbitMqDurableOutboxTransportTests
                 rabbitMq.UseCommandExchange("bondstone.commands");
                 rabbitMq.RouteModule("fulfillment").ToRoutingKey("fulfillment.commands");
             });
-        IDurableOutboxTransport transport =
-            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+        IDurableEnvelopeDispatcher dispatcher =
+            serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
 
-        await transport.SendAsync(CreateRecord());
+        await dispatcher.DispatchAsync(CreateRecord());
 
         Assert.NotNull(publisher.Destination);
         Assert.Equal("bondstone.commands", publisher.Destination.ExchangeName);
@@ -60,7 +60,7 @@ public sealed class RabbitMqDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task SendAsync_WhenEventIsClaimed_PublishesMessageToResolvedRoute()
+    public async Task DispatchAsync_WhenEventIsClaimed_PublishesMessageToResolvedRoute()
     {
         var publisher = new RecordingRabbitMqMessagePublisher();
         await using ServiceProvider serviceProvider = CreateServiceProvider(
@@ -70,10 +70,10 @@ public sealed class RabbitMqDurableOutboxTransportTests
                 rabbitMq.UseEventExchange("bondstone.events");
                 rabbitMq.RouteEvent("sales.order.submitted.v1").ToRoutingKey("sales.order.submitted");
             });
-        IDurableOutboxTransport transport =
-            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+        IDurableEnvelopeDispatcher dispatcher =
+            serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
 
-        await transport.SendAsync(CreateRecord(
+        await dispatcher.DispatchAsync(CreateRecord(
             MessageKind.Event,
             targetModule: null,
             messageTypeName: "sales.order.submitted.v1"));
@@ -89,16 +89,16 @@ public sealed class RabbitMqDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task SendAsync_WhenEventIsClaimed_PublishesMessageToResolvedQueue()
+    public async Task DispatchAsync_WhenEventIsClaimed_PublishesMessageToResolvedQueue()
     {
         var publisher = new RecordingRabbitMqMessagePublisher();
         await using ServiceProvider serviceProvider = CreateServiceProvider(
             publisher,
             rabbitMq => rabbitMq.RouteEvent("sales.order.submitted.v1").ToQueue("sales-events"));
-        IDurableOutboxTransport transport =
-            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+        IDurableEnvelopeDispatcher dispatcher =
+            serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
 
-        await transport.SendAsync(CreateRecord(
+        await dispatcher.DispatchAsync(CreateRecord(
             MessageKind.Event,
             targetModule: null,
             messageTypeName: "sales.order.submitted.v1"));

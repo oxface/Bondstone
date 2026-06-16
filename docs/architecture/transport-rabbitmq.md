@@ -5,11 +5,11 @@ behavior.
 
 ## Current Scope
 
-The current adapter covers outgoing durable outbox transport, receive queue
+The current adapter covers outgoing durable envelope dispatch, receive queue
 topology, receive dispatchers, native message mapping, settlement handler
 helpers, and an opt-in hosted receive worker.
-`RabbitMqDurableOutboxTransport` implements
-`IDurableOutboxTransport` for claimed outbox records and maps Bondstone
+`RabbitMqDurableEnvelopeDispatcher` implements
+`IDurableEnvelopeDispatcher` for claimed outbox records and maps Bondstone
 durable envelopes to RabbitMQ publish messages through a provider-local
 envelope mapper.
 

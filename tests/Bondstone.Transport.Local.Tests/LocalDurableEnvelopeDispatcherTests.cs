@@ -8,11 +8,11 @@ using Xunit;
 
 namespace Bondstone.Transport.Local.Tests;
 
-public sealed class LocalDurableOutboxTransportTests
+public sealed class LocalDurableEnvelopeDispatcherTests
 {
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task SendAsync_WhenCommandQueueBindingExists_DispatchesCommandThroughReceivePipeline()
+    public async Task DispatchAsync_WhenCommandQueueBindingExists_DispatchesCommandThroughReceivePipeline()
     {
         var commandPipeline = new RecordingCommandReceivePipeline();
         await using ServiceProvider serviceProvider = CreateServiceProvider(
@@ -23,11 +23,11 @@ public sealed class LocalDurableOutboxTransportTests
                 local.RouteModule("fulfillment").ToQueue("fulfillment.commands");
                 local.Queue("fulfillment.commands").AcceptModule("fulfillment");
             });
-        IDurableOutboxTransport transport =
-            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+        IDurableEnvelopeDispatcher dispatcher =
+            serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
         DurableOutboxRecord record = CreateRecord();
 
-        await transport.SendAsync(record);
+        await dispatcher.DispatchAsync(record);
 
         Assert.Same(record.Envelope, commandPipeline.Envelope);
         Assert.Equal(1, commandPipeline.HandledCount);
@@ -35,18 +35,18 @@ public sealed class LocalDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task SendAsync_WhenModuleQueueConventionIsConfigured_DispatchesCommandThroughReceivePipeline()
+    public async Task DispatchAsync_WhenModuleQueueConventionIsConfigured_DispatchesCommandThroughReceivePipeline()
     {
         var commandPipeline = new RecordingCommandReceivePipeline();
         await using ServiceProvider serviceProvider = CreateServiceProvider(
             commandPipeline,
             new RecordingEventReceivePipeline(),
             local => local.UseModuleQueueConvention());
-        IDurableOutboxTransport transport =
-            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+        IDurableEnvelopeDispatcher dispatcher =
+            serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
         DurableOutboxRecord record = CreateRecord();
 
-        await transport.SendAsync(record);
+        await dispatcher.DispatchAsync(record);
 
         Assert.Same(record.Envelope, commandPipeline.Envelope);
         Assert.Equal(1, commandPipeline.HandledCount);
@@ -54,7 +54,7 @@ public sealed class LocalDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task SendAsync_WhenEventQueueHasSubscribers_DispatchesEventToEachSubscriber()
+    public async Task DispatchAsync_WhenEventQueueHasSubscribers_DispatchesEventToEachSubscriber()
     {
         var eventPipeline = new RecordingEventReceivePipeline();
         await using ServiceProvider serviceProvider = CreateServiceProvider(
@@ -73,14 +73,14 @@ public sealed class LocalDurableOutboxTransportTests
                         "billing",
                         "billing.sales-order-projection.v1");
             });
-        IDurableOutboxTransport transport =
-            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+        IDurableEnvelopeDispatcher dispatcher =
+            serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
         DurableOutboxRecord record = CreateRecord(
             MessageKind.Event,
             targetModule: null,
             messageTypeName: "sales.order.submitted.v1");
 
-        await transport.SendAsync(record);
+        await dispatcher.DispatchAsync(record);
 
         Assert.Equal(2, eventPipeline.Deliveries.Count);
         Assert.All(
@@ -100,19 +100,19 @@ public sealed class LocalDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task SendAsync_WhenNoQueueBindingExists_ThrowsNoTransportRoute()
+    public async Task DispatchAsync_WhenNoQueueBindingExists_ThrowsNoTransportRoute()
     {
         await using ServiceProvider serviceProvider = CreateServiceProvider(
             new RecordingCommandReceivePipeline(),
             new RecordingEventReceivePipeline(),
             local => local.RouteModule("fulfillment").ToQueue("fulfillment.commands"));
-        IDurableOutboxTransport transport =
-            serviceProvider.GetRequiredService<IDurableOutboxTransport>();
+        IDurableEnvelopeDispatcher dispatcher =
+            serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
 
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await transport.SendAsync(CreateRecord()));
+            async () => await dispatcher.DispatchAsync(CreateRecord()));
 
-        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("No durable envelope dispatch route", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public sealed class LocalDurableOutboxTransportTests
                     local => local.RouteModule("fulfillment").ToQueue("fulfillment.commands"));
             }));
 
-        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("No durable envelope dispatch route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("module 'fulfillment'", exception.Message, StringComparison.Ordinal);
         Assert.Contains(
             "Local transport has no queue binding for target module 'fulfillment'.",

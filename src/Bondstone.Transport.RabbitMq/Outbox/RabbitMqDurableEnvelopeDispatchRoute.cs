@@ -3,13 +3,13 @@ using Bondstone.Persistence;
 
 namespace Bondstone.Transport.RabbitMq.Outbox;
 
-internal sealed class RabbitMqDurableOutboxTransportRoute(
+internal sealed class RabbitMqDurableEnvelopeDispatchRoute(
     IRabbitMqMessagePublisher publisher,
     RabbitMqCommandRoutingTopology commandTopology,
     RabbitMqEventRoutingTopology eventTopology)
-    : IDurableOutboxTransportRoute
+    : IDurableEnvelopeDispatchRoute
 {
-    private readonly RabbitMqDurableOutboxTransport _transport =
+    private readonly RabbitMqDurableEnvelopeDispatcher _dispatcher =
         new(
             publisher ?? throw new ArgumentNullException(nameof(publisher)),
             new RabbitMqCommandRouteResolver(commandTopology),
@@ -40,10 +40,10 @@ internal sealed class RabbitMqDurableOutboxTransportRoute(
         return false;
     }
 
-    public ValueTask SendAsync(
+    public ValueTask DispatchAsync(
         DurableOutboxRecord record,
         CancellationToken ct = default)
     {
-        return _transport.SendAsync(record, ct);
+        return _dispatcher.DispatchAsync(record, ct);
     }
 }

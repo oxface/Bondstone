@@ -21,7 +21,7 @@ public sealed partial class PostgreSqlPersistenceTests
             (firstMessageId, DateTimeOffset.Parse("2026-06-04T00:00:01+00:00")),
             (secondMessageId, DateTimeOffset.Parse("2026-06-04T00:00:02+00:00")));
 
-        RecordingTransport transport = new();
+        RecordingEnvelopeDispatcher transport = new();
         await using PostgreSqlTestDbContext context = CreateContext();
         DurableOutboxDispatcher dispatcher = CreateOutboxDispatcher(
             context,
@@ -67,7 +67,7 @@ public sealed partial class PostgreSqlPersistenceTests
         await using PostgreSqlTestDbContext context = CreateContext();
         DurableOutboxDispatcher dispatcher = CreateOutboxDispatcher(
             context,
-            new ThrowingTransport(new InvalidOperationException("transport unavailable")),
+            new ThrowingEnvelopeDispatcher(new InvalidOperationException("transport unavailable")),
             new FixedTimeProvider(dispatcherTimeUtc),
             new DurableOutboxFailurePolicy(
                 maxAttempts: 3,
@@ -112,7 +112,7 @@ public sealed partial class PostgreSqlPersistenceTests
         await using PostgreSqlTestDbContext context = CreateContext();
         DurableOutboxDispatcher dispatcher = CreateOutboxDispatcher(
             context,
-            new ThrowingTransport(new InvalidOperationException("poison message")),
+            new ThrowingEnvelopeDispatcher(new InvalidOperationException("poison message")),
             new FixedTimeProvider(dispatcherTimeUtc),
             new DurableOutboxFailurePolicy(maxAttempts: 1));
 
@@ -143,7 +143,7 @@ public sealed partial class PostgreSqlPersistenceTests
 
     private static DurableOutboxDispatcher CreateOutboxDispatcher(
         PostgreSqlTestDbContext context,
-        IDurableOutboxTransport transport,
+        IDurableEnvelopeDispatcher dispatcher,
         TimeProvider timeProvider,
         IDurableOutboxFailurePolicy? failurePolicy = null)
     {
@@ -172,13 +172,13 @@ public sealed partial class PostgreSqlPersistenceTests
         Assert.Null(entity.ClaimedUntilUtc);
     }
 
-    private sealed class RecordingTransport : IDurableOutboxTransport
+    private sealed class RecordingEnvelopeDispatcher : IDurableEnvelopeDispatcher
     {
         private readonly List<Guid> _messageIds = [];
 
         public IReadOnlyList<Guid> MessageIds => _messageIds;
 
-        public ValueTask SendAsync(
+        public ValueTask DispatchAsync(
             DurableOutboxRecord record,
             CancellationToken ct = default)
         {
@@ -187,9 +187,9 @@ public sealed partial class PostgreSqlPersistenceTests
         }
     }
 
-    private sealed class ThrowingTransport(Exception exception) : IDurableOutboxTransport
+    private sealed class ThrowingEnvelopeDispatcher(Exception exception) : IDurableEnvelopeDispatcher
     {
-        public ValueTask SendAsync(
+        public ValueTask DispatchAsync(
             DurableOutboxRecord record,
             CancellationToken ct = default)
         {

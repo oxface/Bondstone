@@ -7,7 +7,7 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox;
 public sealed class PostgreSqlModuleDurableOutboxDispatcher<TDbContext>(
     string moduleName,
     TDbContext context,
-    IDurableOutboxTransport transport,
+    IDurableEnvelopeDispatcher envelopeDispatcher,
     IDurableOutboxFailurePolicy failurePolicy,
     TimeProvider? timeProvider = null,
     string? schema = null)
@@ -35,7 +35,7 @@ public sealed class PostgreSqlModuleDurableOutboxDispatcher<TDbContext>(
                 context,
                 _timeProvider,
                 schema),
-            transport,
+            envelopeDispatcher,
             failurePolicy,
             new PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
                 context,

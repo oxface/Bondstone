@@ -1,13 +1,13 @@
 namespace Bondstone.Persistence;
 
-public interface IDurableOutboxTransportRoute
+public interface IDurableEnvelopeDispatchRoute
 {
     string TransportName { get; }
 
     bool CanSend(
         DurableOutboxRecord record);
 
-    ValueTask SendAsync(
+    ValueTask DispatchAsync(
         DurableOutboxRecord record,
         CancellationToken ct = default);
 }

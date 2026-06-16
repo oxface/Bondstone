@@ -4,11 +4,11 @@ using Bondstone.Persistence;
 
 namespace Bondstone.Transport.Local.Outbox;
 
-internal sealed class LocalDurableOutboxTransportRoute(
+internal sealed class LocalDurableEnvelopeDispatchRoute(
     LocalTransportTopology topology,
     IModuleCommandReceivePipeline commandReceivePipeline,
     IModuleEventReceivePipeline eventReceivePipeline)
-    : IDurableOutboxTransportRoute
+    : IDurableEnvelopeDispatchRoute
 {
     private readonly LocalTransportTopology _topology =
         topology ?? throw new ArgumentNullException(nameof(topology));
@@ -38,7 +38,7 @@ internal sealed class LocalDurableOutboxTransportRoute(
         return false;
     }
 
-    public async ValueTask SendAsync(
+    public async ValueTask DispatchAsync(
         DurableOutboxRecord record,
         CancellationToken ct = default)
     {

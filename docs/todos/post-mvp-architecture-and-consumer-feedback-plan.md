@@ -443,6 +443,24 @@ Applied on 2026-06-16:
   sample, public API, and package README docs to describe the current
   supported surface.
 
+### Completed: Envelope Dispatch Vocabulary Cut
+
+Applied on 2026-06-16:
+
+- Renamed the neutral outbox handoff from `IDurableOutboxTransport` and
+  `IDurableOutboxTransportRoute` to `IDurableEnvelopeDispatcher` and
+  `IDurableEnvelopeDispatchRoute`.
+- Renamed `RoutedDurableOutboxTransport` to
+  `RoutedDurableEnvelopeDispatcher` and
+  `RabbitMqDurableOutboxTransport` to `RabbitMqDurableEnvelopeDispatcher`.
+- Changed the neutral envelope handoff method from `SendAsync(...)` to
+  `DispatchAsync(...)`.
+- Kept package-level `UseLocalTransport(...)` and
+  `UseRabbitMqTransport(...)` naming for now because those still describe the
+  selected adapter package.
+- Updated public API baselines, composition tests, local transport tests,
+  RabbitMQ tests, and stable docs for the new vocabulary.
+
 ### Now: Patch Consumer-Visible 1.2.x Gaps
 
 1. Create ADR coverage for the post-MVP communication and transport

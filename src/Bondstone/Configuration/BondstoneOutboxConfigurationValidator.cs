@@ -20,8 +20,8 @@ internal sealed class BondstoneOutboxConfigurationValidator(BondstoneOutboxBuild
         if (!outbox.HasTransport)
         {
             throw new InvalidOperationException(
-                "Bondstone outbox dispatching requires an outbox transport. "
-                + "Register a transport before enabling the dispatcher or worker.");
+                "Bondstone outbox dispatching requires an envelope dispatcher. "
+                + "Register a local or broker transport adapter before enabling the dispatcher or worker.");
         }
     }
 }

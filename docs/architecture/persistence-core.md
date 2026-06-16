@@ -64,18 +64,19 @@ Failure reasons are persisted as diagnostic text for the failed dispatch
 attempt. They are not a normalized machine-readable remediation contract and
 do not by themselves define an operator recovery action.
 
-`IDurableOutboxTransport` is the minimal transport boundary for sending a
+`IDurableEnvelopeDispatcher` is the minimal envelope dispatch boundary for a
 claimed `DurableOutboxRecord`. Transport adapters own routing, serialization,
-broker-specific acknowledgement, and transport-native behavior.
+broker-specific acknowledgement, and provider-native behavior.
 
 `IDurableOutboxDispatcher` is the dispatch boundary. The default
 `DurableOutboxDispatcher` implementation is a plain composable class for
 dispatching one batch when called. It composes claiming, per-record lease
-renewal, transport send, failure decision, and outcome recording. It is not a
-hosted service and does not own polling, leader election, singleton sweeper
-coordination, route circuit breaking, archiving, terminal-failure routing, or
-claim-maintenance APIs. Expired outbox processing claims are recovered by the
-provider claimer when that provider supports expired-lease claiming; active
+renewal, envelope dispatch, failure decision, and outcome recording. It is
+not a hosted service and does not own polling, leader election, singleton
+sweeper coordination, route circuit breaking, archiving, terminal-failure
+routing, or claim-maintenance APIs. Expired outbox processing claims are
+recovered by the provider claimer when that provider supports expired-lease
+claiming; active
 outcome updates remain claim-owner and lease-time aware.
 Hosted worker composition lives outside the persistence package in
 `Bondstone.Hosting`.

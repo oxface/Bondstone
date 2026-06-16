@@ -179,7 +179,9 @@ narrow.
   their tests from the repository and `Bondstone.slnx`; removes them from the
   public API baseline matrix; converts the modular monolith billing sample to
   EF/PostgreSQL persistence; and removes Service Bus from active composition
-  tests.
+  tests. The third implementation slice renames the neutral outbox transport
+  handoff to durable envelope dispatch contracts and refreshes public API
+  baselines plus stable docs.
 - Pending or deferred: Shrinking or merging `Bondstone.Transport`, replacing
   provider transport topology DSLs with thinner envelope dispatch/receive
   helpers, module-aware operation handles, operation failure policy, pipeline

@@ -86,8 +86,8 @@ using Bondstone.Messaging;
 ```
 
 Common contracts include `IDurableOutboxWriter`,
-`IDurableOutboxDispatcher`, `IDurableOutboxTransport`,
-`IDurableOutboxTransportRoute`, `IDurableInboxHandlerExecutor`,
+`IDurableOutboxDispatcher`, `IDurableEnvelopeDispatcher`,
+`IDurableEnvelopeDispatchRoute`, `IDurableInboxHandlerExecutor`,
 `IDurableInboxRegistrar`, `IDurableInboxStore`,
 `IDurableOperationStateStore`, `IDurableOutboxClaimer`,
 `IDurableOutboxLeaseRenewer`, `IDurableOutboxDispatchRecorder`,

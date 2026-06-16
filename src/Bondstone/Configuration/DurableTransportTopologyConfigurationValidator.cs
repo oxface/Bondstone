@@ -68,11 +68,11 @@ internal sealed class DurableTransportTopologyConfigurationValidator(
                 ? $"command route for {routeDescription}"
                 : $"event route for {routeDescription}";
             throw new InvalidOperationException(
-                $"No durable outbox transport route is configured for {messageDescription}. Checked transports: {transportNames}.{failureReasons}");
+                $"No durable envelope dispatch route is configured for {messageDescription}. Checked adapters: {transportNames}.{failureReasons}");
         }
 
         throw new InvalidOperationException(
-            $"Multiple durable outbox transport routes are configured for {routeDescription}: {FormatTransportNames(matches)}. Configure exactly one transport route for this durable message.");
+            $"Multiple durable envelope dispatch routes are configured for {routeDescription}: {FormatTransportNames(matches)}. Configure exactly one adapter route for this durable message.");
     }
 
     private static string FormatTransportNames(

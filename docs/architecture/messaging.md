@@ -319,16 +319,16 @@ and administration remain app-owned or provider-native.
 and local development. It uses the neutral receive pipelines and preserves
 outbox/inbox semantics, but it is not a broker durability layer or fallback.
 
-Direct transport packages contribute `IDurableOutboxTransportRoute` entries.
-`RoutedDurableOutboxTransport` sends a claimed outbox record only when exactly
-one provider route matches the message. Zero matches and ambiguous matches are
-loud configuration errors.
+Direct transport packages contribute `IDurableEnvelopeDispatchRoute` entries.
+`RoutedDurableEnvelopeDispatcher` dispatches a claimed outbox record only when
+exactly one adapter route matches the message. Zero matches and ambiguous
+matches are loud configuration errors.
 
 Local and RabbitMQ contribute startup topology diagnostics for outbound
 durable route ownership. When transport diagnostic sources are configured,
 registered durable command target modules and registered published events must
-have exactly one outbound transport route. Zero matches and multiple matches
-fail during `AddBondstone`, before outbox dispatch.
+have exactly one outbound envelope dispatch route. Zero matches and multiple
+matches fail during `AddBondstone`, before outbox dispatch.
 Normal host setup should use provider transport extensions on the main
 `BondstoneBuilder`, because that path registers the provider topology
 diagnostic sources and configuration validators. The lower-level

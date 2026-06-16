@@ -90,10 +90,10 @@ public sealed class LocalTransportInboxPersistenceTests
 
         await using (AsyncServiceScope scope = serviceProvider.CreateAsyncScope())
         {
-            IDurableOutboxTransport transport =
-                scope.ServiceProvider.GetRequiredService<IDurableOutboxTransport>();
+            IDurableEnvelopeDispatcher dispatcher =
+                scope.ServiceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
 
-            await transport.SendAsync(dispatchedOutbox.ToRecord());
+            await dispatcher.DispatchAsync(dispatchedOutbox.ToRecord());
         }
 
         Assert.Single(await ReadFulfillmentInboxAsync(serviceProvider));

@@ -58,7 +58,7 @@ public sealed class BondstoneBuilderTests
                 builder.Outbox.MarkDispatcher("test dispatcher");
             }));
 
-        Assert.Contains("outbox transport", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("envelope dispatcher", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

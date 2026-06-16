@@ -81,6 +81,19 @@ Issue 28 result diagnostic context, 2026-06-15:
 - The constructor changes are additive optional parameters. Existing callers
   and old operation rows continue to work with null diagnostic context.
 
+Post-MVP transport simplification, 2026-06-16:
+
+- `IDurableOutboxTransport`, `IDurableOutboxTransportRoute`,
+  `RoutedDurableOutboxTransport`, and `RabbitMqDurableOutboxTransport` were
+  renamed to `IDurableEnvelopeDispatcher`,
+  `IDurableEnvelopeDispatchRoute`, `RoutedDurableEnvelopeDispatcher`, and
+  `RabbitMqDurableEnvelopeDispatcher`.
+- The renamed envelope dispatcher contract uses `DispatchAsync(...)` to make
+  the neutral handoff about dispatching persisted Bondstone envelopes, not
+  owning broker transport runtime.
+- This is an intentional compatibility-breaking public API cleanup under ADR
+  0056 while external usage is still bounded.
+
 ## Current Scope
 
 This first pass covers all current package projects:
@@ -215,8 +228,8 @@ Advanced composition API:
 
 - `IDurableOutboxDispatcher`
 - `IDurableOutboxFailurePolicy`
-- `IDurableOutboxTransport`
-- `IDurableOutboxTransportRoute`
+- `IDurableEnvelopeDispatcher`
+- `IDurableEnvelopeDispatchRoute`
 - `IDurableOutboxWriter`
 - `IDurableInboxHandlerExecutor`
 - `IDurableInboxRegistrar`
@@ -228,7 +241,7 @@ Advanced composition API:
 - `DurableInboxHandlerExecutor`
 - `DurableOutboxDispatcher`
 - `DurableOutboxFailurePolicy`
-- `RoutedDurableOutboxTransport`
+- `RoutedDurableEnvelopeDispatcher`
 
 Provider/runtime contract:
 
@@ -374,7 +387,7 @@ Public implementation detail exposed for now:
 
 - `BondstoneRabbitMqHeaders`
 - `RabbitMqDurableMessageEnvelope`
-- `RabbitMqDurableOutboxTransport`
+- `RabbitMqDurableEnvelopeDispatcher`
 
 ## Bondstone.Capabilities.DomainEvents
 

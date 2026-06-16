@@ -13,8 +13,8 @@ transport extension from
 Use this package directly for custom transport adapters or diagnostic tooling.
 
 Install this package when writing provider-neutral transport diagnostics or a
-custom outbox transport adapter. Application hosts normally reference a
-concrete transport package instead.
+custom durable envelope dispatch adapter. Application hosts normally reference
+a concrete transport package instead.
 
 See:
 

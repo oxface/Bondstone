@@ -2,42 +2,42 @@ using Bondstone.Utility;
 
 namespace Bondstone.Persistence;
 
-public sealed class RoutedDurableOutboxTransport(
-    IEnumerable<IDurableOutboxTransportRoute> routes)
-    : IDurableOutboxTransport
+public sealed class RoutedDurableEnvelopeDispatcher(
+    IEnumerable<IDurableEnvelopeDispatchRoute> routes)
+    : IDurableEnvelopeDispatcher
 {
-    private readonly IReadOnlyCollection<IDurableOutboxTransportRoute> _routes =
+    private readonly IReadOnlyCollection<IDurableEnvelopeDispatchRoute> _routes =
         routes?.ToArray() ?? throw new ArgumentNullException(nameof(routes));
 
-    public async ValueTask SendAsync(
+    public async ValueTask DispatchAsync(
         DurableOutboxRecord record,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 
-        IDurableOutboxTransportRoute[] matches = _routes
+        IDurableEnvelopeDispatchRoute[] matches = _routes
             .Where(route => route.CanSend(record))
             .ToArray();
 
         if (matches.Length == 1)
         {
-            await matches[0].SendAsync(record, ct);
+            await matches[0].DispatchAsync(record, ct);
             return;
         }
 
         if (matches.Length == 0)
         {
             throw new InvalidOperationException(
-                $"No durable outbox transport route can send {DescribeRecord(record)}.");
+                $"No durable envelope dispatch route can send {DescribeRecord(record)}.");
         }
 
-        string transportNames = string.Join(
+        string routeNames = string.Join(
             "', '",
             matches.Select(static route => route.TransportName)
-                .OrderBy(static transportName => transportName, StringComparer.Ordinal));
+                .OrderBy(static routeName => routeName, StringComparer.Ordinal));
 
         throw new InvalidOperationException(
-            $"Multiple durable outbox transport routes can send {DescribeRecord(record)}: '{transportNames}'. Configure routing so exactly one transport owns this durable message.");
+            $"Multiple durable envelope dispatch routes can send {DescribeRecord(record)}: '{routeNames}'. Configure routing so exactly one adapter owns this durable message.");
     }
 
     private static string DescribeRecord(

@@ -5,7 +5,7 @@ namespace Bondstone.Persistence;
 public sealed class DurableOutboxDispatcher(
     IDurableOutboxClaimer claimer,
     IDurableOutboxLeaseRenewer leaseRenewer,
-    IDurableOutboxTransport transport,
+    IDurableEnvelopeDispatcher envelopeDispatcher,
     IDurableOutboxFailurePolicy failurePolicy,
     IDurableOutboxDispatchRecorder dispatchRecorder,
     TimeProvider? timeProvider = null)
@@ -64,7 +64,7 @@ public sealed class DurableOutboxDispatcher(
 
             try
             {
-                await transport.SendAsync(record, ct);
+                await envelopeDispatcher.DispatchAsync(record, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {

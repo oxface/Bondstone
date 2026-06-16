@@ -60,8 +60,8 @@ public sealed class AddBondstoneCompositionTests
         using IServiceScope scope = serviceProvider.CreateScope();
         Assert.IsType<DurableOutboxDispatcher>(
             scope.ServiceProvider.GetRequiredService<IDurableOutboxDispatcher>());
-        Assert.IsType<RoutedDurableOutboxTransport>(
-            scope.ServiceProvider.GetRequiredService<IDurableOutboxTransport>());
+        Assert.IsType<RoutedDurableEnvelopeDispatcher>(
+            scope.ServiceProvider.GetRequiredService<IDurableEnvelopeDispatcher>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IDurableOutboxClaimer>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IDurableOutboxLeaseRenewer>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IDurableOutboxDispatchRecorder>());
@@ -88,7 +88,7 @@ public sealed class AddBondstoneCompositionTests
                 bondstone.UseLocalTransport(_ => { });
             }));
 
-        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("No durable envelope dispatch route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("module 'fulfillment'", exception.Message, StringComparison.Ordinal);
         Assert.Contains("RabbitMq", exception.Message, StringComparison.Ordinal);
         Assert.Contains("Local", exception.Message, StringComparison.Ordinal);
@@ -131,7 +131,7 @@ public sealed class AddBondstoneCompositionTests
                 });
             }));
 
-        Assert.Contains("Multiple durable outbox transport routes", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Multiple durable envelope dispatch routes", exception.Message, StringComparison.Ordinal);
         Assert.Contains("composition.event.v1", exception.Message, StringComparison.Ordinal);
         Assert.Contains("RabbitMq", exception.Message, StringComparison.Ordinal);
         Assert.Contains("Local", exception.Message, StringComparison.Ordinal);

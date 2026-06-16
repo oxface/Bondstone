@@ -14,7 +14,7 @@ public sealed class DurableOutboxDispatcherTests
         DurableOutboxRecord second = CreateRecord(Guid.Parse("7fc91fbb-7f01-4a9c-9e2c-cac014cb29ce"));
         var claimer = new FakeClaimer([first, second]);
         var leaseRenewer = new FakeLeaseRenewer();
-        var transport = new FakeTransport();
+        var transport = new FakeEnvelopeDispatcher();
         var recorder = new FakeDispatchRecorder();
         DurableOutboxDispatcher dispatcher = CreateDispatcher(claimer, leaseRenewer, transport, recorder: recorder);
 
@@ -34,11 +34,11 @@ public sealed class DurableOutboxDispatcherTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task DispatchAsync_WhenLeaseCannotBeRenewed_SkipsTransportSend()
+    public async Task DispatchAsync_WhenLeaseCannotBeRenewed_SkipsEnvelopeDispatch()
     {
         DurableOutboxRecord record = CreateRecord(Guid.Parse("523eb5d5-f157-4a4d-abcf-d228d23703e9"));
         var leaseRenewer = new FakeLeaseRenewer { RenewResult = false };
-        var transport = new FakeTransport();
+        var transport = new FakeEnvelopeDispatcher();
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
             leaseRenewer,
@@ -55,10 +55,10 @@ public sealed class DurableOutboxDispatcherTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task DispatchAsync_WhenTransportFailsAndPolicyRetries_SchedulesRetry()
+    public async Task DispatchAsync_WhenEnvelopeDispatchFailsAndPolicyRetries_SchedulesRetry()
     {
         DurableOutboxRecord record = CreateRecord(Guid.Parse("79fffc4d-545d-46e4-b8df-e4e8b992ace1"));
-        var transport = new FakeTransport { Exception = new InvalidOperationException("transport unavailable") };
+        var transport = new FakeEnvelopeDispatcher { Exception = new InvalidOperationException("transport unavailable") };
         var recorder = new FakeDispatchRecorder();
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
@@ -82,7 +82,7 @@ public sealed class DurableOutboxDispatcherTests
     public async Task DispatchAsync_WhenRetryScheduleCannotBeRecorded_CountsStale()
     {
         DurableOutboxRecord record = CreateRecord(Guid.Parse("a42e4f2e-2f8b-4c8f-a119-bfffa93ae1de"));
-        var transport = new FakeTransport { Exception = new InvalidOperationException("transport unavailable") };
+        var transport = new FakeEnvelopeDispatcher { Exception = new InvalidOperationException("transport unavailable") };
         var recorder = new FakeDispatchRecorder { RecordResult = false };
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
@@ -103,12 +103,12 @@ public sealed class DurableOutboxDispatcherTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task DispatchAsync_WhenTransportFailsAndMaxAttemptsReached_MarksTerminalFailed()
+    public async Task DispatchAsync_WhenEnvelopeDispatchFailsAndMaxAttemptsReached_MarksTerminalFailed()
     {
         DurableOutboxRecord record = CreateRecord(
             Guid.Parse("4b6fdcfb-c8ad-4f50-b243-82cc3055fef7"),
             attemptCount: 5);
-        var transport = new FakeTransport { Exception = new InvalidOperationException("poison") };
+        var transport = new FakeEnvelopeDispatcher { Exception = new InvalidOperationException("poison") };
         var recorder = new FakeDispatchRecorder();
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
@@ -132,7 +132,7 @@ public sealed class DurableOutboxDispatcherTests
         DurableOutboxRecord record = CreateRecord(
             Guid.Parse("59b28340-bc5d-4a2d-a682-2bfc00f50b27"),
             attemptCount: 5);
-        var transport = new FakeTransport { Exception = new InvalidOperationException("poison") };
+        var transport = new FakeEnvelopeDispatcher { Exception = new InvalidOperationException("poison") };
         var recorder = new FakeDispatchRecorder { RecordResult = false };
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
@@ -160,7 +160,7 @@ public sealed class DurableOutboxDispatcherTests
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
             new FakeLeaseRenewer(),
-            new FakeTransport(),
+            new FakeEnvelopeDispatcher(),
             recorder: recorder);
 
         DurableOutboxDispatchResult result = await dispatcher.DispatchAsync(
@@ -178,7 +178,7 @@ public sealed class DurableOutboxDispatcherTests
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         DurableOutboxRecord record = CreateRecord(Guid.Parse("b23f236b-722c-4a91-b03e-75e658e8f3d9"));
-        var transport = new FakeTransport { Exception = new OperationCanceledException(cts.Token) };
+        var transport = new FakeEnvelopeDispatcher { Exception = new OperationCanceledException(cts.Token) };
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
             new FakeLeaseRenewer(),
@@ -198,7 +198,7 @@ public sealed class DurableOutboxDispatcherTests
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([]),
             new FakeLeaseRenewer(),
-            new FakeTransport());
+            new FakeEnvelopeDispatcher());
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await dispatcher.DispatchAsync(" ", TimeSpan.FromMinutes(5)));
@@ -207,7 +207,7 @@ public sealed class DurableOutboxDispatcherTests
     private static DurableOutboxDispatcher CreateDispatcher(
         FakeClaimer claimer,
         FakeLeaseRenewer leaseRenewer,
-        FakeTransport transport,
+        FakeEnvelopeDispatcher transport,
         IDurableOutboxFailurePolicy? failurePolicy = null,
         FakeDispatchRecorder? recorder = null)
     {
@@ -276,13 +276,13 @@ public sealed class DurableOutboxDispatcherTests
         }
     }
 
-    private sealed class FakeTransport : IDurableOutboxTransport
+    private sealed class FakeEnvelopeDispatcher : IDurableEnvelopeDispatcher
     {
         public Exception? Exception { get; init; }
 
         public List<Guid> SentMessageIds { get; } = [];
 
-        public ValueTask SendAsync(
+        public ValueTask DispatchAsync(
             DurableOutboxRecord record,
             CancellationToken ct = default)
         {

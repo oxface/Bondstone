@@ -39,7 +39,7 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox
     public sealed class PostgreSqlModuleDurableOutboxDispatcher<TDbContext> : Bondstone.Persistence.IDurableOutboxDispatcher
         where TDbContext : Microsoft.EntityFrameworkCore.DbContext
     {
-        public PostgreSqlModuleDurableOutboxDispatcher(string moduleName, TDbContext context, Bondstone.Persistence.IDurableOutboxTransport transport, Bondstone.Persistence.IDurableOutboxFailurePolicy failurePolicy, System.TimeProvider? timeProvider = null, string? schema = null) { }
+        public PostgreSqlModuleDurableOutboxDispatcher(string moduleName, TDbContext context, Bondstone.Persistence.IDurableEnvelopeDispatcher envelopeDispatcher, Bondstone.Persistence.IDurableOutboxFailurePolicy failurePolicy, System.TimeProvider? timeProvider = null, string? schema = null) { }
         public string ModuleName { get; }
         public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableOutboxDispatchResult> DispatchAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default) { }
     }

@@ -29,7 +29,7 @@ public sealed class RabbitMqTopologyConfigurationValidatorTests
                     rabbitMq => rabbitMq.UseCommandExchange("bondstone.commands"));
             }));
 
-        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("No durable envelope dispatch route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
         Assert.Contains(
             "No RabbitMQ routing key is configured for target module 'fulfillment'.",
@@ -57,7 +57,7 @@ public sealed class RabbitMqTopologyConfigurationValidatorTests
                     rabbitMq => rabbitMq.UseEventExchange("bondstone.events"));
             }));
 
-        Assert.Contains("No durable outbox transport route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("No durable envelope dispatch route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales.test.event.v1", exception.Message, StringComparison.Ordinal);
         Assert.Contains(
             "No RabbitMQ routing key is configured for message type 'sales.test.event.v1'.",

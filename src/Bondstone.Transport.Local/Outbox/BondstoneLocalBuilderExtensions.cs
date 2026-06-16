@@ -23,7 +23,7 @@ public static class BondstoneLocalBuilderExtensions
         var local = new BondstoneLocalTransportBuilder();
         configure(local);
 
-        builder.Services.AddBondstoneLocalOutboxTransport(local.Topology);
+        builder.Services.AddBondstoneLocalEnvelopeDispatcher(local.Topology);
         builder.AddTransportTopologyDiagnosticSource(
             new LocalTransportTopologyDiagnosticSource(local.Topology));
         builder.Outbox.MarkTransport("Local");
@@ -47,7 +47,7 @@ public static class BondstoneLocalBuilderExtensions
         var local = new BondstoneLocalTransportBuilder();
         configure(local);
 
-        outbox.Services.AddBondstoneLocalOutboxTransport(local.Topology);
+        outbox.Services.AddBondstoneLocalEnvelopeDispatcher(local.Topology);
         outbox.MarkTransport("Local");
 
         return outbox;

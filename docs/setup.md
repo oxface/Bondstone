@@ -439,7 +439,7 @@ builder.Services.AddBondstone(bondstone =>
 });
 ```
 
-Provider transport route conventions are outbound-only. RabbitMQ
+Provider adapter route conventions are outbound-only. RabbitMQ
 `UseModuleRoutingKeyConvention()` resolves where commands are sent, but hosts
 that receive commands still need explicit receive bindings such as
 `ReceiveQueue(...).AcceptModule(...)`.
@@ -449,7 +449,7 @@ because there is no broker queue or binding to provision.
 
 Use provider transport extensions on the main `BondstoneBuilder` for normal
 host setup. The lower-level `bondstone.Outbox.UseRabbitMqTransport(...)`
-overload is an advanced composition API for manual outbox transport
+overload is an advanced composition API for manual envelope dispatcher
 registration; it does not add the provider configuration validators and
 topology diagnostic sources that the normal setup path adds.
 

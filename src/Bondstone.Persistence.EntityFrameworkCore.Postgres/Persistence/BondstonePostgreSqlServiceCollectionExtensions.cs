@@ -138,7 +138,7 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
             serviceProvider => new PostgreSqlModuleDurableOutboxDispatcher<TDbContext>(
                     moduleName,
                     serviceProvider.GetRequiredService<TDbContext>(),
-                    serviceProvider.GetRequiredService<IDurableOutboxTransport>(),
+                    serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>(),
                     serviceProvider.GetRequiredService<IDurableOutboxFailurePolicy>(),
                     serviceProvider.GetService<TimeProvider>(),
                     schema)));

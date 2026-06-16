@@ -4,19 +4,19 @@ using Xunit;
 
 namespace Bondstone.Tests.Persistence;
 
-public sealed class RoutedDurableOutboxTransportTests
+public sealed class RoutedDurableEnvelopeDispatcherTests
 {
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task SendAsync_WhenOneRouteMatches_SendsThroughMatchingRoute()
+    public async Task DispatchAsync_WhenOneRouteMatches_SendsThroughMatchingRoute()
     {
         var matchingRoute = new CapturingRoute("PrimaryRoute", canSend: true);
         var skippedRoute = new CapturingRoute("AlternateRoute", canSend: false);
-        var transport = new RoutedDurableOutboxTransport(
+        var dispatcher = new RoutedDurableEnvelopeDispatcher(
             [matchingRoute, skippedRoute]);
         DurableOutboxRecord record = CreateRecord();
 
-        await transport.SendAsync(record);
+        await dispatcher.DispatchAsync(record);
 
         Assert.Same(record, matchingRoute.Record);
         Assert.Null(skippedRoute.Record);
@@ -24,18 +24,18 @@ public sealed class RoutedDurableOutboxTransportTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task SendAsync_WhenMultipleRoutesMatch_ThrowsAmbiguousRoute()
+    public async Task DispatchAsync_WhenMultipleRoutesMatch_ThrowsAmbiguousRoute()
     {
-        var transport = new RoutedDurableOutboxTransport(
+        var dispatcher = new RoutedDurableEnvelopeDispatcher(
             [
                 new CapturingRoute("PrimaryRoute", canSend: true),
                 new CapturingRoute("AlternateRoute", canSend: true),
             ]);
 
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await transport.SendAsync(CreateRecord()));
+            async () => await dispatcher.DispatchAsync(CreateRecord()));
 
-        Assert.Contains("Multiple durable outbox transport routes", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Multiple durable envelope dispatch routes", exception.Message, StringComparison.Ordinal);
         Assert.Contains("PrimaryRoute", exception.Message, StringComparison.Ordinal);
         Assert.Contains("AlternateRoute", exception.Message, StringComparison.Ordinal);
     }
@@ -64,7 +64,7 @@ public sealed class RoutedDurableOutboxTransportTests
     private sealed class CapturingRoute(
         string transportName,
         bool canSend)
-        : IDurableOutboxTransportRoute
+        : IDurableEnvelopeDispatchRoute
     {
         public string TransportName => transportName;
 
@@ -76,7 +76,7 @@ public sealed class RoutedDurableOutboxTransportTests
             return canSend;
         }
 
-        public ValueTask SendAsync(
+        public ValueTask DispatchAsync(
             DurableOutboxRecord record,
             CancellationToken ct = default)
         {

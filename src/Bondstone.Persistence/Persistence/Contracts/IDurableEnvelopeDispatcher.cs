@@ -1,8 +1,8 @@
 namespace Bondstone.Persistence;
 
-public interface IDurableOutboxTransport
+public interface IDurableEnvelopeDispatcher
 {
-    ValueTask SendAsync(
+    ValueTask DispatchAsync(
         DurableOutboxRecord record,
         CancellationToken ct = default);
 }

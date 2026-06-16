@@ -21,6 +21,10 @@ public static class BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensio
     {
         ArgumentNullException.ThrowIfNull(module);
 
+        module.RequireEntityFrameworkCorePersistence();
+        module.Services
+            .GetOrAddEntityFrameworkCoreDomainEventModuleOptInRegistry()
+            .Enable(module.Name);
         module.TryAddEntityFrameworkCoreDomainEventSystemBehaviors();
 
         return module;
@@ -31,28 +35,61 @@ public static class BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensio
     {
         module.Services.TryAddScoped(serviceProvider =>
             new EntityFrameworkCoreDomainEventModuleRuntimeRegistry(
-                serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
-        module.AddCommandPipelineContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Persistence.EntityFrameworkCore.DomainEvents.Command",
-                ModulePipelineStepKind.Capability,
-                EntityFrameworkCoreDomainEventModulePipelineOrder.Command,
-                typeof(EntityFrameworkCoreDomainEventModuleCommandBehavior<>),
-                AppliesToModule));
-        module.AddEventSubscriberPipelineContribution(
-            new ModuleEventSubscriberPipelineContribution(
-                "Bondstone.Persistence.EntityFrameworkCore.DomainEvents.EventSubscriber",
-                ModulePipelineStepKind.Capability,
-                EntityFrameworkCoreDomainEventModulePipelineOrder.EventSubscriber,
-                typeof(EntityFrameworkCoreDomainEventModuleEventSubscriberBehavior<>),
-                AppliesToModule));
+                serviceProvider.GetRequiredService<IBondstoneModuleRegistry>(),
+                serviceProvider.GetRequiredService<EntityFrameworkCoreDomainEventModuleOptInRegistry>()));
+        module.Services.TryAddEnumerable(
+            ServiceDescriptor.Scoped(
+                typeof(IModulePostHandlerAction),
+                typeof(EntityFrameworkCoreDomainEventModulePostHandlerAction)));
     }
 
-    private static bool AppliesToModule(BondstoneModuleRegistration module)
+    private static void RequireEntityFrameworkCorePersistence(
+        this BondstoneModuleBuilder module)
     {
-        return module.UsesPersistence
+        ServiceDescriptor? descriptor = module.Services.FirstOrDefault(static descriptor =>
+            descriptor.ServiceType == typeof(IBondstoneModuleRegistry));
+
+        if (descriptor?.ImplementationInstance is not IBondstoneModuleRegistry moduleRegistry)
+        {
+            throw new InvalidOperationException(
+                "Bondstone module registry was not available while configuring Entity Framework Core domain event persistence.");
+        }
+
+        BondstoneModuleRegistration registration = moduleRegistry.GetModule(module.Name);
+        if (registration.UsesPersistence
             && StringComparer.Ordinal.Equals(
-                module.PersistenceProviderName,
-                EntityFrameworkCoreModulePersistence.ProviderName);
+                registration.PersistenceProviderName,
+                EntityFrameworkCoreModulePersistence.ProviderName))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Module '{module.Name}' cannot use '{nameof(UseEntityFrameworkCoreDomainEventPersistence)}' before declaring "
+            + $"persistence provider '{EntityFrameworkCoreModulePersistence.ProviderName}'. Configure the module with "
+            + "UseEntityFrameworkCorePersistence<TDbContext>() first.");
+    }
+
+    private static EntityFrameworkCoreDomainEventModuleOptInRegistry
+        GetOrAddEntityFrameworkCoreDomainEventModuleOptInRegistry(
+            this IServiceCollection services)
+    {
+        ServiceDescriptor? descriptor = services.FirstOrDefault(static descriptor =>
+            descriptor.ServiceType == typeof(EntityFrameworkCoreDomainEventModuleOptInRegistry));
+
+        if (descriptor?.ImplementationInstance is EntityFrameworkCoreDomainEventModuleOptInRegistry existingRegistry)
+        {
+            return existingRegistry;
+        }
+
+        if (descriptor is not null)
+        {
+            throw new InvalidOperationException(
+                "Entity Framework Core domain event module opt-in registry was already registered by a factory or implementation type.");
+        }
+
+        var registry = new EntityFrameworkCoreDomainEventModuleOptInRegistry();
+        services.AddSingleton(registry);
+        return registry;
     }
 }

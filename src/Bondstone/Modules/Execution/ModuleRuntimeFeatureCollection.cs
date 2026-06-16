@@ -1,12 +1,12 @@
 namespace Bondstone.Modules;
 
-public sealed class ModulePipelineFeatureCollection
+public sealed class ModuleRuntimeFeatureCollection
 {
     private readonly Dictionary<Type, List<object>> _features = [];
     private readonly List<FeatureEntry> _scopeStack = [];
 
     /// <summary>
-    /// Pushes a feature for the current pipeline execution.
+    /// Pushes a feature for the current module runtime execution.
     /// </summary>
     /// <remarks>
     /// Features are stored under the exact <typeparamref name="TFeature"/> used
@@ -56,7 +56,7 @@ public sealed class ModulePipelineFeatureCollection
         if (_scopeStack.Count == 0)
         {
             throw new InvalidOperationException(
-                $"Module pipeline feature '{featureType.FullName}' scopes must be disposed in reverse order.");
+                $"Module runtime feature '{featureType.FullName}' scopes must be disposed in reverse order.");
         }
 
         FeatureEntry activeScope = _scopeStack[^1];
@@ -64,7 +64,7 @@ public sealed class ModulePipelineFeatureCollection
             || !ReferenceEquals(activeScope.Feature, feature))
         {
             throw new InvalidOperationException(
-                $"Module pipeline feature '{featureType.FullName}' scopes must be disposed in reverse order.");
+                $"Module runtime feature '{featureType.FullName}' scopes must be disposed in reverse order.");
         }
 
         if (!_features.TryGetValue(featureType, out List<object>? features)
@@ -72,7 +72,7 @@ public sealed class ModulePipelineFeatureCollection
             || !ReferenceEquals(features[^1], feature))
         {
             throw new InvalidOperationException(
-                $"Module pipeline feature '{featureType.FullName}' scopes must be disposed in reverse order.");
+                $"Module runtime feature '{featureType.FullName}' scopes must be disposed in reverse order.");
         }
 
         _scopeStack.RemoveAt(_scopeStack.Count - 1);
@@ -88,16 +88,16 @@ public sealed class ModulePipelineFeatureCollection
         object Feature);
 
     private sealed class FeatureScope(
-        ModulePipelineFeatureCollection collection,
+        ModuleRuntimeFeatureCollection collection,
         Type featureType,
         object feature)
         : IDisposable
     {
-        private ModulePipelineFeatureCollection? _collection = collection;
+        private ModuleRuntimeFeatureCollection? _collection = collection;
 
         public void Dispose()
         {
-            ModulePipelineFeatureCollection? collection = _collection;
+            ModuleRuntimeFeatureCollection? collection = _collection;
             if (collection is null)
             {
                 return;

@@ -1,5 +1,5 @@
-using Bondstone.Messaging;
 using Bondstone.Modules;
+using Bondstone.Messaging;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.DomainEvents;
 using Bondstone.Persistence;
@@ -8,91 +8,41 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 
-internal sealed class EntityFrameworkCoreDomainEventModuleCommandBehavior<TCommand>(
+internal sealed class EntityFrameworkCoreDomainEventModulePostHandlerAction(
     IServiceProvider serviceProvider,
     EntityFrameworkCoreDomainEventModuleRuntimeRegistry moduleRuntimeRegistry)
-    : IModuleCommandPipelineBehavior<TCommand>
-    where TCommand : ICommand
-{
-    private readonly EntityFrameworkCoreDomainEventModuleBehaviorCore _core = new(
-        serviceProvider,
-        moduleRuntimeRegistry);
-
-    public async ValueTask HandleAsync(
-        TCommand command,
-        ModuleCommandExecutionContext context,
-        ModuleCommandPipelineNext next,
-        CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(next);
-
-        await _core.HandleAsync(
-            context,
-            nextCt => next(nextCt),
-            ct);
-    }
-}
-
-internal sealed class EntityFrameworkCoreDomainEventModuleEventSubscriberBehavior<TEvent>(
-    IServiceProvider serviceProvider,
-    EntityFrameworkCoreDomainEventModuleRuntimeRegistry moduleRuntimeRegistry)
-    : IModuleEventSubscriberPipelineBehavior<TEvent>
-    where TEvent : IIntegrationEvent
-{
-    private readonly EntityFrameworkCoreDomainEventModuleBehaviorCore _core = new(
-        serviceProvider,
-        moduleRuntimeRegistry);
-
-    public async ValueTask HandleAsync(
-        TEvent integrationEvent,
-        ModuleEventSubscriberExecutionContext context,
-        ModuleEventSubscriberPipelineNext next,
-        CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(integrationEvent);
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(next);
-
-        await _core.HandleAsync(
-            context,
-            nextCt => next(nextCt),
-            ct);
-    }
-}
-
-internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
-    IServiceProvider serviceProvider,
-    EntityFrameworkCoreDomainEventModuleRuntimeRegistry moduleRuntimeRegistry)
+    : IModulePostHandlerAction
 {
     private readonly IServiceProvider _serviceProvider =
         serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     private readonly EntityFrameworkCoreDomainEventModuleRuntimeRegistry _moduleRuntimeRegistry =
         moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
 
-    public async ValueTask HandleAsync(
-        IModulePipelineExecutionContext context,
-        Func<CancellationToken, ValueTask> next,
-        CancellationToken ct)
+    public ValueTask RunAsync(
+        IModuleRuntimeExecutionContext context,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(next);
 
-        if (!ShouldCollect(
-                context.ModuleName,
-                out EntityFrameworkCoreDomainEventModuleRuntimeDescriptor runtime))
+        EntityFrameworkCoreDomainEventModuleRuntimeDescriptor runtime =
+            _moduleRuntimeRegistry.GetRuntime(context.ModuleName);
+        if (!runtime.UsesDomainEventPersistence)
         {
-            await next(ct);
-            return;
+            return ValueTask.CompletedTask;
+        }
+
+        if (!runtime.UsesEntityFrameworkCorePersistence)
+        {
+            throw new InvalidOperationException(
+                $"Module '{context.ModuleName}' uses Entity Framework Core domain event persistence but has not declared "
+                + $"persistence provider '{EntityFrameworkCoreModulePersistence.ProviderName}'. Configure the module with "
+                + "UseEntityFrameworkCorePersistence<TDbContext>() before UseEntityFrameworkCoreDomainEventPersistence().");
         }
 
         BondstoneModuleRegistration module = runtime.Module;
         Type dbContextType = GetDbContextType(module);
         DbContext dbContext = (DbContext)_serviceProvider.GetRequiredService(dbContextType);
         ValidateDomainEventMappings(module, dbContext);
-
-        await next(ct);
 
         var collector = new EntityFrameworkCoreDomainEventCollector(
             dbContext,
@@ -103,7 +53,7 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
         IReadOnlyList<IDomainEventSource> sources = collector.CollectAndStage();
         if (sources.Count == 0)
         {
-            return;
+            return ValueTask.CompletedTask;
         }
 
         if (context.Features.TryGet(
@@ -120,14 +70,8 @@ internal sealed class EntityFrameworkCoreDomainEventModuleBehaviorCore(
                 return ValueTask.CompletedTask;
             });
         }
-    }
 
-    private bool ShouldCollect(
-        string moduleName,
-        out EntityFrameworkCoreDomainEventModuleRuntimeDescriptor runtime)
-    {
-        runtime = _moduleRuntimeRegistry.GetRuntime(moduleName);
-        return runtime.UsesEntityFrameworkCorePersistence;
+        return ValueTask.CompletedTask;
     }
 
     private static void ValidateDomainEventMappings(

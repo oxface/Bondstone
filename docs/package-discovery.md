@@ -41,9 +41,9 @@ trace context records.
 `Bondstone.Modules` contains module registration and execution contracts:
 `IBondstoneModule`, `BondstoneModuleBuilder`, `ICommandHandler<TCommand>`,
 `ICommandHandler<TCommand, TResult>`,
-`IIntegrationEventHandler<TEvent>`, command validators, pipeline behavior
-contracts, receive pipelines, module execution context contracts, and the
-module command/event execution result types.
+`IIntegrationEventHandler<TEvent>`, command validators, receive pipelines,
+module execution context contracts, and the module command/event execution
+result types.
 
 ## Core Module And Command APIs
 

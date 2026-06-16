@@ -95,7 +95,7 @@ relative to persistence.
 Automatic local dispatch requires a later ADR before implementation. That ADR
 must introduce an explicit provider-neutral source discovery or collector shape
 that does not couple the capability package to EF Core. A plausible shape is a
-per-execution module pipeline feature or collector contract that exposes
+per-execution module runtime feature or collector contract that exposes
 pending `IDomainEventSource` instances and clear-on-success ownership, but no
 such public contract is added now.
 

@@ -12,7 +12,7 @@ public sealed class ModuleEventSubscriberRegistration
         MessageTypeRegistration messageTypeRegistration,
         string subscriberIdentity,
         Type handlerType,
-        Func<IServiceProvider, object, ModuleEventSubscriberRegistration, ModuleEventSubscriberReceiveContext?, CancellationToken, ValueTask<ModuleEventSubscriberExecutionResult>> execute)
+        ModuleEventSubscriberInvoker execute)
     {
         ArgumentNullException.ThrowIfNull(eventType);
         ArgumentNullException.ThrowIfNull(messageTypeRegistration);
@@ -50,7 +50,7 @@ public sealed class ModuleEventSubscriberRegistration
         _execute = execute;
     }
 
-    private readonly Func<IServiceProvider, object, ModuleEventSubscriberRegistration, ModuleEventSubscriberReceiveContext?, CancellationToken, ValueTask<ModuleEventSubscriberExecutionResult>> _execute;
+    private readonly ModuleEventSubscriberInvoker _execute;
 
     public string ModuleName { get; }
 
@@ -113,26 +113,24 @@ public sealed class ModuleEventSubscriberRegistration
                 nameof(integrationEvent));
         }
 
-        ModuleEventSubscriberPipelineNext handler = CreateHandler<TEvent, THandler>(
+        Func<CancellationToken, ValueTask> handler = CreateHandler<TEvent, THandler>(
             serviceProvider,
             typedEvent);
-        ModuleEventSubscriberPipelinePlan<TEvent> plan = serviceProvider
-            .GetRequiredService<ModuleEventSubscriberPipelinePlanner>()
-            .BuildPlan<TEvent>(
-                serviceProvider,
-                subscriber);
-        ModuleEventSubscriberPipeline pipeline = BuildPipeline(
-            typedEvent,
+        var context = new ModuleEventSubscriberExecutionContext(
             subscriber,
-            receiveContext,
-            plan,
-            handler);
+            receiveContext);
 
-        await pipeline.InvokeAsync(ct);
-        return new ModuleEventSubscriberExecutionResult(pipeline.Context.ReceiveInboxResult);
+        IModuleEventSubscriberRuntime runtime =
+            serviceProvider.GetRequiredService<IModuleEventSubscriberRuntime>();
+        await runtime.ExecuteAsync(
+            typedEvent,
+            context,
+            handler,
+            ct);
+        return new ModuleEventSubscriberExecutionResult(context.ReceiveInboxResult);
     }
 
-    private static ModuleEventSubscriberPipelineNext CreateHandler<TEvent, THandler>(
+    private static Func<CancellationToken, ValueTask> CreateHandler<TEvent, THandler>(
         IServiceProvider serviceProvider,
         TEvent integrationEvent)
         where TEvent : IIntegrationEvent
@@ -144,41 +142,11 @@ public sealed class ModuleEventSubscriberRegistration
             await handler.HandleAsync(integrationEvent, handlerCt);
         };
     }
-
-    private static ModuleEventSubscriberPipeline BuildPipeline<TEvent>(
-        TEvent integrationEvent,
-        ModuleEventSubscriberRegistration subscriber,
-        ModuleEventSubscriberReceiveContext? receiveContext,
-        ModuleEventSubscriberPipelinePlan<TEvent> plan,
-        ModuleEventSubscriberPipelineNext handler)
-        where TEvent : IIntegrationEvent
-    {
-        var context = new ModuleEventSubscriberExecutionContext(
-            subscriber,
-            receiveContext);
-        ModuleEventSubscriberPipelineNext next = handler;
-
-        for (int index = plan.Steps.Count - 1; index >= 0; index--)
-        {
-            IModuleEventSubscriberPipelineBehavior<TEvent> behavior = plan.Steps[index].Behavior;
-            ModuleEventSubscriberPipelineNext current = next;
-            next = behaviorCt => behavior.HandleAsync(
-                integrationEvent,
-                context,
-                current,
-                behaviorCt);
-        }
-
-        return new ModuleEventSubscriberPipeline(context, next);
-    }
-
-    private sealed record ModuleEventSubscriberPipeline(
-        ModuleEventSubscriberExecutionContext Context,
-        ModuleEventSubscriberPipelineNext Next)
-    {
-        public ValueTask InvokeAsync(CancellationToken ct)
-        {
-            return Next(ct);
-        }
-    }
 }
+
+internal delegate ValueTask<ModuleEventSubscriberExecutionResult> ModuleEventSubscriberInvoker(
+    IServiceProvider serviceProvider,
+    object integrationEvent,
+    ModuleEventSubscriberRegistration subscriber,
+    ModuleEventSubscriberReceiveContext? receiveContext,
+    CancellationToken ct);

@@ -11,6 +11,7 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Persistence;
 internal sealed class EntityFrameworkCoreModuleTransactionRunner(
     IServiceProvider serviceProvider,
     EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry)
+    : IModuleTransactionRunner
 {
     private static readonly ConcurrentDictionary<Type, ObjectFactory> ScopeFactories = new();
     private static readonly object[] EmptyArguments = [];
@@ -21,7 +22,7 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
         moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
 
     public async ValueTask ExecuteAsync(
-        IModulePipelineExecutionContext context,
+        IModuleRuntimeExecutionContext context,
         Func<CancellationToken, ValueTask> next,
         CancellationToken ct)
     {

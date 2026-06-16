@@ -108,8 +108,8 @@ extensions, durable send/publish contracts, receive pipeline contracts, result
 types, options, and documented diagnostic shapes.
 
 Some public low-level persistence, transport, receive, dispatcher, resolver,
-module pipeline contribution, module pipeline behavior, and concrete provider
-types remain available for advanced composition, tests, custom schedulers, and
+module runtime service, and concrete provider types
+remain available for advanced composition, tests, custom schedulers, and
 app-owned provider consumers. Their visibility does not automatically make
 them the preferred setup path or an open-ended extension point. Stable docs
 should steer normal users to the builder and module-owned helpers first.

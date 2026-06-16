@@ -30,7 +30,7 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void CommandPipelineBehavior_WhenDuplicateModuleInboxExecutorsAreRegistered_ThrowsClearError()
+    public void CommandRuntime_WhenDuplicateModuleInboxExecutorsAreRegistered_ThrowsClearError()
     {
         var services = new ServiceCollection();
         RegisterInboxHandlerExecutor(services, new DurableModuleInboxHandlerExecutorRegistration(

@@ -2,10 +2,10 @@ using Bondstone.Persistence;
 
 namespace Bondstone.Modules;
 
-public sealed class ModuleCommandExecutionContext(
+internal sealed class ModuleCommandExecutionContext(
     ModuleCommandRoute route,
     ModuleCommandReceiveContext? receiveContext = null)
-    : IModulePipelineExecutionContext
+    : IModuleRuntimeExecutionContext
 {
     public ModuleCommandRoute Route { get; } =
         route ?? throw new ArgumentNullException(nameof(route));
@@ -26,7 +26,7 @@ public sealed class ModuleCommandExecutionContext(
 
     public string? HandlerIdentity => Route.HandlerIdentity;
 
-    public ModulePipelineFeatureCollection Features { get; } = new();
+    public ModuleRuntimeFeatureCollection Features { get; } = new();
 
     internal void SetReceiveInboxResult(DurableInboxHandleResult result)
     {

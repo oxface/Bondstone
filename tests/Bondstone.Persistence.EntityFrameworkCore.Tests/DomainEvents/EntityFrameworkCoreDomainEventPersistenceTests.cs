@@ -63,14 +63,11 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task ModuleCommands_WhenApplicationBehaviorRaisesDomainEvent_StagesBeforeSave()
+    public async Task ModuleCommands_WhenHandlerRaisesDomainEvent_StagesBeforeSave()
     {
         string databaseName = Guid.NewGuid().ToString("N");
         var services = new ServiceCollection();
         services.AddSingleton<DomainEventCapture>();
-        services.AddScoped<
-            IModuleCommandPipelineBehavior<RaiseLoggedDomainEventCommand>,
-            LoggedDomainEventCommandBehavior>();
         services.AddDbContext<DomainEventTestDbContext>(options =>
             UseInMemory(options, databaseName));
 
@@ -101,9 +98,7 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
         Assert.Equal(
             [
-                "application-before",
                 "handler",
-                "application-after",
                 "save:domain-events:1",
                 "clear",
             ],
@@ -225,10 +220,10 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
         Assert.Contains(
-            "Bondstone.Persistence.EntityFrameworkCore.DomainEvents.Command",
+            nameof(BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensions.UseEntityFrameworkCoreDomainEventPersistence),
             exception.Message,
             StringComparison.Ordinal);
-        Assert.Contains("required persistence declaration", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("persistence provider 'EntityFrameworkCore'", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -248,10 +243,10 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
         Assert.Contains(
-            "Bondstone.Persistence.EntityFrameworkCore.DomainEvents.Command",
+            nameof(BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensions.UseEntityFrameworkCoreDomainEventPersistence),
             exception.Message,
             StringComparison.Ordinal);
-        Assert.Contains("required persistence declaration", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("persistence provider 'EntityFrameworkCore'", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -488,21 +483,6 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
             capture.Source = source;
             context.Aggregates.Add(source);
             return ValueTask.CompletedTask;
-        }
-    }
-
-    public sealed class LoggedDomainEventCommandBehavior(DomainEventCapture capture)
-        : IModuleCommandPipelineBehavior<RaiseLoggedDomainEventCommand>
-    {
-        public async ValueTask HandleAsync(
-            RaiseLoggedDomainEventCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
-            CancellationToken ct = default)
-        {
-            capture.Calls.Add("application-before");
-            await next(ct);
-            capture.Calls.Add("application-after");
         }
     }
 

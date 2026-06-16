@@ -507,37 +507,20 @@ EF-backed module `DbContext` models must map the durable tables they use with
 
 Provider-specific module helpers are the preferred setup path because they
 record module persistence metadata and register the module-owned runtime
-factories in Bondstone runtime registries, plus transaction behavior and
+factories in Bondstone runtime registries, plus transaction runners and
 dispatch services used by durable messaging.
 
 The direct non-EF `Bondstone.Persistence.Postgres` package was removed after
 MVP. New PostgreSQL modules should use EF Core persistence unless an ADR
 reintroduces a non-EF provider for a real consumer need.
 
-## Application Pipeline Behaviors
+## Application Handler Concerns
 
-Application-owned command and event subscriber behavior is registered with
-ordinary DI. Use `IModuleCommandPipelineBehavior<TCommand>` for command
-handler concerns and `IModuleEventSubscriberPipelineBehavior<TEvent>` for
-subscriber concerns.
-
-```csharp
-builder.Services.AddScoped<
-    IModuleCommandPipelineBehavior<ReserveInventoryCommand>,
-    ReserveInventoryAuthorizationBehavior>();
-
-builder.Services.AddScoped<
-    IModuleEventSubscriberPipelineBehavior<OrderPlacedEvent>,
-    OrderPlacedAuditBehavior>();
-```
-
-These behaviors run after selected Bondstone/provider runtime contributions
-and inside the module execution context when command or subscriber execution
-establishes one. Passive pipeline contribution records are advanced
-provider/runtime composition contracts stored in Bondstone runtime metadata,
-not the normal application extension path. Bondstone does not provide
-module-scoped application behavior registration; prefer ordinary DI
-registration.
+Bondstone does not provide public application pipeline behavior contracts.
+Keep command validation in `ICommandValidator<TCommand>`. Keep authorization,
+auditing, logging, metrics enrichment, and similar application concerns in
+ordinary handler code, DI decorators, endpoint filters, host-specific
+middleware, or the application framework chosen by the consumer app.
 
 ## Result-Returning Module Commands
 

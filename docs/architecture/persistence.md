@@ -21,8 +21,9 @@ dispatch mechanics.
 EF Core components stage data and expose transaction/save boundaries, but they
 do not own transport acknowledgement, retry policy, or a generic mediator.
 Module command execution and module event subscriber execution own handler
-registration; modules that opt into EF persistence get EF transaction
-runtime pipeline contributions for command handlers and event subscribers.
+registration; modules that opt into EF persistence get EF transaction runtime
+behavior in Bondstone's fixed provider transaction slot for command handlers
+and event subscribers.
 Transport-backed receive orchestration belongs in direct provider adapters
 that call the provider-neutral module receive pipelines.
 
@@ -106,15 +107,15 @@ capability-step registry, public named pipeline-slot API, or generic provider
 metadata registry. EF domain event persistence activates from a module's EF
 persistence declaration, an explicit
 `UseEntityFrameworkCoreDomainEventPersistence()` module opt-in, explicit
-`ApplyBondstoneDomainEvents()` mapping, and EF-owned services. The current
-implementation still contributes ordered runtime records through setup APIs
-until the module pipeline simplification is applied.
+`ApplyBondstoneDomainEvents()` mapping, and EF-owned services. The
+implementation runs through Bondstone's fixed provider post-handler runtime
+slot.
 
 The EF runtime behavior belongs inside module command and integration event
 subscriber execution. It collects and stages pending domain events after
-application behavior and handler logic, while the module execution context is
-still active, and before the EF transaction owner saves and commits. Pending
-events are cleared only after collection, staging, save, and commit succeed.
+handler logic, while the module execution context is still active, and before
+the EF transaction owner saves and commits. Pending events are cleared only
+after collection, staging, save, and commit succeed.
 
 The EF package owns the persisted domain event shape and provider-specific
 tests. Provider-owned SQL should reuse table, column, and constraint names

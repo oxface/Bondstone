@@ -29,7 +29,7 @@ public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
     }
 
     /// <summary>
-    /// Marks a module as using EF Core persistence and adds EF Core transaction pipeline behavior.
+    /// Marks a module as using EF Core persistence and adds EF Core transaction runtime behavior.
     /// </summary>
     /// <typeparam name="TDbContext">The module DbContext type used for the module transaction.</typeparam>
     /// <param name="module">The module builder.</param>
@@ -54,27 +54,9 @@ public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
         module.Services.TryAddScoped(serviceProvider =>
             new EntityFrameworkCoreModuleRuntimeRegistry(
                 serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
-        module.AddCommandPipelineContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Persistence.EntityFrameworkCore.Command.Transaction",
-                ModulePipelineStepKind.System,
-                ModuleCommandSystemPipelineOrder.Transaction,
-                typeof(EntityFrameworkCoreModuleTransactionBehavior<>),
-                UsesEntityFrameworkCorePersistence));
-        module.AddEventSubscriberPipelineContribution(
-            new ModuleEventSubscriberPipelineContribution(
-                "Bondstone.Persistence.EntityFrameworkCore.EventSubscriber.Transaction",
-                ModulePipelineStepKind.System,
-                ModuleEventSubscriberSystemPipelineOrder.Transaction,
-                typeof(EntityFrameworkCoreModuleEventSubscriberTransactionBehavior<>),
-                UsesEntityFrameworkCorePersistence));
-    }
-
-    private static bool UsesEntityFrameworkCorePersistence(BondstoneModuleRegistration module)
-    {
-        return module.UsesPersistence
-            && StringComparer.Ordinal.Equals(
-                module.PersistenceProviderName,
-                EntityFrameworkCoreModulePersistence.ProviderName);
+        module.Services.TryAddEnumerable(
+            ServiceDescriptor.Scoped(
+                typeof(IModuleTransactionRunner),
+                typeof(EntityFrameworkCoreModuleTransactionRunner)));
     }
 }

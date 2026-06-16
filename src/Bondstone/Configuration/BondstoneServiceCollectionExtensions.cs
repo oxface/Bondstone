@@ -41,10 +41,6 @@ public static class BondstoneServiceCollectionExtensions
             GetOrAddOwnedSingleton<IBondstoneModuleRegistry, BondstoneModuleRegistry>(
                 services,
                 "Module registration");
-        ModulePipelineContributionRegistry pipelineContributionRegistry =
-            GetOrAddOwnedSingleton<ModulePipelineContributionRegistry>(
-                services,
-                "Module pipeline contribution registration");
         ModuleCommandValidatorRegistry commandValidatorRegistry =
             GetOrAddOwnedSingleton<ModuleCommandValidatorRegistry>(
                 services,
@@ -56,8 +52,8 @@ public static class BondstoneServiceCollectionExtensions
 
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
         services.TryAddScoped<IModuleEventSubscriberExecutor, ModuleEventSubscriberExecutor>();
-        services.TryAddScoped<ModuleCommandPipelinePlanner>();
-        services.TryAddScoped<ModuleEventSubscriberPipelinePlanner>();
+        services.TryAddScoped<IModuleCommandRuntime, ModuleCommandRuntime>();
+        services.TryAddScoped<IModuleEventSubscriberRuntime, ModuleEventSubscriberRuntime>();
         services.TryAddScoped<IModuleCommandReceivePipeline, ModuleCommandReceivePipeline>();
         services.TryAddScoped<IModuleEventReceivePipeline, ModuleEventReceivePipeline>();
         services.TryAddSingleton<DurableOperationResultPayloadSerializer>();
@@ -113,43 +109,6 @@ public static class BondstoneServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
                 serviceProvider.GetRequiredService<IDurablePayloadSerializer>(),
                 serviceProvider.GetService<TimeProvider>()));
-        pipelineContributionRegistry.AddGlobalCommandContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Command.ReceiveInbox",
-                ModulePipelineStepKind.System,
-                ModuleCommandSystemPipelineOrder.ReceiveInbox,
-                typeof(ModuleCommandReceiveInboxPipelineBehavior<>)));
-        pipelineContributionRegistry.AddGlobalCommandContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Command.OperationState",
-                ModulePipelineStepKind.System,
-                ModuleCommandSystemPipelineOrder.OperationState,
-                typeof(ModuleCommandOperationStatePipelineBehavior<>)));
-        pipelineContributionRegistry.AddGlobalCommandContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Command.ExecutionContext",
-                ModulePipelineStepKind.System,
-                ModuleCommandSystemPipelineOrder.ExecutionContext,
-                typeof(ModuleExecutionContextPipelineBehavior<>)));
-        pipelineContributionRegistry.AddGlobalCommandContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Command.Validation",
-                ModulePipelineStepKind.System,
-                ModuleCommandSystemPipelineOrder.Validation,
-                typeof(ValidationModuleCommandPipelineBehavior<>)));
-        pipelineContributionRegistry.AddGlobalEventSubscriberContribution(
-            new ModuleEventSubscriberPipelineContribution(
-                "Bondstone.EventSubscriber.ReceiveInbox",
-                ModulePipelineStepKind.System,
-                ModuleEventSubscriberSystemPipelineOrder.ReceiveInbox,
-                typeof(ModuleEventSubscriberReceiveInboxPipelineBehavior<>)));
-        pipelineContributionRegistry.AddGlobalEventSubscriberContribution(
-            new ModuleEventSubscriberPipelineContribution(
-                "Bondstone.EventSubscriber.ExecutionContext",
-                ModulePipelineStepKind.System,
-                ModuleEventSubscriberSystemPipelineOrder.ExecutionContext,
-                typeof(ModuleEventSubscriberExecutionContextPipelineBehavior<>)));
-
         var builder = new BondstoneBuilder(
             services,
             messageTypeRegistry,
@@ -157,10 +116,7 @@ public static class BondstoneServiceCollectionExtensions
             publishedEventRegistry,
             eventSubscriberRegistry,
             moduleRegistry,
-            pipelineContributionRegistry,
             commandValidatorRegistry);
-        builder.AddConfigurationValidator(
-            new ModuleRuntimePipelineConfigurationValidator(pipelineContributionRegistry));
         builder.AddConfigurationValidator(
             new DurableModulePersistenceConfigurationValidator(
                 persistenceRegistrationRegistry));

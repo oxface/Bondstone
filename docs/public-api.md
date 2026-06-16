@@ -212,8 +212,6 @@ User application contract:
 - `ICommandHandler<TCommand, TResult>`
 - `IIntegrationEventHandler<TEvent>`
 - `ICommandValidator<TCommand>`
-- `IModuleCommandPipelineBehavior<TCommand>`
-- `IModuleEventSubscriberPipelineBehavior<TEvent>`
 - `IDomainEvent`
 - `DomainEventIdentityAttribute`
 - `IDomainEventSource`
@@ -264,18 +262,13 @@ Provider/runtime contract:
 - `ModuleCommandRoute`
 - `ModulePublishedEventRegistration`
 - `ModuleEventSubscriberRegistration`
-- `ModuleCommandPipelineContribution`
-- `ModuleEventSubscriberPipelineContribution`
-- `ModuleCommandExecutionContext`
-- `ModuleEventSubscriberExecutionContext`
 - `ModuleCommandReceiveContext`
 - `ModuleEventSubscriberReceiveContext`
 - `ModuleExecutionContext`
-- `IModulePipelineExecutionContext`
-- `ModulePipelineFeatureCollection`
-- `ModulePipelineStepKind`
-- `ModuleCommandSystemPipelineOrder`
-- `ModuleEventSubscriberSystemPipelineOrder`
+- `IModuleRuntimeExecutionContext`
+- `IModuleTransactionRunner`
+- `IModulePostHandlerAction`
+- `ModuleRuntimeFeatureCollection`
 
 Public implementation detail exposed for now:
 

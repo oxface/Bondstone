@@ -93,9 +93,9 @@ validation runtime step creates only validators for the executing module. DI
 constructs validator implementation types, but it is not used to select all
 validators for a command CLR type globally.
 
-`IModuleCommandExecutor` executes registered typed handlers through selected
-runtime contributions and application pipeline behaviors. Void commands use
-`ExecuteAsync`; result commands use `ExecuteResultAsync` and return a typed
+`IModuleCommandExecutor` executes registered typed handlers through the fixed
+module runtime sequence. Void commands use `ExecuteAsync`; result commands use
+`ExecuteResultAsync` and return a typed
 `ModuleCommandExecutionResult<TResult>`. The executor is not a generic
 mediator for arbitrary in-process calls.
 
@@ -107,24 +107,22 @@ explicit integration event instead. This keeps module-local transactions from
 committing side effects in another module before the current module's handler
 has committed or rolled back.
 
-Command execution is assembled by an internal runtime planner. The current
-plan selects ordered system and capability contribution records for the
-executing module first, creates only those runtime behaviors, then runs
-application behavior steps in DI registration order, then the registered
-handler. Normal user extension should use
-`IModuleCommandPipelineBehavior<TCommand>` for application concerns such as
-validation, logging, authorization, and auditing. Runtime contributions are
-advanced provider/runtime composition.
+Command execution is direct internal orchestration over Bondstone/provider
+runtime services and the registered handler. Bondstone does not provide a
+public application middleware pipeline for logging, authorization, or
+auditing. Use ordinary handler code, DI decorators, endpoint filters,
+host-specific middleware, or an application framework selected by the
+consumer app.
 
-During command execution, Bondstone's system pipeline sets the current module
-execution context to the route's module before the application handler runs
-and restores the previous context afterward. This is the source-module context
-used by durable command sending and event publishing inside the handler.
+During command execution, Bondstone's direct runtime sets the current module
+execution context to the route's module before the handler runs and restores
+the previous context afterward. This is the source-module context used by
+durable command sending and event publishing inside the handler.
 
-For result commands, existing `IModuleCommandPipelineBehavior<TCommand>`
-behaviors still wrap the handler in the same order. Result-specific behavior
-that inspects or transforms `TResult` is not part of the current public
-pipeline contract.
+For result commands, the registered handler returns the typed result directly
+to local execution. During durable receive, Bondstone serializes the result
+payload for operation-state observation before provider post-handler actions
+and transaction commit.
 
 ## Event Registration
 
@@ -146,109 +144,79 @@ logical subscriber, not the handler CLR type. Event inbox identity uses
 Bondstone message id, subscriber module, and subscriber identity.
 
 `IModuleEventSubscriberExecutor` resolves registered subscribers and executes
-typed `IIntegrationEventHandler<TEvent>` handlers through event subscriber
-pipeline behaviors.
+typed `IIntegrationEventHandler<TEvent>` handlers through the fixed module
+runtime sequence.
 
-Subscriber execution uses the same internal runtime planning shape as command
-execution: ordered system and capability contribution records selected for the
-executing module, application behavior steps in DI registration order, then
-the subscriber handler. Normal subscriber extension should use
-`IModuleEventSubscriberPipelineBehavior<TEvent>` for application-owned
-concerns. Runtime contributions are advanced provider/runtime composition.
+Subscriber execution uses the same direct internal orchestration shape as
+command execution: Bondstone/provider runtime services, then the subscriber
+handler.
 
-During subscriber execution, Bondstone's system pipeline sets the current
-module execution context to the subscriber module before the application
-handler runs and restores the previous context afterward. Durable commands sent
-from a subscriber therefore use the subscriber module as their source module.
+During subscriber execution, Bondstone's direct runtime sets the current
+module execution context to the subscriber module before the handler runs and
+restores the previous context afterward. Durable commands sent from a
+subscriber therefore use the subscriber module as their source module.
 
-## Application Pipeline Behaviors
+## Application Extension
 
-Normal applications extend command execution by registering
-`IModuleCommandPipelineBehavior<TCommand>` in DI. They extend integration event
-subscriber execution by registering
-`IModuleEventSubscriberPipelineBehavior<TEvent>` in DI. These behaviors are
-the supported extension points for logging, authorization,
-auditing, metrics enrichment, and other application-owned concerns around a
-registered handler. Command validation through `ICommandValidator<TCommand>`
-is module-owned command metadata rather than a global application pipeline
-behavior.
+Bondstone does not expose application pipeline behavior contracts,
+module-scoped application behavior registration, public runtime contribution
+records, public named runtime slots, or public runtime order constants.
 
-```csharp
-services.AddScoped<
-    IModuleCommandPipelineBehavior<ReserveInventoryCommand>,
-    ReserveInventoryAuthorizationBehavior>();
+Command validation through `ICommandValidator<TCommand>` remains module-owned
+command metadata. Other application concerns around handlers should use
+ordinary handler code, DI decorators, endpoint filters, host-specific
+middleware, or application frameworks selected by the consumer app. Provider
+packages use hidden transaction-runner and post-handler-action contracts only
+for package-owned runtime concerns such as EF transactions and EF domain event
+persistence.
 
-services.AddScoped<
-    IModuleEventSubscriberPipelineBehavior<OrderPlacedEvent>,
-    OrderPlacedAuditBehavior>();
-```
+Command and event subscriber execution contexts carry a
+`ModuleRuntimeFeatureCollection`. This is an advanced provider/runtime
+coordination surface, not an application extension path. Provider runtime
+services can push typed features for the current execution and other provider
+runtime services can read the nearest active feature without relying on scoped
+mutable state. Features are stored under the exact pushed contract type, so
+provider coordination should use shared interfaces rather than concrete
+implementation types. Feature scopes are per module execution and must be
+disposed in reverse order across the whole collection. Nested module command
+or event subscriber executions create independent execution contexts and do
+not inherit active features from the caller's execution; cross-execution
+feature inheritance is not part of the current contract.
 
-Application behaviors run after selected Bondstone/provider runtime
-contributions and before the handler. When the normal module execution-context
-runtime behavior applies, application behaviors and handlers run inside the
-current module context, so durable sends and publishes use the executing module
-as their source module.
+## Runtime Sequence
 
-Provider, runtime, and capability packages use passive module pipeline
-contribution records for advanced composition. Core contributions are stored
-in Bondstone runtime metadata during `AddBondstone`; provider and capability
-module setup APIs attach module-specific contributions as part of module
-registration. A contribution declares its system or capability kind, order,
-module applicability, and behavior factory. The planner filters contributions
-by module metadata before creating behavior instances, so DI remains the
-object factory rather than the contribution store or module/provider selector.
-Selected runtime contributions for a module pipeline must use unique names
-and unique numeric order values across system and capability steps.
-When a provider uses a factory-based contribution instead of a concrete
-behavior type, duplicate registration equivalence is based on delegate identity
-for the behavior factory and applicability predicate. Provider packages should
-prefer the behavior-type contribution constructor when the behavior has a
-stable concrete type.
-Bondstone does not currently provide module-scoped application
-behavior registration. Ordinary DI registration is the supported model.
+Module command execution uses a fixed runtime sequence:
 
-Command and event subscriber execution contexts also carry a
-`ModulePipelineFeatureCollection`. This is an advanced provider/runtime
-coordination surface, not the normal application extension path. System
-behaviors can push typed features for the current execution and other system
-behaviors can read the nearest active feature without relying on scoped mutable
-state. Features are stored under the exact pushed contract type, so provider
-coordination should use shared interfaces rather than concrete implementation
-types. Feature scopes are per module execution and must be disposed in reverse
-order across the whole collection. Nested module command or event subscriber
-executions create independent execution contexts and do not inherit active
-features from the caller's pipeline; cross-execution feature inheritance is not
-part of the current contract.
+1. provider transaction runner;
+2. durable operation completion behavior;
+3. receive inbox behavior when a receive context exists;
+4. module execution context;
+5. command validation;
+6. handler;
+7. provider post-handler action.
 
-## Optional Capability Runtime
+Module event subscriber execution uses a fixed runtime sequence:
 
-Optional capabilities do not currently have a public capability-step registry
-or public named pipeline slots. Provider and runtime packages contribute
-ordered system or capability pipeline records through Bondstone setup and
-module registration, not by adding executable behavior implementations to DI.
-Those records are passive metadata plus factories; the runtime planner selects
-them from module registration metadata before executable behavior is created.
-Module-specific contribution applicability is validated at startup for every
-module that carries the contribution, even when the module has no command
-handler or event subscriber yet. Capability opt-ins that need executable
-pipeline behavior should therefore only attach contributions after the module
-metadata required by the contribution is present. Future handlerless or purely
-declarative capability markers should use separate metadata rather than
-non-applicable executable pipeline contributions.
+1. provider transaction runner;
+2. receive inbox behavior when a receive context exists;
+3. module execution context;
+4. handler;
+5. provider post-handler action.
 
-Domain event runtime behavior follows that model. The EF Core persistence
-behavior activates only for EF-backed modules that call
-`UseEntityFrameworkCoreDomainEventPersistence()`. The EF opt-in is EF-owned
-module metadata, not a broad capability registry. EF Core transaction behavior
-publishes a provider-neutral transaction feature into the current execution;
-EF domain event persistence consumes that feature to clear pending domain
-events only after an observed commit. The current EF implementation contributes
-ordered runtime records so its planner step is distinct from Bondstone core
-system behavior, while still being ordered before application behavior. It
-does not invoke local domain event handlers or map domain events to integration
-events. Normal user extension remains application pipeline behavior; pipeline
-contributions and feature participation are advanced provider/runtime
-composition until the fixed pipeline simplification is applied.
+Bondstone does not expose a public capability-step registry, public named
+runtime slots, public contribution records, public order constants, or public
+application middleware contracts.
+
+Provider packages use small hidden runtime service contracts only where
+cross-package runtime collaboration is required. EF Core persistence uses a
+transaction runner. EF-backed domain event persistence uses a post-handler
+action, activates only for EF-backed modules that call
+`UseEntityFrameworkCoreDomainEventPersistence()`, and requires EF persistence
+to be declared first. EF Core transaction behavior publishes a
+provider-neutral transaction feature into the current execution; EF domain
+event persistence consumes that feature to clear pending domain events only
+after an observed commit. It does not invoke local domain event handlers or map
+domain events to integration events.
 
 ## Execution Context Limits
 
@@ -281,22 +249,20 @@ hosted receive workers over configured receive topology.
 
 ## Persistence Boundaries
 
-Module-owned persistence behavior composes through pipeline behaviors. For EF
-Core modules, command and event subscriber transaction behavior saves handler
-state, inbox markers, operation state when applicable, and outgoing outbox
-messages in the module persistence boundary.
+Module-owned persistence behavior composes through provider runtime services.
+For EF Core modules, the transaction runner saves handler state, inbox
+markers, operation state when applicable, and outgoing outbox messages in the
+module persistence boundary.
 
-Provider transaction behaviors are registered through passive module pipeline
-contributions when modules opt into a provider and activate only for modules
-that declare that provider's persistence capability. EF Core/PostgreSQL is the
-supported durable persistence path in the active product surface.
+Provider transaction runners activate only for modules that declare that
+provider's persistence capability. EF Core/PostgreSQL is the supported durable
+persistence path in the active product surface.
 
 EF Core domain event persistence belongs inside the same module command and
 event subscriber transaction boundary. It collects and stages domain events
-after application behavior and handler logic, while the module execution
-context is still active, and before transaction-owned `SaveChangesAsync` and
-commit. Pending domain events are cleared only after collection, staging,
-save, and commit succeed.
+after handler logic, while the module execution context is still active, and
+before transaction-owned `SaveChangesAsync` and commit. Pending domain events
+are cleared only after collection, staging, save, and commit succeed.
 
 Module-owned persistence is the preferred durable messaging path. Root-level
 non-module persistence services remain available for advanced single-store

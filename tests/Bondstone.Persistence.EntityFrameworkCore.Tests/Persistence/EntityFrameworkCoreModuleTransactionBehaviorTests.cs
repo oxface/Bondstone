@@ -395,7 +395,7 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void UseEntityFrameworkCorePersistence_WhenCalled_RegistersTransactionBehaviorContributions()
+    public void UseEntityFrameworkCorePersistence_WhenCalled_RegistersTransactionRuntimeBehaviors()
     {
         var services = new ServiceCollection();
 
@@ -407,113 +407,11 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
             });
         });
 
-        Assert.DoesNotContain(
+        Assert.Contains(
             services,
-            static descriptor => descriptor.ServiceType == typeof(ModuleCommandPipelineContribution));
-        Assert.DoesNotContain(
-            services,
-            static descriptor => descriptor.ServiceType == typeof(ModuleEventSubscriberPipelineContribution));
-        Assert.DoesNotContain(
-            services,
-            static descriptor => descriptor.ServiceType == typeof(IModuleCommandPipelineBehavior<>)
-                && descriptor.ImplementationType?.FullName == "Bondstone.Modules.ValidationModuleCommandPipelineBehavior`1");
-    }
-
-    [Fact]
-    [Trait("Category", "Application")]
-    public async Task ModuleCommands_WhenSystemBehaviorsAreRegistered_RunsThemByOrderBeforeApplicationBehaviors()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<CommandCallLog>();
-        services.AddScoped<IModuleCommandPipelineBehavior<StoreHandledCommand>, ApplicationBehavior>();
-
-        services.AddBondstone(bondstone =>
-        {
-            bondstone.Module("fulfillment", module =>
-            {
-                module.AddCommandPipelineContribution(
-                    new ModuleCommandPipelineContribution(
-                        "test.ef.system-late",
-                        ModulePipelineStepKind.System,
-                        10,
-                        typeof(LateSystemBehavior)));
-                module.AddCommandPipelineContribution(
-                    new ModuleCommandPipelineContribution(
-                        "test.ef.system-early",
-                        ModulePipelineStepKind.System,
-                        -10,
-                        typeof(EarlySystemBehavior)));
-                module.Commands.RegisterHandler<StoreHandledCommand, LoggingCommandHandler>();
-            });
-        });
-
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        using IServiceScope scope = serviceProvider.CreateScope();
-
-        await scope.ServiceProvider
-            .GetRequiredService<IModuleCommandExecutor>()
-            .ExecuteAsync(
-                "fulfillment",
-                new StoreHandledCommand("A-100"));
-
-        CommandCallLog log = serviceProvider.GetRequiredService<CommandCallLog>();
-
-        Assert.Equal(
-            [
-                "system-early:before",
-                "system-late:before",
-                "application:before",
-                "handle:A-100",
-                "application:after",
-                "system-late:after",
-                "system-early:after",
-            ],
-            log.Calls);
-    }
-
-    public sealed class EarlySystemBehavior(CommandCallLog log)
-        : IModuleCommandPipelineBehavior<StoreHandledCommand>
-    {
-        public async ValueTask HandleAsync(
-            StoreHandledCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
-            CancellationToken ct = default)
-        {
-            log.Calls.Add("system-early:before");
-            await next(ct);
-            log.Calls.Add("system-early:after");
-        }
-    }
-
-    public sealed class LateSystemBehavior(CommandCallLog log)
-        : IModuleCommandPipelineBehavior<StoreHandledCommand>
-    {
-        public async ValueTask HandleAsync(
-            StoreHandledCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
-            CancellationToken ct = default)
-        {
-            log.Calls.Add("system-late:before");
-            await next(ct);
-            log.Calls.Add("system-late:after");
-        }
-    }
-
-    public sealed class ApplicationBehavior(CommandCallLog log)
-        : IModuleCommandPipelineBehavior<StoreHandledCommand>
-    {
-        public async ValueTask HandleAsync(
-            StoreHandledCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
-            CancellationToken ct = default)
-        {
-            log.Calls.Add("application:before");
-            await next(ct);
-            log.Calls.Add("application:after");
-        }
+            static descriptor => descriptor.ServiceType == typeof(IModuleTransactionRunner)
+                && descriptor.ImplementationType?.FullName
+                == "Bondstone.Persistence.EntityFrameworkCore.Persistence.EntityFrameworkCoreModuleTransactionRunner");
     }
 
     public sealed class LoggingCommandHandler(CommandCallLog log)

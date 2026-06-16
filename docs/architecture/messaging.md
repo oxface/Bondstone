@@ -38,14 +38,9 @@ does not expose a public source-module override.
 Module command execution is registered through module command routes and
 executed through `IModuleCommandExecutor`. The executor runs typed
 `ICommandHandler<TCommand>` and `ICommandHandler<TCommand, TResult>` handlers
-through an internal runtime plan:
-ordered system and capability contributions selected for the executing module,
-application behavior steps in DI registration order, then the handler. System
-contributions currently cover source-module execution context, receive-side
-inbox handling, durable operation completion, and module-owned persistence
-behavior supplied by provider packages. Provider and capability setup adds
-runtime contribution records to Bondstone module metadata, not executable
-behavior implementations to DI.
+through direct internal orchestration: provider transaction runners,
+operation completion, receive inbox handling, module execution context,
+validation, the handler, then provider post-handler actions.
 
 Local execution of `ICommand<TResult>` returns a typed
 `ModuleCommandExecutionResult<TResult>` from `ExecuteResultAsync`. Durable send
@@ -77,11 +72,9 @@ not be derived from handler CLR names.
 
 Core subscriber execution uses `IModuleEventSubscriberExecutor`. It resolves a
 subscriber by module, stable event identity, and stable subscriber identity,
-then executes the typed handler through an internal runtime plan: ordered
-system and capability contributions selected for the subscriber module,
-application behavior steps in DI registration order, then the handler. System
-contributions provide per-subscriber inbox handling and set the module
-execution context for the subscriber module.
+then executes the typed handler through direct internal orchestration:
+provider transaction runners, receive inbox handling, module execution
+context, the handler, then provider post-handler actions.
 
 Event-driven orchestration composes commands and events rather than erasing
 their distinction. A subscriber, saga, process manager, or orchestrator can
@@ -125,9 +118,8 @@ event bus. EF Core is the first runtime implementation, provided by
 `Bondstone.Persistence.EntityFrameworkCore`. It activates only for EF-backed
 modules that call `UseEntityFrameworkCoreDomainEventPersistence()` and map the
 EF domain event record shape explicitly with `ApplyBondstoneDomainEvents()`.
-The current implementation still participates in the module runtime through
-internal ordered contributions until the fixed pipeline simplification is
-applied.
+The implementation participates through Bondstone's hidden provider
+post-handler action contract.
 
 EF Core collection persists module-local domain event records and clears
 sources only after the EF module transaction saves and commits successfully.
@@ -140,9 +132,9 @@ event is explicit module code.
 Module command execution and module event subscriber execution establish the
 current source module through Bondstone's module execution context. The
 current implementation uses an ambient `AsyncLocal` accessor owned by
-`AddBondstone`; command and event subscriber runtime contributions push the
-executing module before application handlers run and restore the previous
-context when the pipeline completes.
+`AddBondstone`; command and event subscriber runtime execution pushes the
+executing module before handlers run and restores the previous context when
+execution completes.
 
 Durable command sending and integration event publishing require that current
 module execution flow. Calls from queued work after the handler returns, code

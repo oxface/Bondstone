@@ -72,11 +72,8 @@ Bondstone table; callers choose the full or granular mappings in
 Modules opt into EF-backed command and event subscriber transactions with
 `UseEntityFrameworkCorePersistence<TDbContext>` on `BondstoneModuleBuilder`.
 That module-owned registration records EF persistence metadata, reuses the
-provider-neutral EF durable store registrations, and attaches EF runtime
-pipeline contributions for modules that declare that capability. Selected
-runtime behaviors are ordered by the module command and event subscriber
-runtimes, so the EF transaction boundary wraps normal application pipeline
-behaviors. The host
+provider-neutral EF durable store registrations, and registers EF transaction
+behavior as Bondstone's hidden provider transaction runner. The host
 still owns the environment-specific DbContext provider configuration,
 connection strings, schema policy, and operational topology.
 
@@ -175,10 +172,11 @@ handler dispatch.
 EF-backed domain event persistence is EF-owned runtime behavior. It activates
 only when modules declare EF Core persistence and explicitly opt into domain
 event persistence with `UseEntityFrameworkCoreDomainEventPersistence()`. The
-opt-in is narrow EF-owned module metadata; Bondstone does not provide a public
-capability-step registry or public named pipeline slots. The current EF
-implementation contributes ordered runtime records through its setup API until
-the fixed module pipeline simplification is applied.
+opt-in is narrow EF-owned module metadata and requires EF persistence to be
+declared first. Bondstone does not provide a public capability-step registry,
+public named pipeline slots, public contribution records, or public
+application middleware contracts. The EF implementation registers with
+Bondstone's hidden provider runtime service contracts.
 
 EF-backed domain event collection belongs inside module command execution and
 module integration event subscriber execution. The placement is:
@@ -187,7 +185,7 @@ module integration event subscriber execution. The placement is:
 - after operation-state and receive-inbox behavior have opened the inner
   handler path;
 - while the module execution context is active;
-- after application pipeline behavior and handler logic complete;
+- after handler logic completes;
 - before the transaction owner calls `SaveChangesAsync`;
 - before the transaction commits.
 
@@ -205,9 +203,9 @@ EF module transaction behavior publishes a provider-neutral
 `IModuleTransactionFeature` into the current execution context while the module
 transaction boundary is active. The transaction feature reports whether
 Bondstone observes commit and accepts commit or rollback callbacks. EF domain
-event behavior stages records after handler execution and registers source
+event persistence stages records after handler execution and registers source
 clearing through that transaction feature only when commit is observable. The
-transaction behavior remains generic and does not know about domain events.
+transaction runner remains generic and does not know about domain events.
 Those callbacks are lightweight runtime cleanup hooks; domain event records
 are already staged before `SaveChangesAsync`, and callback failures can surface
 after the EF transaction has committed.
@@ -250,16 +248,17 @@ generic mediator.
 The EF persistence scope is not a core abstraction and is not a required shape
 for non-EF providers.
 
-Module command and event subscriber pipeline behaviors wrap
+Module command and event subscriber runtime execution uses
 `IEntityFrameworkCorePersistenceScope` so validation, handler state changes,
 inbox markers, outbox messages, operation-state updates where applicable,
 `SaveChangesAsync`, and transaction commit happen in one module boundary when
-those capabilities are used. The current applied EF module behavior wraps
-opted-in module command execution and event subscriber execution. Command
-receive can also save successful operation-state completion updates through
-the EF scope. Event receive operation-state completion, receive failure state,
-retry state, stale receive recovery, and receive acknowledgement policy are
-outside the current EF persistence contract. This outer module transaction is
+those capabilities are used. The current applied EF module transaction runner
+wraps opted-in module command execution and event subscriber execution.
+Command receive can also save successful operation-state completion updates
+through the EF scope. Event receive operation-state completion, receive
+failure state, retry state, stale receive recovery, and receive
+acknowledgement policy are outside the current EF persistence contract. This
+outer module transaction is
 the commit owner; the low-level inbox executor only stages the processed marker
 in the current `DbContext`. The EF scope remains the lower-level transaction
 companion, not a standalone public unit-of-work API.

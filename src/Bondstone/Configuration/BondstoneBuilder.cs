@@ -13,10 +13,8 @@ public sealed class BondstoneBuilder
         ModulePublishedEventRegistry publishedEventRegistry,
         ModuleEventSubscriberRegistry eventSubscriberRegistry,
         BondstoneModuleRegistry moduleRegistry,
-        ModulePipelineContributionRegistry pipelineContributionRegistry,
         ModuleCommandValidatorRegistry commandValidatorRegistry)
     {
-        ArgumentNullException.ThrowIfNull(pipelineContributionRegistry);
         ArgumentNullException.ThrowIfNull(commandValidatorRegistry);
 
         Services = services;
@@ -26,7 +24,6 @@ public sealed class BondstoneBuilder
         _publishedEventRegistry = publishedEventRegistry;
         _eventSubscriberRegistry = eventSubscriberRegistry;
         _moduleRegistry = moduleRegistry;
-        _pipelineContributionRegistry = pipelineContributionRegistry;
         _commandValidatorRegistry = commandValidatorRegistry;
         _configurationValidators =
         [
@@ -40,7 +37,6 @@ public sealed class BondstoneBuilder
     private readonly ModulePublishedEventRegistry _publishedEventRegistry;
     private readonly ModuleEventSubscriberRegistry _eventSubscriberRegistry;
     private readonly BondstoneModuleRegistry _moduleRegistry;
-    private readonly ModulePipelineContributionRegistry _pipelineContributionRegistry;
     private readonly ModuleCommandValidatorRegistry _commandValidatorRegistry;
     private readonly List<IBondstoneConfigurationValidator> _configurationValidators;
 
@@ -59,7 +55,6 @@ public sealed class BondstoneBuilder
             _publishedEventRegistry,
             _eventSubscriberRegistry,
             _moduleRegistry,
-            _pipelineContributionRegistry,
             _commandValidatorRegistry);
     }
 

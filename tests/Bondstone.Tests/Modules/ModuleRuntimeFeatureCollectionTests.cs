@@ -3,13 +3,13 @@ using Xunit;
 
 namespace Bondstone.Tests.Modules;
 
-public sealed class ModulePipelineFeatureCollectionTests
+public sealed class ModuleRuntimeFeatureCollectionTests
 {
     [Fact]
     [Trait("Category", "Unit")]
     public void TryGet_WhenFeatureScopeIsActive_ReturnsNearestFeature()
     {
-        var features = new ModulePipelineFeatureCollection();
+        var features = new ModuleRuntimeFeatureCollection();
         var outerFeature = new TestFeature("outer");
         var innerFeature = new TestFeature("inner");
 
@@ -34,7 +34,7 @@ public sealed class ModulePipelineFeatureCollectionTests
     [Trait("Category", "Unit")]
     public void ScopeDispose_WhenScopesAreDisposedOutOfOrder_Throws()
     {
-        var features = new ModulePipelineFeatureCollection();
+        var features = new ModuleRuntimeFeatureCollection();
 
         using IDisposable outerScope = features.Push<ITestFeature>(
             new TestFeature("outer"));
@@ -54,7 +54,7 @@ public sealed class ModulePipelineFeatureCollectionTests
     [Trait("Category", "Unit")]
     public void ScopeDispose_WhenDifferentFeatureTypesAreDisposedOutOfOrder_Throws()
     {
-        var features = new ModulePipelineFeatureCollection();
+        var features = new ModuleRuntimeFeatureCollection();
 
         using IDisposable outerScope = features.Push<ITestFeature>(
             new TestFeature("outer"));
@@ -74,7 +74,7 @@ public sealed class ModulePipelineFeatureCollectionTests
     [Trait("Category", "Unit")]
     public void TryGet_WhenFeatureWasPushedWithConcreteType_DoesNotResolveInterfaceType()
     {
-        var features = new ModulePipelineFeatureCollection();
+        var features = new ModuleRuntimeFeatureCollection();
         var feature = new TestFeature("concrete");
 
         using IDisposable scope = features.Push(feature);

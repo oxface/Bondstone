@@ -31,16 +31,16 @@ because a module moves from in-process composition to a separate service.
 ## Transport And Persistence Surface
 
 Bondstone is simplifying after MVP around EF Core/PostgreSQL durable
-persistence and smaller transport adapter boundaries. The supported durable
+persistence and app-owned broker integration. The supported durable
 persistence path is `Bondstone.Persistence.EntityFrameworkCore` plus
 `Bondstone.Persistence.EntityFrameworkCore.Postgres`.
 
-`Bondstone.Transport.RabbitMq` remains the only active direct broker adapter.
-It keeps provider-native vocabulary and app-owned broker setup while the
-transport surface is simplified. Bondstone owns persisted outbox retry and
-terminal failure state; broker retry, dead-letter policy, topology, and
-consumer lifecycle remain app-owned. See
-[transport-rabbitmq.md](transport-rabbitmq.md).
+Bondstone does not currently ship a direct broker adapter package. Broker
+integrations use app-owned Rebus, RabbitMQ.Client, Azure Service Bus, Kafka, or
+similar transport code around Bondstone's durable envelope serializer,
+outbound `IDurableEnvelopeDispatcher`, and inbound `IDurableEnvelopeReceiver`.
+Bondstone owns persisted outbox retry and terminal failure state; broker
+retry, dead-letter policy, topology, and consumer lifecycle remain app-owned.
 
 Provider-neutral durable persistence contracts live in `Bondstone.Persistence`.
 There is no active provider-neutral transport diagnostics package. The
@@ -71,8 +71,6 @@ explicit module opt-in and explicit EF mapping.
   store, and persistence-scope rules.
 - [persistence-postgresql.md](persistence-postgresql.md) records PostgreSQL
   provider behavior.
-- [transport-rabbitmq.md](transport-rabbitmq.md) records RabbitMQ direct
-  transport behavior.
 - [transport-local.md](transport-local.md) records explicit local queue
   transport behavior for samples, tests, and local development.
 

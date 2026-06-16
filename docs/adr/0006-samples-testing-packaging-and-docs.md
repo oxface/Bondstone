@@ -1,6 +1,6 @@
 # 0006 Samples Testing Packaging And Docs
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-16
 
@@ -66,6 +66,18 @@ provider-backed confidence for EF/PostgreSQL and RabbitMQ.
 Future documentation cleanup should dedupe repeated setup/architecture text
 and keep one owner for each durable rule.
 
+## Amendment 2026-06-16 Remove Broker Sample Proof
+
+After the broker adapter package was removed from the active product surface,
+the modular monolith sample no longer carries a RabbitMQ registration path or
+RabbitMQ Testcontainers smoke test. The current sample proves the durable loop
+through EF/PostgreSQL plus explicit local transport. Broker-boundary examples
+should stay in app-owned sample code until a real adapter package is
+reintroduced by ADR.
+
+Provider-backed confidence currently means EF/PostgreSQL integration coverage.
+Broker provider-backed tests are deferred with broker adapter packages.
+
 ## Related Decisions
 
 - Supersedes the active sample, testing, package artifact, and docs governance
@@ -89,8 +101,8 @@ and keep one owner for each durable rule.
 - Agent guidance: root [AGENTS.md](../../AGENTS.md) points agents to docs,
   ADRs, testing, samples, packaging, and GitHub workflow docs before changing
   those areas.
-- Application evidence: package artifact tests assert XML docs; local and
-  RabbitMQ sample integration tests cover the current sample path.
+- Application evidence: package artifact tests assert XML docs; the local
+  modular monolith sample integration test covers the current sample path.
 - Pending or deferred: a cleanup sweep should remove redundant docs/tests and
   dedupe stale guidance after the architecture pivot settles.
 

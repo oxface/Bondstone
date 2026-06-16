@@ -1,6 +1,6 @@
 # 0005 Transport Adapters And Receive Helpers
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-16
 
@@ -69,6 +69,24 @@ Future broker adapters must stay small or move to samples. If an adapter needs
 to own topology, subscription storage, retries, dead-letter orchestration, or
 workflow semantics, that belongs in the app or a mature bus/workflow library.
 
+## Amendment 2026-06-16 Remove Broker Adapter Package
+
+Further simplification removed `Bondstone.Transport.RabbitMq` from the active
+package set. The current MVP keeps only `Bondstone.Transport.Local` as an
+explicit local adapter for samples, tests, and local development.
+
+Broker integrations are app-owned. Bondstone provides the durable boundaries:
+
+- `IDurableEnvelopeDispatcher` for outgoing outbox records;
+- `IDurableMessageEnvelopeSerializer` for durable envelope payloads;
+- `IDurableEnvelopeReceiver` for inbound command and event receive execution.
+
+Applications or selected transport libraries own native topology,
+subscriptions, consumers, acknowledgement/settlement, retry, dead-letter
+policy, prefetch, concurrency, and monitoring. Event receive remains explicit:
+the app supplies the subscriber module and stable subscriber identity selected
+by its native subscription.
+
 ## Related Decisions
 
 - Supersedes the active transport direction from the archived ADR sequence.
@@ -82,23 +100,26 @@ workflow semantics, that belongs in the app or a mature bus/workflow library.
 
 ## Application Notes
 
-- Current contract: local transport and RabbitMQ behavior are documented in
-  [docs/architecture/transport-local.md](../architecture/transport-local.md)
-  and [docs/architecture/transport-rabbitmq.md](../architecture/transport-rabbitmq.md).
+- Current contract: local transport behavior is documented in
+  [docs/architecture/transport-local.md](../architecture/transport-local.md).
+  App-owned broker integration is documented in
+  [docs/architecture/messaging.md](../architecture/messaging.md),
+  [docs/setup.md](../setup.md), and
+  [docs/package-discovery.md](../package-discovery.md).
 - Stable docs: messaging receive-pipeline behavior is documented in
   [docs/architecture/messaging.md](../architecture/messaging.md).
 - Agent guidance: root [AGENTS.md](../../AGENTS.md) requires ADR review before
   transport support, provider behavior, package-boundary, public API, or
   compatibility changes.
-- Application evidence: provider-neutral transport diagnostics and old
-  topology ownership were removed; local and RabbitMQ paths are covered by the
-  modular monolith sample integration tests.
-- Pending or deferred: further RabbitMQ receive-worker simplification may move
-  remaining ergonomics toward sample/helper shape if it starts recreating
-  broker runtime ownership.
+- Application evidence: provider-neutral transport diagnostics, old topology
+  ownership, and the RabbitMQ adapter package were removed. Local transport is
+  covered by the modular monolith sample integration tests.
+- Pending or deferred: future broker adapter packages are deferred until a
+  real consumer need justifies adding ergonomic wrappers around the app-owned
+  broker boundary.
 
 ## Verification
 
-Read current architecture, messaging, transport-local, transport-rabbitmq,
-sample, and testing docs. Behavior is covered by transport tests and the local
-plus RabbitMQ sample integration tests.
+Read current architecture, messaging, transport-local, sample, package
+discovery, packaging, and testing docs. Behavior is covered by local transport
+tests and the local modular monolith sample integration test.

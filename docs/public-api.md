@@ -87,10 +87,14 @@ Post-MVP transport simplification, 2026-06-16:
   `RoutedDurableOutboxTransport`, and `RabbitMqDurableOutboxTransport` were
   renamed to `IDurableEnvelopeDispatcher`,
   `IDurableEnvelopeDispatchRoute`, `RoutedDurableEnvelopeDispatcher`, and
-  `RabbitMqDurableEnvelopeDispatcher`.
+  `RabbitMqDurableEnvelopeDispatcher` during the intermediate transport
+  refactor. The RabbitMQ package was later removed from the active package set.
 - The renamed envelope dispatcher contract uses `DispatchAsync(...)` to make
   the neutral handoff about dispatching persisted Bondstone envelopes, not
   owning broker transport runtime.
+- `Bondstone.Transport.RabbitMq` was removed from the active package set.
+  Broker integration is now app-owned through `IDurableEnvelopeDispatcher`,
+  `IDurableMessageEnvelopeSerializer`, and `IDurableEnvelopeReceiver`.
 - This is an intentional compatibility-breaking public API cleanup made while
   external usage is still bounded.
 
@@ -203,7 +207,6 @@ This first pass covers all current package projects:
 - `Bondstone.Persistence.EntityFrameworkCore`
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres`
 - `Bondstone.Transport.Local`
-- `Bondstone.Transport.RabbitMq`
 
 `Bondstone.Persistence.Postgres`, `Bondstone.Transport`, and
 `Bondstone.Transport.ServiceBus` were removed from the active product surface
@@ -214,6 +217,7 @@ and are not covered by the current default public API baseline.
 Normal setup API:
 
 - `BondstoneServiceCollectionExtensions`
+- `BondstoneEnvelopeDispatcherBuilderExtensions`
 - `BondstoneBuilder`
 - `BondstoneOutboxBuilder`
 - `BondstoneModuleBuilderExtensions`
@@ -242,6 +246,7 @@ User application contract:
 - `IDurableOperationExpirationProcessor`
 - `IDurableOperationFinalizer`
 - `IDurableOperationResultReader`
+- `IDurableEnvelopeReceiver`
 - `IDurablePayloadSerializer`
 - `IMessageTypeRegistry`
 - `IModuleExecutionContextAccessor`
@@ -307,6 +312,7 @@ User application contract:
 - `DurableMessageEnvelope`
 - `MessageTraceContext`
 - `MessageKind`
+- `IDurableMessageEnvelopeSerializer`
 - `IDurableOutboxInspector`
 - `IDurableInboxInspector`
 - `DurableInboxAlreadyReceivedException`
@@ -439,38 +445,3 @@ Normal setup API:
 - `BondstoneLocalModuleRouteBuilder`
 - `BondstoneLocalEventRouteBuilder`
 - `BondstoneLocalQueueBuilder`
-
-## Bondstone.Transport.RabbitMq
-
-Normal setup API:
-
-- `BondstoneRabbitMqBuilderExtensions`
-  (`BondstoneBuilder.UseRabbitMqTransport(...)` overload)
-- `BondstoneRabbitMqServiceCollectionExtensions`
-- `BondstoneRabbitMqTransportBuilder`
-- `BondstoneRabbitMqReceiveQueueBuilder`
-- `RabbitMqReceiveWorkerOptions`
-
-User application contract:
-
-- `RabbitMqPublishDestination`
-- `RabbitMqPublishDestinationKind`
-
-Advanced composition API:
-
-- `BondstoneRabbitMqBuilderExtensions`
-  (`BondstoneOutboxBuilder.UseRabbitMqTransport(...)` overload)
-- `IRabbitMqReceivedMessageDispatcher`
-- `IRabbitMqReceivedMessageHandler`
-- `RabbitMqReceivedMessageMapper`
-- `RabbitMqTransportMessage`
-
-Provider/runtime contract:
-
-- `IRabbitMqMessagePublisher`
-
-Public implementation detail exposed for now:
-
-- `BondstoneRabbitMqHeaders`
-- `RabbitMqDurableMessageEnvelope`
-- `RabbitMqDurableEnvelopeDispatcher`

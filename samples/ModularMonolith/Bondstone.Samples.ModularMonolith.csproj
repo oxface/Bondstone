@@ -8,7 +8,6 @@
     <ProjectReference Include="..\..\src\Bondstone.Persistence.EntityFrameworkCore\Bondstone.Persistence.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Hosting\Bondstone.Hosting.csproj" />
     <ProjectReference Include="..\..\src\Bondstone.Transport.Local\Bondstone.Transport.Local.csproj" />
-    <ProjectReference Include="..\..\src\Bondstone.Transport.RabbitMq\Bondstone.Transport.RabbitMq.csproj" />
     <ProjectReference Include="..\..\src\Bondstone\Bondstone.csproj" />
     <ProjectReference Include="..\ModularMonolith.Billing\Bondstone.Samples.ModularMonolith.Billing.csproj" />
     <ProjectReference Include="..\ModularMonolith.Fulfillment.Contracts\Bondstone.Samples.ModularMonolith.Fulfillment.Contracts.csproj" />

@@ -55,8 +55,7 @@ The local transport is not a production broker adapter or hidden fallback.
 `UseModuleQueueConvention()` is complete local durable command topology for
 module-to-module command dispatch. Event routes still bind subscribers
 explicitly because subscriber module and subscriber identity are part of
-durable receive identity. The sample also exposes an explicit RabbitMQ
-registration path that keeps broker connection and topology setup app-owned.
+durable receive identity.
 
 ## Service-Split Path
 
@@ -66,9 +65,10 @@ assemblies stable, keep module persistence isolated by schema, and treat
 `fulfillment` as the documented extraction candidate because it receives a
 durable command and publishes an integration event.
 
-Use the RabbitMQ registration path when proving a broker boundary. Broker
-provisioning, deployment, authentication, product UI, and a provider matrix
-stay out of this sample.
+When proving a broker boundary, keep broker provisioning, native consumers,
+acknowledgement, retry, and dead-letter policy in the app or chosen transport
+library. Use Bondstone's durable envelope serializer,
+`IDurableEnvelopeDispatcher`, and `IDurableEnvelopeReceiver` at the boundary.
 
 Run the app with a PostgreSQL connection string:
 

@@ -24,6 +24,15 @@ namespace Bondstone.Configuration
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurablePayloadSerialization(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection ConfigureBondstoneDurablePayloadJson(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<System.Text.Json.JsonSerializerOptions> configure) { }
     }
+    public static class BondstoneEnvelopeDispatcherBuilderExtensions
+    {
+        public static Bondstone.Configuration.BondstoneBuilder UseDurableEnvelopeDispatcher(this Bondstone.Configuration.BondstoneBuilder builder, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableEnvelopeDispatcher> factory, string dispatcherName = "AppOwned", Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime = 0) { }
+        public static Bondstone.Configuration.BondstoneOutboxBuilder UseDurableEnvelopeDispatcher(this Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableEnvelopeDispatcher> factory, string dispatcherName = "AppOwned", Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime = 0) { }
+        public static Bondstone.Configuration.BondstoneBuilder UseDurableEnvelopeDispatcher<TDispatcher>(this Bondstone.Configuration.BondstoneBuilder builder, string dispatcherName = "AppOwned", Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime = 0)
+            where TDispatcher :  class, Bondstone.Persistence.IDurableEnvelopeDispatcher { }
+        public static Bondstone.Configuration.BondstoneOutboxBuilder UseDurableEnvelopeDispatcher<TDispatcher>(this Bondstone.Configuration.BondstoneOutboxBuilder outbox, string dispatcherName = "AppOwned", Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime = 0)
+            where TDispatcher :  class, Bondstone.Persistence.IDurableEnvelopeDispatcher { }
+    }
     public sealed class BondstoneOutboxBuilder
     {
         public bool HasDispatcher { get; }
@@ -172,6 +181,11 @@ namespace Bondstone.Messaging
             where TCommand : Bondstone.Messaging.IDurableCommand;
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableCommandSendResult> SendAsync<TCommand>(TCommand command, string targetModule, string? partitionKey, System.Guid? durableOperationId = default, Bondstone.Messaging.MessageTraceContext? traceContext = null, System.Guid? causationId = default, System.Threading.CancellationToken ct = default)
             where TCommand : Bondstone.Messaging.IDurableCommand;
+    }
+    public interface IDurableEnvelopeReceiver
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveCommandAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveEventAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, string subscriberModule, string subscriberIdentity, System.Threading.CancellationToken ct = default);
     }
     public interface IDurableEventPublisher
     {

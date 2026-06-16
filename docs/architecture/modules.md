@@ -19,24 +19,25 @@ such as connection strings.
 
 ## Host Composition
 
-Hosts use `AddBondstone` to compose modules, persistence providers, transport
-adapters, and hosted outbox workers.
+Hosts use `AddBondstone` to compose modules, persistence providers, local
+transport for dev/test flows, app-owned broker bridges, and hosted outbox
+workers.
 
 ```csharp
 builder.Services.AddBondstone(bondstone =>
 {
     bondstone.AddOrderingModule(connectionString);
     bondstone.AddFulfillmentModule(connectionString);
-    bondstone.UseRabbitMqTransport(rabbitMq =>
+    bondstone.UseLocalTransport(local =>
     {
-        rabbitMq.DispatchCommandsTo(envelope =>
-            new RabbitMqPublishDestination(
-                "bondstone.commands",
-                $"{envelope.TargetModule}.commands"));
-        rabbitMq.DispatchEventsTo(envelope =>
-            new RabbitMqPublishDestination(
-                "bondstone.events",
-                envelope.MessageTypeName));
+        local.UseModuleQueueConvention();
+        local.RouteEvent("ordering.order-placed.v1")
+            .ToQueue("ordering.order-placed");
+        local.Queue("ordering.order-placed")
+            .SubscribeEvent(
+                "ordering.order-placed.v1",
+                "fulfillment",
+                "fulfillment.order-placed-projection.v1");
     });
     bondstone.Outbox.UseWorker();
 });
@@ -44,7 +45,9 @@ builder.Services.AddBondstone(bondstone =>
 
 Provider-native transport configuration, broker administration, retry,
 dead-letter policy, worker settings, credentials, and topology declaration stay
-app-owned.
+app-owned. Broker hosts bridge native transport code into Bondstone through
+`IDurableEnvelopeDispatcher`, `IDurableMessageEnvelopeSerializer`, and
+`IDurableEnvelopeReceiver`.
 
 ## Durable Messaging Capability
 
@@ -235,11 +238,11 @@ Core module receive is provider-neutral:
 - `IModuleEventReceivePipeline` handles event envelopes for a specific
   subscriber module and subscriber identity.
 
-Transport adapters should parse provider-native messages into
-`DurableMessageEnvelope` and call the appropriate receive pipeline inside the
-provider acknowledgement boundary. The active RabbitMQ adapter provides native
-message mappers, receive dispatchers, settlement handler helpers, and opt-in
-hosted receive workers over configured receive topology.
+App-owned transport readers should parse provider-native messages into
+`DurableMessageEnvelope` and call `IDurableEnvelopeReceiver` inside the
+provider acknowledgement boundary. Commands route by envelope target module;
+events require the app to supply the subscriber module and stable subscriber
+identity selected by that native subscription.
 
 ## Persistence Boundaries
 

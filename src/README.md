@@ -23,7 +23,5 @@ persistence provider, or transport adapter.
   contains PostgreSQL-specific EF Core integration.
 - [Bondstone.Transport.Local](Bondstone.Transport.Local) contains explicit
   local queue routing for samples, tests, and local development.
-- [Bondstone.Transport.RabbitMq](Bondstone.Transport.RabbitMq) contains the
-  RabbitMQ direct transport adapter.
 
 See [../tests](../tests) for package and integration-boundary tests.

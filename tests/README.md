@@ -20,8 +20,6 @@ Testing policy, categories, and commands are documented in
   public API baselines for packable packages.
 - [Bondstone.Transport.Local.Tests](Bondstone.Transport.Local.Tests) covers
   local transport behavior.
-- [Bondstone.Transport.RabbitMq.Tests](Bondstone.Transport.RabbitMq.Tests)
-  covers RabbitMQ transport behavior.
 - [Bondstone.Composition.Tests](Bondstone.Composition.Tests) covers cross-package
   composition.
 - [Bondstone.Samples.Tests](Bondstone.Samples.Tests) covers sample smoke tests.

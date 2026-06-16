@@ -56,6 +56,10 @@ public static class BondstoneServiceCollectionExtensions
         services.TryAddScoped<IModuleEventSubscriberRuntime, ModuleEventSubscriberRuntime>();
         services.TryAddScoped<IModuleCommandReceivePipeline, ModuleCommandReceivePipeline>();
         services.TryAddScoped<IModuleEventReceivePipeline, ModuleEventReceivePipeline>();
+        services.TryAddScoped<IDurableEnvelopeReceiver, DurableEnvelopeReceiver>();
+        services.TryAddSingleton<
+            IDurableMessageEnvelopeSerializer,
+            SystemTextJsonDurableMessageEnvelopeSerializer>();
         services.TryAddSingleton<DurableOperationResultPayloadSerializer>();
         services.TryAddScoped<IDurableOperationResultReader>(serviceProvider =>
             new DurableOperationResultReader(

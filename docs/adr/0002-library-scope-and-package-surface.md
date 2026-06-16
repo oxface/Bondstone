@@ -1,6 +1,6 @@
 # 0002 Library Scope And Package Surface
 
-Status: Accepted
+Status: Amended
 Application: Applied
 Date: 2026-06-16
 
@@ -70,6 +70,26 @@ internals. Normal consumers should see setup builders, module contracts,
 handler contracts, durable send/publish, receive helpers, result observation,
 and provider/adapter registration APIs first.
 
+## Amendment 2026-06-16 Broker Adapter Removal
+
+After further transport simplification, `Bondstone.Transport.RabbitMq` was
+removed from the active package set instead of being kept as the broker proof.
+The active package set is now:
+
+- `Bondstone`;
+- `Bondstone.Persistence`;
+- `Bondstone.Persistence.EntityFrameworkCore`;
+- `Bondstone.Persistence.EntityFrameworkCore.Postgres`;
+- `Bondstone.Hosting`;
+- `Bondstone.Transport.Local`.
+
+Broker integrations are app-owned for the current MVP. Applications can
+implement `IDurableEnvelopeDispatcher` for outgoing outbox records, use
+`IDurableMessageEnvelopeSerializer` to map durable envelopes to transport
+payloads, and call `IDurableEnvelopeReceiver` from their native receive
+handler. Reintroducing broker adapter packages requires a new ADR or amendment
+based on real usage pressure.
+
 ## Related Decisions
 
 - Supersedes the active package and compatibility posture from the archived
@@ -95,6 +115,8 @@ and provider/adapter registration APIs first.
   changes.
 - Application evidence: removed packages are absent from the solution and
   package discovery; active packages are covered by package artifact tests.
+  `Bondstone.Transport.RabbitMq` was removed from the active solution and
+  package inventory by the 2026-06-16 broker adapter removal amendment.
 - Pending or deferred: further public API cleanup is planned as a cleanup
   sweep, not as compatibility preservation.
 

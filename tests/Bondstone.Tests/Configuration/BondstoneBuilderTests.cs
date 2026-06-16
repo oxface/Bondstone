@@ -79,6 +79,26 @@ public sealed class BondstoneBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void AddBondstone_WhenAppOwnedDispatcherIsConfigured_ReturnsServices()
+    {
+        var services = new ServiceCollection();
+
+        IServiceCollection result = services.AddBondstone(builder =>
+        {
+            builder.Outbox.MarkPersistenceProvider("test persistence");
+            builder.UseDurableEnvelopeDispatcher<TestEnvelopeDispatcher>();
+            builder.Outbox.MarkDispatcher("test dispatcher");
+        });
+
+        Assert.Same(services, result);
+        ServiceDescriptor descriptor = Assert.Single(
+            services,
+            service => service.ServiceType == typeof(IDurableEnvelopeDispatcher));
+        Assert.Equal(typeof(TestEnvelopeDispatcher), descriptor.ImplementationType);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void AddBondstone_WhenTransportOnlyIsConfigured_AllowsManualComposition()
     {
         var services = new ServiceCollection();
@@ -318,6 +338,16 @@ public sealed class BondstoneBuilderTests
     {
         public ValueTask WriteAsync(
             DurableMessageEnvelope envelope,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class TestEnvelopeDispatcher : IDurableEnvelopeDispatcher
+    {
+        public ValueTask DispatchAsync(
+            DurableOutboxRecord record,
             CancellationToken ct = default)
         {
             return ValueTask.CompletedTask;

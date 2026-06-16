@@ -83,5 +83,6 @@ worker and follows Bondstone's persisted outbox failure policy; it is not
 handed to a broker retry or DLQ mechanism.
 
 Use this package when a sample needs to prove Bondstone's durable loop before
-choosing a real broker receive adapter. Production broker paths should use
-direct provider adapters such as `Bondstone.Transport.RabbitMq`.
+choosing a real broker integration. Production broker paths should use
+app-owned transport code around `IDurableEnvelopeDispatcher`,
+`IDurableMessageEnvelopeSerializer`, and `IDurableEnvelopeReceiver`.

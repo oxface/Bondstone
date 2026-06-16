@@ -74,19 +74,10 @@ Keep tests grouped by package or integration boundary so they reveal package
 ownership and extraction seams.
 
 For transport adapters, prefer a layered shape: use fast in-process transport
-tests for the broad behavior matrix, and keep a small number of
-Testcontainers-backed transport tests for the real provider handoff contract:
-acknowledgement after success, negative acknowledgement after failure, and
-broker-owned dead-letter behavior where the adapter promises that handoff.
-
-Receive retry-policy tests should assert Bondstone's provider boundary rather
-than expecting Bondstone to own broker retry policy. Fast tests should cover
-native mapping, dispatch, and settlement ordering. Provider-backed integration
-tests should prove the native handoff that Bondstone performs: RabbitMQ
-negative acknowledgement with the configured `requeue` value. Broker retry
-schedules, max delivery count, and dead-letter topology are app/provider
-configuration and should be tested only where the adapter explicitly promises
-that handoff.
+tests for local behavior. Bondstone does not currently ship broker adapter
+packages, so broker receive retry, settlement, delivery counts, and
+dead-letter topology belong to application or selected transport-library
+tests.
 
 For first-class events, keep the same split. Unit and application tests should
 cover event destination resolution, publish dispatch, subscriber registration,
@@ -97,7 +88,7 @@ retry, dead-letter, or subscription-storage behavior belongs in explicit
 Transport adapter routing is fast behavior. Cover missing command routes,
 missing published-event destinations, ambiguous multi-adapter dispatch route
 ownership, and missing receive bindings at dispatch or receive time with
-`Unit` or `Application` tests unless the assertion depends on a real broker
+`Unit` or `Application` tests unless the assertion depends on a real broker.
 handoff.
 
 ## Verification Surface
@@ -127,6 +118,6 @@ smoke test under `tests/Bondstone.Samples.Tests`. It is covered by
 `pnpm backend:test:integration` and intentionally stays out of the default
 fast test filter because it starts Testcontainers PostgreSQL.
 
-The non-EF PostgreSQL and Service Bus package tests were removed with their
-packages after MVP. EF/PostgreSQL and RabbitMQ remain the provider-backed
-integration-test paths.
+The non-EF PostgreSQL, Service Bus, and RabbitMQ package tests were removed
+with their packages after MVP. EF/PostgreSQL remains the provider-backed
+integration-test path.

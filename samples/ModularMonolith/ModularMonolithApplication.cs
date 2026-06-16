@@ -13,14 +13,12 @@ using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Bondstone.Samples.ModularMonolith.Ordering;
 using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
 using Bondstone.Transport.Local.Outbox;
-using Bondstone.Transport.RabbitMq.Outbox;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
 
 namespace Bondstone.Samples.ModularMonolith;
 
@@ -60,61 +58,6 @@ public static class ModularMonolithApplication
                         FulfillmentIntegrationEvents.InventoryReserved,
                         OrderingModule.ModuleName,
                         "ordering.inventory-reserved-projection.v1");
-            }));
-
-        return services;
-    }
-
-    public static IServiceCollection AddModularMonolithSampleWithRabbitMq(
-        this IServiceCollection services,
-        string connectionString,
-        IConnection connection)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
-        ArgumentNullException.ThrowIfNull(connection);
-
-        services.AddLogging();
-        services.AddBondstoneRabbitMqConnection(connection);
-        AddModularMonolithSampleCore(
-            services,
-            connectionString,
-            bondstone => bondstone.UseRabbitMqTransport(rabbitMq =>
-            {
-                rabbitMq.DispatchCommandsTo(envelope =>
-                    envelope.TargetModule == FulfillmentModule.ModuleName
-                        ? new RabbitMqPublishDestination(
-                            "bondstone.commands",
-                            "fulfillment.commands")
-                        : null);
-                rabbitMq.ReceiveQueue("fulfillment.commands")
-                    .AcceptModule(FulfillmentModule.ModuleName);
-
-                rabbitMq.DispatchEventsTo(envelope => envelope.MessageTypeName switch
-                {
-                    OrderingIntegrationEvents.OrderPlaced =>
-                        RabbitMqPublishDestination.ForQueue("ordering.order-placed"),
-                    FulfillmentIntegrationEvents.InventoryReserved =>
-                        RabbitMqPublishDestination.ForQueue("fulfillment.inventory-reserved"),
-                    _ => null,
-                });
-                rabbitMq.ReceiveQueue("ordering.order-placed")
-                    .SubscribeEvent(
-                        OrderingIntegrationEvents.OrderPlaced,
-                        FulfillmentModule.ModuleName,
-                        "fulfillment.order-placed-projection.v1")
-                    .SubscribeEvent(
-                        OrderingIntegrationEvents.OrderPlaced,
-                        BillingModule.ModuleName,
-                        "billing.order-invoice-projection.v1");
-
-                rabbitMq.ReceiveQueue("fulfillment.inventory-reserved")
-                    .SubscribeEvent(
-                        FulfillmentIntegrationEvents.InventoryReserved,
-                        OrderingModule.ModuleName,
-                        "ordering.inventory-reserved-projection.v1");
-
-                rabbitMq.UseReceiveWorker();
             }));
 
         return services;

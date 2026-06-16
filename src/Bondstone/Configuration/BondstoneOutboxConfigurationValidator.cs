@@ -21,7 +21,7 @@ internal sealed class BondstoneOutboxConfigurationValidator(BondstoneOutboxBuild
         {
             throw new InvalidOperationException(
                 "Bondstone outbox dispatching requires an envelope dispatcher. "
-                + "Register a local or broker transport adapter before enabling the dispatcher or worker.");
+                + "Register local transport or an app-owned durable envelope dispatcher before enabling the dispatcher or worker.");
         }
     }
 }

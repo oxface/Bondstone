@@ -27,7 +27,7 @@ Samples should demonstrate:
 - module-owned persistence;
 - durable message identity and registration;
 - inbox/outbox behavior;
-- provider and transport adapter integration;
+- provider integration and explicit local transport behavior;
 - eventual service extraction shape.
 
 ## Modular Monolith Sample
@@ -71,11 +71,6 @@ result reading, dispatched outbox evidence, and the integration-event loop.
 Default fast verification remains `Unit` and `Application` only; run sample
 smoke coverage with the repository integration test entrypoint.
 
-The sample is supplemented with one preferred direct provider path:
-`AddModularMonolithSampleWithRabbitMq(...)`. The RabbitMQ path is covered by
-an explicit Testcontainers RabbitMQ sample smoke test. Do not turn the first
-sample into a broker matrix.
-
 ## Service-Split Readiness
 
 The current service-split proof is documentation over the existing modular
@@ -88,8 +83,8 @@ story is:
   extraction pressure;
 - treat `fulfillment` as the documented extraction candidate because it already
   handles a durable command and publishes an integration event;
-- use the RabbitMQ path as the preferred direct-provider proof when a broker
-  boundary is needed;
+- use app-owned broker code around `IDurableEnvelopeDispatcher` and
+  `IDurableEnvelopeReceiver` when a broker boundary is needed;
 - keep broker provisioning, deployment, authentication, and product UI outside
   the sample.
 

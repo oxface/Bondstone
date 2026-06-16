@@ -18,17 +18,9 @@ Package IDs match project names:
 - `Bondstone.Persistence.EntityFrameworkCore`
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres`
 - `Bondstone.Transport.Local`
-- `Bondstone.Transport.RabbitMq`
 
 For a consumer-facing capability and namespace matrix, see
 [package-discovery.md](package-discovery.md).
-
-`Bondstone.Transport.RabbitMq` is the remaining direct broker adapter in the
-active package set. It includes outgoing durable outbox dispatch through
-application-supplied destination functions, native receive helpers, opt-in
-hosted receive workers, and provider-backed receive integration tests. Broker
-administration remains app-owned. RabbitMQ stays a thin adapter/sample path
-while the post-MVP transport model is simplified.
 
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
 tests, and local development. It exercises outbox/inbox receive semantics
@@ -37,11 +29,12 @@ broker adapter or hidden fallback.
 
 `Bondstone.Persistence.Postgres`, `Bondstone.Transport`, and
 `Bondstone.Transport.ServiceBus`,
+`Bondstone.Transport.RabbitMq`,
 `Bondstone.Capabilities.DomainEvents`, and
 `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` were removed from
 the active package set after MVP. Reintroducing a separate provider-neutral
-transport package or capability package requires ADR review and a real
-consumer need.
+transport package, broker adapter package, or capability package requires ADR
+review and a real consumer need.
 
 Module-local domain event contracts now live in `Bondstone` under
 `Bondstone.DomainEvents`. EF Core domain event collection, EF domain event
@@ -71,12 +64,14 @@ Use this dependency direction:
   may reference `Bondstone` directly for shared builder extension methods.
 - `Bondstone.Transport.Local` depends on `Bondstone`, `Bondstone.Persistence`,
   and no provider-neutral transport package.
-- `Bondstone.Transport.RabbitMq` depends on `Bondstone`,
-  `Bondstone.Persistence`, and `RabbitMQ.Client`.
 
-Provider-specific packages contain provider-specific behavior only. Transport
-packages adapt broker/client SDKs directly instead of adapting another bus
-library. Reusable hosted worker composition belongs in `Bondstone.Hosting`.
+Provider-specific packages contain provider-specific behavior only. Bondstone
+does not currently ship a broker adapter package. Applications that use Rebus,
+RabbitMQ.Client, Azure Service Bus, or another transport implement
+`IDurableEnvelopeDispatcher` for outgoing outbox records and call
+`IDurableEnvelopeReceiver` after mapping native deliveries into
+`DurableMessageEnvelope`. Reusable hosted worker composition belongs in
+`Bondstone.Hosting`.
 Core command, messaging, and module execution abstractions stay in
 `Bondstone`. Provider-neutral durable persistence contracts are in
 `Bondstone.Persistence`; there is no active provider-neutral transport
@@ -96,19 +91,20 @@ Result-returning command contracts and local module result execution live in
 result observation uses provider-neutral operation state from
 `Bondstone.Persistence`, with typed operation result reading exposed from
 `Bondstone` because it uses Bondstone's durable payload serialization options.
-Transport packages continue to expose accepted delivery rather than direct
-request/response execution.
+Local transport exposes accepted delivery rather than direct request/response
+execution. App-owned broker integrations should preserve that same boundary.
 
 ## Public API Surface
 
 Normal user-facing API is the setup and module contract surface: message
 markers and identity attributes, result-returning command contracts, module
-registration builders, `AddBondstone` composition, provider/transport builder
-extensions, durable send/publish contracts, receive pipeline contracts, result
-types, options, and documented diagnostic shapes.
+registration builders, `AddBondstone` composition, provider/local transport
+builder extensions, durable send/publish contracts, envelope receive helpers,
+receive pipeline contracts, result types, options, and documented diagnostic
+shapes.
 
-Some public low-level persistence, transport, receive, dispatcher, resolver,
-module runtime service, and concrete provider types
+Some public low-level persistence, local transport, receive, dispatcher,
+resolver, module runtime service, and concrete provider types
 remain available for advanced composition, tests, custom schedulers, and
 app-owned provider consumers. Their visibility does not automatically make
 them the preferred setup path or an open-ended extension point. Stable docs

@@ -461,8 +461,9 @@ Applied on 2026-06-16:
   `Bondstone.Persistence.EntityFrameworkCore.Postgres` as the supported
   PostgreSQL persistence path.
 - Kept `Bondstone.Transport.Local` as the explicit dev/test/sample transport
-  path and `Bondstone.Transport.RabbitMq` as the remaining direct broker
-  adapter/sample path without expanding its runtime scope.
+  path. A later broker-boundary cleanup removed `Bondstone.Transport.RabbitMq`
+  too; broker integrations are now app-owned bridges through Bondstone
+  envelope dispatcher, serializer, and receiver contracts.
 - Updated stable packaging, package discovery, setup, architecture, testing,
   sample, public API, and package README docs to describe the current
   supported surface.
@@ -475,15 +476,13 @@ Applied on 2026-06-16:
   `IDurableOutboxTransportRoute` to `IDurableEnvelopeDispatcher` and
   `IDurableEnvelopeDispatchRoute`.
 - Renamed `RoutedDurableOutboxTransport` to
-  `RoutedDurableEnvelopeDispatcher` and
-  `RabbitMqDurableOutboxTransport` to `RabbitMqDurableEnvelopeDispatcher`.
+  `RoutedDurableEnvelopeDispatcher`.
 - Changed the neutral envelope handoff method from `SendAsync(...)` to
   `DispatchAsync(...)`.
-- Kept package-level `UseLocalTransport(...)` and
-  `UseRabbitMqTransport(...)` naming for now because those still describe the
-  selected adapter package.
-- Updated public API baselines, composition tests, local transport tests,
-  RabbitMQ tests, and stable docs for the new vocabulary.
+- Kept package-level `UseLocalTransport(...)` naming for the remaining local
+  adapter package.
+- Updated public API baselines, composition tests, local transport tests, and
+  stable docs for the new vocabulary.
 
 ### Now: Patch Consumer-Visible 1.2.x Gaps
 
@@ -511,16 +510,19 @@ Applied on 2026-06-16:
 - Operation-state diagnostic columns are documented as nullable EF migration
   additions with no required backfill.
 
-### Applied: RabbitMQ Transport DSL Cut
+### Applied: Broker Adapter Removal
 
-- Removed RabbitMQ command exchange, module route, event route, and outbound
-  convention DSLs.
-- Replaced outbound RabbitMQ routing with `DispatchCommandsTo(...)` and
-  `DispatchEventsTo(...)` destination functions over the durable envelope.
-- Kept RabbitMQ receive queue bindings as adapter-local routing metadata for
-  receive helpers and the opt-in worker.
+- Removed the remaining RabbitMQ adapter package, tests, sample path, package
+  references, and public API baseline.
+- Added neutral `IDurableMessageEnvelopeSerializer` and
+  `IDurableEnvelopeReceiver` contracts so app-owned broker code can dispatch
+  outgoing durable envelopes and persist received envelopes into the normal
+  command/event receive paths.
 - Kept local transport as the correctness baseline over outbox dispatch and
   receive pipelines.
+- Kept broker topology, native subscriptions, native consumers, retry, dead
+  lettering, prefetch, credentials, and monitoring outside Bondstone for this
+  MVP.
 
 ### Applied: Transport Diagnostics Package Removal
 
@@ -529,8 +531,8 @@ Applied on 2026-06-16:
 - Removed core aggregate startup topology diagnostics and the
   `BondstoneBuilder.AddTransportTopologyDiagnosticSource(...)` extension hook.
 - Removed RabbitMQ topology diagnostics from the public/service surface.
-- Kept route failures loud at dispatch/receive time through the concrete Local
-  and RabbitMQ adapter paths.
+- Kept route failures loud at dispatch/receive time through the concrete local
+  transport path and app-owned broker bridge boundaries.
 
 ### Next: Operational MVP
 
@@ -575,8 +577,9 @@ Applied on 2026-06-16:
    diagnostics on runtime-owned failure boundaries instead of restoring
    provider-neutral topology reports.
 2. Add stable log event ids for the outbox worker and receive helper failure
-   paths. Applied for `DurableOutboxWorker` dispatch failures and RabbitMQ
-   receive worker delivery handling failures.
+   paths. Applied for `DurableOutboxWorker` dispatch failures; receive helper
+   failures remain simple thrown boundary errors until a broker adapter is
+   accepted again.
 3. Add a small diagnostic report only if the simplified model still needs one.
    Deferred; the simplified model does not currently justify a new report.
 
@@ -621,8 +624,9 @@ Applied on 2026-06-16:
 1. Add a service-split sample or test slice that extracts one module into a
    separate host.
 2. Keep contract assemblies, message identities, and handler patterns stable.
-3. Use RabbitMQ as the first broker-boundary proof, or app-owned native
-   transport code if a later ADR reintroduces another thin adapter.
+3. Use app-owned native transport code as the first broker-boundary proof, or
+   introduce a thin adapter later only after a fresh ADR accepts the added
+   ergonomics.
 4. Prove operation result observation across the split.
 5. Document what changes and what stays stable during extraction.
 

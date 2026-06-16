@@ -17,8 +17,6 @@ Install the packages needed for the host:
   persistence.
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
   classification and provider registration.
-- `Bondstone.Transport.RabbitMq` when the host dispatches durable outbox
-  records through the remaining direct broker adapter.
 - `Bondstone.Transport.Local` when a sample, test, or local development host
   explicitly wants in-process queue routing through the durable receive
   pipelines.
@@ -33,19 +31,21 @@ For a normal PostgreSQL-backed host, start with:
 - `Bondstone.Persistence.EntityFrameworkCore` and
   `Bondstone.Persistence.EntityFrameworkCore.Postgres` for EF-backed module
   persistence;
-- `Bondstone.Transport.RabbitMq` when messages leave the process through the
-  remaining direct broker adapter.
+- `Bondstone.Transport.Local` for samples, tests, and local development.
 
 Domain event contracts are in the core `Bondstone` package. EF-backed
 module-local domain event persistence uses
 `Bondstone.Persistence.EntityFrameworkCore` and remains explicit opt-in.
 
-Use the provider transport extensions on `AddBondstone` for ordinary hosts.
-Those extensions register outbox dispatch and receive helpers. Broker
-topology, consumers, retry, and dead-letter policy remain application-owned.
-Lower-level persistence, receive, dispatcher, and outbox transport types remain
-available for advanced composition and tests, but they are not the quick-start
-path.
+Use `Bondstone.Transport.Local` for the quick-start path. Real broker
+integrations are app-owned: register outbound publishing with
+`UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
+`IDurableEnvelopeDispatcher`, serialize `DurableMessageEnvelope` with
+`IDurableMessageEnvelopeSerializer`, and call `IDurableEnvelopeReceiver` from
+the chosen transport's receive handler. Broker topology, consumers, retry,
+and dead-letter policy remain application-owned. Lower-level persistence,
+receive, dispatcher, and local transport types remain available for advanced
+composition and tests, but they are not the quick-start path.
 
 After composing a host, use the modular monolith sample as the adoption proof
 and [testing.md](testing.md) for verification entrypoints. The default quality
@@ -360,25 +360,18 @@ For deeper behavior and limitations, see [architecture/modules.md](architecture/
 
 ## Host Composition
 
-Hosts compose modules, persistence, transport adapters, and hosted workers
-through `AddBondstone`. Provider connection, credentials, retry, dead-letter,
-topology declaration, and administration remain app-owned or provider-native.
+Hosts compose modules, persistence, local transport, and hosted workers through
+`AddBondstone`. Provider connection, credentials, retry, dead-letter, topology
+declaration, and administration remain app-owned or provider-native.
 
-RabbitMQ example:
+Local transport example:
 
 ```csharp
 using Bondstone.Configuration;
 using Bondstone.Hosting.Outbox;
-using Bondstone.Transport.RabbitMq.Outbox;
-using RabbitMQ.Client;
+using Bondstone.Transport.Local.Outbox;
 
 string connectionString = builder.Configuration.GetConnectionString("App")!;
-IConnection rabbitMqConnection = await new ConnectionFactory
-{
-    Uri = new Uri(builder.Configuration.GetConnectionString("RabbitMq")!),
-}.CreateConnectionAsync();
-
-builder.Services.AddBondstoneRabbitMqConnection(rabbitMqConnection);
 
 builder.Services.AddBondstone(bondstone =>
 {
@@ -386,22 +379,12 @@ builder.Services.AddBondstone(bondstone =>
     bondstone.AddFulfillmentModule(connectionString);
     bondstone.AddBillingModule(connectionString);
 
-    bondstone.UseRabbitMqTransport(rabbitMq =>
+    bondstone.UseLocalTransport(local =>
     {
-        rabbitMq.DispatchCommandsTo(envelope =>
-            envelope.TargetModule == "fulfillment"
-                ? new RabbitMqPublishDestination(
-                    "bondstone.commands",
-                    "fulfillment.commands")
-                : null);
-        rabbitMq.ReceiveQueue("fulfillment.commands")
-            .AcceptModule("fulfillment");
-
-        rabbitMq.DispatchEventsTo(envelope =>
-            envelope.MessageTypeName == "ordering.order-placed.v1"
-                ? RabbitMqPublishDestination.ForQueue("ordering.order-placed")
-                : null);
-        rabbitMq.ReceiveQueue("ordering.order-placed")
+        local.UseModuleQueueConvention();
+        local.RouteEvent("ordering.order-placed.v1")
+            .ToQueue("ordering.order-placed");
+        local.Queue("ordering.order-placed")
             .SubscribeEvent(
                 "ordering.order-placed.v1",
                 "fulfillment",
@@ -410,11 +393,6 @@ builder.Services.AddBondstone(bondstone =>
                 "ordering.order-placed.v1",
                 "billing",
                 "billing.order-invoice-projection.v1");
-
-        rabbitMq.UseReceiveWorker(options =>
-        {
-            options.RequeueOnFailure = false;
-        });
     });
 
     bondstone.Outbox.UseWorker(options =>
@@ -426,22 +404,15 @@ builder.Services.AddBondstone(bondstone =>
 });
 ```
 
-RabbitMQ outbound destination functions are outbound-only. They resolve where
-commands and events are published, but hosts that receive commands still need
-explicit receive bindings such as `ReceiveQueue(...).AcceptModule(...)`.
-`Bondstone.Transport.Local` is the local-development exception: its
-`UseModuleQueueConvention()` configures complete in-process command topology
-because there is no broker queue or binding to provision.
-
-Use provider transport extensions on the main `BondstoneBuilder` for normal
-host setup. The lower-level `bondstone.Outbox.UseRabbitMqTransport(...)`
-overload is an advanced composition API for manual envelope dispatcher
-registration.
-
-When more than one direct transport is registered, Bondstone routes each
-claimed outbox record through the provider whose route reports a destination
-for that message. If no provider or more than one provider matches, dispatch
-fails instead of guessing.
+For a real broker, the host or chosen transport library owns topology,
+subscriptions, native consumers, acknowledgement, retry, and dead-letter
+policy. Register outbound publishing with
+`UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
+`IDurableEnvelopeDispatcher` to publish claimed outbox records, use
+`IDurableMessageEnvelopeSerializer` to write/read `DurableMessageEnvelope`,
+and call `IDurableEnvelopeReceiver` from the native receive handler. Commands
+route by `TargetModule`; event receive calls must provide the selected
+subscriber module and stable subscriber identity.
 
 Bondstone owns retry and terminal failure for outgoing persisted outbox
 records. Current outbox status semantics are described in
@@ -782,26 +753,24 @@ await durableEventPublisher.PublishAsync(
 
 ## Receive Direction
 
-Core exposes provider-neutral module receive pipelines over
-`DurableMessageEnvelope`:
+Core exposes provider-neutral module receive over `DurableMessageEnvelope`:
 
-- `IModuleCommandReceivePipeline`
-- `IModuleEventReceivePipeline`
+- `IDurableEnvelopeReceiver.ReceiveCommandAsync(...)`
+- `IDurableEnvelopeReceiver.ReceiveEventAsync(...)`
 
 Direct provider receive adapters should parse their provider-native message
-body into the neutral durable envelope, acknowledge only after the receive
-pipeline completes, and let failures flow to provider-native retry and
-dead-letter policy. RabbitMQ exposes `IRabbitMqReceivedMessageDispatcher` and
-opt-in hosted receive helpers. Bondstone's receive responsibility is the
-native settlement handoff; broker retry schedules, delivery counts, and DLQ
-settings remain provider/app-owned.
+body into the neutral durable envelope, call the receiver, acknowledge only
+after the receiver completes, and let failures flow to provider-native retry
+and dead-letter policy. Bondstone's receive responsibility is inbox
+idempotency and module transaction execution. Broker retry schedules, delivery
+counts, and DLQ settings remain provider/app-owned.
 
 If a receive attempt finds an inbox row that was already received but not
 processed, Bondstone fails the module receive with
 `DurableInboxAlreadyReceivedException` instead of re-running the handler. The
-provider worker then uses its normal failure handoff, such as RabbitMQ negative
-acknowledgement. Recovery of the stale inbox row is an operator or application
-procedure. Operators can inspect unprocessed inbox rows through
+provider worker then uses its normal failure handoff. Recovery of the stale
+inbox row is an operator or application procedure. Operators can inspect
+unprocessed inbox rows through
 `IDurableInboxInspector`:
 
 ```csharp
@@ -818,20 +787,6 @@ handler, moving broker messages, or issuing a compensating action remains an
 application/operator runbook decision because the application must prove what
 happened during the ambiguous receive attempt.
 
-The RabbitMQ package also exposes `RabbitMqReceivedMessageMapper` for
-app-owned consumers before they call the Bondstone dispatcher.
-
-RabbitMQ also exposes `IRabbitMqReceivedMessageHandler`. This helper calls the
-mapper and dispatcher, then invokes a caller-supplied acknowledge delegate only
-after dispatch succeeds. It still does not start hosted consumers.
-
-For hosts that want Bondstone to run the native receive loop, RabbitMQ exposes
-an opt-in `UseReceiveWorker(...)` helper on its transport builder. This helper
-runs consumers for configured receive bindings, but broker entities,
-credentials, bindings, retry policy, and dead-letter setup remain
-application-owned.
-
-The current sample uses explicit `Bondstone.Transport.Local` queue routing by
-default and also exposes `AddModularMonolithSampleWithRabbitMq(...)` for one
-preferred direct-provider sample path. The RabbitMQ sample path keeps
-connection and topology setup app-owned.
+The current sample uses explicit `Bondstone.Transport.Local` queue routing.
+Broker examples should live in application or sample code until a real adapter
+need justifies reintroducing a broker package.

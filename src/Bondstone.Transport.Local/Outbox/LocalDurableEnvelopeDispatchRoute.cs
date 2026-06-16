@@ -1,21 +1,17 @@
 using Bondstone.Messaging;
-using Bondstone.Modules;
 using Bondstone.Persistence;
 
 namespace Bondstone.Transport.Local.Outbox;
 
 internal sealed class LocalDurableEnvelopeDispatchRoute(
     LocalTransportTopology topology,
-    IModuleCommandReceivePipeline commandReceivePipeline,
-    IModuleEventReceivePipeline eventReceivePipeline)
+    IDurableEnvelopeReceiver envelopeReceiver)
     : IDurableEnvelopeDispatchRoute
 {
     private readonly LocalTransportTopology _topology =
         topology ?? throw new ArgumentNullException(nameof(topology));
-    private readonly IModuleCommandReceivePipeline _commandReceivePipeline =
-        commandReceivePipeline ?? throw new ArgumentNullException(nameof(commandReceivePipeline));
-    private readonly IModuleEventReceivePipeline _eventReceivePipeline =
-        eventReceivePipeline ?? throw new ArgumentNullException(nameof(eventReceivePipeline));
+    private readonly IDurableEnvelopeReceiver _envelopeReceiver =
+        envelopeReceiver ?? throw new ArgumentNullException(nameof(envelopeReceiver));
 
     public string TransportName => "Local";
 
@@ -69,7 +65,7 @@ internal sealed class LocalDurableEnvelopeDispatchRoute(
                 $"Local transport has no queue binding for command '{envelope.MessageTypeName}' targeting module '{envelope.TargetModule}'.");
         }
 
-        await _commandReceivePipeline.HandleOnceAsync(envelope, ct);
+        await _envelopeReceiver.ReceiveCommandAsync(envelope, ct);
     }
 
     private async ValueTask SendEventAsync(
@@ -86,7 +82,7 @@ internal sealed class LocalDurableEnvelopeDispatchRoute(
 
         foreach (LocalEventSubscription subscription in subscriptions)
         {
-            await _eventReceivePipeline.HandleOnceAsync(
+            await _envelopeReceiver.ReceiveEventAsync(
                 envelope,
                 subscription.SubscriberModule,
                 subscription.SubscriberIdentity,

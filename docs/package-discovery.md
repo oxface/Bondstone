@@ -16,7 +16,6 @@ policy, see [packaging.md](packaging.md).
 | EF Core plus PostgreSQL durable persistence helpers                                                                                                   | `Bondstone.Persistence.EntityFrameworkCore.Postgres` | `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence`                                | Preferred EF/PostgreSQL module setup is `module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: ...)`.                                                                                               |
 | Hosted durable outbox worker and default dispatcher registration                                                                                      | `Bondstone.Hosting`                                  | `Bondstone.Hosting.Outbox`                                                                      | Normal hosts use `bondstone.Outbox.UseWorker(...)`; advanced schedulers can use the dispatcher registration separately.                                                                                             |
 | Explicit local in-process transport for samples, tests, and local development                                                                         | `Bondstone.Transport.Local`                          | `Bondstone.Transport.Local.Outbox`                                                              | Use `UseLocalTransport(...)` when the host intentionally routes through local queues and Bondstone receive pipelines.                                                                                               |
-| RabbitMQ direct transport adapter                                                                                                                     | `Bondstone.Transport.RabbitMq`                       | `Bondstone.Transport.RabbitMq.Outbox`, `Bondstone.Transport.RabbitMq.Inbox`                     | Thin direct adapter with outbound destination functions, native receive helpers, and opt-in receive workers.                                                                                                        |
 
 Package IDs match project names. The full package inventory and dependency
 direction live in [packaging.md](packaging.md).
@@ -106,6 +105,26 @@ module-hinted read overloads for callers that know the result-owning module.
 
 `IDurableOperationExpirationStore` is in `Bondstone.Persistence` for provider
 stores that support app-owned operation expiry jobs.
+
+## App-Owned Broker Integration
+
+Bondstone does not currently ship RabbitMQ, Service Bus, Rebus, Kafka, or
+other broker adapter packages. App-owned broker integrations normally use:
+
+- `UseDurableEnvelopeDispatcher<TDispatcher>()` from `Bondstone.Configuration`
+  to register the outbound dispatcher and satisfy outbox composition
+  validation;
+- `IDurableEnvelopeDispatcher` from `Bondstone.Persistence` to publish claimed
+  outbox records through the chosen transport;
+- `IDurableMessageEnvelopeSerializer` from `Bondstone.Messaging` to write and
+  read `DurableMessageEnvelope` payloads;
+- `IDurableEnvelopeReceiver` from `Bondstone.Messaging` to execute received
+  command envelopes or explicitly selected event subscribers through
+  Bondstone's inbox and module transaction boundary.
+
+The application or transport library owns broker topology, subscriptions,
+native consumers, ack/nack/settlement, retry, dead-letter policy, prefetch,
+and monitoring.
 
 ## EF Core Mappings
 

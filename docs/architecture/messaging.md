@@ -304,80 +304,55 @@ reader. Generated operation ids, retry state, stale receive recovery, default
 timeout policies, and provider-specific operation concurrency are outside the
 current operation-state contract.
 
-## Transport Adapters
+## Transport Boundary
 
-Direct provider adapters are the supported transport architecture. Rebus is
-not a supported transport package.
+Bondstone does not currently ship a broker adapter package. Rebus,
+RabbitMQ.Client, Azure Service Bus, Kafka, and other broker runtimes are
+app-owned choices.
 
-Current direct transport packages:
+`Bondstone.Transport.Local` is the only active transport package. It provides
+explicit local queue routing for samples, tests, and local development. It
+uses the neutral receive helper and preserves outbox/inbox semantics, but it
+is not a broker durability layer or fallback.
 
-- `Bondstone.Transport.RabbitMq`
-- `Bondstone.Transport.Local`
+Outbound broker integrations call
+`UseDurableEnvelopeDispatcher<TDispatcher>()` and implement
+`IDurableEnvelopeDispatcher` to publish claimed outbox records through the
+chosen native transport. Advanced integrations may also compose
+`IDurableEnvelopeDispatchRoute` with `RoutedDurableEnvelopeDispatcher`, which
+dispatches a claimed outbox record only when exactly one route matches the
+message. Zero matches and ambiguous matches are loud dispatch-time errors.
 
-RabbitMQ is the remaining direct broker adapter. Its implemented scope
-includes outgoing durable outbox dispatch, provider-native receive topology,
-opt-in hosted receive workers, and provider-backed receive tests. RabbitMQ
-uses exchange, routing-key, and queue vocabulary. Provider connection,
-credentials, queue/exchange/binding creation, retry, dead-letter, serializer,
-and administration remain app-owned or provider-native.
-
-`Bondstone.Transport.Local` is explicit local queue routing for samples, tests,
-and local development. It uses the neutral receive pipelines and preserves
-outbox/inbox semantics, but it is not a broker durability layer or fallback.
-
-Direct transport packages contribute `IDurableEnvelopeDispatchRoute` entries.
-`RoutedDurableEnvelopeDispatcher` dispatches a claimed outbox record only when
-exactly one adapter route matches the message. Zero matches and ambiguous
-matches are loud dispatch-time errors.
-
-Bondstone no longer has a provider-neutral startup topology diagnostics layer.
-Local and RabbitMQ validate their own routing when dispatching or receiving
-envelopes. Normal host setup should use provider transport extensions on the
-main `BondstoneBuilder`; the lower-level `BondstoneOutboxBuilder` transport
-overloads remain advanced composition APIs for manual dispatch setups.
-
-RabbitMQ receive bindings are adapter-local routing metadata for the receive
-dispatcher and opt-in worker. Missing or mismatched receive bindings fail
-during receive dispatch. Same-queue in-process event fan-out remains valid,
-but split subscribers should use provider-native broker fan-out, such as
-RabbitMQ exchange bindings.
-
-RabbitMQ maps received provider-native messages into the neutral receive
-pipelines. The package also exposes native received message mappers so
-app-owned consumers can convert broker messages before dispatch, plus handler
-helpers that invoke caller-supplied native settlement only after dispatch
-succeeds. RabbitMQ also exposes opt-in hosted receive lifecycle helpers over
-configured receive topology.
-Provider-backed integration tests cover successful receive settlement,
-dead-letter handoff after failed dispatch, and event subscriber fan-out.
+Inbound broker integrations should use `IDurableMessageEnvelopeSerializer` to
+read the durable envelope body and `IDurableEnvelopeReceiver` to execute
+module receive. Command envelopes route by `TargetModule`. Event receive is
+explicit: the app supplies the subscriber module and stable subscriber
+identity selected by its native subscription.
 
 Bondstone owns persisted outbox retry and terminal failure state. The outgoing
 outbox terminal status is documented in
-[persistence-core.md](persistence-core.md). Direct provider receive adapters
-own settlement ordering and operational diagnostics, but broker retry
-schedules, delivery counts, dead-letter policy, and provider client retry
-configuration remain application-owned and provider-native.
+[persistence-core.md](persistence-core.md). Native broker consumers own
+settlement ordering and operational diagnostics. Broker retry schedules,
+delivery counts, dead-letter policy, topology, prefetch, concurrency, and
+client retry configuration remain application-owned and provider-native.
 
-Applications bind Bondstone receive topology to provider-native queues where
-their retry/DLQ policy is already configured. RabbitMQ exposes the worker
-failure `requeue` decision. Bondstone does not create a provider-neutral
-receive retry policy or receive DLQ abstraction.
+Bondstone does not create a provider-neutral receive retry policy, receive
+DLQ abstraction, subscription store, receive topology DSL, or broker worker
+runtime.
 
 ## Diagnostics
 
 Durable-message diagnostics should specialize by message kind and provider.
 Command diagnostics should describe target-module routing. Event diagnostics
-should describe publish subjects, subscriber bindings, and missing-subscriber
-outcomes. Core keeps shared durable-message vocabulary, while provider
-packages expose provider-native diagnostic details.
+should describe publish subjects, subscriber identities, and missing-subscriber
+outcomes. Core keeps shared durable-message vocabulary; app-owned broker code
+should log provider-native delivery and settlement details where needed.
 
-Startup topology validation should use those diagnostics for fail-fast
-configuration errors while remaining separate from broker provisioning.
-Validation does not create RabbitMQ exchanges, queues, or bindings, and does
-not create broker topology.
+Bondstone no longer has a provider-neutral startup topology diagnostics layer.
+Validation does not create exchanges, queues, topics, subscriptions, bindings,
+or broker topology.
 
 Receive recovery diagnostics should explain the native settlement handoff after
-failed Bondstone dispatch. RabbitMQ diagnostics should include the queue,
-delivery identity, routing facts, and configured negative-acknowledgement
-requeue decision. These logs document what Bondstone did; they do not imply
-Bondstone owns broker retry or dead-letter policy.
+failed Bondstone dispatch when an app-owned broker consumer performs that
+handoff. These logs document what the app did around Bondstone; they do not
+imply Bondstone owns broker retry or dead-letter policy.

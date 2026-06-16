@@ -5,8 +5,6 @@ using Bondstone.Hosting.Outbox;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
-using Bondstone.Transport.Local.Outbox;
-using Bondstone.Transport.RabbitMq.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -20,11 +18,10 @@ public sealed class AddBondstoneCompositionTests
 {
     [Fact]
     [Trait("Category", "Application")]
-    public void AddBondstone_WithPostgreSqlRabbitMqAndWorker_ComposesResolvableOutboxGraph()
+    public void AddBondstone_WithPostgreSqlCustomDispatcherAndWorker_ComposesResolvableOutboxGraph()
     {
         var services = new ServiceCollection();
         services.AddOptions();
-        services.AddSingleton<IRabbitMqMessagePublisher, NoOpRabbitMqMessagePublisher>();
         services.AddSingleton<ILogger<DurableOutboxWorker>>(
             NullLogger<DurableOutboxWorker>.Instance);
 
@@ -32,17 +29,7 @@ public sealed class AddBondstoneCompositionTests
         {
             bondstone.UsePostgreSqlPersistence<CompositionDbContext>(
                 "Host=localhost;Database=bondstone");
-            bondstone.UseRabbitMqTransport(rabbitMq =>
-            {
-                rabbitMq.DispatchCommandsTo(envelope =>
-                    new RabbitMqPublishDestination(
-                        "bondstone.commands",
-                        $"{envelope.TargetModule}.commands"));
-                rabbitMq.DispatchEventsTo(envelope =>
-                    new RabbitMqPublishDestination(
-                        "bondstone.events",
-                        envelope.MessageTypeName));
-            });
+            bondstone.UseDurableEnvelopeDispatcher<RecordingEnvelopeDispatcher>();
             bondstone.Outbox.UseWorker(options =>
             {
                 options.WorkerId = "composition-smoke-test";
@@ -64,7 +51,7 @@ public sealed class AddBondstoneCompositionTests
         using IServiceScope scope = serviceProvider.CreateScope();
         Assert.IsType<DurableOutboxDispatcher>(
             scope.ServiceProvider.GetRequiredService<IDurableOutboxDispatcher>());
-        Assert.IsType<RoutedDurableEnvelopeDispatcher>(
+        Assert.IsType<RecordingEnvelopeDispatcher>(
             scope.ServiceProvider.GetRequiredService<IDurableEnvelopeDispatcher>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IDurableOutboxClaimer>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IDurableOutboxLeaseRenewer>());
@@ -183,29 +170,16 @@ public sealed class AddBondstoneCompositionTests
         }
     }
 
-    private sealed class NoOpRabbitMqMessagePublisher : IRabbitMqMessagePublisher
+    private sealed class RecordingEnvelopeDispatcher : IDurableEnvelopeDispatcher
     {
-        public ValueTask PublishAsync(
-            RabbitMqPublishDestination destination,
-            RabbitMqTransportMessage message,
+        public DurableOutboxRecord? Record { get; private set; }
+
+        public ValueTask DispatchAsync(
+            DurableOutboxRecord record,
             CancellationToken ct = default)
         {
+            Record = record;
             return ValueTask.CompletedTask;
         }
     }
-
-    private sealed class RecordingRabbitMqMessagePublisher : IRabbitMqMessagePublisher
-    {
-        public RabbitMqPublishDestination? Destination { get; private set; }
-
-        public ValueTask PublishAsync(
-            RabbitMqPublishDestination destination,
-            RabbitMqTransportMessage message,
-            CancellationToken ct = default)
-        {
-            Destination = destination;
-            return ValueTask.CompletedTask;
-        }
-    }
-
 }

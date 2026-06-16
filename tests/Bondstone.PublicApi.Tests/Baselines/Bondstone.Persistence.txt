@@ -48,6 +48,13 @@ namespace Bondstone.Messaging
         Failed = 4,
         Cancelled = 5,
     }
+    public interface IDurableMessageEnvelopeSerializer
+    {
+        Bondstone.Messaging.DurableMessageEnvelope Deserialize(System.ReadOnlyMemory<byte> utf8Json);
+        Bondstone.Messaging.DurableMessageEnvelope Deserialize(string json);
+        string Serialize(Bondstone.Messaging.DurableMessageEnvelope envelope);
+        byte[] SerializeToUtf8Bytes(Bondstone.Messaging.DurableMessageEnvelope envelope);
+    }
     public interface IDurableOperationReader
     {
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(Bondstone.Messaging.DurableOperationHandle operation, System.Threading.CancellationToken ct = default);
@@ -67,6 +74,14 @@ namespace Bondstone.Messaging
         public string? TraceState { get; }
         public bool TryGetW3CTraceId(out string? traceId) { }
         public static Bondstone.Messaging.MessageTraceContext? CaptureCurrent() { }
+    }
+    public sealed class SystemTextJsonDurableMessageEnvelopeSerializer : Bondstone.Messaging.IDurableMessageEnvelopeSerializer
+    {
+        public SystemTextJsonDurableMessageEnvelopeSerializer() { }
+        public Bondstone.Messaging.DurableMessageEnvelope Deserialize(System.ReadOnlyMemory<byte> utf8Json) { }
+        public Bondstone.Messaging.DurableMessageEnvelope Deserialize(string json) { }
+        public string Serialize(Bondstone.Messaging.DurableMessageEnvelope envelope) { }
+        public byte[] SerializeToUtf8Bytes(Bondstone.Messaging.DurableMessageEnvelope envelope) { }
     }
 }
 namespace Bondstone.Persistence

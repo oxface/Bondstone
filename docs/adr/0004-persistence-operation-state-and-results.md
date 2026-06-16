@@ -111,5 +111,5 @@ failure.
 
 Read current messaging, persistence, EF persistence, PostgreSQL persistence,
 setup, and sample docs. Behavior is covered by operation reader/result reader
-tests, EF/PostgreSQL tests, public API tests, and local/RabbitMQ sample
-integration tests.
+tests, EF/PostgreSQL tests, public API tests, and the local modular monolith
+sample integration test.

@@ -1,6 +1,7 @@
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Samples.ModularMonolith;
+using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Bondstone.Samples.ModularMonolith.Ordering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -50,19 +51,24 @@ public sealed class ModularMonolithRabbitMqSampleTests(
             IModuleCommandExecutor executor =
                 scope.ServiceProvider.GetRequiredService<IModuleCommandExecutor>();
 
-            await executor.ExecuteAsync(
-                OrderingModule.ModuleName,
-                new PlaceOrderCommand(
-                    orderId,
-                    Sku: "coffee-mug",
-                    Quantity: 2,
-                    DurableOperationId: durableOperationId),
-                ct);
+            ModuleCommandExecutionResult<PlaceOrderResult> placeOrder =
+                await executor.ExecuteResultAsync<PlaceOrderResult>(
+                    OrderingModule.ModuleName,
+                    new PlaceOrderCommand(
+                        orderId,
+                        Sku: "coffee-mug",
+                        Quantity: 2,
+                        DurableOperationId: durableOperationId),
+                    ct);
+            DurableOperationHandle operation = placeOrder.Result.ReservationOperation;
+            Assert.Equal(durableOperationId, operation.DurableOperationId);
+            Assert.Equal(OrderingModule.ModuleName, operation.SourceModule);
+            Assert.Equal(FulfillmentModule.ModuleName, operation.TargetModule);
 
             OrderStatusResult result = await WaitForResultAsync(
                 serviceProvider,
                 orderId,
-                durableOperationId,
+                operation,
                 TimeSpan.FromSeconds(25),
                 ct);
 
@@ -162,7 +168,7 @@ public sealed class ModularMonolithRabbitMqSampleTests(
     private static async Task<OrderStatusResult> WaitForResultAsync(
         IServiceProvider serviceProvider,
         Guid orderId,
-        Guid durableOperationId,
+        DurableOperationHandle operation,
         TimeSpan timeout,
         CancellationToken ct)
     {
@@ -173,7 +179,7 @@ public sealed class ModularMonolithRabbitMqSampleTests(
             OrderStatusResult result =
                 await serviceProvider.ReadOrderStatusAsync(
                     orderId,
-                    durableOperationId,
+                    operation,
                     ct);
 
             if (result is

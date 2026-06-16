@@ -85,7 +85,8 @@ curl -X POST http://localhost:5000/orders \
   -d '{"sku":"coffee-mug","quantity":2}'
 ```
 
-Read durable state with the returned order and operation ids:
+The response includes the order id and durable operation handle. Read durable
+state with the returned order id and the handle's operation id:
 
 ```bash
 curl "http://localhost:5000/orders/<order-id>?operationId=<operation-id>"

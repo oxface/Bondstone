@@ -42,18 +42,23 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
             IModuleCommandExecutor executor =
                 scope.ServiceProvider.GetRequiredService<IModuleCommandExecutor>();
 
-            await executor.ExecuteAsync(
-                OrderingModule.ModuleName,
-                new PlaceOrderCommand(
-                    orderId,
-                    Sku: "coffee-mug",
-                    Quantity: 2,
-                    DurableOperationId: durableOperationId));
+            ModuleCommandExecutionResult<PlaceOrderResult> placeOrder =
+                await executor.ExecuteResultAsync<PlaceOrderResult>(
+                    OrderingModule.ModuleName,
+                    new PlaceOrderCommand(
+                        orderId,
+                        Sku: "coffee-mug",
+                        Quantity: 2,
+                        DurableOperationId: durableOperationId));
+            DurableOperationHandle operation = placeOrder.Result.ReservationOperation;
+            Assert.Equal(durableOperationId, operation.DurableOperationId);
+            Assert.Equal(OrderingModule.ModuleName, operation.SourceModule);
+            Assert.Equal(FulfillmentModule.ModuleName, operation.TargetModule);
 
             OrderStatusResult result = await WaitForResultAsync(
                 serviceProvider,
                 orderId,
-                durableOperationId,
+                operation,
                 TimeSpan.FromSeconds(20));
 
             Assert.Equal(1, result.OrderCount);
@@ -88,7 +93,7 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
 
             OrderStatusResult afterDuplicate = await serviceProvider.ReadOrderStatusAsync(
                 orderId,
-                durableOperationId);
+                operation);
             Assert.Equal(result, afterDuplicate);
         }
         finally
@@ -138,7 +143,7 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
     private static async Task<OrderStatusResult> WaitForResultAsync(
         IServiceProvider serviceProvider,
         Guid orderId,
-        Guid durableOperationId,
+        DurableOperationHandle operation,
         TimeSpan timeout)
     {
         DateTimeOffset deadline = DateTimeOffset.UtcNow.Add(timeout);
@@ -148,7 +153,7 @@ public sealed class ModularMonolithSampleTests(PostgreSqlSampleFixture fixture)
             OrderStatusResult result =
                 await serviceProvider.ReadOrderStatusAsync(
                     orderId,
-                    durableOperationId);
+                    operation);
 
             if (result is
                 {

@@ -159,18 +159,21 @@ public static class ModularMonolithApplication
                 Guid orderId = Guid.NewGuid();
                 Guid durableOperationId = Guid.NewGuid();
 
-                await executor.ExecuteAsync(
-                    OrderingModule.ModuleName,
-                    new PlaceOrderCommand(
-                        orderId,
-                        order.Sku,
-                        order.Quantity,
-                        durableOperationId),
-                    ct);
+                ModuleCommandExecutionResult<PlaceOrderResult> result =
+                    await executor.ExecuteResultAsync<PlaceOrderResult>(
+                        OrderingModule.ModuleName,
+                        new PlaceOrderCommand(
+                            orderId,
+                            order.Sku,
+                            order.Quantity,
+                            durableOperationId),
+                        ct);
 
                 return Results.Accepted(
                     $"/orders/{orderId}?operationId={durableOperationId}",
-                    new PlaceOrderResponse(orderId, durableOperationId));
+                    new PlaceOrderResponse(
+                        orderId,
+                        result.Result.ReservationOperation));
             });
 
         endpoints.MapGet(
@@ -181,10 +184,14 @@ public static class ModularMonolithApplication
                 IServiceProvider serviceProvider,
                 CancellationToken ct) =>
             {
+                var operation = new DurableOperationHandle(
+                    operationId,
+                    OrderingModule.ModuleName,
+                    FulfillmentModule.ModuleName);
                 OrderStatusResult result =
                     await serviceProvider.ReadOrderStatusAsync(
                         orderId,
-                        operationId,
+                        operation,
                         ct);
 
                 return Results.Ok(result);
@@ -225,10 +232,11 @@ public static class ModularMonolithApplication
     public static async Task<OrderStatusResult> ReadOrderStatusAsync(
         this IServiceProvider serviceProvider,
         Guid orderId,
-        Guid durableOperationId,
+        DurableOperationHandle operation,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
+        ArgumentNullException.ThrowIfNull(operation);
 
         await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
         OrderingDbContext orderingContext =
@@ -243,10 +251,10 @@ public static class ModularMonolithApplication
             scope.ServiceProvider.GetRequiredService<IDurableOperationResultReader>();
 
         DurableOperationState? operationState =
-            await operationReader.GetStateAsync(durableOperationId, ct);
+            await operationReader.GetStateAsync(operation, ct);
         DurableOperationResult<ReserveInventoryResult> operationResult =
             await operationResultReader.GetResultAsync<ReserveInventoryResult>(
-                durableOperationId,
+                operation,
                 ct);
         int processedInboxCount =
             await fulfillmentContext
@@ -279,7 +287,7 @@ public static class ModularMonolithApplication
 
         return new OrderStatusResult(
             orderId,
-            durableOperationId,
+            operation,
             await orderingContext.Orders.CountAsync(ct),
             await fulfillmentContext.Reservations.CountAsync(ct),
             await fulfillmentContext.OrderEvents.CountAsync(ct),
@@ -293,7 +301,6 @@ public static class ModularMonolithApplication
             operationResult.Result?.ReservationId,
             operationState?.Status);
     }
-
 }
 
 public sealed record PlaceOrderRequest(
@@ -302,11 +309,14 @@ public sealed record PlaceOrderRequest(
 
 public sealed record PlaceOrderResponse(
     Guid OrderId,
-    Guid DurableOperationId);
+    DurableOperationHandle Operation)
+{
+    public Guid DurableOperationId => Operation.DurableOperationId;
+}
 
 public sealed record OrderStatusResult(
     Guid OrderId,
-    Guid DurableOperationId,
+    DurableOperationHandle Operation,
     int OrderCount,
     int ReservationCount,
     int FulfillmentOrderEventCount,
@@ -318,4 +328,7 @@ public sealed record OrderStatusResult(
     string? FulfillmentDomainEventName,
     DurableOperationResultState ReservationResultState,
     Guid? ReservationId,
-    DurableOperationStatus? OperationStatus);
+    DurableOperationStatus? OperationStatus)
+{
+    public Guid DurableOperationId => Operation.DurableOperationId;
+}

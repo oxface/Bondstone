@@ -7,4 +7,8 @@ public sealed record PlaceOrderCommand(
     string Sku,
     int Quantity,
     Guid DurableOperationId)
-    : ICommand;
+    : ICommand<PlaceOrderResult>;
+
+public sealed record PlaceOrderResult(
+    Guid OrderId,
+    DurableOperationHandle ReservationOperation);

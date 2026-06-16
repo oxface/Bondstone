@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Bondstone.Messaging;
 using Bondstone.Modules;
@@ -43,6 +44,38 @@ public sealed class BondstoneBuilder
     public IServiceCollection Services { get; }
 
     public BondstoneOutboxBuilder Outbox { get; }
+
+    /// <summary>
+    /// Registers a durable message contract identity without registering a handler or subscriber.
+    /// </summary>
+    /// <typeparam name="TMessage">The durable command or integration event contract type.</typeparam>
+    /// <returns>The registered message identity.</returns>
+    public MessageTypeRegistration RegisterMessage<TMessage>()
+        where TMessage : IMessage
+    {
+        return _messageTypeRegistry.Register<TMessage>();
+    }
+
+    /// <summary>
+    /// Registers durable message contract identities from an assembly without registering handlers or subscribers.
+    /// </summary>
+    /// <param name="assembly">The assembly that contains attributed durable message contracts.</param>
+    /// <returns>The registered message identities.</returns>
+    public IReadOnlyCollection<MessageTypeRegistration> RegisterMessagesFromAssembly(
+        Assembly assembly)
+    {
+        return _messageTypeRegistry.RegisterFromAssembly(assembly);
+    }
+
+    /// <summary>
+    /// Registers durable message contract identities from the assembly that contains <typeparamref name="TMarker"/>.
+    /// </summary>
+    /// <typeparam name="TMarker">A marker type in the contract assembly.</typeparam>
+    /// <returns>The registered message identities.</returns>
+    public IReadOnlyCollection<MessageTypeRegistration> RegisterMessagesFromAssemblyContaining<TMarker>()
+    {
+        return RegisterMessagesFromAssembly(typeof(TMarker).Assembly);
+    }
 
     internal BondstoneModuleBuilder CreateModuleBuilder(string moduleName)
     {

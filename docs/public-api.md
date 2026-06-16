@@ -226,6 +226,12 @@ Normal setup API:
 - `BondstoneModuleEventBuilder`
 - `BondstoneDurablePayloadServiceCollectionExtensions`
 
+Extraction setup API:
+
+- `BondstoneBuilder.RegisterMessage<TMessage>()`
+- `BondstoneBuilder.RegisterMessagesFromAssembly(...)`
+- `BondstoneBuilder.RegisterMessagesFromAssemblyContaining<TMarker>()`
+
 User application contract:
 
 - `IMessage`

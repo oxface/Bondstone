@@ -34,7 +34,10 @@ public static class ModularMonolithApplication
         services.AddLogging();
         AddModularMonolithSampleCore(
             services,
-            connectionString,
+            bondstone => bondstone
+                .AddOrderingModule(connectionString)
+                .AddFulfillmentModule(connectionString)
+                .AddBillingModule(connectionString),
             bondstone => bondstone.UseLocalTransport(local =>
             {
                 local.UseModuleQueueConvention();
@@ -63,21 +66,61 @@ public static class ModularMonolithApplication
         return services;
     }
 
-    private static void AddModularMonolithSampleCore(
-        IServiceCollection services,
+    public static IServiceCollection AddModularMonolithOrderingServiceSample(
+        this IServiceCollection services,
         string connectionString,
         Action<BondstoneBuilder> configureTransport)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        ArgumentNullException.ThrowIfNull(configureTransport);
+
+        services.AddLogging();
+        AddModularMonolithSampleCore(
+            services,
+            bondstone =>
+            {
+                bondstone.AddOrderingModule(connectionString);
+                bondstone.RegisterMessage<ReserveInventoryCommand>();
+            },
+            configureTransport,
+            "modular-monolith-ordering-sample");
+
+        return services;
+    }
+
+    public static IServiceCollection AddModularMonolithFulfillmentServiceSample(
+        this IServiceCollection services,
+        string connectionString,
+        Action<BondstoneBuilder> configureTransport)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        ArgumentNullException.ThrowIfNull(configureTransport);
+
+        services.AddLogging();
+        AddModularMonolithSampleCore(
+            services,
+            bondstone => bondstone.AddFulfillmentModule(connectionString),
+            configureTransport,
+            "modular-monolith-fulfillment-sample");
+
+        return services;
+    }
+
+    private static void AddModularMonolithSampleCore(
+        IServiceCollection services,
+        Action<BondstoneBuilder> configureModules,
+        Action<BondstoneBuilder> configureTransport,
+        string workerId = "modular-monolith-sample")
+    {
         services.AddBondstone(bondstone =>
         {
-            bondstone
-                .AddOrderingModule(connectionString)
-                .AddFulfillmentModule(connectionString)
-                .AddBillingModule(connectionString);
+            configureModules(bondstone);
             configureTransport(bondstone);
             bondstone.Outbox.UseWorker(options =>
             {
-                options.WorkerId = "modular-monolith-sample";
+                options.WorkerId = workerId;
                 options.BatchSize = 10;
                 options.PollingInterval = TimeSpan.FromMilliseconds(25);
             });

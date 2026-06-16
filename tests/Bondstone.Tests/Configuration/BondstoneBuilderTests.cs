@@ -111,6 +111,29 @@ public sealed class BondstoneBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void RegisterMessage_WhenRemoteContractIsRegistered_RegistersIdentityWithoutRoute()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstone(builder =>
+        {
+            builder.RegisterMessage<TestRemoteCommand>();
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IMessageTypeRegistry messageTypeRegistry =
+            serviceProvider.GetRequiredService<IMessageTypeRegistry>();
+        IModuleCommandRouteRegistry routeRegistry =
+            serviceProvider.GetRequiredService<IModuleCommandRouteRegistry>();
+
+        Assert.Equal(
+            "sales.test.remote-command.v1",
+            messageTypeRegistry.GetMessageTypeName<TestRemoteCommand>());
+        Assert.Empty(routeRegistry.Routes);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void AddBondstone_WhenDefaultMessageRegistryWasRegisteredByType_NormalizesToInstance()
     {
         var services = new ServiceCollection();
@@ -310,6 +333,9 @@ public sealed class BondstoneBuilderTests
 
     [DurableCommandIdentity("sales.test.command.v1")]
     public sealed record TestCommand : IDurableCommand;
+
+    [DurableCommandIdentity("sales.test.remote-command.v1")]
+    public sealed record TestRemoteCommand : IDurableCommand;
 
     public sealed class TestCommandHandler : ICommandHandler<TestCommand>
     {

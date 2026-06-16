@@ -63,18 +63,20 @@ applications should create normal module-owned migrations from the EF
 `ApplyBondstoneDomainEvents(...)` are included in the module migration
 history.
 
-The focused smoke test lives in
+The focused smoke tests live in
 [`tests/Bondstone.Samples.Tests`](../tests/Bondstone.Samples.Tests) and is an
-`Integration` test because it uses Testcontainers PostgreSQL. It proves
+`Integration` suite because they use Testcontainers PostgreSQL. They prove
 durable command delivery, processed inbox idempotency, persisted operation
-result reading, dispatched outbox evidence, and the integration-event loop.
+result reading, dispatched outbox evidence, the integration-event loop, and a
+bounded service-split proof where ordering and fulfillment run in separate
+service providers over the same PostgreSQL instance.
 Default fast verification remains `Unit` and `Application` only; run sample
 smoke coverage with the repository integration test entrypoint.
 
 ## Service-Split Readiness
 
-The current service-split proof is documentation over the existing modular
-monolith sample, not a separate sample application. The bounded extraction
+The current service-split proof is a tested split of the existing modular
+monolith sample, not a second product application. The bounded extraction
 story is:
 
 - keep `ordering`, `fulfillment`, and `billing` as module-owned assemblies
@@ -83,11 +85,18 @@ story is:
   extraction pressure;
 - treat `fulfillment` as the documented extraction candidate because it already
   handles a durable command and publishes an integration event;
+- register remote outgoing contracts with `BondstoneBuilder.RegisterMessage<T>()`
+  so the source service can serialize commands without referencing target
+  implementation assemblies;
 - use app-owned broker code around `IDurableEnvelopeDispatcher` and
   `IDurableEnvelopeReceiver` when a broker boundary is needed;
+- observe durable operation results from the target service because the target
+  module owns the completed result state;
 - keep broker provisioning, deployment, authentication, and product UI outside
   the sample.
 
-The repository does not include a second sample host. The current sample is
-the bounded service-split proof; it is not a broker/provider matrix or product
-application.
+The integration proof uses a test-owned in-memory broker bridge that serializes
+`DurableMessageEnvelope` values and calls the receiving service's
+`IDurableEnvelopeReceiver`. It intentionally avoids a broker/provider matrix;
+real hosts can replace that bridge with Rebus, RabbitMQ.Client, Azure Service
+Bus, Kafka, or another app-owned transport runtime.

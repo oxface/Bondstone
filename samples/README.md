@@ -59,11 +59,17 @@ durable receive identity.
 
 ## Service-Split Path
 
-The current service-split proof is the modular-monolith sample shape, not a
-second sample host. The bounded extraction path is to keep the contract
-assemblies stable, keep module persistence isolated by schema, and treat
-`fulfillment` as the documented extraction candidate because it receives a
-durable command and publishes an integration event.
+The current service-split proof reuses the modular-monolith modules and runs
+ordering and fulfillment in separate service providers in
+`tests/Bondstone.Samples.Tests`. The bounded extraction path is to keep the
+contract assemblies stable, keep module persistence isolated by schema, and
+treat `fulfillment` as the documented extraction candidate because it receives
+a durable command and publishes an integration event.
+
+Source services that send commands handled by extracted modules register the
+remote contract identity with `BondstoneBuilder.RegisterMessage<T>()` without
+registering the remote handler. Target services register their owning handlers
+normally.
 
 When proving a broker boundary, keep broker provisioning, native consumers,
 acknowledgement, retry, and dead-letter policy in the app or chosen transport

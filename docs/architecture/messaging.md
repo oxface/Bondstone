@@ -37,6 +37,12 @@ send result carries a `DurableOperationHandle` with the operation id, source
 module, and target module. It is not a general background-work API and does
 not expose a public source-module override.
 
+Extracted source services that send remote durable commands must register the
+remote command contract identity with `BondstoneBuilder.RegisterMessage<T>()`
+or `RegisterMessagesFromAssembly(...)`. This registers message identity only;
+it does not create a local command route or require a reference to the target
+module implementation assembly.
+
 Module command execution is registered through module command routes and
 executed through `IModuleCommandExecutor`. The executor runs typed
 `ICommandHandler<TCommand>` and `ICommandHandler<TCommand, TResult>` handlers

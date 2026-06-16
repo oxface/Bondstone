@@ -226,6 +226,23 @@ public sealed record ReserveInventoryResult(
     int Quantity);
 ```
 
+When a service sends a durable command handled by another extracted service,
+register the remote contract identity without registering the remote handler:
+
+```csharp
+builder.Services.AddBondstone(bondstone =>
+{
+    bondstone.AddOrderingModule(connectionString);
+    bondstone.RegisterMessage<ReserveInventoryCommand>();
+    bondstone.UseDurableEnvelopeDispatcher<MyBrokerDispatcher>();
+    bondstone.Outbox.UseWorker();
+});
+```
+
+The receiving service still registers the command handler on the owning
+module. This keeps contract identity available for outbound serialization
+without making the source service reference the target module implementation.
+
 Handlers are ordinary module services. Bondstone's module transaction behavior
 commits handler state, inbox markers, operation state, and outgoing outbox rows
 for modules that declare durable EF persistence:

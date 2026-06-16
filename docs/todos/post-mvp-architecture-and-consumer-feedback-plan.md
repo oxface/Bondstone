@@ -295,17 +295,27 @@ possible:
 - provider/runtime contracts;
 - public implementation details exposed for now.
 
-### Samples Prove The Happy Path, Not Operations
+### Samples Now Prove The Happy Path And The First Extraction Boundary
 
 The modular monolith sample proves a strong happy path:
 
 - module-owned registration;
 - EF/PostgreSQL persistence;
 - local transport;
-- RabbitMQ transport;
 - domain event persistence;
 - inbox idempotency;
 - operation result polling.
+- operation result polling.
+
+The sample integration tests now also prove the first extraction boundary:
+
+- ordering and fulfillment run in separate service providers;
+- ordering registers the remote fulfillment command contract identity without
+  registering the fulfillment handler;
+- app-owned broker bridge code serializes `DurableMessageEnvelope` values and
+  calls `IDurableEnvelopeReceiver` in the target host;
+- the source module keeps the `Pending` acceptance receipt;
+- the target module writes `Completed` and the typed operation result.
 
 Missing sample coverage:
 
@@ -313,7 +323,7 @@ Missing sample coverage:
 - terminal outbox inspection and replay/reset guidance;
 - stuck inbox row inspection;
 - operation failure state;
-- extracted-service host shape.
+- real broker provisioning or native retry/dead-letter behavior.
 
 ## Operational State Direction
 
@@ -434,14 +444,15 @@ Keep both paths:
 Do not make durable send look like RPC. The API should continue to return
 acceptance metadata, not `TResult`.
 
-Needed improvements:
+Applied improvements:
 
-- Better terminal failure semantics.
-- Better result polling guidance for HTTP APIs.
-- Operation result docs that show `Pending`, `Failed`, `Cancelled`,
+- Better terminal failure semantics are documented as explicit application
+  finalization and expiration policy.
+- Result polling guidance for HTTP APIs is documented in `docs/setup.md`.
+- Operation result docs now cover `Pending`, `Failed`, `Cancelled`,
   `CompletedWithoutResult`, and deserialization failure handling.
-- A sample endpoint that demonstrates timeout-bounded wait and single-read
-  status polling.
+- The modular monolith sample includes a single-read status endpoint, and the
+  sample integration tests use timeout-bounded waits.
 
 ## Work Plan
 
@@ -484,7 +495,7 @@ Applied on 2026-06-16:
 - Updated public API baselines, composition tests, local transport tests, and
   stable docs for the new vocabulary.
 
-### Now: Patch Consumer-Visible 1.2.x Gaps
+### Completed: Consumer-Visible 1.2.x Gaps
 
 1. Create ADR coverage for the post-MVP communication and transport
    simplification.
@@ -555,7 +566,7 @@ Applied on 2026-06-16:
 7. Add tests proving `Failed` operation results are observable and do not poll
    forever. Applied.
 
-### Then: Scalability And API Curation
+### Applied: Scalability And API Curation
 
 1. Add module-hinted operation result read overloads. Applied.
 2. Keep global operation reads as compatibility behavior. Applied.
@@ -570,7 +581,7 @@ Applied on 2026-06-16:
    preferred setup paths. Applied for inspection stores and module
    inspection-store registrations.
 
-### Then: Diagnostics Simplification
+### Applied: Diagnostics Simplification
 
 1. Keep diagnostics around persistence, outbox dispatch, receive pipeline
    execution, inbox idempotency, and operation results. Applied by keeping
@@ -619,16 +630,18 @@ Applied on 2026-06-16:
 - Refreshed public API baselines, module architecture docs,
   EF/domain-event architecture docs, and affected runtime tests.
 
-### Then: Extraction Proof
+### Applied: Extraction Proof
 
-1. Add a service-split sample or test slice that extracts one module into a
-   separate host.
-2. Keep contract assemblies, message identities, and handler patterns stable.
-3. Use app-owned native transport code as the first broker-boundary proof, or
-   introduce a thin adapter later only after a fresh ADR accepts the added
-   ergonomics.
-4. Prove operation result observation across the split.
-5. Document what changes and what stays stable during extraction.
+- Added split sample registration helpers for ordering and fulfillment hosts.
+- Added `BondstoneBuilder.RegisterMessage<T>()` and assembly overloads so a
+  source service can register remote outgoing contract identities without
+  registering remote handlers.
+- Added a Testcontainers-backed sample integration test that runs ordering and
+  fulfillment in separate service providers, bridges durable envelopes through
+  test-owned app transport code, receives commands/events through
+  `IDurableEnvelopeReceiver`, and observes the fulfillment operation result
+  from the target service.
+- Documented what changes and what stays stable during extraction.
 
 ## Open Questions
 
@@ -683,7 +696,7 @@ Applied ADR groups:
 
 ### Cleanup Sweeps
 
-Run two broad cleanup passes after the feature/pivot slices settle.
+Run final cleanup passes after the feature/pivot slices settle.
 
 Code cleanup sweep:
 

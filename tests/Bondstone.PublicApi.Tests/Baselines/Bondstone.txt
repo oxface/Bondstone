@@ -5,6 +5,10 @@ namespace Bondstone.Configuration
         public Bondstone.Configuration.BondstoneOutboxBuilder Outbox { get; }
         public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
         public Bondstone.Configuration.BondstoneBuilder AddConfigurationValidator(Bondstone.Configuration.IBondstoneConfigurationValidator validator) { }
+        public Bondstone.Messaging.MessageTypeRegistration RegisterMessage<TMessage>()
+            where TMessage : Bondstone.Messaging.IMessage { }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> RegisterMessagesFromAssembly(System.Reflection.Assembly assembly) { }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> RegisterMessagesFromAssemblyContaining<TMarker>() { }
     }
     public sealed class BondstoneConfigurationValidationContext
     {

@@ -245,8 +245,7 @@ The operation id likely needs routing metadata or a locator path.
 
 ### Diagnostics Are Valuable But Scattered
 
-Startup topology validation and provider diagnostics are useful. The current
-shape is spread across:
+Diagnostics are valuable, but the pre-simplification shape was spread across:
 
 - provider-specific topology diagnostic records;
 - provider-specific validators;
@@ -477,13 +476,20 @@ Applied on 2026-06-16:
 
 ### Next: Product Surface Cut
 
-1. Shrink `Bondstone.Transport` to only durable envelope dispatch/receive
-   contracts that still justify a separate package, or merge those contracts
-   into core/persistence packages.
-2. Replace direct provider transport topology DSLs with a small envelope
+1. Replace direct provider transport topology DSLs with a small envelope
    dispatcher and receive helper shape.
-3. Keep local transport as the correctness baseline over outbox dispatch and
+2. Keep local transport as the correctness baseline over outbox dispatch and
    receive pipelines.
+
+### Applied: Transport Diagnostics Package Removal
+
+- Removed the separate `Bondstone.Transport` package and its public API
+  baseline from the active product surface.
+- Removed core aggregate startup topology diagnostics and the
+  `BondstoneBuilder.AddTransportTopologyDiagnosticSource(...)` extension hook.
+- Removed RabbitMQ topology diagnostics from the public/service surface.
+- Kept route failures loud at dispatch/receive time through the concrete Local
+  and RabbitMQ adapter paths.
 
 ### Next: Operational MVP
 
@@ -510,13 +516,11 @@ Applied on 2026-06-16:
 
 ### Then: Diagnostics Simplification
 
-1. Remove topology diagnostics that only exist for the old transport runtime
-   model.
-2. Keep diagnostics around persistence, outbox dispatch, receive pipeline
+1. Keep diagnostics around persistence, outbox dispatch, receive pipeline
    execution, inbox idempotency, and operation results.
-3. Add stable log event ids for the outbox worker and receive helper failure
+2. Add stable log event ids for the outbox worker and receive helper failure
    paths.
-4. Add a small diagnostic report only if the simplified model still needs one.
+3. Add a small diagnostic report only if the simplified model still needs one.
 
 ### Then: Extraction Proof
 

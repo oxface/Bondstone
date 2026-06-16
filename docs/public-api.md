@@ -105,13 +105,12 @@ This first pass covers all current package projects:
 - `Bondstone.Persistence`
 - `Bondstone.Persistence.EntityFrameworkCore`
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres`
-- `Bondstone.Transport`
 - `Bondstone.Transport.Local`
 - `Bondstone.Transport.RabbitMq`
 
-`Bondstone.Persistence.Postgres` and `Bondstone.Transport.ServiceBus` were
-removed from the active product surface and are not covered by the current
-default public API baseline.
+`Bondstone.Persistence.Postgres`, `Bondstone.Transport`, and
+`Bondstone.Transport.ServiceBus` were removed from the active product surface
+and are not covered by the current default public API baseline.
 
 ## Bondstone
 
@@ -322,17 +321,6 @@ Public implementation detail exposed for now:
 - `DurableOutboxWorker`
 - `DurableOutboxWorkerOptionsValidator`
 
-## Bondstone.Transport
-
-User application contract:
-
-- `DurableTransportTopologyRouteDiagnostic`
-- `DurableMessageTopologyDiagnosticKind`
-
-Provider/runtime contract:
-
-- `IDurableTransportTopologyDiagnosticSource`
-
 ## Bondstone.Transport.Local
 
 Normal setup API:
@@ -358,14 +346,8 @@ Normal setup API:
 
 User application contract:
 
-- `RabbitMqCommandRoutingDiagnostic`
-- `RabbitMqCommandRoutingSource`
-- `RabbitMqEventRoutingDiagnostic`
-- `RabbitMqEventRoutingSource`
 - `RabbitMqPublishDestination`
 - `RabbitMqPublishDestinationKind`
-- `RabbitMqReceiveQueueDiagnostic`
-- `RabbitMqReceiveQueueEventSubscriptionDiagnostic`
 
 Advanced composition API:
 
@@ -381,7 +363,6 @@ Provider/runtime contract:
 - `IRabbitMqMessagePublisher`
 - `IRabbitMqOutboxCommandRouteResolver`
 - `IRabbitMqOutboxEventRouteResolver`
-- `IRabbitMqTopologyDiagnostics`
 
 Public implementation detail exposed for now:
 

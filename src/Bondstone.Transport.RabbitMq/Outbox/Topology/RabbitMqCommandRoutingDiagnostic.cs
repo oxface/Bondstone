@@ -1,9 +1,8 @@
-using Bondstone.Messaging;
 using Bondstone.Utility;
 
 namespace Bondstone.Transport.RabbitMq.Outbox;
 
-public sealed class RabbitMqCommandRoutingDiagnostic
+internal sealed class RabbitMqCommandRoutingDiagnostic
 {
     public RabbitMqCommandRoutingDiagnostic(
         string targetModule,
@@ -24,9 +23,6 @@ public sealed class RabbitMqCommandRoutingDiagnostic
             "RabbitMQ routing key");
         FailureReason = failureReason;
     }
-
-    public DurableMessageTopologyDiagnosticKind Kind =>
-        DurableMessageTopologyDiagnosticKind.CommandDestination;
 
     public string TargetModule { get; }
 

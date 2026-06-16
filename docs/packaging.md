@@ -19,7 +19,6 @@ Package IDs match project names:
 - `Bondstone.Persistence`
 - `Bondstone.Persistence.EntityFrameworkCore`
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres`
-- `Bondstone.Transport`
 - `Bondstone.Transport.Local`
 - `Bondstone.Transport.RabbitMq`
 
@@ -38,9 +37,10 @@ tests, and local development. It exercises outbox/inbox receive semantics
 through the provider-neutral receive pipelines, but it is not a production
 broker adapter or hidden fallback.
 
-`Bondstone.Persistence.Postgres` and `Bondstone.Transport.ServiceBus` were
-removed from the active package set after MVP. Reintroducing either package
-requires ADR review and a real consumer need.
+`Bondstone.Persistence.Postgres`, `Bondstone.Transport`, and
+`Bondstone.Transport.ServiceBus` were removed from the active package set after
+MVP. Reintroducing a separate provider-neutral transport package requires ADR
+review and a real consumer need.
 
 `Bondstone.Capabilities.DomainEvents` is intentionally small. It contains
 module-local domain event capability contracts only; it is not a domain event
@@ -58,21 +58,16 @@ outbox, inbox, transport-facing persistence contracts, and passive
 module-runtime registration records. Module-aware runtime resolution and
 module execution stay in `Bondstone`.
 
-`Bondstone.Transport` contains provider-neutral transport topology diagnostic
-contracts and shapes. Broker/client adapters depend on it; application setup
-normally uses the concrete transport packages.
-
 ## Package Dependencies
 
 Use this dependency direction:
 
 - `Bondstone` stays at the core with no dependency on provider, transport
   adapter, or hosting packages. It may depend on the neutral
-  `Bondstone.Persistence` and `Bondstone.Transport` contract packages.
+  `Bondstone.Persistence` contract package.
 - `Bondstone.Hosting` depends on `Bondstone` and `Bondstone.Persistence`.
 - `Bondstone.Persistence` is provider-neutral and depends only on shared .NET
   abstractions.
-- `Bondstone.Transport` depends on `Bondstone.Persistence`.
 - `Bondstone.Capabilities.DomainEvents` depends only on `Bondstone`.
 - `Bondstone.Persistence.EntityFrameworkCore` depends on `Bondstone` and
   `Bondstone.Persistence`.
@@ -83,17 +78,17 @@ Use this dependency direction:
   `Bondstone.Persistence.EntityFrameworkCore`, `Bondstone.Persistence`, and
   may reference `Bondstone` directly for shared builder extension methods.
 - `Bondstone.Transport.Local` depends on `Bondstone`, `Bondstone.Persistence`,
-  and `Bondstone.Transport`.
+  and no provider-neutral transport package.
 - `Bondstone.Transport.RabbitMq` depends on `Bondstone`,
-  `Bondstone.Persistence`, `Bondstone.Transport`, and `RabbitMQ.Client`.
+  `Bondstone.Persistence`, and `RabbitMQ.Client`.
 
 Provider-specific packages contain provider-specific behavior only. Transport
 packages adapt broker/client SDKs directly instead of adapting another bus
 library. Reusable hosted worker composition belongs in `Bondstone.Hosting`.
 Core command, messaging, and module execution abstractions stay in
 `Bondstone`. Provider-neutral durable persistence contracts are in
-`Bondstone.Persistence`; provider-neutral transport diagnostics are in
-`Bondstone.Transport`; module-local domain event contracts are in
+`Bondstone.Persistence`; there is no active provider-neutral transport
+diagnostics package; module-local domain event contracts are in
 `Bondstone.Capabilities.DomainEvents`. EF Core domain event collection and
 persistence belongs in
 `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` as provider bridge

@@ -42,11 +42,10 @@ terminal failure state; broker retry, dead-letter policy, topology, and
 consumer lifecycle remain app-owned. See
 [transport-rabbitmq.md](transport-rabbitmq.md).
 
-Provider-neutral durable persistence contracts live in `Bondstone.Persistence`
-and provider-neutral transport topology diagnostics live in
-`Bondstone.Transport`. The `Bondstone` core package owns module execution,
-module registration, and module-aware runtime resolution over those neutral
-contracts.
+Provider-neutral durable persistence contracts live in `Bondstone.Persistence`.
+There is no active provider-neutral transport diagnostics package. The
+`Bondstone` core package owns module execution, module registration, and
+module-aware runtime resolution over the persistence contracts.
 
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
 tests, and local development. It is not a fallback and does not replace broker

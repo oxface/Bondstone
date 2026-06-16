@@ -35,10 +35,10 @@ bondstone.UseRabbitMqTransport(rabbitMq =>
 });
 ```
 
-Explicit module and event routing keys override conventions. Diagnostic
-services report the same resolution results used by dispatch so applications
-and tests can explain missing exchanges or routing keys without publishing
-messages.
+Explicit module and event routing keys override conventions. The same routing
+metadata is used by dispatch, so missing exchanges, routing keys, queue
+destinations, or receive bindings fail when the corresponding outbound or
+receive helper is used.
 
 Module routing-key conventions configure outbound command destinations only.
 They do not declare broker queues, create bindings, configure consumers, or
@@ -46,16 +46,13 @@ authorize this host to receive commands for matching modules. Hosts that
 receive commands must still declare receive topology with
 `ReceiveQueue(...).AcceptModule(...)`.
 
-RabbitMQ contributes command and event route diagnostics to Bondstone's
-aggregate outbound route ownership validation. Receive queue bindings always
-validate that accepted modules have durable command handlers and subscribed
-event identities match registered Bondstone event subscribers. In a
-single-transport host, RabbitMQ also fails startup when registered event
-subscribers have no RabbitMQ receive binding. Queue-style event routes also
-validate that receive bindings for the event are on the routed queue. Multiple
-subscriber bindings on that one queue remain valid in-process fan-out; split
-subscribers should use an exchange route with application-owned queue
-bindings. This validation is diagnostic only; it does not declare RabbitMQ
+RabbitMQ no longer contributes provider-neutral startup topology diagnostics.
+Receive queue bindings are adapter-local routing metadata for
+`IRabbitMqReceivedMessageDispatcher` and the opt-in receive worker. Missing or
+mismatched receive bindings fail during receive dispatch. Queue-style event
+routes can still fan out in-process when multiple subscriber bindings are
+declared on the same receive queue; split subscribers should use an exchange
+route with application-owned queue bindings. None of this declares RabbitMQ
 exchanges, queues, bindings, DLX, retry queues, or policies.
 
 Use `.ToQueue(...)` or `UseEventQueueConvention(...)` when an event should be

@@ -322,28 +322,18 @@ outbox/inbox semantics, but it is not a broker durability layer or fallback.
 Direct transport packages contribute `IDurableEnvelopeDispatchRoute` entries.
 `RoutedDurableEnvelopeDispatcher` dispatches a claimed outbox record only when
 exactly one adapter route matches the message. Zero matches and ambiguous
-matches are loud configuration errors.
+matches are loud dispatch-time errors.
 
-Local and RabbitMQ contribute startup topology diagnostics for outbound
-durable route ownership. When transport diagnostic sources are configured,
-registered durable command target modules and registered published events must
-have exactly one outbound envelope dispatch route. Zero matches and multiple
-matches fail during `AddBondstone`, before outbox dispatch.
-Normal host setup should use provider transport extensions on the main
-`BondstoneBuilder`, because that path registers the provider topology
-diagnostic sources and configuration validators. The lower-level
-`BondstoneOutboxBuilder` transport overloads register transport services only
-and are advanced composition APIs for manual dispatch setups.
+Bondstone no longer has a provider-neutral startup topology diagnostics layer.
+Local and RabbitMQ validate their own routing when dispatching or receiving
+envelopes. Normal host setup should use provider transport extensions on the
+main `BondstoneBuilder`; the lower-level `BondstoneOutboxBuilder` transport
+overloads remain advanced composition APIs for manual dispatch setups.
 
-RabbitMQ also validates provider receive bindings. Receive bindings validate
-that accepted command modules have registered durable command handlers and
-event subscription bindings have matching registered subscribers. In a
-single-transport host, the provider validator also fails when registered event
-subscribers have no receive binding. It also validates queue-style event
-destinations against receive bindings: same-queue in-process fan-out remains
-valid, but direct queue event routing fails startup when receive bindings for
-that event are on another receive entity or spread across multiple receive
-entities. Split subscribers should use provider-native broker fan-out, such as
+RabbitMQ receive bindings are adapter-local routing metadata for the receive
+dispatcher and opt-in worker. Missing or mismatched receive bindings fail
+during receive dispatch. Same-queue in-process event fan-out remains valid,
+but split subscribers should use provider-native broker fan-out, such as
 RabbitMQ exchange bindings.
 
 RabbitMQ maps received provider-native messages into the neutral receive

@@ -1,8 +1,11 @@
 # 0039 Startup Transport Topology Validation
 
-Status: Amended
-Application: Applied
+Status: Superseded
+Application: Not Applicable
 Date: 2026-06-10
+
+Superseded by:
+[0056 Post-MVP Communication And Transport Simplification](0056-post-mvp-communication-and-transport-simplification.md).
 
 ## Context
 
@@ -95,6 +98,7 @@ declaration helpers remain future ADR-backed work.
 - [0036 Direct Transport Adapters And Rebus Removal](0036-direct-transport-adapters-and-rebus-removal.md)
 - [0038 Provider Retry Recovery And Settlement Boundaries](0038-provider-retry-recovery-and-settlement-boundaries.md)
 - [0040 Event Queue Fan-Out Diagnostics](0040-event-queue-fanout-diagnostics.md)
+- [0056 Post-MVP Communication And Transport Simplification](0056-post-mvp-communication-and-transport-simplification.md)
 
 ## Application Notes
 

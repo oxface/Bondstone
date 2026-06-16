@@ -8,22 +8,6 @@ namespace Bondstone.Transport.RabbitMq.Inbox
     {
         System.Threading.Tasks.ValueTask HandleAsync(string queueName, RabbitMQ.Client.Events.BasicDeliverEventArgs delivery, System.Func<ulong, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> acknowledgeAsync, System.Threading.CancellationToken ct = default);
     }
-    public sealed class RabbitMqReceiveQueueDiagnostic
-    {
-        public RabbitMqReceiveQueueDiagnostic(string queueName, System.Collections.Generic.IReadOnlyCollection<string> acceptedModules, System.Collections.Generic.IReadOnlyCollection<Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveQueueEventSubscriptionDiagnostic> eventSubscriptions, string? failureReason = null) { }
-        public System.Collections.Generic.IReadOnlyCollection<string> AcceptedModules { get; }
-        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveQueueEventSubscriptionDiagnostic> EventSubscriptions { get; }
-        public string? FailureReason { get; }
-        public bool HasBinding { get; }
-        public string QueueName { get; }
-    }
-    public sealed class RabbitMqReceiveQueueEventSubscriptionDiagnostic
-    {
-        public RabbitMqReceiveQueueEventSubscriptionDiagnostic(string messageTypeName, string subscriberModule, string subscriberIdentity) { }
-        public string MessageTypeName { get; }
-        public string SubscriberIdentity { get; }
-        public string SubscriberModule { get; }
-    }
     public sealed class RabbitMqReceiveWorkerOptions
     {
         public RabbitMqReceiveWorkerOptions() { }
@@ -107,29 +91,6 @@ namespace Bondstone.Transport.RabbitMq.Outbox
     {
         Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination ResolveDestination(Bondstone.Persistence.DurableOutboxRecord record);
     }
-    public interface IRabbitMqTopologyDiagnostics
-    {
-        Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingDiagnostic DescribeCommandRoute(string targetModule);
-        Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingDiagnostic DescribeEventRoute(string messageTypeName);
-        Bondstone.Transport.RabbitMq.Inbox.RabbitMqReceiveQueueDiagnostic DescribeReceiveQueue(string queueName);
-    }
-    public sealed class RabbitMqCommandRoutingDiagnostic
-    {
-        public RabbitMqCommandRoutingDiagnostic(string targetModule, Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingSource source, string? exchangeName, string? routingKey, string? failureReason = null) { }
-        public string? ExchangeName { get; }
-        public string? FailureReason { get; }
-        public bool HasRoute { get; }
-        public Bondstone.Messaging.DurableMessageTopologyDiagnosticKind Kind { get; }
-        public string? RoutingKey { get; }
-        public Bondstone.Transport.RabbitMq.Outbox.RabbitMqCommandRoutingSource Source { get; }
-        public string TargetModule { get; }
-    }
-    public enum RabbitMqCommandRoutingSource
-    {
-        Missing = 0,
-        ExplicitRoutingKey = 1,
-        RoutingKeyConvention = 2,
-    }
     public sealed class RabbitMqDurableEnvelopeDispatcher : Bondstone.Persistence.IDurableEnvelopeDispatcher
     {
         public RabbitMqDurableEnvelopeDispatcher(Bondstone.Transport.RabbitMq.Outbox.IRabbitMqMessagePublisher publisher, Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxCommandRouteResolver commandRouteResolver, Bondstone.Transport.RabbitMq.Outbox.IRabbitMqOutboxEventRouteResolver eventRouteResolver) { }
@@ -153,27 +114,6 @@ namespace Bondstone.Transport.RabbitMq.Outbox
         public string? TraceParent { get; init; }
         public string? TraceState { get; init; }
         public static Bondstone.Transport.RabbitMq.Outbox.RabbitMqDurableMessageEnvelope From(Bondstone.Messaging.DurableMessageEnvelope envelope) { }
-    }
-    public sealed class RabbitMqEventRoutingDiagnostic
-    {
-        public RabbitMqEventRoutingDiagnostic(string messageTypeName, Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingSource source, Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination? destination, string? failureReason = null) { }
-        public Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestination? Destination { get; }
-        public Bondstone.Transport.RabbitMq.Outbox.RabbitMqPublishDestinationKind? DestinationKind { get; }
-        public string? ExchangeName { get; }
-        public string? FailureReason { get; }
-        public bool HasRoute { get; }
-        public Bondstone.Messaging.DurableMessageTopologyDiagnosticKind Kind { get; }
-        public string MessageTypeName { get; }
-        public string? RoutingKey { get; }
-        public Bondstone.Transport.RabbitMq.Outbox.RabbitMqEventRoutingSource Source { get; }
-    }
-    public enum RabbitMqEventRoutingSource
-    {
-        Missing = 0,
-        ExplicitRoutingKey = 1,
-        RoutingKeyConvention = 2,
-        ExplicitQueue = 3,
-        QueueConvention = 4,
     }
     public sealed class RabbitMqPublishDestination
     {

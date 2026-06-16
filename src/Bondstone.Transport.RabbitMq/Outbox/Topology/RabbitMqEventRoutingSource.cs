@@ -1,6 +1,6 @@
 namespace Bondstone.Transport.RabbitMq.Outbox;
 
-public enum RabbitMqEventRoutingSource
+internal enum RabbitMqEventRoutingSource
 {
     Missing = 0,
     ExplicitRoutingKey = 1,

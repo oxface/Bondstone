@@ -2,7 +2,7 @@ using Bondstone.Utility;
 
 namespace Bondstone.Transport.RabbitMq.Inbox;
 
-public sealed class RabbitMqReceiveQueueEventSubscriptionDiagnostic
+internal sealed class RabbitMqReceiveQueueEventSubscriptionDiagnostic
 {
     public RabbitMqReceiveQueueEventSubscriptionDiagnostic(
         string messageTypeName,

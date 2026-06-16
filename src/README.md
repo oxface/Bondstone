@@ -23,8 +23,6 @@ persistence provider, transport adapter, or optional capability.
   Core persistence mappings and boundaries.
 - [Bondstone.Persistence.EntityFrameworkCore.Postgres](Bondstone.Persistence.EntityFrameworkCore.Postgres)
   contains PostgreSQL-specific EF Core integration.
-- [Bondstone.Transport](Bondstone.Transport) contains provider-neutral
-  transport topology diagnostic contracts.
 - [Bondstone.Transport.Local](Bondstone.Transport.Local) contains explicit
   local queue routing for samples, tests, and local development.
 - [Bondstone.Transport.RabbitMq](Bondstone.Transport.RabbitMq) contains the

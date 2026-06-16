@@ -20,8 +20,6 @@ Install the packages needed for the host:
   module transaction behavior.
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
   classification and provider registration.
-- `Bondstone.Transport` for provider-neutral topology diagnostics used by
-  custom transport adapters.
 - `Bondstone.Transport.RabbitMq` when the host dispatches durable outbox
   records through the remaining direct broker adapter.
 - `Bondstone.Transport.Local` when a sample, test, or local development host
@@ -47,10 +45,11 @@ For example, EF-backed module-local domain event persistence uses
 `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`.
 
 Use the provider transport extensions on `AddBondstone` for ordinary hosts.
-Those extensions register provider topology validation and diagnostics as well
-as outbox dispatch. Lower-level persistence, receive, dispatcher, and outbox
-transport types remain available for advanced composition and tests, but they
-are not the quick-start path.
+Those extensions register outbox dispatch and receive helpers. Broker
+topology, consumers, retry, and dead-letter policy remain application-owned.
+Lower-level persistence, receive, dispatcher, and outbox transport types remain
+available for advanced composition and tests, but they are not the quick-start
+path.
 
 After composing a host, use the modular monolith sample as the adoption proof
 and [testing.md](testing.md) for verification entrypoints. The default quality
@@ -450,8 +449,7 @@ because there is no broker queue or binding to provision.
 Use provider transport extensions on the main `BondstoneBuilder` for normal
 host setup. The lower-level `bondstone.Outbox.UseRabbitMqTransport(...)`
 overload is an advanced composition API for manual envelope dispatcher
-registration; it does not add the provider configuration validators and
-topology diagnostic sources that the normal setup path adds.
+registration.
 
 When more than one direct transport is registered, Bondstone routes each
 claimed outbox record through the provider whose topology matches that

@@ -43,8 +43,6 @@ public static class BondstoneRabbitMqServiceCollectionExtensions
         services.AddTransient<IRabbitMqOutboxEventRouteResolver>(
             serviceProvider => new RabbitMqEventRouteResolver(
                 serviceProvider.GetRequiredService<RabbitMqEventRoutingTopology>()));
-        services.AddSingleton<IRabbitMqTopologyDiagnostics>(
-            new RabbitMqTopologyDiagnostics(commandTopology, eventTopology, receiveTopology));
         services.TryAddScoped<IRabbitMqReceivedMessageDispatcher, RabbitMqReceivedMessageDispatcher>();
         services.TryAddScoped<IRabbitMqReceivedMessageHandler, RabbitMqReceivedMessageHandler>();
         if (receiveWorkerRegistration is not null)

@@ -5,7 +5,6 @@ namespace Bondstone.Configuration
         public Bondstone.Configuration.BondstoneOutboxBuilder Outbox { get; }
         public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
         public Bondstone.Configuration.BondstoneBuilder AddConfigurationValidator(Bondstone.Configuration.IBondstoneConfigurationValidator validator) { }
-        public Bondstone.Configuration.BondstoneBuilder AddTransportTopologyDiagnosticSource(Bondstone.Configuration.IDurableTransportTopologyDiagnosticSource diagnosticSource) { }
     }
     public sealed class BondstoneConfigurationValidationContext
     {

@@ -86,16 +86,16 @@ configuration and should be tested only where the adapter explicitly promises
 that handoff.
 
 For first-class events, keep the same split. Unit and application tests should
-cover event route/topic resolution, publish dispatch, subscriber registration,
-subscriber inbox-key identity, and diagnostics. Provider-backed delivery,
-acknowledgement, retry, dead-letter, or subscription-storage behavior belongs
-in explicit `Integration` tests.
+cover event destination resolution, publish dispatch, subscriber registration,
+and subscriber inbox-key identity. Provider-backed delivery, acknowledgement,
+retry, dead-letter, or subscription-storage behavior belongs in explicit
+`Integration` tests.
 
-Transport topology validation is fast startup behavior. Cover missing command
-routes, missing published-event destinations, ambiguous multi-adapter dispatch route
-ownership, missing subscriber bindings, invalid receive bindings, and
-queue-destination event fan-out mismatches with `Unit` or `Application` tests
-unless the assertion depends on a real broker handoff.
+Transport adapter routing is fast behavior. Cover missing command routes,
+missing published-event destinations, ambiguous multi-adapter dispatch route
+ownership, and missing receive bindings at dispatch or receive time with
+`Unit` or `Application` tests unless the assertion depends on a real broker
+handoff.
 
 ## Verification Surface
 

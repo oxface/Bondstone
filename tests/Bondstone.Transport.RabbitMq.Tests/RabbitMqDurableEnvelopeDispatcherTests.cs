@@ -112,55 +112,6 @@ public sealed class RabbitMqDurableEnvelopeDispatcherTests
         Assert.False(publisher.Message.Headers.ContainsKey(BondstoneRabbitMqHeaders.TargetModule));
     }
 
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void DescribeCommandRoute_WhenConventionExists_ReturnsConventionRoute()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
-        services.AddBondstone(
-            bondstone => bondstone.UseRabbitMqTransport(rabbitMq =>
-            {
-                rabbitMq.UseCommandExchange("bondstone.commands");
-                rabbitMq.UseModuleRoutingKeyConvention(static moduleName => $"module.{moduleName}");
-            }));
-
-        using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        IRabbitMqTopologyDiagnostics diagnostics =
-            serviceProvider.GetRequiredService<IRabbitMqTopologyDiagnostics>();
-
-        RabbitMqCommandRoutingDiagnostic diagnostic =
-            diagnostics.DescribeCommandRoute("fulfillment");
-
-        Assert.Equal(RabbitMqCommandRoutingSource.RoutingKeyConvention, diagnostic.Source);
-        Assert.Equal("bondstone.commands", diagnostic.ExchangeName);
-        Assert.Equal("module.fulfillment", diagnostic.RoutingKey);
-        Assert.True(diagnostic.HasRoute);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void DescribeEventRoute_WhenExchangeIsMissing_ReturnsMissingDiagnostic()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
-        services.AddBondstone(
-            bondstone => bondstone.UseRabbitMqTransport(
-                rabbitMq => rabbitMq.RouteEvent("sales.order.submitted.v1")
-                    .ToRoutingKey("sales.order.submitted")));
-
-        using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        IRabbitMqTopologyDiagnostics diagnostics =
-            serviceProvider.GetRequiredService<IRabbitMqTopologyDiagnostics>();
-
-        RabbitMqEventRoutingDiagnostic diagnostic =
-            diagnostics.DescribeEventRoute("sales.order.submitted.v1");
-
-        Assert.Equal(RabbitMqEventRoutingSource.Missing, diagnostic.Source);
-        Assert.False(diagnostic.HasRoute);
-        Assert.Contains("exchange", diagnostic.FailureReason, StringComparison.OrdinalIgnoreCase);
-    }
-
     private static ServiceProvider CreateServiceProvider(
         RecordingRabbitMqMessagePublisher publisher,
         Action<BondstoneRabbitMqTransportBuilder> configure)

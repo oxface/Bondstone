@@ -150,7 +150,7 @@ public sealed partial class PostgreSqlPersistenceTests
         return new DurableOutboxDispatcher(
             new PostgreSqlDurableOutboxClaimer<PostgreSqlTestDbContext>(context, timeProvider),
             new PostgreSqlDurableOutboxLeaseRenewer<PostgreSqlTestDbContext>(context, timeProvider),
-            transport,
+            dispatcher,
             failurePolicy ?? new DurableOutboxFailurePolicy(),
             new PostgreSqlDurableOutboxDispatchRecorder<PostgreSqlTestDbContext>(context),
             timeProvider);

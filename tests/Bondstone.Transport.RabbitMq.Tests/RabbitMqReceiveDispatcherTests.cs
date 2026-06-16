@@ -82,36 +82,6 @@ public sealed class RabbitMqReceiveDispatcherTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void DescribeReceiveQueue_WhenQueueIsBound_ReturnsBindingDiagnostic()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<IRabbitMqMessagePublisher>(new RecordingRabbitMqMessagePublisher());
-        services.AddBondstone(
-            bondstone => bondstone.Outbox.UseRabbitMqTransport(
-                rabbitMq =>
-                    rabbitMq.ReceiveQueue("sales-events")
-                        .SubscribeEvent(
-                            "sales.order.submitted.v1",
-                            "fulfillment",
-                            "fulfillment.sales-order-projection.v1")));
-
-        using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        IRabbitMqTopologyDiagnostics diagnostics =
-            serviceProvider.GetRequiredService<IRabbitMqTopologyDiagnostics>();
-
-        RabbitMqReceiveQueueDiagnostic diagnostic =
-            diagnostics.DescribeReceiveQueue("sales-events");
-
-        Assert.True(diagnostic.HasBinding);
-        Assert.Empty(diagnostic.AcceptedModules);
-        Assert.Single(diagnostic.EventSubscriptions);
-        Assert.Equal(
-            "sales.order.submitted.v1",
-            diagnostic.EventSubscriptions.Single().MessageTypeName);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
     public async Task DispatchAsync_WhenQueueIsNotBound_Throws()
     {
         await using ServiceProvider serviceProvider = CreateServiceProvider(

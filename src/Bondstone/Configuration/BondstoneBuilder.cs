@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Bondstone.Messaging;
 using Bondstone.Modules;
-using System.ComponentModel;
 
 namespace Bondstone.Configuration;
 
@@ -29,12 +28,10 @@ public sealed class BondstoneBuilder
         _moduleRegistry = moduleRegistry;
         _pipelineContributionRegistry = pipelineContributionRegistry;
         _commandValidatorRegistry = commandValidatorRegistry;
-        _transportTopologyDiagnosticSources = [];
         _configurationValidators =
         [
             new BondstoneOutboxConfigurationValidator(Outbox),
             new DurableMessagingConfigurationValidator(),
-            new DurableTransportTopologyConfigurationValidator(_transportTopologyDiagnosticSources),
         ];
     }
 
@@ -45,7 +42,6 @@ public sealed class BondstoneBuilder
     private readonly BondstoneModuleRegistry _moduleRegistry;
     private readonly ModulePipelineContributionRegistry _pipelineContributionRegistry;
     private readonly ModuleCommandValidatorRegistry _commandValidatorRegistry;
-    private readonly List<IDurableTransportTopologyDiagnosticSource> _transportTopologyDiagnosticSources;
     private readonly List<IBondstoneConfigurationValidator> _configurationValidators;
 
     public IServiceCollection Services { get; }
@@ -87,16 +83,6 @@ public sealed class BondstoneBuilder
         ArgumentNullException.ThrowIfNull(validator);
 
         _configurationValidators.Add(validator);
-        return this;
-    }
-
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public BondstoneBuilder AddTransportTopologyDiagnosticSource(
-        IDurableTransportTopologyDiagnosticSource diagnosticSource)
-    {
-        ArgumentNullException.ThrowIfNull(diagnosticSource);
-
-        _transportTopologyDiagnosticSources.Add(diagnosticSource);
         return this;
     }
 }

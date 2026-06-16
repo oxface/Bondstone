@@ -128,28 +128,6 @@ public sealed class LocalDurableEnvelopeDispatcherTests
         });
     }
 
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void AddBondstone_WhenDurableCommandHandlerHasExplicitRouteWithoutQueueBinding_Throws()
-    {
-        var services = new ServiceCollection();
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => services.AddBondstone(bondstone =>
-            {
-                RegisterFulfillmentCommandModule(bondstone);
-                bondstone.UseLocalTransport(
-                    local => local.RouteModule("fulfillment").ToQueue("fulfillment.commands"));
-            }));
-
-        Assert.Contains("No durable envelope dispatch route", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("module 'fulfillment'", exception.Message, StringComparison.Ordinal);
-        Assert.Contains(
-            "Local transport has no queue binding for target module 'fulfillment'.",
-            exception.Message,
-            StringComparison.Ordinal);
-    }
-
     private static ServiceProvider CreateServiceProvider(
         RecordingCommandReceivePipeline commandPipeline,
         RecordingEventReceivePipeline eventPipeline,

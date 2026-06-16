@@ -154,6 +154,7 @@ narrow.
 - [0036 Direct Transport Adapters And Rebus Removal](0036-direct-transport-adapters-and-rebus-removal.md)
 - [0038 Provider Retry Recovery And Settlement Boundaries](0038-provider-retry-recovery-and-settlement-boundaries.md)
 - [0039 Startup Transport Topology Validation](0039-startup-transport-topology-validation.md)
+  is superseded by this post-MVP simplification.
 - [0045 Module Execution Context Semantics](0045-module-execution-context-semantics.md)
 - [0051 Package Boundary Split](0051-package-boundary-split.md)
 - [0052 Domain Event Capability Package Boundary](0052-domain-event-capability-package-boundary.md)
@@ -181,12 +182,15 @@ narrow.
   EF/PostgreSQL persistence; and removes Service Bus from active composition
   tests. The third implementation slice renames the neutral outbox transport
   handoff to durable envelope dispatch contracts and refreshes public API
-  baselines plus stable docs.
-- Pending or deferred: Shrinking or merging `Bondstone.Transport`, replacing
-  provider transport topology DSLs with thinner envelope dispatch/receive
-  helpers, module-aware operation handles, operation failure policy, pipeline
-  simplification, local transport correctness fixes, and broader public API
-  cleanup remain follow-up work.
+  baselines plus stable docs. The fourth implementation slice removes the
+  separate `Bondstone.Transport` package, removes the core aggregate startup
+  topology diagnostics layer, removes RabbitMQ topology diagnostics from the
+  public/service surface, and makes Local/RabbitMQ route validation a
+  dispatch/receive-time concern.
+- Pending or deferred: Replacing provider transport topology DSLs with thinner
+  envelope dispatch/receive helpers, module-aware operation handles, operation
+  failure policy, pipeline simplification, local transport correctness fixes,
+  and broader public API cleanup remain follow-up work.
 
 ## Verification
 
@@ -211,3 +215,13 @@ For the public package surface cut:
   module-owned durable persistence.
 - Focused composition and public API tests should run before full restore,
   build, fast tests, formatter checks for changed docs, and `git diff --check`.
+
+For the transport diagnostics package removal:
+
+- `Bondstone.Transport` should be absent from the repository, `Bondstone.slnx`,
+  package discovery, setup guidance, package dependency docs, and public API
+  baseline inputs.
+- ADR 0039 should be marked superseded because startup transport topology
+  validation is no longer the current operating contract.
+- Build, fast tests, public API baseline refresh, formatter checks for changed
+  docs, and `git diff --check` should run.

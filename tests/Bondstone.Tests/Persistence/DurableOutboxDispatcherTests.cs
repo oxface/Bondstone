@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Bondstone.Tests;
@@ -75,6 +76,74 @@ public sealed class DurableOutboxDispatcherTests
         Assert.Equal("sales.customer.register.v1", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.message_type"));
         Assert.Equal("sales", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.source_module"));
         Assert.Equal("billing", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.target_module"));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task DispatchAsync_WhenOutcomesAreRecorded_EmitsOutboxMetrics()
+    {
+        DurableOutboxRecord dispatched = CreateRecord(
+            Guid.Parse("b7b384e0-5441-4b69-acdd-bce710a6d88a"),
+            sourceModule: "metric-sales",
+            targetModule: "metric-billing");
+        DurableOutboxRecord retry = CreateRecord(
+            Guid.Parse("0e2c05ee-45bc-457d-92c0-65c19ae6fb29"),
+            sourceModule: "metric-sales",
+            targetModule: "metric-fulfillment");
+        DurableOutboxRecord terminal = CreateRecord(
+            Guid.Parse("3ab4b560-0523-481f-bf4c-4970a4583ede"),
+            attemptCount: 5,
+            sourceModule: "metric-sales",
+            targetModule: "metric-warehouse");
+        DurableOutboxRecord stale = CreateRecord(
+            Guid.Parse("7e6463e3-79a9-4d4a-9851-97c48713e1d6"),
+            sourceModule: "metric-sales",
+            targetModule: "metric-support");
+        var measurements = new List<MetricMeasurement>();
+        using MeterListener listener = MetricTestHelper.CreateMeterListener(
+            "Bondstone.Persistence",
+            measurements);
+        var leaseRenewer = new FakeLeaseRenewer();
+        leaseRenewer.FailedRenewalMessageIds.Add(stale.Envelope.MessageId);
+        var transport = new FakeEnvelopeDispatcher();
+        transport.ExceptionsByMessageId[retry.Envelope.MessageId] =
+            new InvalidOperationException("temporary failure");
+        transport.ExceptionsByMessageId[terminal.Envelope.MessageId] =
+            new InvalidOperationException("terminal failure");
+        DurableOutboxDispatcher dispatcher = CreateDispatcher(
+            new FakeClaimer([dispatched, retry, terminal, stale]),
+            leaseRenewer,
+            transport,
+            failurePolicy: new DurableOutboxFailurePolicy(maxAttempts: 5));
+
+        await dispatcher.DispatchAsync(
+            "dispatcher-1",
+            TimeSpan.FromMinutes(5));
+
+        Assert.Equal(
+            4,
+            MetricTestHelper.FindMeasurements(
+                    measurements,
+                    "bondstone.outbox.claimed",
+                    "bondstone.source_module",
+                    "metric-sales")
+                .Sum(static measurement => measurement.Value));
+        AssertMetric(
+            measurements,
+            "bondstone.outbox.dispatched",
+            "metric-billing");
+        AssertMetric(
+            measurements,
+            "bondstone.outbox.retry_scheduled",
+            "metric-fulfillment");
+        AssertMetric(
+            measurements,
+            "bondstone.outbox.terminal_failed",
+            "metric-warehouse");
+        AssertMetric(
+            measurements,
+            "bondstone.outbox.stale",
+            "metric-support");
     }
 
     [Fact]
@@ -267,7 +336,9 @@ public sealed class DurableOutboxDispatcherTests
 
     private static DurableOutboxRecord CreateRecord(
         Guid messageId,
-        int attemptCount = 1)
+        int attemptCount = 1,
+        string sourceModule = "sales",
+        string targetModule = "billing")
     {
         var dispatchState = new DurableOutboxDispatchState(
             DurableOutboxStatus.Processing,
@@ -280,12 +351,27 @@ public sealed class DurableOutboxDispatcherTests
                 messageId,
                 MessageKind.Command,
                 "sales.customer.register.v1",
-                "sales",
-                "billing",
+                sourceModule,
+                targetModule,
                 "{}",
                 DateTimeOffset.Parse("2026-06-05T00:00:00+00:00")),
             DateTimeOffset.Parse("2026-06-05T00:00:01+00:00"),
             dispatchState);
+    }
+
+    private static void AssertMetric(
+        IEnumerable<MetricMeasurement> measurements,
+        string instrumentName,
+        string targetModule)
+    {
+        MetricMeasurement measurement = Assert.Single(
+            measurements,
+            candidate =>
+                candidate.InstrumentName == instrumentName
+                && candidate.HasTag("bondstone.target_module", targetModule));
+        Assert.Equal(1, measurement.Value);
+        Assert.Equal("Command", measurement.GetTag("bondstone.message_kind"));
+        Assert.Equal("metric-sales", measurement.GetTag("bondstone.source_module"));
     }
 
     private sealed class FakeClaimer(IReadOnlyList<DurableOutboxRecord> records)
@@ -310,6 +396,8 @@ public sealed class DurableOutboxDispatcherTests
 
         public List<Guid> RenewedMessageIds { get; } = [];
 
+        public HashSet<Guid> FailedRenewalMessageIds { get; } = [];
+
         public ValueTask<bool> RenewAsync(
             Guid messageId,
             string claimedBy,
@@ -317,7 +405,8 @@ public sealed class DurableOutboxDispatcherTests
             CancellationToken ct = default)
         {
             RenewedMessageIds.Add(messageId);
-            return ValueTask.FromResult(RenewResult);
+            bool result = RenewResult && !FailedRenewalMessageIds.Contains(messageId);
+            return ValueTask.FromResult(result);
         }
     }
 
@@ -325,12 +414,21 @@ public sealed class DurableOutboxDispatcherTests
     {
         public Exception? Exception { get; init; }
 
+        public Dictionary<Guid, Exception> ExceptionsByMessageId { get; } = [];
+
         public List<Guid> SentMessageIds { get; } = [];
 
         public ValueTask DispatchAsync(
             DurableOutboxRecord record,
             CancellationToken ct = default)
         {
+            if (ExceptionsByMessageId.TryGetValue(
+                    record.Envelope.MessageId,
+                    out Exception? exception))
+            {
+                throw exception;
+            }
+
             if (Exception is not null)
             {
                 throw Exception;

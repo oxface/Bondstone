@@ -16,6 +16,11 @@ Bondstone currently emits activities from these `ActivitySource` names:
 - `Bondstone.Modules` for module durable messaging boundaries;
 - `Bondstone.Persistence` for provider-neutral durable persistence work.
 
+Bondstone currently emits metrics from matching `Meter` names:
+
+- `Bondstone.Modules` for direct receive and operation metrics;
+- `Bondstone.Persistence` for provider-neutral outbox dispatch metrics.
+
 ## Current Activities
 
 `Bondstone.Modules` currently emits:
@@ -90,6 +95,62 @@ activity records the resulting retry, terminal failure, or stale counts.
 Tags whose source values are absent, such as event `target_module` or
 operation ids on untracked messages, may be absent from the emitted activity.
 
+## Current Metrics
+
+Bondstone metrics are OpenTelemetry-native .NET counters. They count only
+Bondstone-owned durable state transitions and intentionally avoid
+high-cardinality labels such as message id, operation id, exception message,
+payload data, broker delivery count, or native destination name.
+
+`Bondstone.Persistence` currently emits:
+
+- `bondstone.outbox.claimed`: outbox records claimed for dispatch;
+- `bondstone.outbox.dispatched`: outbox records recorded as dispatched;
+- `bondstone.outbox.retry_scheduled`: outbox records recorded for retry;
+- `bondstone.outbox.terminal_failed`: outbox records recorded as terminal
+  failed;
+- `bondstone.outbox.stale`: claimed outbox records whose lease or outcome
+  update was no longer owned by the dispatcher.
+
+Outbox metric attributes can include:
+
+- `bondstone.message_kind`;
+- `bondstone.source_module`;
+- `bondstone.target_module`, when present.
+
+`Bondstone.Modules` currently emits:
+
+- `bondstone.direct_receive.handled`: direct receive completed handler
+  execution and inbox handling;
+- `bondstone.direct_receive.already_processed`: direct receive found an
+  already processed inbox row and skipped handler execution idempotently;
+- `bondstone.direct_receive.already_received`: direct receive found an
+  already received but unprocessed inbox row and raised the ambiguous receive
+  error;
+- `bondstone.operation.finalized`: explicit operation finalizer wrote a new
+  terminal operation state;
+- `bondstone.operation.expiration.candidates`: operation expiration processing
+  found stale pending or running candidates;
+- `bondstone.operation.expiration.finalized`: operation expiration processing
+  finalized candidates through the explicit finalizer.
+
+Direct receive metric attributes can include:
+
+- `bondstone.module`, meaning the target command module or subscriber module;
+- `bondstone.message_kind`;
+- `bondstone.source_module`;
+- `bondstone.target_module`, when present.
+
+Operation metric attributes can include:
+
+- `bondstone.module`;
+- `bondstone.operation_status`.
+
+These metrics are intentionally not broker topology, queue health, native retry,
+dead-letter, delivery-count, or provider monitoring signals. Use the selected
+broker client, broker management plane, host logs, and application telemetry
+for those layers.
+
 ## Current Result And Inspection Diagnostics
 
 Operation state can carry optional diagnostic context:
@@ -133,24 +194,6 @@ infrastructure health remain provider-native or application-owned
 diagnostics.
 
 ## Not Current Behavior
-
-Bondstone does not expose finalized metrics for outbox claims, dispatches,
-retries, terminal failures, receive outcomes, inbox decisions, operation
-finalization, or operation expiration.
-
-Bondstone does not expose a stable metric instrument vocabulary. Metrics such
-as the following are not current stable contracts:
-
-- outbox rows claimed;
-- outbox rows dispatched;
-- outbox retries scheduled;
-- outbox rows marked terminal failed;
-- outbox stale claim outcomes;
-- receive handled outcomes;
-- receive already-processed skip outcomes;
-- receive already-received ambiguous outcomes;
-- operation finalizations;
-- operation expiration candidates and finalized outcomes.
 
 Bondstone does not publish stable misconfiguration error codes. Startup and
 runtime exception messages are intentionally clear, but they are not a

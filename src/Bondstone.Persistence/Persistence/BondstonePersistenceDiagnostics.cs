@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Bondstone.Messaging;
 
 namespace Bondstone.Persistence;
@@ -7,8 +8,24 @@ internal static class BondstonePersistenceDiagnostics
 {
     public const string ActivitySourceName = "Bondstone.Persistence";
     public const string OutboxDispatchActivityName = "bondstone.outbox.dispatch";
+    public const string OutboxClaimedInstrumentName = "bondstone.outbox.claimed";
+    public const string OutboxDispatchedInstrumentName = "bondstone.outbox.dispatched";
+    public const string OutboxRetryScheduledInstrumentName = "bondstone.outbox.retry_scheduled";
+    public const string OutboxTerminalFailedInstrumentName = "bondstone.outbox.terminal_failed";
+    public const string OutboxStaleInstrumentName = "bondstone.outbox.stale";
 
     public static readonly ActivitySource ActivitySource = new(ActivitySourceName);
+    private static readonly Meter Meter = new(ActivitySourceName);
+    private static readonly Counter<long> OutboxClaimedCounter = Meter.CreateCounter<long>(
+        OutboxClaimedInstrumentName);
+    private static readonly Counter<long> OutboxDispatchedCounter = Meter.CreateCounter<long>(
+        OutboxDispatchedInstrumentName);
+    private static readonly Counter<long> OutboxRetryScheduledCounter = Meter.CreateCounter<long>(
+        OutboxRetryScheduledInstrumentName);
+    private static readonly Counter<long> OutboxTerminalFailedCounter = Meter.CreateCounter<long>(
+        OutboxTerminalFailedInstrumentName);
+    private static readonly Counter<long> OutboxStaleCounter = Meter.CreateCounter<long>(
+        OutboxStaleInstrumentName);
 
     public static class Tags
     {
@@ -47,5 +64,56 @@ internal static class BondstonePersistenceDiagnostics
         activity.SetTag(Tags.RetryScheduledCount, result.RetryScheduledCount);
         activity.SetTag(Tags.TerminalFailedCount, result.TerminalFailedCount);
         activity.SetTag(Tags.StaleCount, result.StaleCount);
+    }
+
+    public static void RecordOutboxClaimed(
+        IReadOnlyList<DurableOutboxRecord> records)
+    {
+        foreach (DurableOutboxRecord record in records)
+        {
+            OutboxClaimedCounter.Add(1, CreateRecordTags(record));
+        }
+    }
+
+    public static void RecordOutboxDispatched(
+        DurableOutboxRecord record)
+    {
+        OutboxDispatchedCounter.Add(1, CreateRecordTags(record));
+    }
+
+    public static void RecordOutboxRetryScheduled(
+        DurableOutboxRecord record)
+    {
+        OutboxRetryScheduledCounter.Add(1, CreateRecordTags(record));
+    }
+
+    public static void RecordOutboxTerminalFailed(
+        DurableOutboxRecord record)
+    {
+        OutboxTerminalFailedCounter.Add(1, CreateRecordTags(record));
+    }
+
+    public static void RecordOutboxStale(
+        DurableOutboxRecord record)
+    {
+        OutboxStaleCounter.Add(1, CreateRecordTags(record));
+    }
+
+    private static TagList CreateRecordTags(
+        DurableOutboxRecord record)
+    {
+        DurableMessageEnvelope envelope = record.Envelope;
+        var tags = new TagList
+        {
+            { Tags.MessageKind, envelope.MessageKind.ToString() },
+            { Tags.SourceModule, envelope.SourceModule },
+        };
+
+        if (!string.IsNullOrWhiteSpace(envelope.TargetModule))
+        {
+            tags.Add(Tags.TargetModule, envelope.TargetModule);
+        }
+
+        return tags;
     }
 }

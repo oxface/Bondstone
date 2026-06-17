@@ -200,6 +200,23 @@ Remaining after the operation visibility quick wins:
   snapshot API until consumer evidence shows the simple wait API is
   insufficient.
 
+2026-06-17 minimal observability metrics applied:
+
+- Added OpenTelemetry-native .NET counters for Bondstone-owned outbox
+  transitions: claimed, dispatched, retry scheduled, terminal failed, and
+  stale.
+- Added direct receive counters for handled, already processed, and already
+  received ambiguous outcomes.
+- Added operation counters for explicit finalization plus expiration
+  candidates and expiration finalizations.
+- Kept metric dimensions deliberately small: module, message kind,
+  source/target module, and operation status only where applicable. Message
+  ids, operation ids, exception messages, payload data, broker delivery counts,
+  topology, dead-letter state, and provider-native monitoring remain outside
+  the metric contract.
+- Left stable misconfiguration error codes deferred because implementing them
+  cleanly would require a separate exception/error-code design pass.
+
 ## Implementation Order
 
 Start with small visibility and ergonomics slices before large receive-buffer
@@ -350,8 +367,6 @@ directions:
 - Durable receive buffer design and implementation, including persistence
   records, leases, retry attempts, terminal receive failure state, worker
   options, retention, and tests.
-- Finalized metrics and a stable metric instrument vocabulary for outbox,
-  receive, inbox, operation finalization, and operation expiration outcomes.
 - Stable misconfiguration error codes. Current exception messages remain
   diagnostic surfaces, but they are not a machine-readable error-code
   vocabulary.

@@ -1,7 +1,9 @@
+using System.Diagnostics.Metrics;
 using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
+using Bondstone.Tests;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -69,6 +71,63 @@ public sealed class DurableOperationExpirationProcessorTests
         Assert.Equal(DurableOperationStatus.Failed, store.GetSaved(runningId).Status);
         Assert.Equal(DurableOperationStatus.Pending, store.GetSaved(freshId).Status);
         Assert.Equal(DurableOperationStatus.Completed, store.GetSaved(completedId).Status);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task MarkExpiredAsync_WhenCandidatesExist_EmitsExpirationMetrics()
+    {
+        Guid pendingId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        Guid runningId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var store = new ExpiringModuleOperationStateStore("metric-fulfillment");
+        store.Seed(
+            new DurableOperationState(
+                pendingId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-16T10:00:00+00:00")),
+            new DurableOperationState(
+                runningId,
+                DurableOperationStatus.Running,
+                DateTimeOffset.Parse("2026-06-16T10:01:00+00:00")));
+        var measurements = new List<MetricMeasurement>();
+        using MeterListener listener = MetricTestHelper.CreateMeterListener(
+            "Bondstone.Modules",
+            measurements);
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        await serviceProvider
+            .GetRequiredService<IDurableOperationExpirationProcessor>()
+            .MarkExpiredAsync(
+                "metric-fulfillment",
+                DateTimeOffset.Parse("2026-06-16T10:01:00+00:00"),
+                DurableOperationStatus.Cancelled,
+                "operation expired",
+                maxCount: 10);
+
+        MetricMeasurement candidates = Assert.Single(
+            measurements,
+            candidate =>
+                candidate.InstrumentName == "bondstone.operation.expiration.candidates"
+                && candidate.HasTag("bondstone.module", "metric-fulfillment"));
+        Assert.Equal(2, candidates.Value);
+        Assert.Equal("Cancelled", candidates.GetTag("bondstone.operation_status"));
+
+        MetricMeasurement finalized = Assert.Single(
+            measurements,
+            candidate =>
+                candidate.InstrumentName == "bondstone.operation.expiration.finalized"
+                && candidate.HasTag("bondstone.module", "metric-fulfillment"));
+        Assert.Equal(2, finalized.Value);
+        Assert.Equal("Cancelled", finalized.GetTag("bondstone.operation_status"));
+
+        Assert.Equal(
+            2,
+            MetricTestHelper.FindMeasurements(
+                    measurements,
+                    "bondstone.operation.finalized",
+                    "bondstone.module",
+                    "metric-fulfillment")
+                .Sum(static measurement => measurement.Value));
     }
 
     [Fact]

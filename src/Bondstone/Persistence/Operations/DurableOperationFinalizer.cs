@@ -112,6 +112,9 @@ internal sealed class DurableOperationFinalizer(
             activity?.SetTag(
                 BondstoneMessagingDiagnostics.Tags.OperationFinalized,
                 true);
+            BondstoneMessagingDiagnostics.RecordOperationFinalized(
+                normalizedModuleName,
+                terminalState.Status);
 
             return new DurableOperationFinalizationResult(
                 terminalState,

@@ -21,7 +21,9 @@ Bondstone owns:
 - read-only inspection contracts for terminal outbox rows and unprocessed inbox
   rows;
 - explicit operation finalization and expiration APIs that application policy
-  can call.
+  can call;
+- OpenTelemetry-native metrics for Bondstone-owned outbox, direct receive, and
+  operation finalization or expiration transitions.
 
 The application owns:
 
@@ -54,6 +56,7 @@ the module transaction when EF module persistence is configured.
 
 Already processed inbox rows are idempotent duplicate receives. Bondstone skips
 the handler because the durable receive identity is already complete.
+Bondstone emits a direct receive already-processed metric for this outcome.
 
 Already received but unprocessed inbox rows are ambiguous. They can mean the
 process failed after recording the receive but before the processed marker, or
@@ -61,6 +64,8 @@ they can mean application side effects happened but the process stopped before
 Bondstone could record completion. Bondstone therefore raises
 `DurableInboxAlreadyReceivedException` through the module receive path instead
 of re-running the handler or silently treating the message as handled.
+Bondstone emits a direct receive already-received metric for this ambiguous
+outcome.
 
 Bondstone does not currently provide inbox leases, a stale-row sweeper, a
 failed receive state, provider-neutral receive retry, or a durable receive
@@ -139,6 +144,12 @@ Bondstone stopped retrying that local persisted dispatch according to the
 configured failure policy. It does not mean a provider-native dead-letter queue
 was created or used.
 
+Bondstone emits outbox metrics when records are claimed, recorded as
+dispatched, scheduled for retry, marked terminal failed, or found stale during
+dispatch. These metrics describe Bondstone-owned outbox state only; broker
+delivery counts, dead-letter state, queue health, and topology remain
+provider-native or application-owned.
+
 Use `IDurableOutboxInspector` to inspect terminal failures:
 
 ```csharp
@@ -179,7 +190,10 @@ Applications can mark explicit terminal non-success outcomes with
 the operation should stop being observed as pending or running. Applications
 that need recurring expiry can schedule their own job and call
 `IDurableOperationExpirationProcessor` for each module store. Bondstone does
-not register a hosted operation expiry worker by default.
+not register a hosted operation expiry worker by default. Bondstone emits
+metrics for explicit operation finalizations, expiration candidates, and
+expiration finalizations, but the application still owns the expiration job's
+cadence, cutoff, terminal status, and reason.
 
 Do not infer operation failure automatically from outbox terminal failure,
 inbox idempotency, broker retry, or dead-letter behavior unless application or

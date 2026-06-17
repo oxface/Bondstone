@@ -51,6 +51,7 @@ public sealed class DurableOutboxDispatcher(
                 leaseDuration,
                 maxCount,
                 ct);
+            BondstonePersistenceDiagnostics.RecordOutboxClaimed(records);
 
             var dispatchedCount = 0;
             var retryScheduledCount = 0;
@@ -68,6 +69,7 @@ public sealed class DurableOutboxDispatcher(
                 if (!renewed)
                 {
                     staleCount++;
+                    BondstonePersistenceDiagnostics.RecordOutboxStale(record);
                     continue;
                 }
 
@@ -105,16 +107,19 @@ public sealed class DurableOutboxDispatcher(
                     if (!recorded)
                     {
                         staleCount++;
+                        BondstonePersistenceDiagnostics.RecordOutboxStale(record);
                         continue;
                     }
 
                     if (decision.ShouldRetry)
                     {
                         retryScheduledCount++;
+                        BondstonePersistenceDiagnostics.RecordOutboxRetryScheduled(record);
                         continue;
                     }
 
                     terminalFailedCount++;
+                    BondstonePersistenceDiagnostics.RecordOutboxTerminalFailed(record);
                     continue;
                 }
 
@@ -127,10 +132,12 @@ public sealed class DurableOutboxDispatcher(
                 if (dispatched)
                 {
                     dispatchedCount++;
+                    BondstonePersistenceDiagnostics.RecordOutboxDispatched(record);
                 }
                 else
                 {
                     staleCount++;
+                    BondstonePersistenceDiagnostics.RecordOutboxStale(record);
                 }
             }
 

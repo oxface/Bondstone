@@ -40,6 +40,10 @@ internal sealed class DurableOperationExpirationProcessor(
                 expiresBeforeUtc,
                 maxCount,
                 ct);
+        BondstoneMessagingDiagnostics.RecordOperationExpirationCandidates(
+            normalizedModuleName,
+            terminalStatus,
+            candidates.Count);
 
         var finalizations = new List<DurableOperationFinalizationResult>(candidates.Count);
         foreach (DurableOperationState candidate in candidates)
@@ -62,6 +66,11 @@ internal sealed class DurableOperationExpirationProcessor(
             };
             finalizations.Add(finalization);
         }
+
+        BondstoneMessagingDiagnostics.RecordOperationExpirationFinalized(
+            normalizedModuleName,
+            terminalStatus,
+            finalizations.Count(static finalization => finalization.WasFinalized));
 
         return new DurableOperationExpirationResult(
             normalizedModuleName,

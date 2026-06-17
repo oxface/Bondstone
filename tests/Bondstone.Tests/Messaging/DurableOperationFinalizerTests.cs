@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Modules;
@@ -71,6 +72,36 @@ public sealed class DurableOperationFinalizerTests
         Assert.Equal(durableOperationId.ToString("D"), ActivityTestHelper.GetTag(activity, "bondstone.operation_id"));
         Assert.Equal("Failed", ActivityTestHelper.GetTag(activity, "bondstone.operation_status"));
         Assert.Equal(true, ActivityTestHelper.GetTag(activity, "bondstone.operation_finalized"));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task MarkFailedAsync_WhenOperationIsFinalized_EmitsOperationFinalizedMetric()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var measurements = new List<MetricMeasurement>();
+        using MeterListener listener = MetricTestHelper.CreateMeterListener(
+            "Bondstone.Modules",
+            measurements);
+        var store = new CapturingModuleOperationStateStore("metric-fulfillment");
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            DateTimeOffset.Parse("2026-06-16T12:00:00+00:00"),
+            store);
+
+        await serviceProvider
+            .GetRequiredService<IDurableOperationFinalizer>()
+            .MarkFailedAsync(
+                "metric-fulfillment",
+                durableOperationId,
+                "expired before receive");
+
+        MetricMeasurement measurement = Assert.Single(
+            measurements,
+            candidate =>
+                candidate.InstrumentName == "bondstone.operation.finalized"
+                && candidate.HasTag("bondstone.module", "metric-fulfillment"));
+        Assert.Equal(1, measurement.Value);
+        Assert.Equal("Failed", measurement.GetTag("bondstone.operation_status"));
     }
 
     [Fact]

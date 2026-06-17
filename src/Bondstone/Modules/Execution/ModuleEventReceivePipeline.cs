@@ -69,7 +69,25 @@ internal sealed class ModuleEventReceivePipeline(
 
         if (result.Status == DurableInboxHandleStatus.AlreadyReceived)
         {
-            throw new DurableInboxAlreadyReceivedException(result);
+            var exception = new DurableInboxAlreadyReceivedException(result);
+            activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+            BondstoneMessagingDiagnostics.RecordDirectReceiveAlreadyReceived(
+                envelope,
+                subscriberModule);
+            throw exception;
+        }
+
+        if (result.Status == DurableInboxHandleStatus.AlreadyProcessed)
+        {
+            BondstoneMessagingDiagnostics.RecordDirectReceiveAlreadyProcessed(
+                envelope,
+                subscriberModule);
+        }
+        else
+        {
+            BondstoneMessagingDiagnostics.RecordDirectReceiveHandled(
+                envelope,
+                subscriberModule);
         }
 
         return result;

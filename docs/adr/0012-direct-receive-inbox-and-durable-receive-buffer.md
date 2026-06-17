@@ -85,8 +85,9 @@ retention policy, and documentation.
 - Current contract: direct receive uses inbox idempotency and treats
   already-received/unprocessed rows as ambiguous receive failures.
 - Stable docs: current behavior is documented in messaging and persistence
-  architecture docs and [operations.md](../operations.md). Follow-up should
-  add a focused durable receive buffer design before implementation.
+  architecture docs and [operations.md](../operations.md). Stable docs state
+  that the receive buffer is not current behavior and leave design intent in
+  this ADR and after-v2 planning.
 - Agent guidance: no new agent rule is required until a receive-buffer ADR is
   accepted.
 - Application evidence: `DurableInboxHandlerExecutor` runs the handler only
@@ -107,4 +108,5 @@ receive worker code paths while producing this decision. Application remains
 partial because the direct receive inbox exists today, while the optional
 durable receive buffer is still design work. On 2026-06-16, added production
 operations guidance for the current direct receive semantics and stale inbox
-inspection model.
+inspection model. On 2026-06-17, removed roadmap-style receive-buffer wording
+from durable docs while keeping the non-current behavior warning.

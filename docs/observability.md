@@ -5,9 +5,9 @@ metrics, structured logs, and clear misconfiguration errors should make the
 durable module boundary observable without turning Bondstone into a broker
 monitoring stack.
 
-This page describes current behavior only. It also names planned
-instrumentation so consumers can see the direction without treating future
-signal names as stable contracts.
+This page describes current behavior only. ADR
+[0011](adr/0011-otel-native-diagnostics-and-misconfiguration-reporting.md)
+records the broader diagnostics direction.
 
 ## Current Activity Sources
 
@@ -112,8 +112,8 @@ Startup and runtime validation errors intentionally name missing durable
 composition pieces, such as missing module persistence, missing mappings,
 missing dispatchers, duplicate module durable registrations, invalid durable
 identity attributes, missing receive bindings, and missing or ambiguous
-dispatch routes. These messages are diagnostic surfaces, but they are not yet
-cataloged as a stable error-code vocabulary.
+dispatch routes. These messages are diagnostic surfaces, but they are not a
+stable error-code vocabulary.
 
 ## Current Logs
 
@@ -134,12 +134,12 @@ diagnostics.
 
 ## Not Current Behavior
 
-Bondstone does not yet expose finalized metrics for outbox claims, dispatches,
+Bondstone does not expose finalized metrics for outbox claims, dispatches,
 retries, terminal failures, receive outcomes, inbox decisions, operation
 finalization, or operation expiration.
 
-Bondstone does not yet expose a stable metric instrument vocabulary. Planned
-but not current metrics include:
+Bondstone does not expose a stable metric instrument vocabulary. Metrics such
+as the following are not current stable contracts:
 
 - outbox rows claimed;
 - outbox rows dispatched;
@@ -152,8 +152,8 @@ but not current metrics include:
 - operation finalizations;
 - operation expiration candidates and finalized outcomes.
 
-Bondstone does not yet publish stable misconfiguration error codes. Startup
-and runtime exception messages are intentionally clear, but they are not a
+Bondstone does not publish stable misconfiguration error codes. Startup and
+runtime exception messages are intentionally clear, but they are not a
 machine-readable error-code vocabulary.
 
 Bondstone does not provide provider-neutral topology diagnostics, broker retry
@@ -161,20 +161,9 @@ diagnostics, dead-letter diagnostics, subscription storage diagnostics, or
 broker monitoring. Use native broker clients, broker management surfaces,
 application logs, and provider-specific telemetry for that layer.
 
-## Planned Direction
-
-Future instrumentation should prefer OpenTelemetry signals at durable
-boundaries:
-
-- additional outbox claim, retry, terminal failure, and stale-claim metrics;
-- receive outcome, inbox decision, and handler execution metrics or spans;
-- operation result completion, finalization, and expiration;
-- serializer and deserialization failures where they affect durable payloads.
-
-Future metrics and tags should use a small stable vocabulary before being
-documented as contracts. Until that vocabulary exists, application code should
-add its own domain-specific logs and metrics around endpoints, handlers,
-broker receive loops, operation polling, and operator jobs.
+Application code should add domain-specific logs and metrics around endpoints,
+handlers, broker receive loops, operation polling, and operator jobs where the
+current Bondstone surface does not expose the signal the application needs.
 
 Transport adapter packages may log native settlement handoff, but such logs
 must not imply Bondstone owns broker retry, dead-letter, topology, or

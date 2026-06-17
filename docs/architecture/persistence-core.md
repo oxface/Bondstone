@@ -311,5 +311,6 @@ EF Core with PostgreSQL-specific behavior is the supported provider path in
 the active product surface. Provider-neutral contracts remain where they keep
 EF/PostgreSQL honest and support outbox, inbox, operation-state, and receive
 pipeline composition. The previous direct non-EF PostgreSQL provider was
-removed after MVP; future non-EF providers should not depend on EF entity
-mappings, `DbContext`, or `IEntityFrameworkCorePersistenceScope`.
+removed after MVP. Any non-EF provider requires ADR review and should not
+depend on EF entity mappings, `DbContext`, or
+`IEntityFrameworkCorePersistenceScope`.

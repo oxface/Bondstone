@@ -103,5 +103,5 @@ and events through broker-backed workers, and observe the durable command
 result from the target fulfillment module. They still do not make the sample
 own broker topology as product behavior; the tests create the minimal topology
 needed for verification. Each sample host still uses one outbound dispatcher.
-If a future sample needs outbound multi-transport, it should demonstrate an
-explicit aggregate dispatcher rather than implicit adapter stacking.
+Outbound multi-transport samples should demonstrate an explicit aggregate
+dispatcher rather than implicit adapter stacking.

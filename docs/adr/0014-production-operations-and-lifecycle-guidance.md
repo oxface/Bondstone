@@ -80,7 +80,8 @@ note.
 - Current contract: production operations guidance is centralized in
   [operations.md](../operations.md), with detailed architecture docs remaining
   the deeper runtime contract. V2 replacement and high-level migration
-  guidance lives in [packaging.md](../packaging.md).
+  guidance, including the release checklist, lives in
+  [packaging.md](../packaging.md).
 - Stable docs: docs README, setup, architecture, package discovery, packaging,
   messaging, hosting, and package README docs link to the operations or
   observability guidance.
@@ -99,6 +100,8 @@ note.
   focused unit tests covered RabbitMQ receive failure logging and native
   nack/requeue handoff, RabbitMQ ack-after-receive ordering, Service Bus
   processor error logging, and Service Bus complete-after-receive ordering.
+  Later on 2026-06-17, durable operations and release docs were cleaned up to
+  describe current behavior and non-current surfaces without roadmap language.
 - Pending or deferred: finalized observability vocabulary remains follow-up
   work.
 
@@ -115,4 +118,6 @@ because adapter failure-handoff follow-up and finalized observability
 vocabulary remain open. Later on 2026-06-17, focused RabbitMQ and Service Bus
 unit tests closed the adapter failure-handoff follow-up for v2; application
 remains partially applied only because finalized observability vocabulary
-remains open.
+remains open. Later on 2026-06-17, removed roadmap-style wording from durable
+operations and packaging docs while keeping the current non-current behavior
+warnings.

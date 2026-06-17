@@ -388,5 +388,5 @@ failed Bondstone dispatch when an app-owned broker consumer performs that
 handoff. These logs document what the app did around Bondstone; they do not
 imply Bondstone owns broker retry or dead-letter policy.
 
-The current diagnostic surface and planned OpenTelemetry-native vocabulary are
+The current diagnostic surface and OpenTelemetry-native direction are
 documented in [../observability.md](../observability.md).

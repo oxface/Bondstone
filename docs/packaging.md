@@ -65,7 +65,7 @@ examples.
 
 The exact package version comes from source-controlled release metadata. At
 the time of this document, `Directory.Build.props` records
-`VersionPrefix` as `1.1.0`, and Release Please owns future changes to that
+`VersionPrefix` as `1.1.0`, and Release Please owns subsequent changes to that
 value. For a v2 readiness PR or checkpoint, leave `VersionPrefix` unchanged
 unless the repository is intentionally creating the Release Please release PR.
 The Release Please release PR should update `Directory.Build.props`,
@@ -74,7 +74,7 @@ and the version tag together. Do not invent a v2 NuGet version or release date
 in docs, READMEs, or release notes before the source metadata changes.
 
 The active v2 package IDs are the package set listed above. Removed or
-deferred v1 surfaces include:
+non-current v1 surfaces include:
 
 - `Bondstone.Persistence.Postgres`;
 - `Bondstone.Transport`;
@@ -85,8 +85,7 @@ deferred v1 surfaces include:
 - non-EF persistence providers until a real consumer need and ADR bring one
   back;
 - durable receive buffer, finalized metric instruments, and stable
-  misconfiguration error codes, which are accepted or planned direction but
-  not current package behavior.
+  misconfiguration error codes, which are not current package behavior.
 
 Consumers migrating from v1 should:
 
@@ -215,10 +214,10 @@ Migration and operations notes:
 - Current observability includes the activity sources, activities, tags, log
   event ids, result diagnostics, and inspection contracts documented in
   [observability.md](observability.md). Finalized metrics, a stable metric
-  instrument vocabulary, and stable misconfiguration error codes remain
-  deferred; do not promise them as v2 behavior.
-- The durable receive buffer remains future design work. Current receive
-  behavior is the direct receive inbox idempotency boundary documented in
+  instrument vocabulary, and stable misconfiguration error codes are not v2
+  behavior.
+- The durable receive buffer is not current behavior. Current receive behavior
+  is the direct receive inbox idempotency boundary documented in
   [operations.md](operations.md).
 
 NuGet registry follow-up after v2 publication:

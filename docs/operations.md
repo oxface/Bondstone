@@ -64,8 +64,10 @@ of re-running the handler or silently treating the message as handled.
 
 Bondstone does not currently provide inbox leases, a stale-row sweeper, a
 failed receive state, provider-neutral receive retry, or a durable receive
-buffer. A future durable receive buffer is accepted as design direction, but it
-is not current behavior.
+buffer. ADR
+[0012](adr/0012-direct-receive-inbox-and-durable-receive-buffer.md) records
+the durable receive-buffer decision trail, but a receive buffer is not current
+behavior.
 
 ## Broker Settlement
 
@@ -230,7 +232,7 @@ debugging policy.
 See [observability.md](observability.md) for the current diagnostic surfaces
 and the OpenTelemetry-native direction. Today, Bondstone emits stable activity
 names and log event ids for the minimum durable boundaries documented there,
-but it does not yet expose finalized metric instruments or stable
-misconfiguration error codes. Where Bondstone does not yet expose a signal,
-keep monitoring in application code, provider tooling, broker-native
-telemetry, and database queries over app-owned tables.
+but it does not expose finalized metric instruments or stable misconfiguration
+error codes. Where Bondstone does not expose a signal, keep monitoring in
+application code, provider tooling, broker-native telemetry, and database
+queries over app-owned tables.

@@ -295,9 +295,7 @@ Final v2 public API decision check, 2026-06-17:
   composition, tests, and app-owned inspection/migration tooling. The
   provider-neutral interfaces remain the preferred dependency surface.
 - No remaining public concrete type in this final slice is an obvious hide-now
-  candidate. No post-v2 public API cleanup follow-up is required from this
-  check unless real consumer feedback asks for narrower replacement factories
-  or different composition hooks.
+  candidate.
 
 ## Current Scope
 

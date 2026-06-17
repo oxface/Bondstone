@@ -75,14 +75,15 @@ toward owning application messaging infrastructure.
 - Current contract: stable architecture docs already position Bondstone as
   modular-monolith first with service extraction as an evolution path.
 - Stable docs: operations guidance now reinforces app-owned broker policy and
-  thin-adapter boundaries used by extraction proofs. Follow-up should still
-  sharpen docs that compare Bondstone with full bus frameworks and explain
-  extraction scenarios.
+  thin-adapter boundaries used by extraction proofs. After-v2 planning carries
+  the remaining extraction-proof expansion rather than durable docs presenting
+  it as current behavior.
 - Agent guidance: no new agent rule is required until extraction guidance is
   stable enough to affect future implementation choices.
 - Application evidence: modular monolith sample and broker-backed extraction
   tests already exist; production operations docs now describe the ownership
-  split that keeps thin broker adapters from becoming a full bus runtime.
+  split that keeps thin broker adapters from becoming a full bus runtime. On
+  2026-06-17, the post-MVP plan was pruned to after-v2 work only.
 - Pending or deferred: improve extraction docs, route-aware multi-transport
   sample when needed, and clear "choose Bondstone vs a bus" guidance.
 

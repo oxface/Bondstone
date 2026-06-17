@@ -155,13 +155,15 @@ not obvious must be captured as a short approval list before implementation.
   public API baselines against package discovery, setup, and public API docs.
   On 2026-06-17, package README links and packaging guidance were updated to
   point consumers at the active v2 package set and replacement/migration
-  guidance without reintroducing removed package IDs.
-- Pending or deferred: Rebus remains app-owned; further public API cleanup is
-  planned as a cleanup sweep, not as compatibility preservation. EF entity
-  visibility reductions, provider concrete store visibility, hosting worker
-  visibility, and default serializer visibility remain approval-list
-  decisions. Receive-worker settlement options were resolved by the 2026-06-16
-  amendment to [ADR 0008](0008-thin-broker-adapters.md).
+  guidance without reintroducing removed package IDs. Later on 2026-06-17,
+  the final v2 public API decision check classified the remaining public
+  concrete helpers as deliberate normal defaults, advanced composition APIs,
+  or provider/runtime concrete APIs.
+- Pending or deferred: Rebus remains app-owned. Further broad public API
+  cleanup should come from real consumer feedback or ADR review rather than a
+  standing v2 cleanup promise. Receive-worker settlement options were resolved
+  by the 2026-06-16 amendment to
+  [ADR 0008](0008-thin-broker-adapters.md).
 
 ## Verification
 

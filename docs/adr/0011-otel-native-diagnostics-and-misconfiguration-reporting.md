@@ -79,18 +79,19 @@ policy.
 - Current contract: Bondstone diagnostics should stay OpenTelemetry-native,
   with transport-infrastructure diagnostics left to the application and native
   broker tooling.
-- Stable docs: [observability.md](../observability.md) documents the current
-  diagnostic surfaces and OTel-native direction; setup, architecture, and
-  package discovery docs link to it. Testing-specific diagnostics guidance
-  remains future work.
-- Agent guidance: no new agent rule is required until the stable
-  observability guide exists.
+- Stable docs: [observability.md](../observability.md) documents current
+  diagnostic surfaces and links here for the broader OTel-native direction;
+  setup, architecture, and package discovery docs link to it. Stable docs name
+  non-current metrics and error-code vocabulary without presenting a roadmap.
+- Agent guidance: no new agent rule is required.
 - Application evidence: `ModuleReceiveTelemetry` starts receive activities;
   operation state can carry diagnostic context; inspectors expose terminal
-  outbox and unprocessed inbox rows.
-- Pending or deferred: define the complete stable activity-name, tag, metric,
-  log event-id, and misconfiguration-message vocabulary, then expand
-  instrumentation beyond the current receive activity and worker logs.
+  outbox and unprocessed inbox rows. On 2026-06-17, durable docs were cleaned
+  up so future instrumentation intent stays in ADRs or plans rather than the
+  stable observability guide.
+- Pending or deferred: define stable metric instruments and a stable
+  misconfiguration-message vocabulary before documenting them as current
+  contracts.
 
 ## Verification
 
@@ -99,4 +100,6 @@ architecture, messaging, setup, packaging, and public API docs during the
 review that produced this decision. On 2026-06-16, added the stable
 observability guide and links from setup, architecture, and package discovery
 docs. Application remains partial until the full OTel vocabulary, metrics, log
-event ids, and misconfiguration-message conventions are applied.
+event ids, and misconfiguration-message conventions are applied. On
+2026-06-17, removed roadmap-style instrumentation language from durable docs
+and kept non-current surfaces documented as non-current behavior.

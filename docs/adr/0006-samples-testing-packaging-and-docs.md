@@ -113,12 +113,14 @@ durable operation result observation.
 - Application evidence: package artifact tests assert XML docs; the local
   modular monolith sample integration test covers the current sample path; and
   RabbitMQ/Service Bus adapter and sample integration tests prove the thin
-  broker handoff.
-- Pending or deferred: a cleanup sweep should remove redundant docs/tests and
-  dedupe stale guidance after the architecture pivot settles.
+  broker handoff. On 2026-06-17, stable docs were swept for roadmap-style
+  wording so durable docs describe current behavior while ADRs and plans keep
+  decision trail and after-v2 handoff.
+- Pending or deferred: no v2 documentation cleanup remains in this ADR.
 
 ## Verification
 
 Read current docs README, packaging, samples, setup, package discovery, and
 testing docs. Current verification entrypoints are documented in
 `docs/testing.md` and package artifacts are checked by `pnpm backend:pack`.
+On 2026-06-17, formatted changed Markdown after the durable-doc cleanup.

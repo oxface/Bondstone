@@ -20,58 +20,7 @@ implementation tasks into GitHub Issues or GitHub Projects.
 - [0015 Service Extraction Proof Before Broad Bus Features](../adr/0015-service-extraction-proof-before-broad-bus-features.md)
 - [0016 Non-Throwing Operation Wait Ergonomics](../adr/0016-non-throwing-operation-wait-ergonomics.md)
 
-## V2 Release Must Path
-
-Status: Ready for a v2 release PR/checkpoint once verification is green.
-
-Completed for the v2 must path:
-
-- Documentation now points at the active thin RabbitMQ and Azure Service Bus
-  adapters rather than saying broker adapter packages still need to be
-  reintroduced.
-- Stable operations guidance covers direct receive semantics, ambiguous
-  unprocessed inbox rows, broker settlement, outbox terminal failures,
-  operation finalization and expiration, EF migrations, contract evolution,
-  retention, and observability ownership.
-- Stable observability guidance documents the current activity sources,
-  activities, tags, log event ids, result diagnostics, inspection contracts,
-  and non-current metrics/error-code vocabulary.
-- Worker and adapter scope is settled for v2: Bondstone owns durable outbox
-  dispatch and receive handoff boundaries; applications own broker topology,
-  retry, dead-letter, prefetch/concurrency, provisioning, and monitoring.
-- RabbitMQ `AutoAck` was removed from the Bondstone receive worker. RabbitMQ
-  receive workers use manual acknowledgement and settle only after Bondstone
-  durable receive succeeds.
-- Azure Service Bus receive rejects `AutoCompleteMessages = true` and
-  completes native messages only after Bondstone durable receive succeeds.
-- Local transport is documented as explicit sample, test, and local
-  development infrastructure, not production broker durability or a hidden
-  fallback.
-- The public API inventory has a final v2 decision check. Remaining public
-  concrete helpers are classified as deliberate normal defaults, advanced
-  composition APIs, or provider/runtime concrete APIs rather than unresolved
-  implementation-detail exposure.
-- Package discovery, package README, setup, operations, observability,
-  packaging, and public API docs describe the current active package set and
-  v2 replacement posture.
-- `docs/packaging.md` contains the v2 release checklist, migration checklist,
-  and NuGet registry follow-up actions. Release Please remains the normal
-  owner of the actual version bump, changelog, tag, and GitHub release.
-
-Still required in the release PR or release workflow, not in this readiness
-checkpoint:
-
-- Release Please must create the actual v2 release PR and update
-  `Directory.Build.props`, `.github/.release-please-manifest.json`,
-  `CHANGELOG.md`, the version tag, and the GitHub release together.
-- Maintainers must verify the package artifacts from the release ref before
-  publishing.
-- NuGet publish, v1 deprecation, and v1 delisting are explicit post-approval
-  registry actions and are not part of this source checkpoint.
-
-## Post-V2 Or Long-Term Work
-
-These items remain intentionally outside the v2 must path:
+## After V2
 
 - Durable receive buffer design and implementation, including persistence
   records, leases, retry attempts, terminal receive failure state, worker
@@ -88,23 +37,10 @@ These items remain intentionally outside the v2 must path:
   monolith path and thin adapter proofs, including broader extraction
   scenarios, route-aware multi-transport ergonomics, and a two-transport
   sample only when real demand appears.
-
-## Deliberately Deferred
-
-- generic application middleware pipeline;
-- topology DSLs or provisioning;
-- provider-neutral transport diagnostics;
-- subscription storage;
-- broker retry/dead-letter orchestration;
-- saga or workflow engine features;
-- non-EF persistence provider work without real consumer demand;
-- broad multi-transport routing ergonomics before a concrete use case;
 - optional hosted operation expiration worker unless application feedback
   shows it belongs in Bondstone rather than app-owned scheduling.
 
 ## Verification
 
-Plan-only change. Read root and ADR guidance, current architecture docs,
-setup docs, testing docs, package/public API docs, and the current receive,
-outbox, EF transaction, and transport adapter code paths during the
-post-MVP review.
+Executed v2 work was moved into stable docs and the application notes of the
+accepted ADRs linked above. This plan now carries only after-v2 handoff items.

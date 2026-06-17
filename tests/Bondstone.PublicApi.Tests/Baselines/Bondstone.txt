@@ -522,3 +522,42 @@ namespace Bondstone.Modules
         public string ModuleName { get; }
     }
 }
+namespace Bondstone.Persistence
+{
+    public sealed class DurableIncomingInboxDispatcher : Bondstone.Persistence.IDurableIncomingInboxDispatcher
+    {
+        public DurableIncomingInboxDispatcher(Bondstone.Persistence.IDurableIncomingInboxClaimer claimer, Bondstone.Modules.IModuleCommandReceivePipeline commandReceivePipeline, Bondstone.Modules.IModuleEventReceivePipeline eventReceivePipeline, Bondstone.Persistence.IDurableIncomingInboxOutcomeRecorder outcomeRecorder, Bondstone.Persistence.IDurableIncomingInboxFailurePolicy failurePolicy, System.TimeProvider? timeProvider = null) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxProcessingResult> ProcessAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class DurableIncomingInboxFailurePolicy : Bondstone.Persistence.IDurableIncomingInboxFailurePolicy
+    {
+        public DurableIncomingInboxFailurePolicy(Bondstone.Persistence.DurableIncomingInboxProcessingOptions? options = null) { }
+        public Bondstone.Persistence.DurableIncomingInboxFailureDecision DecideFailure(Bondstone.Persistence.DurableIncomingInboxRecord record, string failureReason, System.DateTimeOffset failedAtUtc) { }
+    }
+    public sealed class DurableIncomingInboxProcessingOptions
+    {
+        public const int DefaultMaxAttempts = 5;
+        public DurableIncomingInboxProcessingOptions(int maxAttempts = 5, System.Collections.Generic.IReadOnlyList<System.TimeSpan>? retryDelays = null) { }
+        public int MaxAttempts { get; }
+        public System.Collections.Generic.IReadOnlyList<System.TimeSpan> RetryDelays { get; }
+        public static System.Collections.Generic.IReadOnlyList<System.TimeSpan> DefaultRetryDelays { get; }
+    }
+    public sealed class DurableIncomingInboxProcessingResult : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxProcessingResult>
+    {
+        public DurableIncomingInboxProcessingResult(int claimedCount, int processedCount, int retryScheduledCount, int terminalFailedCount, int staleCount) { }
+        public int ClaimedCount { get; }
+        public int CompletedCount { get; }
+        public int ProcessedCount { get; }
+        public int RetryScheduledCount { get; }
+        public int StaleCount { get; }
+        public int TerminalFailedCount { get; }
+    }
+    public interface IDurableIncomingInboxDispatcher
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxProcessingResult> ProcessAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxFailurePolicy
+    {
+        Bondstone.Persistence.DurableIncomingInboxFailureDecision DecideFailure(Bondstone.Persistence.DurableIncomingInboxRecord record, string failureReason, System.DateTimeOffset failedAtUtc);
+    }
+}

@@ -94,18 +94,19 @@ provider-neutral bus host. Application hosts may bypass adapter workers and
 call `IDurableMessageEnvelopeSerializer` plus `IDurableEnvelopeReceiver` from
 their own native receive loops.
 
-The optional future durable inbox topology keeps this split. A transport
-ingestion worker or native listener remains adapter-owned or application-owned
-because it reads provider-native deliveries and settles provider-native
-messages. It may call a future Bondstone durable inbox ingestion service and
-settle the native delivery only after durable ingestion succeeds.
+The optional durable inbox topology keeps this split. A transport ingestion
+worker or native listener remains adapter-owned or application-owned because it
+reads provider-native deliveries and settles provider-native messages. It may
+call Bondstone durable inbox ingestion and settle the native delivery only
+after durable ingestion succeeds.
 
 A future durable inbox processing worker would be Bondstone-owned because it
-would move Bondstone durable incoming rows through claim, retry, processed,
-stale, and terminal receive failure state before handing each due row to the
-existing module receive pipeline. That worker still must not provision broker
-topology, own broker retry or dead-letter policy, or mutate application
-cleanup and retention state by default.
+would host the existing durable incoming inbox dispatcher that moves Bondstone
+durable incoming rows through claim, retry, processed, stale, and terminal
+receive failure state before handing each due row to the existing module
+receive pipeline. That worker still must not provision broker topology, own
+broker retry or dead-letter policy, or mutate application cleanup and
+retention state by default.
 
 Provider SQL remains in provider packages. Transport-specific send, receive,
 and envelope behavior remains in transport adapter packages. Production worker

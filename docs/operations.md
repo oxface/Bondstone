@@ -67,11 +67,12 @@ of re-running the handler or silently treating the message as handled.
 Bondstone emits a direct receive already-received metric for this ambiguous
 outcome.
 
-Bondstone does not currently provide inbox leases, a stale-row sweeper, a
-failed receive state, provider-neutral receive retry, or a durable inbox
-worker. ADR
-[0017](adr/0017-single-durable-inbox-incoming-ledger.md) records the current
-durable inbox incoming-ledger direction. ADR
+Bondstone does not currently provide tiny direct-inbox leases, a direct-inbox
+stale-row sweeper, or direct-inbox failed receive state. ADR
+[0017](adr/0017-single-durable-inbox-incoming-ledger.md) records the durable
+inbox incoming-ledger direction. The incoming ledger has provider contracts,
+PostgreSQL mutation stores, and a host-callable processing dispatcher, but no
+hosted incoming inbox worker or transport adapter handoff yet. ADR
 [0012](adr/0012-direct-receive-inbox-and-durable-receive-buffer.md) preserves
 the superseded receive-buffer decision trail.
 
@@ -81,16 +82,16 @@ Current direct receive has two runtime stages:
 2. handler state, inbox marker, operation state, and outgoing outbox commit in
    the target module persistence boundary.
 
-The future optional durable inbox model would split this into three
-durable-processing stages:
+The optional durable inbox model splits this into durable-processing stages:
 
 1. native transport delivery to a Bondstone durable inbox incoming row;
-2. durable inbox worker claim and handoff to module receive;
-3. handler state, operation state, outgoing outbox rows, and durable inbox
-   processed state commit in the target module persistence boundary where
-   possible.
+2. host-called durable inbox processing claim and handoff to module receive;
+3. handler state, operation state, outgoing outbox rows, and direct inbox
+   processed state commit in the target module persistence boundary;
+4. incoming durable inbox processed, retry, terminal failure, or stale outcome
+   recording through claim-owner and lease-aware mutation.
 
-That future model uses one richer incoming durable inbox ledger rather than a
+That model uses one richer incoming durable inbox ledger rather than a
 receive-buffer row plus a separate inbox idempotency row for the same buffered
 message. Durable inbox identity is message id plus the resolved receive
 binding: target module and stable handler identity for a command, or
@@ -100,24 +101,36 @@ count, claim owner, claim lease, retry schedule, processed timestamp,
 terminal failure timestamp, and failure reason.
 
 In that optional model, native broker settlement would happen after durable
-ingestion succeeds, before handler processing. The later Bondstone processing
-worker would claim due durable inbox rows and call the existing module receive
-pipeline. Handler state, successful command operation completion, outgoing
-outbox rows, and durable inbox processed state should commit in the target
-module transaction where possible. Durable inbox retry and terminal receive
-failure state is recorded with claim-owner and lease-aware updates. Broker
-retry, dead-letter policy, delivery counts, topology, and cleanup or retention
-would remain outside Bondstone's default ownership.
+ingestion succeeds, before handler processing. The host-callable Bondstone
+processing dispatcher claims due durable inbox rows and calls the existing
+module receive pipeline. In the current slice, incoming-ledger outcome
+recording happens after the module receive pipeline returns. If the process
+crashes after handler state, successful command operation completion, outgoing
+outbox rows, and the tiny direct inbox processed marker commit but before the
+incoming row is marked processed, a later retry relies on the tiny direct inbox
+to report already processed and let the incoming dispatcher catch the ledger
+up. Durable inbox retry and terminal receive failure state is recorded with
+claim-owner and lease-aware updates. Broker retry, dead-letter policy, delivery
+counts, topology, and cleanup or retention remain outside Bondstone's default
+ownership.
+
+If module receive encounters a tiny direct inbox row that is already received
+but not processed, it raises `DurableInboxAlreadyReceivedException`. The
+incoming dispatcher treats that loud ambiguity as a processing failure and
+will retry or terminally fail the incoming row according to incoming inbox
+policy. Operator runbooks should inspect the direct inbox row, incoming ledger
+row, handler state, operation state, outbox rows, broker state, and application
+logs before deciding whether any manual mutation or compensation is safe.
 
 Terminal durable inbox receive failure would be durable operational evidence,
 not automatic operation failure. Applications that want a user-visible terminal
 operation outcome would inspect the terminal durable inbox row and explicitly
 finalize the operation through application policy.
 
-The future durable inbox worker is opt-in. Direct receive remains the default
-unless a later ADR changes it, so current operators should treat unprocessed
-direct inbox rows as ambiguous receive attempts that need application-owned
-investigation.
+The durable incoming inbox path remains opt-in. Direct receive remains the
+default unless a later ADR changes it, so current operators should treat
+unprocessed direct inbox rows as ambiguous receive attempts that need
+application-owned investigation.
 
 ## Broker Settlement
 

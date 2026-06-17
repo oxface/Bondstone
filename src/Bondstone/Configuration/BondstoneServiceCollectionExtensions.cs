@@ -57,6 +57,18 @@ public static class BondstoneServiceCollectionExtensions
         services.TryAddScoped<IModuleCommandReceivePipeline, ModuleCommandReceivePipeline>();
         services.TryAddScoped<IModuleEventReceivePipeline, ModuleEventReceivePipeline>();
         services.TryAddScoped<IDurableEnvelopeReceiver, DurableEnvelopeReceiver>();
+        services.TryAddSingleton(new DurableIncomingInboxProcessingOptions());
+        services.TryAddSingleton<IDurableIncomingInboxFailurePolicy>(serviceProvider =>
+            new DurableIncomingInboxFailurePolicy(
+                serviceProvider.GetRequiredService<DurableIncomingInboxProcessingOptions>()));
+        services.TryAddScoped<IDurableIncomingInboxDispatcher>(serviceProvider =>
+            new DurableIncomingInboxDispatcher(
+                serviceProvider.GetRequiredService<IDurableIncomingInboxClaimer>(),
+                serviceProvider.GetRequiredService<IModuleCommandReceivePipeline>(),
+                serviceProvider.GetRequiredService<IModuleEventReceivePipeline>(),
+                serviceProvider.GetRequiredService<IDurableIncomingInboxOutcomeRecorder>(),
+                serviceProvider.GetRequiredService<IDurableIncomingInboxFailurePolicy>(),
+                serviceProvider.GetService<TimeProvider>()));
         services.TryAddSingleton<
             IDurableMessageEnvelopeSerializer,
             SystemTextJsonDurableMessageEnvelopeSerializer>();

@@ -240,16 +240,18 @@ those operations reliable.
 ## Future Optional Durable Inbox
 
 The optional durable inbox incoming ledger accepted by ADR
-[0017](../adr/0017-single-durable-inbox-incoming-ledger.md) is not current
-receive runtime behavior. ADR
+[0017](../adr/0017-single-durable-inbox-incoming-ledger.md) is partially
+applied. ADR
 [0012](../adr/0012-direct-receive-inbox-and-durable-receive-buffer.md)
 preserves the superseded separate receive-buffer decision trail. The accepted
 provider-neutral names use `DurableIncomingInbox*` and
 `IDurableIncomingInbox*` to distinguish this richer incoming ledger from the
 tiny direct-receive inbox. Provider-neutral EF Core ingestion and read-only
 inspection stores exist. PostgreSQL-specific claim, lease-renewal, and
-outcome-recording stores exist for the incoming ledger. Hosted workers,
-transport adapter handoff, and runtime processing are not implemented.
+outcome-recording stores exist for the incoming ledger. Core also provides a
+host-callable `IDurableIncomingInboxDispatcher` that claims due rows and hands
+each row to the existing module receive pipelines. Hosted workers and
+transport adapter handoff are not implemented.
 
 The target durable inbox is modeled as a single persisted incoming delivery
 ledger. Its key is the durable receive binding:
@@ -286,6 +288,17 @@ The existing module receive pipeline remains the owner of target module
 handler execution. Handler state, successful command operation completion,
 outgoing outbox rows, and durable inbox processed state should commit in the
 target module transaction where possible.
+
+The first runtime processing slice records the incoming-ledger outcome after
+the module receive pipeline returns. That leaves a crash window: handler state,
+operation completion, outgoing outbox rows, and the tiny direct inbox processed
+marker can commit before the incoming ledger is marked processed. If a later
+retry sees the tiny direct inbox as already processed, the incoming dispatcher
+records the incoming row as processed and catches the ledger up. If the tiny
+direct inbox is already received but unprocessed, the module receive pipeline
+continues to raise `DurableInboxAlreadyReceivedException`; the incoming
+dispatcher treats that ambiguity as a processing failure and applies incoming
+inbox retry or terminal-failure policy.
 
 Durable inbox terminal failure must not automatically write operation `Failed`.
 Operation state is still the caller-visible result model, and applications

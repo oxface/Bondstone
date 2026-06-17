@@ -223,11 +223,22 @@ Durable incoming inbox provider-neutral contracts, 2026-06-17:
   ingestion, claim, lease renewal, outcome recording, and inspection of the
   incoming ledger. Inspection supports broad status reads plus stale
   processing claim and terminal receive-failure queries for operations.
+- `IDurableIncomingInboxDispatcher`,
+  `DurableIncomingInboxDispatcher`,
+  `IDurableIncomingInboxFailurePolicy`,
+  `DurableIncomingInboxFailurePolicy`,
+  `DurableIncomingInboxProcessingOptions`, and
+  `DurableIncomingInboxProcessingResult` are additive host-callable processing
+  APIs for the optional incoming ledger. They claim due rows, invoke the
+  existing module receive pipelines, and record processed, retry, terminal
+  failure, or stale outcomes through the incoming inbox store contracts.
 - The PostgreSQL provider supplies internal runtime stores for incoming inbox
-  claim, lease renewal, and outcome recording. This slice does not add
-  app-facing durable inbox setup, hosted workers, transport adapter handoff,
-  direct receive behavior changes, operation failure inference, or cleanup
-  mutation APIs.
+  claim, lease renewal, and outcome recording. This slice does not add hosted
+  workers, transport adapter handoff, direct receive default behavior changes,
+  operation failure inference, or cleanup mutation APIs. Processing outcome is
+  recorded after module receive returns, so a crash between the module receive
+  commit and incoming-ledger outcome recording relies on the existing direct
+  inbox idempotency row during retry.
 
 Durable incoming inbox EF Core mapping, 2026-06-17:
 

@@ -214,14 +214,16 @@ acknowledging the message as handled.
 ## Future Optional Durable Inbox
 
 ADR
-[0017](../adr/0017-single-durable-inbox-incoming-ledger.md) accepts a future
-durable inbox incoming ledger, but it is not current runtime behavior. Direct
-receive remains the default. ADR
+[0017](../adr/0017-single-durable-inbox-incoming-ledger.md) accepts the durable
+inbox incoming ledger direction. It is partially applied: provider-neutral
+records, EF ingestion and inspection, PostgreSQL mutation stores, and a
+host-callable processing dispatcher exist, but hosted workers and transport
+adapter handoff do not. Direct receive remains the default. ADR
 [0012](../adr/0012-direct-receive-inbox-and-durable-receive-buffer.md)
 preserves the superseded separate receive-buffer decision trail.
 
-The future durable inbox should be the single durable delivery ledger in front
-of the existing module receive pipelines. Its identity is the stable receive
+The durable inbox is the target single durable delivery ledger in front of the
+existing module receive pipelines. Its identity is the stable receive
 binding:
 
 - command rows use message id, target module, and stable command handler
@@ -236,20 +238,23 @@ failure state around processing attempts. The current tiny inbox remains the
 direct-receive idempotency boundary until a later implementation migrates or
 replaces it.
 
-Ingestion would parse a native transport delivery into
+Ingestion parses a native transport delivery into
 `DurableMessageEnvelope`, validate message kind, stable message type
 registration, and the command route or event subscriber binding, then insert
 the durable inbox row idempotently. It would not execute handlers, complete
 operation state, stage outgoing outbox rows, or infer terminal operation
 state.
 
-Processing would claim due durable inbox rows and call
+Processing claims due durable inbox rows and calls
 `IModuleCommandReceivePipeline` or `IModuleEventReceivePipeline`. A handled or
 already-processed pipeline outcome marks the durable inbox processed.
-Exceptions are processing failures that would be retried or marked terminal
-according to durable inbox policy. Terminal durable inbox failure is
-operational evidence for application policy; it does not automatically write
-`Failed` operation state.
+Exceptions are processing failures that are retried or marked terminal
+according to durable inbox policy. Already-received but unprocessed direct
+inbox rows remain loud ambiguity: the receive pipeline raises
+`DurableInboxAlreadyReceivedException`, and the incoming dispatcher treats that
+as a processing failure rather than re-running the handler. Terminal durable
+inbox failure is operational evidence for application policy; it does not
+automatically write `Failed` operation state.
 
 ## Durable Envelope
 

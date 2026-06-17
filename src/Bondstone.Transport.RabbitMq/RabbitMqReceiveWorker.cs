@@ -93,6 +93,7 @@ internal sealed class RabbitMqReceiveWorker(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(
+                RabbitMqReceiveWorkerLogEvents.ReceiveFailed,
                 ex,
                 "RabbitMQ receive worker failed for queue '{QueueName}'.",
                 registration.QueueName);

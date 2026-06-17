@@ -226,7 +226,9 @@ debugging policy.
 ## Observability
 
 See [observability.md](observability.md) for the current diagnostic surfaces
-and the OpenTelemetry-native direction. Today, do not assume every durable
-boundary has finalized metrics, tag names, or log event ids. Where Bondstone
-does not yet expose a signal, keep monitoring in application code, provider
-tooling, broker-native telemetry, and database queries over app-owned tables.
+and the OpenTelemetry-native direction. Today, Bondstone emits stable activity
+names and log event ids for the minimum durable boundaries documented there,
+but it does not yet expose finalized metric instruments or stable
+misconfiguration error codes. Where Bondstone does not yet expose a signal,
+keep monitoring in application code, provider tooling, broker-native
+telemetry, and database queries over app-owned tables.

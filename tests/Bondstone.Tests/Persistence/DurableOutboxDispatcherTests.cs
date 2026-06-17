@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
+using Bondstone.Tests;
 using Xunit;
 
 namespace Bondstone.Tests.Persistence;
@@ -30,6 +32,49 @@ public sealed class DurableOutboxDispatcherTests
         Assert.Equal([first.Envelope.MessageId, second.Envelope.MessageId], transport.SentMessageIds);
         Assert.Equal([first.Envelope.MessageId, second.Envelope.MessageId], recorder.DispatchedMessageIds);
         Assert.Equal([first.Envelope.MessageId, second.Envelope.MessageId], leaseRenewer.RenewedMessageIds);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task DispatchAsync_WhenRecordsAreSent_EmitsOutboxDispatchActivities()
+    {
+        DurableOutboxRecord first = CreateRecord(Guid.Parse("40d76ea9-188f-4ed4-bd1d-a6bc65a58101"));
+        DurableOutboxRecord second = CreateRecord(Guid.Parse("7fc91fbb-7f01-4a9c-9e2c-cac014cb29ce"));
+        var activities = new List<Activity>();
+        using ActivityListener listener = ActivityTestHelper.CreateActivityListener(
+            "Bondstone.Persistence",
+            activities);
+        DurableOutboxDispatcher dispatcher = CreateDispatcher(
+            new FakeClaimer([first, second]),
+            new FakeLeaseRenewer(),
+            new FakeEnvelopeDispatcher());
+
+        await dispatcher.DispatchAsync(
+            " dispatcher-1 ",
+            TimeSpan.FromMinutes(5),
+            maxCount: 10);
+
+        Activity batchActivity = Assert.Single(
+            activities,
+            activity => activity.OperationName == "bondstone.outbox.dispatch");
+        Assert.Equal(ActivityKind.Internal, batchActivity.Kind);
+        Assert.Equal("dispatcher-1", ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.claimed_by"));
+        Assert.Equal(10, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.max_count"));
+        Assert.Equal(2, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.claimed_count"));
+        Assert.Equal(2, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.dispatched_count"));
+        Assert.Equal(0, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.retry_scheduled_count"));
+        Assert.Equal(0, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.terminal_failed_count"));
+        Assert.Equal(0, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.stale_count"));
+
+        Activity firstMessageActivity = Assert.Single(
+            activities,
+            activity => activity.OperationName == "bondstone.outbox.dispatch.message"
+                && ActivityTestHelper.GetTag(activity, "bondstone.message_id")?.Equals(
+                    first.Envelope.MessageId.ToString("D")) == true);
+        Assert.Equal("Command", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.message_kind"));
+        Assert.Equal("sales.customer.register.v1", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.message_type"));
+        Assert.Equal("sales", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.source_module"));
+        Assert.Equal("billing", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.target_module"));
     }
 
     [Fact]

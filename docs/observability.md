@@ -9,22 +9,88 @@ This page describes current behavior only. It also names planned
 instrumentation so consumers can see the direction without treating future
 signal names as stable contracts.
 
-## Current Surfaces
+## Current Activity Sources
 
-Bondstone currently has a receive `ActivitySource` named `Bondstone.Modules`.
-Module command and event receive pipelines start consumer activities through
-the internal receive telemetry helper. Current receive activity tags are:
+Bondstone currently emits activities from these `ActivitySource` names:
 
-- `bondstone.message_id`
-- `bondstone.message_kind`
-- `bondstone.message_type`
-- `bondstone.source_module`
-- `bondstone.target_module`
-- `bondstone.handler_identity`
+- `Bondstone.Modules` for module durable messaging boundaries;
+- `Bondstone.Persistence` for provider-neutral durable persistence work.
+
+## Current Activities
+
+`Bondstone.Modules` currently emits:
+
+- `bondstone.command.send`, `Producer`: durable command send accepted into the
+  current source module outbox;
+- `bondstone.event.publish`, `Producer`: integration event publish accepted
+  into the current source module outbox;
+- `bondstone.module_command.receive`, `Consumer`: command envelope receive
+  through a module command handler route;
+- `bondstone.module_event.receive`, `Consumer`: event envelope receive through
+  a module subscriber route;
+- `bondstone.operation.finalize`, `Internal`: explicit operation finalization
+  through application-owned policy.
+
+`Bondstone.Persistence` currently emits:
+
+- `bondstone.outbox.dispatch`, `Internal`: one provider-neutral outbox
+  dispatch batch;
+- `bondstone.outbox.dispatch.message`, `Internal`: one claimed outbox message
+  handoff to the configured envelope dispatcher.
 
 Receive activities use trace context from `DurableMessageEnvelope.TraceContext`
 when a valid W3C `traceparent` value is present. Invalid trace parent values
-fail receive with an argument exception.
+fail receive with an argument exception. Send and publish activities capture
+current trace context into the durable envelope unless the caller supplied an
+explicit `MessageTraceContext`.
+
+## Current Tags
+
+Durable message activities can emit:
+
+- `bondstone.message_id`;
+- `bondstone.message_kind`;
+- `bondstone.message_type`;
+- `bondstone.source_module`;
+- `bondstone.target_module`;
+- `bondstone.partition_key`;
+- `bondstone.operation_id`;
+- `bondstone.handler_identity`, receive activities only.
+
+Operation finalization activities can emit:
+
+- `bondstone.module`;
+- `bondstone.operation_id`;
+- `bondstone.operation_status`;
+- `bondstone.operation_finalized`.
+
+Outbox dispatch activities can emit:
+
+- `bondstone.outbox.claimed_by`;
+- `bondstone.outbox.max_count`;
+- `bondstone.outbox.claimed_count`;
+- `bondstone.outbox.dispatched_count`;
+- `bondstone.outbox.retry_scheduled_count`;
+- `bondstone.outbox.terminal_failed_count`;
+- `bondstone.outbox.stale_count`.
+
+Outbox message dispatch activities can also emit durable message tags:
+
+- `bondstone.message_id`;
+- `bondstone.message_kind`;
+- `bondstone.message_type`;
+- `bondstone.source_module`;
+- `bondstone.target_module`.
+
+Activity status is set to `Error` when the instrumented Bondstone boundary
+throws. Outbox message dispatch failures that are recorded for retry or
+terminal failure set the message-dispatch activity to `Error`; the batch
+activity records the resulting retry, terminal failure, or stale counts.
+
+Tags whose source values are absent, such as event `target_module` or
+operation ids on untracked messages, may be absent from the emitted activity.
+
+## Current Result And Inspection Diagnostics
 
 Operation state can carry optional diagnostic context:
 
@@ -42,14 +108,6 @@ Bondstone exposes read-only operational inspection through:
 - `IDurableOutboxInspector` for terminal outbox failures;
 - `IDurableInboxInspector` for unprocessed inbox rows.
 
-The hosted outbox worker logs unexpected dispatch-batch failures with event id
-`1001` and name `DispatchBatchFailed`.
-
-RabbitMQ and Azure Service Bus receive workers log native receive-worker
-failures through `ILogger`. Broker delivery counts, retry state, dead-letter
-state, topology, and infrastructure health remain provider-native or
-application-owned diagnostics.
-
 Startup and runtime validation errors intentionally name missing durable
 composition pieces, such as missing module persistence, missing mappings,
 missing dispatchers, duplicate module durable registrations, invalid durable
@@ -57,14 +115,46 @@ identity attributes, missing receive bindings, and missing or ambiguous
 dispatch routes. These messages are diagnostic surfaces, but they are not yet
 cataloged as a stable error-code vocabulary.
 
+## Current Logs
+
+The hosted outbox worker logs unexpected dispatch-batch failures with event id
+`1001` and name `DispatchBatchFailed`.
+
+RabbitMQ receive workers log receive failures with event id `2001` and name
+`ReceiveFailed` before nacking according to the native `RequeueOnFailure`
+option.
+
+Azure Service Bus receive workers log processor failures with event id `3001`
+and name `ReceiveFailed`. Native retry, settlement exhaustion, and
+dead-letter behavior remain Azure Service Bus client and broker behavior.
+
+Broker delivery counts, retry state, dead-letter state, topology, and
+infrastructure health remain provider-native or application-owned
+diagnostics.
+
 ## Not Current Behavior
 
 Bondstone does not yet expose finalized metrics for outbox claims, dispatches,
 retries, terminal failures, receive outcomes, inbox decisions, operation
 finalization, or operation expiration.
 
-Bondstone does not yet publish a complete stable vocabulary for all activity
-names, tags, metric names, log event ids, or misconfiguration codes.
+Bondstone does not yet expose a stable metric instrument vocabulary. Planned
+but not current metrics include:
+
+- outbox rows claimed;
+- outbox rows dispatched;
+- outbox retries scheduled;
+- outbox rows marked terminal failed;
+- outbox stale claim outcomes;
+- receive handled outcomes;
+- receive already-processed skip outcomes;
+- receive already-received ambiguous outcomes;
+- operation finalizations;
+- operation expiration candidates and finalized outcomes.
+
+Bondstone does not yet publish stable misconfiguration error codes. Startup
+and runtime exception messages are intentionally clear, but they are not a
+machine-readable error-code vocabulary.
 
 Bondstone does not provide provider-neutral topology diagnostics, broker retry
 diagnostics, dead-letter diagnostics, subscription storage diagnostics, or
@@ -76,9 +166,8 @@ application logs, and provider-specific telemetry for that layer.
 Future instrumentation should prefer OpenTelemetry signals at durable
 boundaries:
 
-- durable send and publish;
-- outbox claim, dispatch, retry, and terminal failure;
-- receive, inbox decision, and handler execution;
+- additional outbox claim, retry, terminal failure, and stale-claim metrics;
+- receive outcome, inbox decision, and handler execution metrics or spans;
 - operation result completion, finalization, and expiration;
 - serializer and deserialization failures where they affect durable payloads.
 

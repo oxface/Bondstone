@@ -13,7 +13,6 @@ internal sealed class ModuleCommandReceivePipeline(
     IDurablePayloadSerializer? payloadSerializer = null)
     : IModuleCommandReceivePipeline
 {
-    private const string ActivityName = "bondstone.module_command.receive";
     private readonly IMessageTypeRegistry _messageTypeRegistry =
         messageTypeRegistry ?? throw new ArgumentNullException(nameof(messageTypeRegistry));
     private readonly IModuleCommandRouteRegistry _routeRegistry =
@@ -51,7 +50,7 @@ internal sealed class ModuleCommandReceivePipeline(
             _timeProvider.GetUtcNow());
 
         using Activity? activity = ModuleReceiveTelemetry.StartReceiveActivity(
-            ActivityName,
+            BondstoneMessagingDiagnostics.ModuleCommandReceiveActivityName,
             envelope,
             handlerIdentity);
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Bondstone.Modules;
 using Bondstone.Persistence;
 
@@ -57,58 +58,92 @@ internal sealed class DurableCommandSender(
             ?? throw new InvalidOperationException(
                 "Durable command sending requires a current module execution context.");
 
-        Guid messageId = Guid.NewGuid();
-        string messageTypeName = _messageTypeRegistry.GetMessageTypeName<TCommand>();
-        string payload = _payloadSerializer.Serialize(command);
-        MessageTraceContext? capturedTraceContext =
-            traceContext ?? MessageTraceContext.CaptureCurrent();
+        using Activity? activity = BondstoneMessagingDiagnostics.ActivitySource.StartActivity(
+            BondstoneMessagingDiagnostics.CommandSendActivityName,
+            ActivityKind.Producer);
 
-        DateTimeOffset createdAtUtc = _timeProvider.GetUtcNow();
-        var envelope = new DurableMessageEnvelope(
-            messageId,
-            MessageKind.Command,
-            messageTypeName,
-            executionContext.ModuleName,
-            targetModule,
-            payload,
-            createdAtUtc,
-            durableOperationId,
-            capturedTraceContext,
-            causationId,
-            partitionKey);
-
-        string sourceModule = executionContext.ModuleName;
-        IDurableOutboxWriter outboxWriter = _outboxWriterResolver.Resolve(sourceModule);
-        IDurableOperationStateStore? operationStateStore = null;
-        if (durableOperationId is Guid operationId)
+        try
         {
-            operationStateStore = _operationStateStoreResolver.Resolve(
-                sourceModule,
-                operationId);
-        }
+            Guid messageId = Guid.NewGuid();
+            string messageTypeName = _messageTypeRegistry.GetMessageTypeName<TCommand>();
+            string payload = _payloadSerializer.Serialize(command);
+            MessageTraceContext? capturedTraceContext =
+                traceContext ?? MessageTraceContext.CaptureCurrent();
 
-        await outboxWriter.WriteAsync(envelope, ct);
-
-        if (durableOperationId is Guid operationIdToTrack)
-        {
-            await SavePendingOperationStateIfUnknownAsync(
-                operationStateStore!,
-                operationIdToTrack,
+            DateTimeOffset createdAtUtc = _timeProvider.GetUtcNow();
+            var envelope = new DurableMessageEnvelope(
+                messageId,
+                MessageKind.Command,
+                messageTypeName,
+                executionContext.ModuleName,
+                targetModule,
+                payload,
                 createdAtUtc,
-                ct);
+                durableOperationId,
+                capturedTraceContext,
+                causationId,
+                partitionKey);
+
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.TargetModule,
+                targetModule);
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.SourceModule,
+                executionContext.ModuleName);
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.MessageType,
+                messageTypeName);
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.MessageKind,
+                MessageKind.Command.ToString());
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.OperationId,
+                durableOperationId?.ToString("D"));
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.PartitionKey,
+                partitionKey);
+
+            string sourceModule = executionContext.ModuleName;
+            IDurableOutboxWriter outboxWriter = _outboxWriterResolver.Resolve(sourceModule);
+            IDurableOperationStateStore? operationStateStore = null;
+            if (durableOperationId is Guid operationId)
+            {
+                operationStateStore = _operationStateStoreResolver.Resolve(
+                    sourceModule,
+                    operationId);
+            }
+
+            await outboxWriter.WriteAsync(envelope, ct);
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.MessageId,
+                envelope.MessageId.ToString("D"));
+
+            if (durableOperationId is Guid operationIdToTrack)
+            {
+                await SavePendingOperationStateIfUnknownAsync(
+                    operationStateStore!,
+                    operationIdToTrack,
+                    createdAtUtc,
+                    ct);
+            }
+
+            DurableOperationHandle? operation = durableOperationId is Guid operationIdToReturn
+                ? new DurableOperationHandle(
+                    operationIdToReturn,
+                    envelope.SourceModule,
+                    envelope.TargetModule!)
+                : null;
+
+            return new DurableCommandSendResult(
+                messageId,
+                operation,
+                DurableCommandSendStatus.Accepted);
         }
-
-        DurableOperationHandle? operation = durableOperationId is Guid operationIdToReturn
-            ? new DurableOperationHandle(
-                operationIdToReturn,
-                envelope.SourceModule,
-                envelope.TargetModule!)
-            : null;
-
-        return new DurableCommandSendResult(
-            messageId,
-            operation,
-            DurableCommandSendStatus.Accepted);
+        catch (Exception exception)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+            throw;
+        }
     }
 
     private static async ValueTask SavePendingOperationStateIfUnknownAsync(

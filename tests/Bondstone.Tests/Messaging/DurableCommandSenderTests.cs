@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
+using Bondstone.Tests;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -47,6 +49,51 @@ public sealed class DurableCommandSenderTests
         Assert.Equal("""{"orderId":"order-123"}""", envelope.Payload);
         Assert.Equal("order-123", envelope.PartitionKey);
         Assert.Equal(DateTimeOffset.Parse("2026-06-06T12:00:00+00:00"), envelope.CreatedAtUtc);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenCalledInsideModuleCommand_EmitsCommandSendActivity()
+    {
+        var outboxWriter = new CapturingOutboxWriter();
+        var activities = new List<Activity>();
+        using ActivityListener listener = ActivityTestHelper.CreateActivityListener(
+            "Bondstone.Modules",
+            activities);
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableOutboxWriter>(outboxWriter);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<SubmitOrderCommand, SubmitOrderHandler>();
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new SubmitOrderCommand("order-123"));
+
+        DurableMessageEnvelope envelope = Assert.Single(outboxWriter.Envelopes);
+        Activity activity = Assert.Single(
+            activities,
+            candidate => candidate.OperationName == "bondstone.command.send");
+        Assert.Equal(ActivityKind.Producer, activity.Kind);
+        Assert.Equal(envelope.MessageId.ToString("D"), ActivityTestHelper.GetTag(activity, "bondstone.message_id"));
+        Assert.Equal("Command", ActivityTestHelper.GetTag(activity, "bondstone.message_kind"));
+        Assert.Equal("sales.order.reserve.v1", ActivityTestHelper.GetTag(activity, "bondstone.message_type"));
+        Assert.Equal("sales", ActivityTestHelper.GetTag(activity, "bondstone.source_module"));
+        Assert.Equal("fulfillment", ActivityTestHelper.GetTag(activity, "bondstone.target_module"));
+        Assert.Equal("order-123", ActivityTestHelper.GetTag(activity, "bondstone.partition_key"));
     }
 
     [Fact]

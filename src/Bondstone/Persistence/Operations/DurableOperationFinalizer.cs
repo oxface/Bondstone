@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Bondstone.Modules;
 using Bondstone.Persistence;
 using Bondstone.Utility;
@@ -61,34 +62,66 @@ internal sealed class DurableOperationFinalizer(
             nameof(reason),
             "Operation finalization reason");
 
-        IDurableOperationStateStore store = ResolveStore(
-            normalizedModuleName,
-            durableOperationId);
-        DurableOperationState? currentState = await store.GetStateAsync(
-            durableOperationId,
-            ct);
+        using Activity? activity = BondstoneMessagingDiagnostics.ActivitySource.StartActivity(
+            BondstoneMessagingDiagnostics.OperationFinalizeActivityName,
+            ActivityKind.Internal);
+        activity?.SetTag(
+            BondstoneMessagingDiagnostics.Tags.Module,
+            normalizedModuleName);
+        activity?.SetTag(
+            BondstoneMessagingDiagnostics.Tags.OperationId,
+            durableOperationId.ToString("D"));
 
-        if (currentState is not null && IsTerminal(currentState.Status))
+        try
         {
+            IDurableOperationStateStore store = ResolveStore(
+                normalizedModuleName,
+                durableOperationId);
+            DurableOperationState? currentState = await store.GetStateAsync(
+                durableOperationId,
+                ct);
+
+            if (currentState is not null && IsTerminal(currentState.Status))
+            {
+                activity?.SetTag(
+                    BondstoneMessagingDiagnostics.Tags.OperationStatus,
+                    currentState.Status.ToString());
+                activity?.SetTag(
+                    BondstoneMessagingDiagnostics.Tags.OperationFinalized,
+                    false);
+
+                return new DurableOperationFinalizationResult(
+                    currentState,
+                    wasFinalized: false);
+            }
+
+            var terminalState = new DurableOperationState(
+                durableOperationId,
+                terminalStatus,
+                _timeProvider.GetUtcNow(),
+                failureReason: normalizedReason,
+                diagnosticContext: diagnosticContext ?? currentState?.DiagnosticContext);
+
+            await store.SaveAsync(
+                terminalState,
+                ct);
+
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.OperationStatus,
+                terminalState.Status.ToString());
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.OperationFinalized,
+                true);
+
             return new DurableOperationFinalizationResult(
-                currentState,
-                wasFinalized: false);
+                terminalState,
+                wasFinalized: true);
         }
-
-        var terminalState = new DurableOperationState(
-            durableOperationId,
-            terminalStatus,
-            _timeProvider.GetUtcNow(),
-            failureReason: normalizedReason,
-            diagnosticContext: diagnosticContext ?? currentState?.DiagnosticContext);
-
-        await store.SaveAsync(
-            terminalState,
-            ct);
-
-        return new DurableOperationFinalizationResult(
-            terminalState,
-            wasFinalized: true);
+        catch (Exception exception)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+            throw;
+        }
     }
 
     private IDurableOperationStateStore ResolveStore(

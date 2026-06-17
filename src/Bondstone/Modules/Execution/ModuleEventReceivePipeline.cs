@@ -11,7 +11,6 @@ internal sealed class ModuleEventReceivePipeline(
     IDurablePayloadSerializer? payloadSerializer = null)
     : IModuleEventReceivePipeline
 {
-    private const string ActivityName = "bondstone.module_event.receive";
     private readonly IMessageTypeRegistry _messageTypeRegistry =
         messageTypeRegistry ?? throw new ArgumentNullException(nameof(messageTypeRegistry));
     private readonly IModuleEventSubscriberExecutor _moduleEventSubscriberExecutor =
@@ -40,7 +39,7 @@ internal sealed class ModuleEventReceivePipeline(
             _timeProvider.GetUtcNow());
 
         using Activity? activity = ModuleReceiveTelemetry.StartReceiveActivity(
-            ActivityName,
+            BondstoneMessagingDiagnostics.ModuleEventReceiveActivityName,
             envelope,
             subscriberIdentity);
 

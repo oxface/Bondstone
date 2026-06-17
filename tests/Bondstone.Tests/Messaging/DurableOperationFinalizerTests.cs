@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
+using Bondstone.Tests;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -38,6 +40,37 @@ public sealed class DurableOperationFinalizerTests
         Assert.Equal(failedAtUtc, state.UpdatedAtUtc);
         Assert.Equal("expired before receive", state.FailureReason);
         Assert.Same(state, result.State);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task MarkFailedAsync_WhenOperationIsUnknown_EmitsOperationFinalizeActivity()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var activities = new List<Activity>();
+        using ActivityListener listener = ActivityTestHelper.CreateActivityListener(
+            "Bondstone.Modules",
+            activities);
+        var store = new CapturingModuleOperationStateStore("fulfillment");
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            DateTimeOffset.Parse("2026-06-16T12:00:00+00:00"),
+            store);
+
+        await serviceProvider
+            .GetRequiredService<IDurableOperationFinalizer>()
+            .MarkFailedAsync(
+                "fulfillment",
+                durableOperationId,
+                "expired before receive");
+
+        Activity activity = Assert.Single(
+            activities,
+            candidate => candidate.OperationName == "bondstone.operation.finalize");
+        Assert.Equal(ActivityKind.Internal, activity.Kind);
+        Assert.Equal("fulfillment", ActivityTestHelper.GetTag(activity, "bondstone.module"));
+        Assert.Equal(durableOperationId.ToString("D"), ActivityTestHelper.GetTag(activity, "bondstone.operation_id"));
+        Assert.Equal("Failed", ActivityTestHelper.GetTag(activity, "bondstone.operation_status"));
+        Assert.Equal(true, ActivityTestHelper.GetTag(activity, "bondstone.operation_finalized"));
     }
 
     [Fact]

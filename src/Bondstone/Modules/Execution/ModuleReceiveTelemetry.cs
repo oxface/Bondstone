@@ -5,7 +5,8 @@ namespace Bondstone.Modules;
 
 internal static class ModuleReceiveTelemetry
 {
-    public static readonly ActivitySource ActivitySource = new("Bondstone.Modules");
+    public static readonly ActivitySource ActivitySource =
+        BondstoneMessagingDiagnostics.ActivitySource;
 
     public static Activity? StartReceiveActivity(
         string activityName,
@@ -47,12 +48,10 @@ internal static class ModuleReceiveTelemetry
             return null;
         }
 
-        activity.SetTag("bondstone.message_id", envelope.MessageId.ToString("D"));
-        activity.SetTag("bondstone.message_kind", envelope.MessageKind.ToString());
-        activity.SetTag("bondstone.message_type", envelope.MessageTypeName);
-        activity.SetTag("bondstone.source_module", envelope.SourceModule);
-        activity.SetTag("bondstone.target_module", envelope.TargetModule);
-        activity.SetTag("bondstone.handler_identity", handlerIdentity);
+        BondstoneMessagingDiagnostics.SetEnvelopeTags(activity, envelope);
+        activity.SetTag(
+            BondstoneMessagingDiagnostics.Tags.HandlerIdentity,
+            handlerIdentity);
 
         return activity;
     }

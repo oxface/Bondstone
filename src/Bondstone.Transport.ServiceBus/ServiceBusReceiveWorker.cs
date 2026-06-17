@@ -100,6 +100,7 @@ internal sealed class ServiceBusReceiveWorker(
         ProcessErrorEventArgs args)
     {
         _logger.LogError(
+            ServiceBusReceiveWorkerLogEvents.ReceiveFailed,
             args.Exception,
             "Azure Service Bus receive worker failed for entity '{EntityPath}' during '{ErrorSource}'.",
             args.EntityPath,

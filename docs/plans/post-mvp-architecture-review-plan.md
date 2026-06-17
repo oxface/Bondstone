@@ -17,14 +17,18 @@ first-consumer-project hardening plan. The goal is to keep Bondstone's scope
 narrowly focused on durable module boundaries while reducing the operational
 gaps that would make a real consumer project painful or misleading.
 
-## Accepted ADRs
+## Accepted Or Amended ADRs
 
 - [0011 OTel Native Diagnostics And Misconfiguration Reporting](../adr/0011-otel-native-diagnostics-and-misconfiguration-reporting.md)
-- [0012 Direct Receive Inbox And Durable Receive Buffer](../adr/0012-direct-receive-inbox-and-durable-receive-buffer.md)
 - [0013 Worker Boundaries And Transport Adapter Ownership](../adr/0013-worker-boundaries-and-transport-adapter-ownership.md)
 - [0014 Production Operations And Lifecycle Guidance](../adr/0014-production-operations-and-lifecycle-guidance.md)
 - [0015 Service Extraction Proof Before Broad Bus Features](../adr/0015-service-extraction-proof-before-broad-bus-features.md)
 - [0016 Non-Throwing Operation Wait Ergonomics](../adr/0016-non-throwing-operation-wait-ergonomics.md)
+- [0017 Single Durable Inbox Incoming Ledger](../adr/0017-single-durable-inbox-incoming-ledger.md)
+
+Superseded receive-side trail:
+
+- [0012 Direct Receive Inbox And Durable Receive Buffer](../adr/0012-direct-receive-inbox-and-durable-receive-buffer.md)
 
 ## Review Findings
 
@@ -66,20 +70,20 @@ transport receive worker calls the module receive pipeline, and the handler
 runs inside that receive attempt. The inbox table is an idempotency ledger, not
 a queued work table.
 
-The future durable receive-buffer path should introduce the three-stage
-production topology when the application opts into it:
+The future durable inbox path should introduce the three-stage production
+topology when the application opts into it:
 
 - outbox worker: source outbox to transport;
 - transport ingestion worker/listener: transport to Bondstone-owned durable
-  receive-buffer record, then native settlement after durable ingestion;
-- receive-buffer processing worker: Bondstone-owned buffered delivery to inbox,
+  incoming inbox record, then native settlement after durable ingestion;
+- durable inbox processing worker: Bondstone-owned buffered delivery to inbox,
   operation state, outgoing outbox, and handler execution inside the target
   module persistence boundary.
 
 A generic cleanup worker is not current behavior and should not be added as a
 default background service without ADR review. Cleanup mutates durable evidence
 such as processed inbox rows, dispatched outbox rows, operation states, domain
-event records, terminal outbox failures, and future receive-buffer records.
+event records, terminal outbox failures, and future durable inbox records.
 Retention may be useful, but defaults can destroy operational evidence. Prefer
 first adding inspection, runbook guidance, filters, and explicit app-owned
 cleanup samples.
@@ -89,19 +93,20 @@ cleanup samples.
 These items are candidates to complete before treating the current line as
 consumer-ready v2 scope.
 
-1. Durable receive-buffer design slice.
+1. Durable incoming inbox design slice.
    Define the persistence record, claim/lease model, retry attempts, terminal
    receive failure state, operation interaction, worker options, and retention
-   guidance. Keep the direct receive path as the simple default unless a later
-   ADR changes it.
+   guidance for the ADR 0017 single incoming ledger. Keep the direct receive
+   path as the simple default unless a later ADR changes it.
 
 2. Operation-result hardening.
    Add a non-throwing wait/read API per ADR 0016, then review whether Bondstone
    needs an operation diagnostic snapshot that can explain "still pending"
    using source outbox state, terminal source dispatch failure, future receive
-   buffer state, finalization state, and result deserialization failure. Avoid
-   automatically converting transport or inbox failures into operation failure
-   unless application policy explicitly finalizes the operation.
+   incoming inbox state, finalization state, and result deserialization
+   failure. Avoid automatically converting transport or inbox failures into
+   operation failure unless application policy explicitly finalizes the
+   operation.
 
 3. Operation-linked inspection.
    Review whether inspectors need filters by operation id and message id, not
@@ -117,7 +122,7 @@ consumer-ready v2 scope.
 5. Minimal metrics.
    Stabilize metric names and dimensions for the states Bondstone owns:
    outbox claimed/dispatched/retry/terminal/stale, direct receive
-   handled/already-processed/already-received, future receive-buffer outcomes,
+   handled/already-processed/already-received, future durable inbox outcomes,
    operation finalization, and operation expiration.
 
 6. Stable misconfiguration error codes.
@@ -147,7 +152,7 @@ consumer-ready v2 scope.
 10. Health/readiness guidance.
     Consider small health-check helpers or documented recipes for terminal
     outbox failures, stale direct inbox rows, worker dispatch failures, and
-    future receive-buffer terminal failures. Keep broker health provider-native
+    future durable inbox terminal failures. Keep broker health provider-native
     or app-owned.
 
 ## Easy Wins
@@ -176,7 +181,7 @@ consumer-ready v2 scope.
 - Added operations troubleshooting for pending durable operations, including
   source outbox terminal failures, direct inbox ambiguity, broker-native
   surfaces, explicit finalization, and app-owned expiration.
-- Added a direct receive versus future receive-buffer sequence in operations
+- Added a direct receive versus future durable inbox sequence in operations
   guidance.
 - Added XML documentation remarks for current operation result reader,
   operation reader, result-state, and result-deserialization failure behavior.
@@ -238,11 +243,66 @@ Remaining after the operation visibility quick wins:
 - Did not implement cleanup worker behavior. Cleanup mutates durable evidence
   and still requires ADR review before any default worker.
 
+2026-06-17 durable inbox design slice applied, later superseded by ADR 0017:
+
+- Amended ADR 0012 with the optional separate-buffer identity, structured
+  persistence record, ingestion boundary, processing worker responsibilities,
+  failure semantics, package ownership, worker split, observability vocabulary,
+  migration ownership, and compatibility constraints.
+- Kept direct receive as the default and confirmed buffered receive remains
+  opt-in.
+- Updated stable docs to describe the future buffered receive path as
+  non-current behavior while preserving the current direct receive, inbox,
+  outbox, operation-state, worker, and broker ownership contracts.
+- Deferred runtime contracts, EF mappings, PostgreSQL concurrency behavior,
+  worker options, inspection contracts, adapter handoff hooks, migrations,
+  public API review, and tests to implementation work items.
+
+2026-06-17 durable inbox implementation slice 1 applied:
+
+- Added provider-neutral durable inbox contracts and records in
+  `Bondstone.Persistence`: receive identity key, incoming ledger record,
+  status/state, ingestion result, retry/terminal failure decision, ingestion
+  store, claimer, lease renewer, outcome recorder, and read-only inspection
+  store.
+- Kept the slice below runtime behavior. No EF mapping, PostgreSQL SQL,
+  hosted worker, adapter handoff, direct receive behavior change, operation
+  failure inference, or cleanup/retention mutation API was added.
+- Kept broker delivery counts, dead-letter state, settlement state, and
+  topology out of the provider-neutral record and contracts.
+- Added focused unit coverage for durable inbox key, record, state,
+  ingestion result, and failure decision validation.
+
+2026-06-17 durable inbox EF Core mapping slice applied:
+
+- Added the provider-neutral EF Core durable inbox entity and configuration
+  with a separate `incoming_inbox_messages` table, composite receive identity
+  primary key, structural durable envelope columns, incoming inbox state columns, and
+  indexes for future due-record claiming and inspection.
+- Added the granular `ApplyBondstoneIncomingInbox(...)` mapping helper and
+  intentionally kept it out of `ApplyBondstonePersistence(...)` while receive
+  buffering remains optional and non-runtime.
+- Did not add EF stores, PostgreSQL SQL, hosted workers, adapter handoff,
+  direct receive behavior changes, operation failure inference, or cleanup
+  mutation APIs.
+- Added focused EF entity round-trip and model metadata tests.
+
+2026-06-17 durable inbox pivot applied:
+
+- Added ADR 0017 and superseded the separate receive-buffer direction from ADR 0012.
+- Accepted a single richer durable inbox incoming ledger as the target
+  buffered receive model: durable envelope, receive identity, claim/lease,
+  retry, terminal failure, and processed state in one incoming ledger.
+- Confirmed `DurableIncomingInbox*` and `IDurableIncomingInbox*` as the
+  accepted provider-neutral names for the single richer incoming ledger.
+- Kept direct receive as the current default/simple path until a later ADR
+  changes the default.
+
 ## Implementation Order
 
-Start with small visibility and ergonomics slices before large receive-buffer
+Start with small visibility and ergonomics slices before large durable inbox
 runtime work. This should make the first consumer project easier to support
-even if the durable receive buffer takes more than one implementation pass.
+even if the durable inbox takes more than one implementation pass.
 
 ### 0. Convert Plan To Work Items
 
@@ -295,7 +355,7 @@ Avoid broad exception-type churn unless an ADR approves it.
 
 ### 4. Worker Ergonomics Before New Workers
 
-Harden the current outbox worker before adding receive-buffer workers:
+Harden the current outbox worker before adding durable inbox workers:
 
 - document the current aggregate dispatch registration-order behavior;
 - review selected-module worker options;
@@ -306,32 +366,46 @@ Harden the current outbox worker before adding receive-buffer workers:
 This is also the right point to decide whether hosted operation expiration is
 still app-owned or deserves an opt-in worker.
 
-### 5. Durable Receive-Buffer ADR Design Slice
+### 5. Durable Inbox ADR Design Slice
 
-Before implementation, amend ADR 0012 or create a follow-up ADR that locks the
-receive-buffer shape:
+ADR 0017 replaces the separate receive-buffer shape with a single durable
+inbox incoming ledger. Before runtime implementation, complete the accepted
+`DurableIncomingInbox*` design surface around that decision:
 
-- receive-buffer record identity and persisted fields;
+- durable inbox incoming row identity and persisted fields;
 - ingestion boundary and idempotency behavior;
 - claim ownership, lease expiry, retry attempts, and terminal receive failure;
-- interaction with inbox rows, operation state, and outgoing outbox rows;
+- interaction with current direct inbox rows, operation state, and outgoing
+  outbox rows;
 - worker options, retention, and inspection surface;
 - adapter handoff rules for RabbitMQ, Service Bus, and app-owned native loops.
 
 Keep the direct receive path as the default unless a later ADR intentionally
 changes that rule.
 
-### 6. Durable Receive-Buffer Implementation Slice
+### 6. Durable Inbox Implementation Slice
 
-Implement the receive buffer in thin vertical cuts:
+Implement the durable inbox in thin vertical cuts:
 
-1. provider-neutral contracts and records;
-2. EF Core mapping and PostgreSQL behavior;
-3. ingestion service and inspection API;
-4. receive-buffer processing dispatcher/worker;
-5. adapter opt-in integration;
-6. integration tests for crash/retry/terminal failure behavior;
-7. operations and setup docs.
+1. finish EF ingestion and inspection store ergonomics for the accepted
+   incoming ledger;
+2. PostgreSQL-specific concurrency behavior;
+3. durable inbox processing dispatcher/worker;
+4. adapter opt-in integration;
+5. integration tests for crash/retry/terminal failure behavior;
+6. operations and setup docs.
+
+2026-06-17 durable inbox ingestion and inspection slice applied:
+
+- Added EF Core provider/runtime stores for durable incoming inbox ingestion
+  and read-only inspection over the `incoming_inbox_messages` ledger.
+- Kept ingestion idempotent at the provider-neutral EF boundary by returning
+  existing rows for the receive identity and staging only new pending rows.
+- Added broad status inspection plus stale processing-claim and terminal
+  receive-failure inspection filters for operations.
+- Deferred PostgreSQL-specific concurrency SQL, claiming, lease renewal,
+  outcome recording, hosted workers, transport adapter handoff, direct receive
+  behavior changes, operation failure inference, and cleanup mutation APIs.
 
 Do not add cleanup mutation as part of this slice. Retention should start as
 documentation, inspection, and app-owned cleanup.
@@ -367,17 +441,17 @@ Do not start these until consumer evidence or a new ADR justifies them:
 
 ## ADR Gates
 
-No new ADR was added by the 2026-06-17 review because ADRs 0012, 0013, 0016,
-and 0010 already cover receive buffering, worker ownership, operation wait
+ADR 0017 supersedes the separate receive-buffer direction from ADR 0012.
+ADRs 0013, 0016, and 0010 still cover worker ownership, operation wait
 ergonomics, and multi-transport routing direction.
 
 Create or amend ADRs before implementation if the work chooses any of these
 directions:
 
-- making durable receive buffer the default receive model instead of optional;
+- making durable inbox the default receive model instead of optional;
 - adding a default cleanup worker that mutates durable evidence;
 - inferring operation failure automatically from outbox, inbox, broker, or
-  receive-buffer state;
+  durable inbox state;
 - making Bondstone own broker retry, dead-letter, delivery-count, topology, or
   subscription policy;
 - adding a public application middleware/runtime pipeline beyond the current
@@ -385,7 +459,7 @@ directions:
 
 ## After First Consumer Hardening
 
-- Durable receive buffer design and implementation, including persistence
+- Durable inbox design and implementation, including persistence
   records, leases, retry attempts, terminal receive failure state, worker
   options, retention, and tests.
 - Stable misconfiguration error codes. Current exception messages remain
@@ -411,8 +485,9 @@ carries first-consumer hardening candidates plus longer-term handoff items.
 
 The 2026-06-17 update reviewed architecture, operations, observability,
 packaging, setup, public API, testing, ADR 0010, ADR 0012, ADR 0013, ADR 0016,
-and ADR 0004. No executable verification was run because this change updates a
-planning handoff only.
+and ADR 0004. Later on 2026-06-17, ADR 0017 superseded ADR 0012's separate
+durable incoming inbox direction. No executable verification was run for the planning
+handoff updates.
 
 Later on 2026-06-17, operation visibility quick wins were applied to
 operations guidance and XML documentation. Verification:

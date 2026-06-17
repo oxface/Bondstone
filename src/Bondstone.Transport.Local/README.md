@@ -22,7 +22,7 @@ and bridge through `IDurableEnvelopeDispatcher`,
 Install this package only when the host intentionally routes durable messages
 through local queues and Bondstone receive pipelines. It is not a production
 broker fallback and does not provide broker durability, topology management,
-retry, dead-letter handling, or receive-buffer behavior.
+retry, dead-letter handling, or durable incoming inbox behavior.
 
 See:
 

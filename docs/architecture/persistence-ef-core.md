@@ -33,6 +33,12 @@ messaging tables unless their configured module behavior uses those stores.
 Consumers own migrations. Bondstone does not ship migrations or
 provider-specific migration conventions in the generic EF Core package.
 
+`ApplyBondstoneIncomingInbox` maps the optional durable inbox incoming-ledger
+table accepted by ADR 0017. The mapping is intentionally granular and not
+included in `ApplyBondstonePersistence`. Mapping the table does not register
+durable inbox hosted workers, transport handoff, PostgreSQL claim SQL, or
+direct receive behavior.
+
 For modules that call `UseDurableMessaging()` with EF persistence, Bondstone
 validates the module DbContext model during module command and event
 subscriber execution. The model must include outbox and inbox mappings, either
@@ -51,6 +57,8 @@ provider-neutral EF Core implementations for:
 - `IDurableOutboxInspectionStore`;
 - `IDurableInboxStore`;
 - `IDurableInboxInspectionStore`;
+- `IDurableIncomingInboxIngestionStore`;
+- `IDurableIncomingInboxInspectionStore`;
 - `IDurableOperationStateStore`;
 - `IEntityFrameworkCorePersistenceScope`.
 
@@ -134,6 +142,35 @@ or before the caller's UTC cutoff, ordered by oldest update first and bounded
 by the requested maximum count. The query is for application-owned expiry
 jobs; the EF package does not schedule expiry or choose terminal status
 policy.
+
+The durable incoming inbox mapping uses `IncomingInboxMessageEntity`, mapped
+to `incoming_inbox_messages` by default. Its shape is the accepted durable
+inbox incoming ledger: durable receive identity, structural durable envelope
+fields, source transport diagnostic name, ingested timestamp, status, attempt
+count, retry and terminal outcome timestamps, failure reason, and claim
+owner/lease fields.
+
+`EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbContext>` stages a
+new pending `IncomingInboxMessageEntity` when no row exists for the durable
+receive identity, or returns the existing row as already ingested. It does not
+call `SaveChangesAsync`, execute handlers, settle broker messages, claim work,
+or infer operation state. Relational duplicate races remain provider-specific
+behavior until a PostgreSQL ingestion store is added. The store requires the
+incoming inbox entity mapping and fails with a clear
+`ApplyBondstoneIncomingInbox()` mapping error if it is used with a DbContext
+that does not map the incoming ledger.
+
+`EntityFrameworkCoreDurableIncomingInboxInspectionStore<TDbContext>` reads
+incoming inbox rows without tracking. It supports broad status inspection,
+stale processing claim inspection by claim-lease cutoff, and terminal
+receive-failure inspection by failed-at cutoff. The queries can filter by
+receiver module and source transport diagnostic name. They do not claim,
+renew, schedule retry, mark processed, reset, replay, purge, or archive rows.
+The store requires the incoming inbox entity mapping and fails with a clear
+`ApplyBondstoneIncomingInbox()` mapping error if it is used with a DbContext
+that does not map the incoming ledger. The EF package does not implement
+durable inbox claiming, lease renewal, outcome recording, hosted workers,
+transport handoff, or processing behavior in this slice.
 
 ### Operation-State Diagnostic Column Migration
 

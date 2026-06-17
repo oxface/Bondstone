@@ -3,21 +3,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Tests;
 
-internal sealed class EntityFrameworkCoreTestDbContext(DbContextOptions<EntityFrameworkCoreTestDbContext> options)
+internal sealed class MissingIncomingInboxMappingDbContext(DbContextOptions<MissingIncomingInboxMappingDbContext> options)
     : DbContext(options)
 {
-    public static EntityFrameworkCoreTestDbContext Create()
+    public static MissingIncomingInboxMappingDbContext Create()
     {
-        var options = new DbContextOptionsBuilder<EntityFrameworkCoreTestDbContext>()
+        var options = new DbContextOptionsBuilder<MissingIncomingInboxMappingDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
             .Options;
 
-        return new EntityFrameworkCoreTestDbContext(options);
+        return new MissingIncomingInboxMappingDbContext(options);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyBondstonePersistence();
-        modelBuilder.ApplyBondstoneIncomingInbox();
     }
 }

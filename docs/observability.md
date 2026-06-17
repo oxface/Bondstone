@@ -199,6 +199,15 @@ Bondstone does not publish stable misconfiguration error codes. Startup and
 runtime exception messages are intentionally clear, but they are not a
 machine-readable error-code vocabulary.
 
+Bondstone does not currently emit durable inbox worker activities or metrics
+because the durable inbox incoming ledger is not implemented. The accepted
+future vocabulary is limited to Bondstone-owned durable inbox transitions:
+ingestion accepted or duplicated, rows claimed, processed, retry scheduled,
+terminal receive failed, and stale claim or outcome updates. Those future
+metrics should use low-cardinality attributes such as module, message kind,
+source module, target module when present, status, and controlled transport
+diagnostic names.
+
 Bondstone does not provide provider-neutral topology diagnostics, broker retry
 diagnostics, dead-letter diagnostics, subscription storage diagnostics, or
 broker monitoring. Use native broker clients, broker management surfaces,

@@ -237,6 +237,59 @@ add a receive record, and mark it processed. Provider implementations own the
 unique constraint, transaction, savepoint, and concurrency behavior that make
 those operations reliable.
 
+## Future Optional Durable Inbox
+
+The optional durable inbox incoming ledger accepted by ADR
+[0017](../adr/0017-single-durable-inbox-incoming-ledger.md) is not current
+receive runtime behavior. ADR
+[0012](../adr/0012-direct-receive-inbox-and-durable-receive-buffer.md)
+preserves the superseded separate receive-buffer decision trail. The accepted
+provider-neutral names use `DurableIncomingInbox*` and
+`IDurableIncomingInbox*` to distinguish this richer incoming ledger from the
+tiny direct-receive inbox. Provider-neutral EF Core ingestion and read-only
+inspection stores exist. PostgreSQL-specific claim SQL, runtime processing,
+hosted workers, and transport adapter handoff are not implemented.
+
+The target durable inbox is modeled as a single persisted incoming delivery
+ledger. Its key is the durable receive binding:
+
+- commands: message id, target module, and stable handler identity;
+- events: message id, subscriber module, and stable subscriber identity.
+
+The durable inbox row should carry the `DurableMessageEnvelope`, receive
+identity, optional source transport diagnostic name, ingested timestamp, and
+receive processing state. Providers should map the envelope fields
+structurally so they can index and inspect message kind, message type name,
+source module, optional target module, durable operation id, trace context,
+causation id, partition key, payload, metadata, and envelope created-at
+timestamp without deserializing an opaque envelope blob. The provider-neutral
+record intentionally does not store broker settlement state, delivery counts,
+dead-letter state, or topology metadata.
+
+Provider-neutral durable inbox contracts should separate responsibilities in
+the same style as outbox dispatch:
+
+- ingestion idempotently inserts or returns a durable inbox row for a validated
+  envelope and receive binding, starting new rows in `Pending` state;
+- claiming marks due pending or expired-processing rows as processing, records
+  claim ownership and lease expiry, and increments attempt count;
+- lease renewal extends an active claim only for the owning claimant;
+- outcome recording marks processed, schedules retry, marks terminal receive
+  failure, or reports a stale claim when ownership or lease checks fail;
+- inspection reads pending, processing, retry, or terminal rows without
+  mutating them. Inspection includes broad status queries plus operational
+  stale-processing and terminal-failure queries with receiver-module and
+  source-transport filters.
+
+The existing module receive pipeline remains the owner of target module
+handler execution. Handler state, successful command operation completion,
+outgoing outbox rows, and durable inbox processed state should commit in the
+target module transaction where possible.
+
+Durable inbox terminal failure must not automatically write operation `Failed`.
+Operation state is still the caller-visible result model, and applications
+must explicitly finalize operations when their policy has enough evidence.
+
 ## Operation State
 
 `IDurableOperationStateStore` saves durable operation state by durable

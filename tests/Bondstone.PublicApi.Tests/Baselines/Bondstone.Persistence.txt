@@ -142,6 +142,76 @@ namespace Bondstone.Persistence
         AlreadyReceived = 2,
         AlreadyProcessed = 3,
     }
+    public sealed class DurableIncomingInboxFailureDecision : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxFailureDecision>
+    {
+        public System.DateTimeOffset FailedAtUtc { get; }
+        public string FailureReason { get; }
+        public Bondstone.Persistence.DurableIncomingInboxFailureDecisionKind Kind { get; }
+        public System.DateTimeOffset? NextAttemptAtUtc { get; }
+        public bool ShouldRetry { get; }
+        public bool ShouldTerminalFail { get; }
+        public static Bondstone.Persistence.DurableIncomingInboxFailureDecision Retry(string failureReason, System.DateTimeOffset failedAtUtc, System.DateTimeOffset nextAttemptAtUtc) { }
+        public static Bondstone.Persistence.DurableIncomingInboxFailureDecision TerminalFailure(string failureReason, System.DateTimeOffset failedAtUtc) { }
+    }
+    public enum DurableIncomingInboxFailureDecisionKind
+    {
+        Retry = 1,
+        TerminalFailure = 2,
+    }
+    public sealed class DurableIncomingInboxIngestionResult : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxIngestionResult>
+    {
+        public DurableIncomingInboxIngestionResult(Bondstone.Persistence.DurableIncomingInboxIngestionStatus status, Bondstone.Persistence.DurableIncomingInboxRecord record) { }
+        public Bondstone.Persistence.DurableIncomingInboxRecord Record { get; }
+        public Bondstone.Persistence.DurableIncomingInboxIngestionStatus Status { get; }
+        public bool WasAlreadyIngested { get; }
+        public bool WasIngested { get; }
+    }
+    public enum DurableIncomingInboxIngestionStatus
+    {
+        Ingested = 1,
+        AlreadyIngested = 2,
+    }
+    public sealed class DurableIncomingInboxKey : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxKey>
+    {
+        public DurableIncomingInboxKey(System.Guid messageId, string receiverModule, string handlerIdentity) { }
+        public string HandlerIdentity { get; }
+        public System.Guid MessageId { get; }
+        public string ReceiverModule { get; }
+        public static Bondstone.Persistence.DurableIncomingInboxKey ForCommandHandler(System.Guid messageId, string targetModule, string handlerIdentity) { }
+        public static Bondstone.Persistence.DurableIncomingInboxKey ForEventSubscriber(System.Guid messageId, string subscriberModule, string subscriberIdentity) { }
+    }
+    public sealed class DurableIncomingInboxRecord : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxRecord>
+    {
+        public DurableIncomingInboxRecord(Bondstone.Persistence.DurableIncomingInboxKey key, Bondstone.Messaging.DurableMessageEnvelope envelope, System.DateTimeOffset ingestedAtUtc, Bondstone.Persistence.DurableIncomingInboxState? state = null, string? sourceTransportName = null) { }
+        public Bondstone.Messaging.DurableMessageEnvelope Envelope { get; }
+        public string HandlerIdentity { get; }
+        public System.DateTimeOffset IngestedAtUtc { get; }
+        public Bondstone.Persistence.DurableIncomingInboxKey Key { get; }
+        public string ReceiverModule { get; }
+        public string? SourceTransportName { get; }
+        public Bondstone.Persistence.DurableIncomingInboxState State { get; }
+    }
+    public sealed class DurableIncomingInboxState : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxState>
+    {
+        public DurableIncomingInboxState(Bondstone.Persistence.DurableIncomingInboxStatus status, int attemptCount, System.DateTimeOffset? nextAttemptAtUtc = default, System.DateTimeOffset? processedAtUtc = default, System.DateTimeOffset? failedAtUtc = default, string? failureReason = null, string? claimedBy = null, System.DateTimeOffset? claimedUntilUtc = default) { }
+        public int AttemptCount { get; }
+        public string? ClaimedBy { get; }
+        public System.DateTimeOffset? ClaimedUntilUtc { get; }
+        public System.DateTimeOffset? FailedAtUtc { get; }
+        public string? FailureReason { get; }
+        public System.DateTimeOffset? NextAttemptAtUtc { get; }
+        public System.DateTimeOffset? ProcessedAtUtc { get; }
+        public Bondstone.Persistence.DurableIncomingInboxStatus Status { get; }
+        public static Bondstone.Persistence.DurableIncomingInboxState Pending { get; }
+    }
+    public enum DurableIncomingInboxStatus
+    {
+        Pending = 1,
+        Processing = 2,
+        Processed = 3,
+        RetryScheduled = 4,
+        TerminalFailed = 5,
+    }
     public sealed class DurableModuleInboxHandlerExecutorRegistration
     {
         public DurableModuleInboxHandlerExecutorRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableInboxHandlerExecutor> createExecutor) { }
@@ -296,6 +366,30 @@ namespace Bondstone.Persistence
         System.Threading.Tasks.ValueTask AddAsync(Bondstone.Persistence.DurableInboxRecord record, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxRecord?> GetAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask MarkProcessedAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.DateTimeOffset processedAtUtc, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxClaimer
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> ClaimAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxIngestionStore
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxIngestionResult> IngestAsync(Bondstone.Persistence.DurableIncomingInboxRecord record, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxInspectionStore
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindAsync(Bondstone.Persistence.DurableIncomingInboxStatus? status = default, int maxCount = 100, System.DateTimeOffset? ingestedAtOrBeforeUtc = default, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindStaleProcessingAsync(System.DateTimeOffset claimedUntilAtOrBeforeUtc, int maxCount = 100, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindTerminalFailedAsync(int maxCount = 100, System.DateTimeOffset? failedAtOrBeforeUtc = default, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxLeaseRenewer
+    {
+        System.Threading.Tasks.ValueTask<bool> RenewAsync(Bondstone.Persistence.DurableIncomingInboxKey key, string claimedBy, System.TimeSpan leaseDuration, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxOutcomeRecorder
+    {
+        System.Threading.Tasks.ValueTask<bool> MarkProcessedAsync(Bondstone.Persistence.DurableIncomingInboxKey key, string claimedBy, System.DateTimeOffset processedAtUtc, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<bool> MarkTerminalFailedAsync(Bondstone.Persistence.DurableIncomingInboxKey key, string claimedBy, string failureReason, System.DateTimeOffset failedAtUtc, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<bool> ScheduleRetryAsync(Bondstone.Persistence.DurableIncomingInboxKey key, string claimedBy, string failureReason, System.DateTimeOffset failedAtUtc, System.DateTimeOffset nextAttemptAtUtc, System.Threading.CancellationToken ct = default);
     }
     public interface IDurableOperationExpirationStore
     {

@@ -84,7 +84,7 @@ non-current v1 surfaces include:
   Rebus-specific package ownership;
 - non-EF persistence providers until a real consumer need and ADR bring one
   back;
-- durable receive buffer, finalized metric instruments, and stable
+- durable inbox worker/runtime, finalized metric instruments, and stable
   misconfiguration error codes, which are not current package behavior.
 
 Consumers migrating from v1 should:
@@ -206,7 +206,7 @@ Migration and operations notes:
 - Local transport is an explicit local queue adapter for samples, tests, and
   local development. It exercises Bondstone outbox/inbox receive semantics,
   but it is not production broker durability, topology management, retry,
-  dead-letter handling, or durable receive-buffer behavior.
+  dead-letter handling, or durable inbox worker behavior.
 - Broker receive adapters and app-owned native receive loops should settle
   native deliveries only after Bondstone receive succeeds. If Bondstone
   receive fails, use the provider-native failure path rather than
@@ -216,7 +216,7 @@ Migration and operations notes:
   [observability.md](observability.md). Finalized metrics, a stable metric
   instrument vocabulary, and stable misconfiguration error codes are not v2
   behavior.
-- The durable receive buffer is not current behavior. Current receive behavior
+- The durable inbox worker is not current behavior. Current receive behavior
   is the direct receive inbox idempotency boundary documented in
   [operations.md](operations.md).
 

@@ -245,7 +245,7 @@ Local transport is explicit routing for samples, tests, and local development.
 It exercises the durable outbox and receive inbox semantics through
 Bondstone's neutral receive pipelines, but it is not broker durability, a
 production fallback, topology management, retry, dead-letter handling, or
-receive-buffer behavior.
+durable inbox worker behavior.
 See [architecture/transport-local.md](architecture/transport-local.md).
 
 ## Domain Events

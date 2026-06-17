@@ -68,30 +68,56 @@ Bondstone emits a direct receive already-received metric for this ambiguous
 outcome.
 
 Bondstone does not currently provide inbox leases, a stale-row sweeper, a
-failed receive state, provider-neutral receive retry, or a durable receive
-buffer. ADR
-[0012](adr/0012-direct-receive-inbox-and-durable-receive-buffer.md) records
-the durable receive-buffer decision trail, but a receive buffer is not current
-behavior.
+failed receive state, provider-neutral receive retry, or a durable inbox
+worker. ADR
+[0017](adr/0017-single-durable-inbox-incoming-ledger.md) records the current
+durable inbox incoming-ledger direction. ADR
+[0012](adr/0012-direct-receive-inbox-and-durable-receive-buffer.md) preserves
+the superseded receive-buffer decision trail.
 
-Current direct receive has two durable stages:
+Current direct receive has two runtime stages:
 
 1. native transport delivery to Bondstone module receive;
 2. handler state, inbox marker, operation state, and outgoing outbox commit in
    the target module persistence boundary.
 
-The future optional receive-buffer model would split this into three durable
-stages:
+The future optional durable inbox model would split this into three
+durable-processing stages:
 
-1. native transport delivery to a Bondstone receive-buffer record;
-2. receive-buffer worker claim and handoff to module receive;
-3. handler state, inbox marker, operation state, and outgoing outbox commit in
-   the target module persistence boundary.
+1. native transport delivery to a Bondstone durable inbox incoming row;
+2. durable inbox worker claim and handoff to module receive;
+3. handler state, operation state, outgoing outbox rows, and durable inbox
+   processed state commit in the target module persistence boundary where
+   possible.
 
-That future model would let Bondstone own receive retry state and terminal
-receive failure over Bondstone-owned durable records. It is not current
-behavior, so current operators should treat unprocessed direct inbox rows as
-ambiguous receive attempts that need application-owned investigation.
+That future model uses one richer incoming durable inbox ledger rather than a
+receive-buffer row plus a separate inbox idempotency row for the same buffered
+message. Durable inbox identity is message id plus the resolved receive
+binding: target module and stable handler identity for a command, or
+subscriber module and stable subscriber identity for an event. The durable
+inbox row stores structured durable envelope fields plus status, attempt
+count, claim owner, claim lease, retry schedule, processed timestamp,
+terminal failure timestamp, and failure reason.
+
+In that optional model, native broker settlement would happen after durable
+ingestion succeeds, before handler processing. The later Bondstone processing
+worker would claim due durable inbox rows and call the existing module receive
+pipeline. Handler state, successful command operation completion, outgoing
+outbox rows, and durable inbox processed state should commit in the target
+module transaction where possible. Durable inbox retry and terminal receive
+failure state is recorded with claim-owner and lease-aware updates. Broker
+retry, dead-letter policy, delivery counts, topology, and cleanup or retention
+would remain outside Bondstone's default ownership.
+
+Terminal durable inbox receive failure would be durable operational evidence,
+not automatic operation failure. Applications that want a user-visible terminal
+operation outcome would inspect the terminal durable inbox row and explicitly
+finalize the operation through application policy.
+
+The future durable inbox worker is opt-in. Direct receive remains the default
+unless a later ADR changes it, so current operators should treat unprocessed
+direct inbox rows as ambiguous receive attempts that need application-owned
+investigation.
 
 ## Broker Settlement
 

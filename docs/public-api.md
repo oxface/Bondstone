@@ -205,6 +205,45 @@ Non-throwing operation wait, 2026-06-17:
   caller patience and does not write `Failed`, `Cancelled`, or any other
   operation state.
 
+Durable incoming inbox provider-neutral contracts, 2026-06-17:
+
+- `DurableIncomingInboxKey`, `DurableIncomingInboxRecord`,
+  `DurableIncomingInboxState`, `DurableIncomingInboxStatus`,
+  `DurableIncomingInboxIngestionResult`,
+  `DurableIncomingInboxIngestionStatus`,
+  `DurableIncomingInboxFailureDecision`, and
+  `DurableIncomingInboxFailureDecisionKind` are provider-neutral records and
+  values for the optional durable inbox incoming ledger accepted by ADR 0017.
+  The names deliberately avoid colliding with the tiny direct-receive
+  `DurableInboxRecord`.
+- `IDurableIncomingInboxIngestionStore`, `IDurableIncomingInboxClaimer`,
+  `IDurableIncomingInboxLeaseRenewer`,
+  `IDurableIncomingInboxOutcomeRecorder`, and
+  `IDurableIncomingInboxInspectionStore` are provider/runtime contracts for
+  ingestion, claim, lease renewal, outcome recording, and inspection of the
+  incoming ledger. Inspection supports broad status reads plus stale
+  processing claim and terminal receive-failure queries for operations.
+- This slice does not add app-facing durable inbox setup, PostgreSQL SQL,
+  hosted workers, transport adapter handoff, direct receive behavior changes,
+  operation failure inference, or cleanup mutation APIs.
+
+Durable incoming inbox EF Core mapping, 2026-06-17:
+
+- `ApplyBondstoneIncomingInbox(...)` is an additive granular EF Core setup API
+  for mapping the optional durable incoming inbox table. It is intentionally
+  not part of `ApplyBondstonePersistence(...)`.
+- `IncomingInboxMessageEntity` and
+  `IncomingInboxMessageEntityConfiguration` expose the accepted durable inbox
+  incoming ledger table shape and map `incoming_inbox_messages` by default.
+- `EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbContext>` and
+  `EntityFrameworkCoreDurableIncomingInboxInspectionStore<TDbContext>` are
+  additive provider/runtime implementations for idempotent EF ingestion and
+  read-only EF inspection. They are registered by
+  `AddBondstoneEntityFrameworkCorePersistence<TDbContext>`.
+- This slice does not add PostgreSQL claim SQL, hosted workers, adapter
+  handoff, direct receive behavior changes, operation failure inference, or
+  cleanup mutation APIs.
+
 Public API curation, 2026-06-16:
 
 - The current persistence inspection contracts are intentionally split between

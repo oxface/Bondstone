@@ -1,4 +1,5 @@
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
+using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Persistence;
@@ -35,6 +36,12 @@ public static class BondstoneEntityFrameworkCoreServiceCollectionExtensions
         services.TryAddScoped<IDurableInboxStore, EntityFrameworkCoreDurableInboxStore<TDbContext>>();
         services.TryAddScoped<IDurableInboxInspectionStore>(serviceProvider =>
             new EntityFrameworkCoreDurableInboxInspectionStore<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>()));
+        services.TryAddScoped<
+            IDurableIncomingInboxIngestionStore,
+            EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbContext>>();
+        services.TryAddScoped<IDurableIncomingInboxInspectionStore>(serviceProvider =>
+            new EntityFrameworkCoreDurableIncomingInboxInspectionStore<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>()));
         services.TryAddScoped<IDurableOperationStateStore, EntityFrameworkCoreDurableOperationStateStore<TDbContext>>();
         services.TryAddScoped<

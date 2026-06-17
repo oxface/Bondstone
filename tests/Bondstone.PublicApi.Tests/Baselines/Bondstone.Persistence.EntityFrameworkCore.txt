@@ -88,6 +88,101 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Inbox
         }
     }
 }
+namespace Bondstone.Persistence.EntityFrameworkCore.IncomingInbox
+{
+    public sealed class EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbContext> : Bondstone.Persistence.IDurableIncomingInboxIngestionStore
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreDurableIncomingInboxIngestionStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxIngestionResult> IngestAsync(Bondstone.Persistence.DurableIncomingInboxRecord record, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class EntityFrameworkCoreDurableIncomingInboxInspectionStore<TDbContext> : Bondstone.Persistence.IDurableIncomingInboxInspectionStore
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreDurableIncomingInboxInspectionStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindAsync(Bondstone.Persistence.DurableIncomingInboxStatus? status = default, int maxCount = 100, System.DateTimeOffset? ingestedAtOrBeforeUtc = default, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindStaleProcessingAsync(System.DateTimeOffset claimedUntilAtOrBeforeUtc, int maxCount = 100, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindTerminalFailedAsync(int maxCount = 100, System.DateTimeOffset? failedAtOrBeforeUtc = default, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class IncomingInboxMessageEntity
+    {
+        public int AttemptCount { get; }
+        public System.Guid? CausationId { get; }
+        public string? ClaimedBy { get; }
+        public System.DateTimeOffset? ClaimedUntilUtc { get; }
+        public System.DateTimeOffset CreatedAtUtc { get; }
+        public System.Guid? DurableOperationId { get; }
+        public System.DateTimeOffset? FailedAtUtc { get; }
+        public string? FailureReason { get; }
+        public string HandlerIdentity { get; }
+        public System.DateTimeOffset IngestedAtUtc { get; }
+        public System.Guid MessageId { get; }
+        public Bondstone.Messaging.MessageKind MessageKind { get; }
+        public string MessageTypeName { get; }
+        public string? Metadata { get; }
+        public System.DateTimeOffset? NextAttemptAtUtc { get; }
+        public string? PartitionKey { get; }
+        public string Payload { get; }
+        public System.DateTimeOffset? ProcessedAtUtc { get; }
+        public string ReceiverModule { get; }
+        public string SourceModule { get; }
+        public string? SourceTransportName { get; }
+        public Bondstone.Persistence.DurableIncomingInboxStatus Status { get; }
+        public string? TargetModule { get; }
+        public string? TraceBaggage { get; }
+        public string? TraceParent { get; }
+        public string? TraceState { get; }
+        public Bondstone.Persistence.DurableIncomingInboxRecord ToRecord() { }
+        public static Bondstone.Persistence.EntityFrameworkCore.IncomingInbox.IncomingInboxMessageEntity FromRecord(Bondstone.Persistence.DurableIncomingInboxRecord record) { }
+    }
+    public sealed class IncomingInboxMessageEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Persistence.EntityFrameworkCore.IncomingInbox.IncomingInboxMessageEntity>
+    {
+        public const int ClaimedByMaxLength = 256;
+        public const int FailureReasonMaxLength = 2048;
+        public const int HandlerIdentityMaxLength = 512;
+        public const int MessageKindMaxLength = 32;
+        public const int MessageTypeNameMaxLength = 256;
+        public const int ModuleNameMaxLength = 128;
+        public const int PartitionKeyMaxLength = 512;
+        public const string PrimaryKeyName = "PK_incoming_inbox_messages";
+        public const int SourceTransportNameMaxLength = 256;
+        public const int StatusMaxLength = 32;
+        public const string TableName = "incoming_inbox_messages";
+        public const int TraceParentMaxLength = 128;
+        public const int TraceStateMaxLength = 512;
+        public IncomingInboxMessageEntityConfiguration(string? schema = null) { }
+        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Persistence.EntityFrameworkCore.IncomingInbox.IncomingInboxMessageEntity> builder) { }
+        public static class Columns
+        {
+            public const string AttemptCount = "AttemptCount";
+            public const string CausationId = "CausationId";
+            public const string ClaimedBy = "ClaimedBy";
+            public const string ClaimedUntilUtc = "ClaimedUntilUtc";
+            public const string CreatedAtUtc = "CreatedAtUtc";
+            public const string DurableOperationId = "DurableOperationId";
+            public const string FailedAtUtc = "FailedAtUtc";
+            public const string FailureReason = "FailureReason";
+            public const string HandlerIdentity = "HandlerIdentity";
+            public const string IngestedAtUtc = "IngestedAtUtc";
+            public const string MessageId = "MessageId";
+            public const string MessageKind = "MessageKind";
+            public const string MessageTypeName = "MessageTypeName";
+            public const string Metadata = "Metadata";
+            public const string NextAttemptAtUtc = "NextAttemptAtUtc";
+            public const string PartitionKey = "PartitionKey";
+            public const string Payload = "Payload";
+            public const string ProcessedAtUtc = "ProcessedAtUtc";
+            public const string ReceiverModule = "ReceiverModule";
+            public const string SourceModule = "SourceModule";
+            public const string SourceTransportName = "SourceTransportName";
+            public const string Status = "Status";
+            public const string TargetModule = "TargetModule";
+            public const string TraceBaggage = "TraceBaggage";
+            public const string TraceParent = "TraceParent";
+            public const string TraceState = "TraceState";
+        }
+    }
+}
 namespace Bondstone.Persistence.EntityFrameworkCore.Operations
 {
     public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationExpirationStore, Bondstone.Persistence.IDurableOperationStateStore
@@ -247,6 +342,7 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Persistence
     public static class BondstoneModelBuilderExtensions
     {
         public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneInbox(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
+        public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneIncomingInbox(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
         public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneOperationState(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
         public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneOutbox(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
         public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstonePersistence(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }

@@ -1,4 +1,5 @@
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
+using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
@@ -33,6 +34,10 @@ public sealed class BondstoneEntityFrameworkCoreServiceCollectionExtensionsTests
         AssertContainsScopedFactory<IDurableOutboxWriter>(services);
         AssertContainsScoped<IDurableInboxStore, EntityFrameworkCoreDurableInboxStore<EntityFrameworkCoreTestDbContext>>(
             services);
+        AssertContainsScoped<
+            IDurableIncomingInboxIngestionStore,
+            EntityFrameworkCoreDurableIncomingInboxIngestionStore<EntityFrameworkCoreTestDbContext>>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxInspectionStore>(services);
         AssertContainsScoped<
             IDurableOperationStateStore,
             EntityFrameworkCoreDurableOperationStateStore<EntityFrameworkCoreTestDbContext>>(services);

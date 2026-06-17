@@ -58,6 +58,9 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         AssertContainsScopedFactory<IDurableOutboxClaimer>(services);
         AssertContainsScopedFactory<IDurableOutboxLeaseRenewer>(services);
         AssertContainsScopedFactory<IDurableOutboxDispatchRecorder>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxClaimer>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxLeaseRenewer>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxOutcomeRecorder>(services);
         AssertContainsScoped<IDurableInboxStore>(services);
         AssertContainsScoped<IDurableOperationStateStore>(services);
     }
@@ -81,6 +84,9 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         AssertContainsScopedFactory<IDurableOutboxClaimer>(services);
         AssertContainsScopedFactory<IDurableOutboxLeaseRenewer>(services);
         AssertContainsScopedFactory<IDurableOutboxDispatchRecorder>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxClaimer>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxLeaseRenewer>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxOutcomeRecorder>(services);
     }
 
     [Fact]

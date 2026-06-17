@@ -200,8 +200,8 @@ runtime exception messages are intentionally clear, but they are not a
 machine-readable error-code vocabulary.
 
 Bondstone does not currently emit durable inbox worker activities or metrics
-because the durable inbox incoming ledger is not implemented. The accepted
-future vocabulary is limited to Bondstone-owned durable inbox transitions:
+because durable inbox workers are not implemented. The accepted future
+vocabulary is limited to Bondstone-owned durable inbox transitions:
 ingestion accepted or duplicated, rows claimed, processed, retry scheduled,
 terminal receive failed, and stale claim or outcome updates. Those future
 metrics should use low-cardinality attributes such as module, message kind,

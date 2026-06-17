@@ -14,6 +14,11 @@ The PostgreSQL package owns:
 - PostgreSQL outbox lease renewal using claim-owner and lease-aware `UPDATE`
   statements;
 - PostgreSQL outbox dispatch outcome recording using claim-owner and
+  lease-aware `UPDATE` statements;
+- PostgreSQL incoming inbox claiming using `FOR UPDATE SKIP LOCKED`;
+- PostgreSQL incoming inbox lease renewal using claim-owner and lease-aware
+  `UPDATE` statements;
+- PostgreSQL incoming inbox outcome recording using claim-owner and
   lease-aware `UPDATE` statements.
 
 Provider-owned SQL uses table, column, and constraint names from the
@@ -32,6 +37,18 @@ and terminal-failure outcomes only when the row is still processing, still
 owned by the supplied claimant, and still inside the active claim lease. The
 provider follows the core outbox terminal status contract in
 [persistence-core.md](persistence-core.md).
+
+The PostgreSQL incoming inbox claimer claims due `Pending` rows, due
+`RetryScheduled` rows, and stale `Processing` rows whose claim lease has
+expired, using PostgreSQL row locking with `FOR UPDATE SKIP LOCKED`. Claiming
+sets `Processing`, writes claim ownership and lease expiry, clears retry or
+failure outcome fields, and increments attempt count. Incoming inbox lease
+renewal and outcome recording only update rows that are still `Processing`,
+still owned by the supplied claimant, and still inside the active claim lease.
+Normal stale ownership or race cases return false or an empty claim result.
+The provider does not add hosted incoming inbox workers, transport adapter
+handoff, direct receive behavior changes, operation failure inference, or
+cleanup mutation APIs.
 
 The PostgreSQL inbox registrar returns explicit registered, already-received,
 or already-processed results without using duplicate exceptions as the public
@@ -99,6 +116,10 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
   non-processing rows;
 - outbox dispatch success, retry, terminal failure, stale claimant, and
   expired lease outcomes;
+- incoming inbox claiming for pending rows, due retry rows, retry rows not
+  yet due, expired lease reclaim, and active lease exclusion;
+- incoming inbox lease renewal and processed, retry, and terminal-failure
+  outcome recording for active claims and stale claimant rejection;
 - read-only terminal outbox inspection through the EF-backed inspection store;
 - outbox dispatcher composition using real PostgreSQL claim, lease renewal,
   and dispatch outcome recording with fake transport success and failure;

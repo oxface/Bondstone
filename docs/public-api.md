@@ -223,9 +223,11 @@ Durable incoming inbox provider-neutral contracts, 2026-06-17:
   ingestion, claim, lease renewal, outcome recording, and inspection of the
   incoming ledger. Inspection supports broad status reads plus stale
   processing claim and terminal receive-failure queries for operations.
-- This slice does not add app-facing durable inbox setup, PostgreSQL SQL,
-  hosted workers, transport adapter handoff, direct receive behavior changes,
-  operation failure inference, or cleanup mutation APIs.
+- The PostgreSQL provider supplies internal runtime stores for incoming inbox
+  claim, lease renewal, and outcome recording. This slice does not add
+  app-facing durable inbox setup, hosted workers, transport adapter handoff,
+  direct receive behavior changes, operation failure inference, or cleanup
+  mutation APIs.
 
 Durable incoming inbox EF Core mapping, 2026-06-17:
 
@@ -240,9 +242,10 @@ Durable incoming inbox EF Core mapping, 2026-06-17:
   additive provider/runtime implementations for idempotent EF ingestion and
   read-only EF inspection. They are registered by
   `AddBondstoneEntityFrameworkCorePersistence<TDbContext>`.
-- This slice does not add PostgreSQL claim SQL, hosted workers, adapter
-  handoff, direct receive behavior changes, operation failure inference, or
-  cleanup mutation APIs.
+- PostgreSQL-specific incoming inbox mutation stores live in
+  `Bondstone.Persistence.EntityFrameworkCore.Postgres`. This slice does not
+  add hosted workers, adapter handoff, direct receive behavior changes,
+  operation failure inference, or cleanup mutation APIs.
 
 Public API curation, 2026-06-16:
 

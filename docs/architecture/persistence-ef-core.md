@@ -36,8 +36,8 @@ provider-specific migration conventions in the generic EF Core package.
 `ApplyBondstoneIncomingInbox` maps the optional durable inbox incoming-ledger
 table accepted by ADR 0017. The mapping is intentionally granular and not
 included in `ApplyBondstonePersistence`. Mapping the table does not register
-durable inbox hosted workers, transport handoff, PostgreSQL claim SQL, or
-direct receive behavior.
+durable inbox hosted workers, transport handoff, provider-specific mutation
+stores, or direct receive behavior.
 
 For modules that call `UseDurableMessaging()` with EF persistence, Bondstone
 validates the module DbContext model during module command and event
@@ -155,7 +155,7 @@ new pending `IncomingInboxMessageEntity` when no row exists for the durable
 receive identity, or returns the existing row as already ingested. It does not
 call `SaveChangesAsync`, execute handlers, settle broker messages, claim work,
 or infer operation state. Relational duplicate races remain provider-specific
-behavior until a PostgreSQL ingestion store is added. The store requires the
+behavior until a provider-specific ingestion store is added. The store requires the
 incoming inbox entity mapping and fails with a clear
 `ApplyBondstoneIncomingInbox()` mapping error if it is used with a DbContext
 that does not map the incoming ledger.
@@ -170,7 +170,8 @@ The store requires the incoming inbox entity mapping and fails with a clear
 `ApplyBondstoneIncomingInbox()` mapping error if it is used with a DbContext
 that does not map the incoming ledger. The EF package does not implement
 durable inbox claiming, lease renewal, outcome recording, hosted workers,
-transport handoff, or processing behavior in this slice.
+transport handoff, or processing behavior. PostgreSQL-specific incoming inbox
+mutation stores live in the PostgreSQL provider package.
 
 ### Operation-State Diagnostic Column Migration
 

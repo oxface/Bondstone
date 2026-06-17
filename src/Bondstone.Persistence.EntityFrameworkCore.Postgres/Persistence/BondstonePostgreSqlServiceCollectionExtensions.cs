@@ -1,5 +1,6 @@
 using Bondstone.Configuration;
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
+using Bondstone.Persistence.EntityFrameworkCore.Postgres.IncomingInbox;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox;
@@ -62,6 +63,20 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
                 schema));
         services.TryAddScoped<IDurableOutboxDispatchRecorder>(serviceProvider =>
             new PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>(),
+                schema));
+        services.TryAddScoped<IDurableIncomingInboxClaimer>(serviceProvider =>
+            new PostgreSqlDurableIncomingInboxClaimer<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>(),
+                serviceProvider.GetService<TimeProvider>(),
+                schema));
+        services.TryAddScoped<IDurableIncomingInboxLeaseRenewer>(serviceProvider =>
+            new PostgreSqlDurableIncomingInboxLeaseRenewer<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>(),
+                serviceProvider.GetService<TimeProvider>(),
+                schema));
+        services.TryAddScoped<IDurableIncomingInboxOutcomeRecorder>(serviceProvider =>
+            new PostgreSqlDurableIncomingInboxOutcomeRecorder<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>(),
                 schema));
 

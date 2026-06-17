@@ -247,8 +247,9 @@ preserves the superseded separate receive-buffer decision trail. The accepted
 provider-neutral names use `DurableIncomingInbox*` and
 `IDurableIncomingInbox*` to distinguish this richer incoming ledger from the
 tiny direct-receive inbox. Provider-neutral EF Core ingestion and read-only
-inspection stores exist. PostgreSQL-specific claim SQL, runtime processing,
-hosted workers, and transport adapter handoff are not implemented.
+inspection stores exist. PostgreSQL-specific claim, lease-renewal, and
+outcome-recording stores exist for the incoming ledger. Hosted workers,
+transport adapter handoff, and runtime processing are not implemented.
 
 The target durable inbox is modeled as a single persisted incoming delivery
 ledger. Its key is the durable receive binding:

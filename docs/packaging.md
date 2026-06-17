@@ -66,8 +66,12 @@ examples.
 The exact package version comes from source-controlled release metadata. At
 the time of this document, `Directory.Build.props` records
 `VersionPrefix` as `1.1.0`, and Release Please owns future changes to that
-value. Do not invent a v2 NuGet version or release date in docs, READMEs, or
-release notes before the source metadata changes.
+value. For a v2 readiness PR or checkpoint, leave `VersionPrefix` unchanged
+unless the repository is intentionally creating the Release Please release PR.
+The Release Please release PR should update `Directory.Build.props`,
+`.github/.release-please-manifest.json`, `CHANGELOG.md`, the GitHub release,
+and the version tag together. Do not invent a v2 NuGet version or release date
+in docs, READMEs, or release notes before the source metadata changes.
 
 The active v2 package IDs are the package set listed above. Removed or
 deferred v1 surfaces include:
@@ -110,6 +114,124 @@ Consumers migrating from v1 should:
 Release notes for replacement releases must call out removed package IDs,
 removed or renamed public APIs, durable table-shape changes, and any migration
 steps consumers must perform in their own applications.
+
+## V2 Release Checklist
+
+Use this checklist before creating or merging the v2 release PR. These steps
+prepare and verify source only; they do not publish packages, deprecate
+packages, or delist packages remotely.
+
+Release metadata:
+
+- Let Release Please own the v2 release PR when using the normal path. Verify
+  that the release PR updates `Directory.Build.props` `VersionPrefix` to the
+  intended v2 version, updates `.github/.release-please-manifest.json` to the
+  same version, updates `CHANGELOG.md`, and creates the matching version tag
+  and GitHub release when merged.
+- If a manual recovery release is used instead of Release Please, select a ref
+  whose source-controlled `VersionPrefix` already records the intended package
+  version. The manual publish workflow publishes the version in source
+  metadata at that ref.
+- Do not run the NuGet publish workflow, publish a GitHub release, deprecate
+  packages, or delist packages until the release is explicitly approved.
+
+Active package IDs:
+
+- `Bondstone`
+- `Bondstone.Hosting`
+- `Bondstone.Persistence`
+- `Bondstone.Persistence.EntityFrameworkCore`
+- `Bondstone.Persistence.EntityFrameworkCore.Postgres`
+- `Bondstone.Transport.Local`
+- `Bondstone.Transport.RabbitMq`
+- `Bondstone.Transport.ServiceBus`
+
+Removed package IDs and package surfaces:
+
+- `Bondstone.Persistence.Postgres`
+- `Bondstone.Transport`
+- `Bondstone.Capabilities.DomainEvents`
+- `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`
+- provider-neutral broker runtime ownership, Rebus-specific package
+  ownership, topology provisioning, retry/dead-letter orchestration,
+  subscription storage, and provider-neutral transport diagnostics.
+
+Major breaking-change notes:
+
+- The package set changed to the active package IDs above. Consumers must
+  replace removed package references and remove old broad transport or
+  capability package usage.
+- The non-EF PostgreSQL persistence package is removed. PostgreSQL-backed
+  modules use EF Core mappings from
+  `Bondstone.Persistence.EntityFrameworkCore` plus
+  `Bondstone.Persistence.EntityFrameworkCore.Postgres`.
+- Module-local domain event contracts live in `Bondstone` under
+  `Bondstone.DomainEvents`; EF-backed domain event collection and record
+  mapping live in `Bondstone.Persistence.EntityFrameworkCore`.
+- The old outbox transport naming was replaced by envelope dispatcher naming:
+  use `IDurableEnvelopeDispatcher`,
+  `IDurableEnvelopeDispatchRoute`, and
+  `RoutedDurableEnvelopeDispatcher` for app-owned or adapter-owned dispatch.
+- Thin RabbitMQ and Azure Service Bus adapters are native-driver envelope
+  adapters only. They do not own topology, provisioning, retries,
+  dead-lettering, prefetch/concurrency policy, credentials, monitoring, or
+  Rebus integration.
+- RabbitMQ receive no longer exposes `AutoAck`; the worker uses manual
+  acknowledgement and acknowledges only after Bondstone receive succeeds.
+  Azure Service Bus receive rejects `AutoCompleteMessages = true` and
+  completes messages only after Bondstone receive succeeds.
+
+Public API cleanup highlights:
+
+- Removed package-local implementation details from the public surface where
+  they had no approved v2 role, including
+  `Bondstone.Utility.StringExtensions`,
+  `BondstoneLocalServiceCollectionExtensions`,
+  `ModuleRuntimeFeatureCollection`, `IModuleTransactionFeature`,
+  `DurableOutboxWorker`, `DurableOutboxWorkerOptionsValidator`, and
+  PostgreSQL concrete SQL implementation components.
+- Kept remaining public concrete helpers only where they are deliberate
+  normal defaults, advanced composition APIs, or provider/runtime concrete
+  APIs, as classified in [public-api.md](public-api.md).
+- Treat any further broad public type removal, visibility reduction, rename,
+  or parameter-name churn as compatibility-sensitive and outside the v2
+  release-prep path unless a new ADR approves it.
+
+Migration and operations notes:
+
+- Applications own EF migrations and schema rollout. Every app that maps
+  Bondstone EF tables must generate and review its own migrations after
+  upgrading packages, including per-module schemas. Release notes must call
+  out durable table-shape changes so apps can schedule migrations before
+  deployment.
+- Local transport is an explicit local queue adapter for samples, tests, and
+  local development. It exercises Bondstone outbox/inbox receive semantics,
+  but it is not production broker durability, topology management, retry,
+  dead-letter handling, or durable receive-buffer behavior.
+- Broker receive adapters and app-owned native receive loops should settle
+  native deliveries only after Bondstone receive succeeds. If Bondstone
+  receive fails, use the provider-native failure path rather than
+  acknowledging the message as handled.
+- Current observability includes the activity sources, activities, tags, log
+  event ids, result diagnostics, and inspection contracts documented in
+  [observability.md](observability.md). Finalized metrics, a stable metric
+  instrument vocabulary, and stable misconfiguration error codes remain
+  deferred; do not promise them as v2 behavior.
+- The durable receive buffer remains future design work. Current receive
+  behavior is the direct receive inbox idempotency boundary documented in
+  [operations.md](operations.md).
+
+NuGet registry follow-up after v2 publication:
+
+- Verify all active v2 packages are visible on nuget.org with package README,
+  XML documentation, symbols, dependency metadata, and the intended version.
+- Deprecate v1 package versions that v2 replaces and point consumers to the
+  matching active package ID or current package version where nuget.org
+  deprecation metadata supports it.
+- Delist v1 package versions or removed v1 package IDs only after v2 packages
+  are verified and the maintainers intentionally choose that registry action.
+  Preserve traceability for already-published packages and avoid implying
+  removed package IDs still have a v2 replacement package with the same ID.
 
 ## Package Dependencies
 

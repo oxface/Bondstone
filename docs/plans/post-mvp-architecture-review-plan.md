@@ -20,105 +20,74 @@ implementation tasks into GitHub Issues or GitHub Projects.
 - [0015 Service Extraction Proof Before Broad Bus Features](../adr/0015-service-extraction-proof-before-broad-bus-features.md)
 - [0016 Non-Throwing Operation Wait Ergonomics](../adr/0016-non-throwing-operation-wait-ergonomics.md)
 
-## Priority Order
+## V2 Release Must Path
 
-### P0: Documentation Correction
+Status: Ready for a v2 release PR/checkpoint once verification is green.
 
-Status: Started.
+Completed for the v2 must path:
 
-- Remove stale docs that say broker adapter packages still need to be
+- Documentation now points at the active thin RabbitMQ and Azure Service Bus
+  adapters rather than saying broker adapter packages still need to be
   reintroduced.
-- Keep setup, package discovery, packaging, architecture, and package README
-  guidance aligned around the current thin RabbitMQ and Azure Service Bus
-  adapters.
+- Stable operations guidance covers direct receive semantics, ambiguous
+  unprocessed inbox rows, broker settlement, outbox terminal failures,
+  operation finalization and expiration, EF migrations, contract evolution,
+  retention, and observability ownership.
+- Stable observability guidance documents the current activity sources,
+  activities, tags, log event ids, result diagnostics, inspection contracts,
+  and non-current metrics/error-code vocabulary.
+- Worker and adapter scope is settled for v2: Bondstone owns durable outbox
+  dispatch and receive handoff boundaries; applications own broker topology,
+  retry, dead-letter, prefetch/concurrency, provisioning, and monitoring.
+- RabbitMQ `AutoAck` was removed from the Bondstone receive worker. RabbitMQ
+  receive workers use manual acknowledgement and settle only after Bondstone
+  durable receive succeeds.
+- Azure Service Bus receive rejects `AutoCompleteMessages = true` and
+  completes native messages only after Bondstone durable receive succeeds.
+- Local transport is documented as explicit sample, test, and local
+  development infrastructure, not production broker durability or a hidden
+  fallback.
+- The public API inventory has a final v2 decision check. Remaining public
+  concrete helpers are classified as deliberate normal defaults, advanced
+  composition APIs, or provider/runtime concrete APIs rather than unresolved
+  implementation-detail exposure.
+- Package discovery, package README, setup, operations, observability,
+  packaging, and public API docs describe the current active package set and
+  v2 replacement posture.
+- `docs/packaging.md` contains the v2 release checklist, migration checklist,
+  and NuGet registry follow-up actions. Release Please remains the normal
+  owner of the actual version bump, changelog, tag, and GitHub release.
 
-### P1: Production Operations And Observability
+Still required in the release PR or release workflow, not in this readiness
+checkpoint:
 
-Related ADRs: 0011, 0014.
+- Release Please must create the actual v2 release PR and update
+  `Directory.Build.props`, `.github/.release-please-manifest.json`,
+  `CHANGELOG.md`, the version tag, and the GitHub release together.
+- Maintainers must verify the package artifacts from the release ref before
+  publishing.
+- NuGet publish, v1 deprecation, and v1 delisting are explicit post-approval
+  registry actions and are not part of this source checkpoint.
 
-This is the highest-impact post-MVP work because current consumer feedback is
-documentation-heavy and the library already exposes enough durable behavior
-to need operational guidance.
+## Post-V2 Or Long-Term Work
 
-Deliverables:
+These items remain intentionally outside the v2 must path:
 
-- add a stable observability guide;
-- define activity names, tags, metrics, log event ids, and misconfiguration
-  message conventions;
-- add or refine OTel instrumentation around send, publish, outbox dispatch,
-  receive, inbox decisions, handler execution, and operation finalization;
-- add a stable production operations guide for outbox terminal failures,
-  stale inbox rows, operation expiry/finalization, retention, EF migrations,
-  contract evolution, adapter settlement behavior, and troubleshooting;
-- link package READMEs and setup docs to the operations and observability
-  guidance.
-
-### P2: Receive Semantics And Inbox Recovery Design
-
-Related ADR: 0012.
-
-Keep the current direct receive inbox as the default idempotency boundary.
-Design, but do not rush, an optional durable receive buffer for service
-extraction and stronger operational recovery.
-
-Deliverables:
-
-- document the current direct receive failure matrix;
-- document why already-received/unprocessed inbox rows are ambiguous;
-- decide whether the durable receive buffer should be accepted now or remain
-  deferred;
-- if accepted, design persistence records, state transitions, leases, retry
-  attempts, terminal receive failure, worker options, retention, and tests.
-
-### P3: Worker Boundary And Adapter Scope
-
-Related ADR: 0013.
-
-Keep workers simple and focused on Bondstone-owned durable states. Keep
-transport adapters thin and explicit.
-
-Deliverables:
-
-- update hosting docs with worker boundary rules;
-- add stronger warnings or defaults around unsafe receive options such as
-  RabbitMQ auto-ack;
-- document how host-owned native receive loops can bypass adapter workers;
-- decide whether operation expiration should get an optional hosted worker.
-
-### P4: Service Extraction Proof
-
-Related ADRs: 0015, 0010.
-
-Protect Bondstone's differentiation: durable modular-monolith semantics with
-a credible extraction path.
-
-Deliverables:
-
-- improve docs explaining Bondstone versus full bus frameworks;
-- document module extraction scenarios and limits;
-- keep local modular monolith sample as the fast adoption path;
-- keep RabbitMQ and Service Bus sample tests as extraction proofs;
-- add route-aware multi-transport ergonomics and a two-transport sample only
-  when real demand appears.
-
-### P5: Compatibility And Lifecycle Polish
-
-Related ADRs: 0011, 0014, 0015.
-
-Deliverables:
-
-- write message contract evolution guidance;
-- write EF table migration and package upgrade guidance;
-- write retention guidance for outbox, inbox, operation state, and optional
-  domain event records;
-- consider a non-throwing durable operation wait API after endpoint ergonomics
-  are better understood;
-- after v2 ships, add .NET package validation or ApiCompat against the latest
-  stable v2 package as the compatibility guard, while keeping the current
-  `PublicApiGenerator` baseline test as the human-readable public surface
-  review tool;
-- keep `net10.0` as the intentional target framework unless a later ADR
-  changes platform strategy.
+- Durable receive buffer design and implementation, including persistence
+  records, leases, retry attempts, terminal receive failure state, worker
+  options, retention, and tests.
+- Finalized metrics and a stable metric instrument vocabulary for outbox,
+  receive, inbox, operation finalization, and operation expiration outcomes.
+- Stable misconfiguration error codes. Current exception messages remain
+  diagnostic surfaces, but they are not a machine-readable error-code
+  vocabulary.
+- .NET package validation or ApiCompat against the latest stable v2 package
+  after v2 ships, while keeping the current `PublicApiGenerator` baseline test
+  as the human-readable public surface review tool.
+- Service extraction proof expansion beyond the current local modular
+  monolith path and thin adapter proofs, including broader extraction
+  scenarios, route-aware multi-transport ergonomics, and a two-transport
+  sample only when real demand appears.
 
 ## Deliberately Deferred
 
@@ -129,23 +98,9 @@ Deliverables:
 - broker retry/dead-letter orchestration;
 - saga or workflow engine features;
 - non-EF persistence provider work without real consumer demand;
-- broad multi-transport routing ergonomics before a concrete use case.
-
-## Open Questions
-
-- Should the durable receive buffer be accepted before the first extraction
-  project starts, or designed now and implemented after the pure modular
-  monolith validates the default receive path?
-- Should operation expiration get a built-in hosted worker, or remain an
-  application-scheduled processor for now?
-- Which operational queries should be documented as canonical examples for
-  PostgreSQL-backed EF Core stores?
-
-## Completed Decisions
-
-- RabbitMQ `AutoAck` was removed from the Bondstone receive worker for v2.
-  RabbitMQ receive workers now use manual acknowledgement and settle only
-  after Bondstone durable receive succeeds.
+- broad multi-transport routing ergonomics before a concrete use case;
+- optional hosted operation expiration worker unless application feedback
+  shows it belongs in Bondstone rather than app-owned scheduling.
 
 ## Verification
 

@@ -43,9 +43,12 @@ Domain event contracts are in the core `Bondstone` package. EF-backed
 module-local domain event persistence uses
 `Bondstone.Persistence.EntityFrameworkCore` and remains explicit opt-in.
 
-Use `Bondstone.Transport.Local` for the quick-start path. Broker integrations
-remain app-owned even when a host uses the thin RabbitMQ or Azure Service Bus
-adapter packages. For fully custom broker plumbing, register outbound
+Use `Bondstone.Transport.Local` for the first local modular-monolith path:
+samples, tests, and local development hosts explicitly route through local
+queues and Bondstone receive pipelines. It is not a hidden fallback and not a
+production broker substitute. Broker integrations remain app-owned even when a
+host uses the thin RabbitMQ or Azure Service Bus adapter packages. For fully
+custom broker plumbing, register outbound
 publishing with `UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
 `IDurableEnvelopeDispatcher`, serialize `DurableMessageEnvelope` with
 `IDurableMessageEnvelopeSerializer`, and call `IDurableEnvelopeReceiver` from
@@ -158,12 +161,15 @@ builder.Services.AddBondstone(bondstone =>
 outbox worker. Use `bondstone.Outbox.UseDurableDispatcher()` only for advanced
 manual dispatcher composition where the host does not want the built-in worker.
 
-`Bondstone.Transport.Local` is explicit local development and sample
+`Bondstone.Transport.Local` is explicit sample, test, and local-development
 infrastructure. `local.UseModuleQueueConvention()` is complete command
 topology for local module-to-module durable command dispatch: target module
 `fulfillment` routes to `fulfillment.commands`, and that queue accepts the
 same module. Event routes still need explicit subscriber bindings because
-subscriber module and subscriber identity are durable receive identity.
+subscriber module and subscriber identity are durable receive identity. Local
+transport exercises outbox dispatch and inbox receive semantics without
+claiming broker durability, queue administration, retry, or dead-letter
+behavior.
 
 Module assemblies should expose a thin host extension and a module-owned
 `IBondstoneModule` registration object:

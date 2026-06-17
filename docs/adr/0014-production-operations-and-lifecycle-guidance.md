@@ -95,9 +95,12 @@ note.
   ownership, table-shape upgrades, contract evolution, serializer
   compatibility, retention, and Bondstone/app ownership boundaries.
   On 2026-06-17, package README links were added for setup, package discovery,
-  operations, observability, and packaging/release guidance.
-- Pending or deferred: deeper adapter failure-handoff tests/docs and finalized
-  observability vocabulary remain follow-up work.
+  operations, observability, and packaging/release guidance. On 2026-06-17,
+  focused unit tests covered RabbitMQ receive failure logging and native
+  nack/requeue handoff, RabbitMQ ack-after-receive ordering, Service Bus
+  processor error logging, and Service Bus complete-after-receive ordering.
+- Pending or deferred: finalized observability vocabulary remains follow-up
+  work.
 
 ## Verification
 
@@ -109,4 +112,7 @@ README links, adapter failure-handoff follow-up, and finalized observability
 vocabulary remained open. On 2026-06-17, package README links and v2
 release/migration guidance were added; application remains partially applied
 because adapter failure-handoff follow-up and finalized observability
-vocabulary remain open.
+vocabulary remain open. Later on 2026-06-17, focused RabbitMQ and Service Bus
+unit tests closed the adapter failure-handoff follow-up for v2; application
+remains partially applied only because finalized observability vocabulary
+remains open.

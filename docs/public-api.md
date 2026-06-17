@@ -270,12 +270,34 @@ V2 public API cleanup continuation, 2026-06-16:
   implementation details behind public setup helpers and provider-neutral
   contracts.
 
-Remaining v2 decisions for approval:
+Final v2 public API decision check, 2026-06-17:
 
-- EF Core concrete stores, scope, and provider-neutral concrete dispatch
-  helpers: decide whether advanced manual composition still needs direct
-  construction, or whether public interfaces plus narrower service
-  registration helpers are enough.
+- The remaining public implementation-detail sections were
+  `MessageTypeRegistry`, the provider-neutral concrete persistence helpers,
+  and the EF Core concrete stores/scope. They are now classified as deliberate
+  normal defaults, advanced composition APIs, or provider/runtime concrete APIs
+  instead of unresolved implementation-detail exposure.
+- `MessageTypeRegistry` remains public for v2 as the default mutable message
+  identity registry used by setup and as a useful direct-test/manual
+  composition helper. Normal applications should depend on
+  `IMessageTypeRegistry`.
+- `DurableInboxHandlerExecutor`, `DurableOutboxDispatcher`,
+  `DurableOutboxFailurePolicy`, `DurableModuleOutboxDispatchAggregator`, and
+  `RoutedDurableEnvelopeDispatcher` remain public for v2. They are the shared
+  concrete helpers used by Hosting, Local transport, PostgreSQL EF module
+  composition, custom schedulers, and app-owned broker composition. Hiding
+  them would require new public factory or service-registration contracts
+  across packages, which is larger than an obvious cleanup.
+- The EF Core concrete stores and `EntityFrameworkCorePersistenceScope` remain
+  public for v2 as provider/runtime concrete APIs and advanced composition
+  defaults. The EF and PostgreSQL setup helpers construct them across package
+  boundaries, and direct construction remains useful for custom persistence
+  composition, tests, and app-owned inspection/migration tooling. The
+  provider-neutral interfaces remain the preferred dependency surface.
+- No remaining public concrete type in this final slice is an obvious hide-now
+  candidate. No post-v2 public API cleanup follow-up is required from this
+  check unless real consumer feedback asks for narrower replacement factories
+  or different composition hooks.
 
 ## Current Scope
 
@@ -357,6 +379,11 @@ User application contract:
 - `ModuleCommandExecutionResult<TResult>`
 - `ModuleEventSubscriberExecutionResult`
 
+Normal default and advanced composition API:
+
+- `MessageTypeRegistry`
+- `SystemTextJsonDurablePayloadSerializer`
+
 Advanced composition API:
 
 - `IModuleCommandExecutor`
@@ -383,14 +410,6 @@ Provider/runtime contract:
 - `IModuleRuntimeExecutionContext`
 - `IModuleTransactionRunner`
 - `IModulePostHandlerAction`
-
-Public implementation detail exposed for now:
-
-- `MessageTypeRegistry`
-
-Normal default and advanced composition API:
-
-- `SystemTextJsonDurablePayloadSerializer`
 
 ## Bondstone.Persistence
 
@@ -428,6 +447,8 @@ Advanced composition API:
 - `IDurableEnvelopeDispatcher`
 - `IDurableEnvelopeDispatchRoute`
 - `SystemTextJsonDurableMessageEnvelopeSerializer`
+- `DurableInboxHandlerExecutor`
+- `DurableOutboxDispatcher`
 - `DurableOutboxFailurePolicy`
 - `RoutedDurableEnvelopeDispatcher`
 
@@ -452,10 +473,8 @@ Provider/runtime contract:
 - `DurableModuleOutboxDispatcherRegistration`
 - `DurableModuleOutboxInspectionStoreRegistration`
 
-Public implementation detail exposed for now:
+Provider/runtime concrete API:
 
-- `DurableInboxHandlerExecutor`
-- `DurableOutboxDispatcher`
 - `DurableModuleOutboxDispatchAggregator`
 
 ## Bondstone.Persistence.EntityFrameworkCore
@@ -471,6 +490,7 @@ Normal setup API:
 Advanced composition API:
 
 - `IEntityFrameworkCorePersistenceScope`
+- `EntityFrameworkCorePersistenceScope<TDbContext>`
 
 Provider/runtime contract:
 
@@ -487,10 +507,9 @@ Provider/runtime contract:
 - `DomainEventRecordEntityConfiguration`
 - `DomainEventRecordEntityConfiguration.Columns`
 
-Public implementation detail exposed for now:
+Provider/runtime concrete API:
 
 - `EntityFrameworkCoreDurableInboxInspectionStore<TDbContext>`
-- `EntityFrameworkCorePersistenceScope<TDbContext>`
 - `EntityFrameworkCoreDurableOutboxWriter<TDbContext>`
 - `EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext>`
 - `EntityFrameworkCoreDurableInboxStore<TDbContext>`

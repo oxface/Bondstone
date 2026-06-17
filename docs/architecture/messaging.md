@@ -258,13 +258,17 @@ durable results through `IDurableOperationResultReader`:
 `WaitForResultAsync<TResult>()` performs explicit timeout-bounded polling
 until the operation reaches a terminal state. If the timeout expires before a
 terminal state is observed, `WaitForResultAsync<TResult>()` throws
-`TimeoutException`. Timeout is caller patience, not stored operation state; use
-application policy such as `IDurableOperationFinalizer` when the operation
-itself should become `Failed` or `Cancelled`. `IDurableOperationReader` remains
-available as the lower-level state reader. When available, pass
-`DurableCommandSendResult.Operation` to these readers. Handle-based reads query
-the target module's operation-state store. Operation-id-only reads remain
-available as the global aggregate compatibility path.
+`TimeoutException`. `TryWaitForResultAsync<TResult>()` uses the same polling
+model but returns `DurableOperationWaitResult<TResult>` with
+`CompletedWithinTimeout` plus the latest observed
+`DurableOperationResult<TResult>` instead of throwing on timeout. Timeout is
+caller patience, not stored operation state; use application policy such as
+`IDurableOperationFinalizer` when the operation itself should become `Failed`
+or `Cancelled`. `IDurableOperationReader` remains available as the lower-level
+state reader. When available, pass `DurableCommandSendResult.Operation` to
+these readers. Handle-based reads and waits query the target module's
+operation-state store. Operation-id-only reads remain available as the global
+aggregate compatibility path.
 
 Applications can mark explicit terminal non-success outcomes through
 `IDurableOperationFinalizer`. The finalizer writes `Failed` or `Cancelled` to

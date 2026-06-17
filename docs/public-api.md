@@ -192,6 +192,19 @@ Durable operation handles, 2026-06-16:
 - Handle-based `IDurableOperationReader` and `IDurableOperationResultReader`
   overloads are additive convenience paths that query the target module store.
 
+Non-throwing operation wait, 2026-06-17:
+
+- `DurableOperationWaitResult<TResult>` is an additive user application
+  contract that separates caller wait outcome from durable operation result
+  state.
+- `IDurableOperationResultReader.TryWaitForResultAsync<TResult>(...)`
+  overloads are additive non-throwing wait APIs for operation-id-only,
+  module-hinted, and handle-based observation.
+- The API reports whether a terminal result was observed before caller timeout
+  and returns the latest `DurableOperationResult<TResult>`. Timeout remains
+  caller patience and does not write `Failed`, `Cancelled`, or any other
+  operation state.
+
 Public API curation, 2026-06-16:
 
 - The current persistence inspection contracts are intentionally split between

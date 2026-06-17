@@ -69,6 +69,25 @@ buffer. ADR
 the durable receive-buffer decision trail, but a receive buffer is not current
 behavior.
 
+Current direct receive has two durable stages:
+
+1. native transport delivery to Bondstone module receive;
+2. handler state, inbox marker, operation state, and outgoing outbox commit in
+   the target module persistence boundary.
+
+The future optional receive-buffer model would split this into three durable
+stages:
+
+1. native transport delivery to a Bondstone receive-buffer record;
+2. receive-buffer worker claim and handoff to module receive;
+3. handler state, inbox marker, operation state, and outgoing outbox commit in
+   the target module persistence boundary.
+
+That future model would let Bondstone own receive retry state and terminal
+receive failure over Bondstone-owned durable records. It is not current
+behavior, so current operators should treat unprocessed direct inbox rows as
+ambiguous receive attempts that need application-owned investigation.
+
 ## Broker Settlement
 
 Broker receive adapters should settle native deliveries only after Bondstone
@@ -145,11 +164,14 @@ can be used to observe the target module's operation state.
 
 Use `IDurableOperationResultReader.GetResultAsync<TResult>()` to read the
 current operation state once. Use
-`IDurableOperationResultReader.WaitForResultAsync<TResult>()` only when an
-explicit timeout-bounded wait is acceptable. Current wait behavior is
-throwing: if the timeout expires before the operation reaches a terminal state,
-`WaitForResultAsync<TResult>()` throws `TimeoutException`. That timeout is
-caller patience; it does not write `Failed`, `Cancelled`, or any other durable
+`IDurableOperationResultReader.TryWaitForResultAsync<TResult>()` when an API or
+workflow wants a timeout-bounded wait that returns a value even when the caller
+stops waiting. The returned `DurableOperationWaitResult<TResult>` separates
+`CompletedWithinTimeout` from the latest observed durable operation result.
+Use `WaitForResultAsync<TResult>()` only when exception-based timeout handling
+is acceptable; if its timeout expires before the operation reaches a terminal
+state, it throws `TimeoutException`. Both wait forms treat timeout as caller
+patience; they do not write `Failed`, `Cancelled`, or any other durable
 operation state.
 
 Applications can mark explicit terminal non-success outcomes with
@@ -162,6 +184,84 @@ not register a hosted operation expiry worker by default.
 Do not infer operation failure automatically from outbox terminal failure,
 inbox idempotency, broker retry, or dead-letter behavior unless application or
 provider-specific policy has made that terminal user-visible outcome explicit.
+
+### Pending Operation Troubleshooting
+
+When an operation remains `Pending` longer than expected, inspect the ledgers
+that Bondstone owns before marking the operation `Failed` or `Cancelled`.
+Pending means "no terminal operation state has been observed"; it does not
+identify which part of the workflow is blocked.
+
+Start with the send result. Prefer passing `DurableCommandSendResult.Operation`
+to result readers because it carries the source and target module names. If
+only the operation id is available, record or reconstruct the expected source
+and target modules from the application workflow before investigating.
+
+Inspect the source module outbox for the operation's outgoing command. Today
+the app-facing `IDurableOutboxInspector` reads terminal failures rather than
+arbitrary pending rows, so a terminal row is the clearest Bondstone-owned
+evidence that source dispatch stopped retrying:
+
+```csharp
+IReadOnlyList<DurableOutboxRecord> terminalRows = await outboxInspector
+    .FindTerminalFailedAsync(
+        sourceModuleName,
+        maxCount: 50,
+        failedAtOrBeforeUtc: DateTimeOffset.UtcNow,
+        ct);
+
+DurableOutboxRecord? operationFailure = terminalRows.FirstOrDefault(row =>
+    row.Envelope.DurableOperationId == operation.DurableOperationId);
+```
+
+If the source outbox has terminally failed, decide in application policy
+whether to retry, compensate, or finalize the operation. Bondstone does not
+turn terminal outbox failure into operation failure automatically because the
+transport side effect may or may not have happened.
+
+Inspect the target module inbox for ambiguous receives. Unprocessed inbox rows
+mean Bondstone saw the message for a handler or subscriber but cannot prove
+that re-running the handler is safe:
+
+```csharp
+IReadOnlyList<DurableInboxRecord> unprocessedRows = await inboxInspector
+    .FindUnprocessedAsync(
+        targetModuleName,
+        maxCount: 50,
+        receivedAtOrBeforeUtc: DateTimeOffset.UtcNow.AddMinutes(-5),
+        ct);
+
+DurableInboxRecord? matchingReceive = unprocessedRows.FirstOrDefault(row =>
+    row.Key.MessageId == sendResult.SendId);
+```
+
+If an unprocessed inbox row matches the message, use an operator runbook or
+application-specific evidence before mutating rows, moving broker messages, or
+finalizing the operation. Direct receive intentionally treats this state as
+ambiguous.
+
+If no Bondstone terminal outbox row or stale inbox row explains the delay,
+inspect provider-native transport health, broker delivery or dead-letter
+state, worker logs, and application handler logs. Those surfaces are outside
+Bondstone's provider-neutral operation state.
+
+Use `IDurableOperationFinalizer` only after application policy has enough
+evidence to produce a user-visible terminal outcome:
+
+```csharp
+DurableOperationFinalizationResult finalization =
+    await durableOperationFinalizer.MarkFailedAsync(
+        targetModuleName,
+        operation.DurableOperationId,
+        "Inventory reservation did not complete before the application SLA.",
+        ct: ct);
+```
+
+For recurring policy, schedule an app-owned job and call
+`IDurableOperationExpirationProcessor` for each module that owns operation
+state. Expiration finalizes stale `Pending` or `Running` rows according to the
+application's cutoff and reason; it does not inspect broker or outbox state by
+itself.
 
 ## EF Migrations And Upgrades
 

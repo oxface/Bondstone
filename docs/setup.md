@@ -663,27 +663,32 @@ DurableCommandSendResult sendResult = await durableCommandSender.SendAsync(
     durableOperationId: durableOperationId,
     ct: ct);
 
-DurableOperationResult<CreateOrderResult> durableResult =
-    await durableOperationResultReader.WaitForResultAsync<CreateOrderResult>(
+DurableOperationWaitResult<CreateOrderResult> waitResult =
+    await durableOperationResultReader.TryWaitForResultAsync<CreateOrderResult>(
         sendResult.Operation!,
         timeout: TimeSpan.FromSeconds(30),
         pollInterval: TimeSpan.FromMilliseconds(250),
         ct: ct);
 
-if (durableResult is { IsCompleted: true, HasResult: true, Result: { } order })
+if (waitResult is
+    {
+        CompletedWithinTimeout: true,
+        Result: { IsCompleted: true, HasResult: true, Result: { } order }
+    })
 {
     Guid orderId = order.OrderId;
 }
 ```
 
 Use `GetResultAsync<TResult>()` when an API endpoint should read the current
-operation state once. Use `WaitForResultAsync<TResult>()` only where an
-explicit, timeout-bounded wait is acceptable for the caller. Applications still
-own endpoint policy, timeout choice, polling cadence, and what to do with
-unknown, pending, failed, or cancelled operation state. When
-`WaitForResultAsync<TResult>()` reaches its timeout before the operation is
-terminal, it throws `TimeoutException`; the timeout does not by itself write a
-durable operation state.
+operation state once. Use `TryWaitForResultAsync<TResult>()` where an endpoint
+or workflow wants a timeout-bounded wait that returns the latest observed
+operation state instead of throwing on timeout. Use
+`WaitForResultAsync<TResult>()` only where exception-based timeout handling is
+acceptable for the caller. Applications still own endpoint policy, timeout
+choice, polling cadence, and what to do with unknown, pending, failed, or
+cancelled operation state. Neither wait form writes a terminal durable
+operation state when caller timeout expires.
 
 When application policy has enough evidence that a workflow should stop
 polling, use `IDurableOperationFinalizer` to mark the operation terminal in

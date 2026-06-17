@@ -288,9 +288,12 @@ Operation reads can also use a module hint. The default
 `IDurableOperationReader.GetStateAsync(operationId, moduleName, ...)` resolves
 only the named module's operation-state store and does not query unrelated
 module stores. `IDurableOperationResultReader` exposes matching hinted
-single-read and wait overloads. Use hinted reads when the caller already knows
-the module that owns the operation result; keep global reads for small hosts,
-tests, or callers that only have an operation id.
+single-read, throwing wait, and non-throwing wait overloads. Use hinted reads
+or waits when the caller already knows the module that owns the operation
+result; keep global observation for small hosts, tests, or callers that only
+have an operation id. Non-throwing waits return the latest observed operation
+result when caller timeout expires; they do not write terminal operation
+state.
 
 Durable command sends that include an operation id return a
 `DurableOperationHandle` on `DurableCommandSendResult.Operation`. The handle

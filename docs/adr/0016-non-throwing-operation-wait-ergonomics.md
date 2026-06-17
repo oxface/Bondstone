@@ -1,7 +1,7 @@
 # 0016 Non-Throwing Operation Wait Ergonomics
 
-Status: Accepted
-Application: Partially Applied
+Status: Amended
+Application: Applied
 Date: 2026-06-16
 
 ## Context
@@ -64,6 +64,22 @@ The docs must be precise: `WaitForResultAsync<TResult>()` does not return a
 timeout result today. It throws on timeout. Timeout does not finalize the
 operation.
 
+## Amendment 2026-06-17
+
+The additive non-throwing wait API is now accepted and applied as
+`IDurableOperationResultReader.TryWaitForResultAsync<TResult>(...)`.
+
+The API returns `DurableOperationWaitResult<TResult>` with:
+
+- `CompletedWithinTimeout`, which reports whether a terminal operation result
+  was observed before caller timeout expired;
+- `Result`, which carries the latest observed `DurableOperationResult<TResult>`.
+
+The API has operation-id-only, module-hinted, and handle-based overloads that
+mirror the existing throwing wait shape. It does not infer or write durable
+operation failure from timeout, outbox, inbox, broker retry, dead-letter, or
+receive ambiguity.
+
 ## Related Decisions
 
 - Narrows [0004 Persistence Operation State And Results](0004-persistence-operation-state-and-results.md).
@@ -73,28 +89,36 @@ operation.
 
 - Current contract: `WaitForResultAsync<TResult>()` throws
   `TimeoutException` if no terminal state is observed before the caller's
-  timeout.
+  timeout. `TryWaitForResultAsync<TResult>()` returns
+  `DurableOperationWaitResult<TResult>` and reports caller timeout separately
+  from durable operation state.
 - Stable docs: messaging architecture and setup docs describe the throwing
-  timeout behavior and recommend `GetResultAsync<TResult>()` for current-state
-  endpoint reads. [operations.md](../operations.md) also documents timeout,
-  finalization, and expiration ownership for production callers.
-- Agent guidance: no new agent rule is required until a future API is
-  accepted.
+  timeout behavior, the non-throwing wait behavior, and recommend
+  `GetResultAsync<TResult>()` for current-state endpoint reads.
+  [operations.md](../operations.md) also documents timeout, finalization, and
+  expiration ownership for production callers.
+- Agent guidance: no new agent rule is required for the non-throwing wait API.
 - Application evidence: tests cover terminal success, terminal failure,
-  handle-based polling, and timeout throwing behavior; stable operations docs
-  now state that wait timeout is caller patience and does not write durable
-  operation state.
-- Pending or deferred: design and add a non-throwing wait API only when
-  endpoint ergonomics justify public API expansion.
+  terminal cancellation, module-hinted polling, handle-based polling,
+  timeout-with-latest-result, cancellation, result deserialization failure,
+  and timeout throwing behavior; stable operations docs now state that wait
+  timeout is caller patience and does not write durable operation state.
+- Pending or deferred: operation-linked inspection filters and a broader
+  operation diagnostic snapshot remain deferred to consumer evidence.
 
 ## Verification
 
 Accepted during v2 planning. Stable docs and interface XML comments were
 corrected in the same work item, and focused unit coverage was added for
-current timeout behavior. Application remains partial because the existing
-throwing behavior is documented and tested, while the additive non-throwing
-API remains deferred.
+current timeout behavior.
 
 On 2026-06-16, added production operations guidance for result polling,
 throwing wait timeout behavior, explicit finalization, and app-owned
 expiration jobs.
+
+On 2026-06-17, applied the additive non-throwing wait API with focused unit
+coverage. Verification included
+`dotnet test tests/Bondstone.Tests/Bondstone.Tests.csproj --configuration Release --filter FullyQualifiedName~DurableOperationResultReaderTests`,
+`BONDSTONE_UPDATE_PUBLIC_API_BASELINE=1 dotnet test tests/Bondstone.PublicApi.Tests/Bondstone.PublicApi.Tests.csproj --configuration Release`,
+`dotnet build Bondstone.slnx --configuration Release`, and
+`pnpm backend:test`.

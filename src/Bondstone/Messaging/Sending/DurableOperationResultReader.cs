@@ -70,41 +70,20 @@ internal sealed class DurableOperationResultReader(
         TimeSpan? pollInterval = null,
         CancellationToken ct = default)
     {
-        ValidateOperationId(durableOperationId);
-        ValidatePositive(timeout, nameof(timeout));
-
-        TimeSpan effectivePollInterval = pollInterval ?? DefaultPollInterval;
-        ValidatePositive(effectivePollInterval, nameof(pollInterval));
-
-        DateTimeOffset deadlineUtc = _timeProvider.GetUtcNow().Add(timeout);
-        DurableOperationResult<TResult> lastResult;
-
-        while (true)
-        {
-            lastResult = await GetResultAsync<TResult>(
+        DurableOperationWaitResult<TResult> waitResult =
+            await TryWaitForResultAsync<TResult>(
                 durableOperationId,
+                timeout,
+                pollInterval,
                 ct);
 
-            if (lastResult.IsTerminal)
-            {
-                return lastResult;
-            }
-
-            TimeSpan remaining = deadlineUtc - _timeProvider.GetUtcNow();
-            if (remaining <= TimeSpan.Zero)
-            {
-                throw new TimeoutException(
-                    $"Durable operation '{durableOperationId}' did not reach a terminal state before timeout '{timeout}'.");
-            }
-
-            TimeSpan delay = remaining < effectivePollInterval
-                ? remaining
-                : effectivePollInterval;
-            await Task.Delay(
-                delay,
-                _timeProvider,
-                ct);
+        if (waitResult.CompletedWithinTimeout)
+        {
+            return waitResult.Result;
         }
+
+        throw new TimeoutException(
+            $"Durable operation '{durableOperationId}' did not reach a terminal state before timeout '{timeout}'.");
     }
 
     public async ValueTask<DurableOperationResult<TResult>> WaitForResultAsync<TResult>(
@@ -118,41 +97,21 @@ internal sealed class DurableOperationResultReader(
         string normalizedModuleName = moduleName.NormalizeRequired(
             nameof(moduleName),
             "Module name");
-        ValidatePositive(timeout, nameof(timeout));
-
-        TimeSpan effectivePollInterval = pollInterval ?? DefaultPollInterval;
-        ValidatePositive(effectivePollInterval, nameof(pollInterval));
-
-        DateTimeOffset deadlineUtc = _timeProvider.GetUtcNow().Add(timeout);
-        DurableOperationResult<TResult> lastResult;
-
-        while (true)
-        {
-            lastResult = await GetResultAsync<TResult>(
+        DurableOperationWaitResult<TResult> waitResult =
+            await TryWaitForResultAsync<TResult>(
                 durableOperationId,
                 normalizedModuleName,
+                timeout,
+                pollInterval,
                 ct);
 
-            if (lastResult.IsTerminal)
-            {
-                return lastResult;
-            }
-
-            TimeSpan remaining = deadlineUtc - _timeProvider.GetUtcNow();
-            if (remaining <= TimeSpan.Zero)
-            {
-                throw new TimeoutException(
-                    $"Durable operation '{durableOperationId}' in module '{normalizedModuleName}' did not reach a terminal state before timeout '{timeout}'.");
-            }
-
-            TimeSpan delay = remaining < effectivePollInterval
-                ? remaining
-                : effectivePollInterval;
-            await Task.Delay(
-                delay,
-                _timeProvider,
-                ct);
+        if (waitResult.CompletedWithinTimeout)
+        {
+            return waitResult.Result;
         }
+
+        throw new TimeoutException(
+            $"Durable operation '{durableOperationId}' in module '{normalizedModuleName}' did not reach a terminal state before timeout '{timeout}'.");
     }
 
     public async ValueTask<DurableOperationResult<TResult>> WaitForResultAsync<TResult>(
@@ -169,6 +128,105 @@ internal sealed class DurableOperationResultReader(
             timeout,
             pollInterval,
             ct);
+    }
+
+    public async ValueTask<DurableOperationWaitResult<TResult>> TryWaitForResultAsync<TResult>(
+        Guid durableOperationId,
+        TimeSpan timeout,
+        TimeSpan? pollInterval = null,
+        CancellationToken ct = default)
+    {
+        ValidateOperationId(durableOperationId);
+        ValidatePositive(timeout, nameof(timeout));
+
+        TimeSpan effectivePollInterval = pollInterval ?? DefaultPollInterval;
+        ValidatePositive(effectivePollInterval, nameof(pollInterval));
+
+        return await TryWaitForResultCoreAsync(
+            timeout,
+            effectivePollInterval,
+            () => GetResultAsync<TResult>(
+                durableOperationId,
+                ct),
+            ct);
+    }
+
+    public async ValueTask<DurableOperationWaitResult<TResult>> TryWaitForResultAsync<TResult>(
+        Guid durableOperationId,
+        string moduleName,
+        TimeSpan timeout,
+        TimeSpan? pollInterval = null,
+        CancellationToken ct = default)
+    {
+        ValidateOperationId(durableOperationId);
+        string normalizedModuleName = moduleName.NormalizeRequired(
+            nameof(moduleName),
+            "Module name");
+        ValidatePositive(timeout, nameof(timeout));
+
+        TimeSpan effectivePollInterval = pollInterval ?? DefaultPollInterval;
+        ValidatePositive(effectivePollInterval, nameof(pollInterval));
+
+        return await TryWaitForResultCoreAsync(
+            timeout,
+            effectivePollInterval,
+            () => GetResultAsync<TResult>(
+                durableOperationId,
+                normalizedModuleName,
+                ct),
+            ct);
+    }
+
+    public async ValueTask<DurableOperationWaitResult<TResult>> TryWaitForResultAsync<TResult>(
+        DurableOperationHandle operation,
+        TimeSpan timeout,
+        TimeSpan? pollInterval = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        return await TryWaitForResultAsync<TResult>(
+            operation.DurableOperationId,
+            operation.TargetModule,
+            timeout,
+            pollInterval,
+            ct);
+    }
+
+    private async ValueTask<DurableOperationWaitResult<TResult>> TryWaitForResultCoreAsync<TResult>(
+        TimeSpan timeout,
+        TimeSpan effectivePollInterval,
+        Func<ValueTask<DurableOperationResult<TResult>>> readResultAsync,
+        CancellationToken ct)
+    {
+        DateTimeOffset deadlineUtc = _timeProvider.GetUtcNow().Add(timeout);
+
+        while (true)
+        {
+            DurableOperationResult<TResult> result = await readResultAsync();
+            if (result.IsTerminal)
+            {
+                return new DurableOperationWaitResult<TResult>(
+                    completedWithinTimeout: true,
+                    result);
+            }
+
+            TimeSpan remaining = deadlineUtc - _timeProvider.GetUtcNow();
+            if (remaining <= TimeSpan.Zero)
+            {
+                return new DurableOperationWaitResult<TResult>(
+                    completedWithinTimeout: false,
+                    result);
+            }
+
+            TimeSpan delay = remaining < effectivePollInterval
+                ? remaining
+                : effectivePollInterval;
+            await Task.Delay(
+                delay,
+                _timeProvider,
+                ct);
+        }
     }
 
     private DurableOperationResult<TResult> CreateResult<TResult>(

@@ -12,5 +12,9 @@ small Bondstone envelope plumbing.
 
 See:
 
-- [Messaging architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/messaging.md)
+- [Setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md)
 - [Package discovery](https://github.com/oxface/Bondstone/blob/main/docs/package-discovery.md)
+- [Operations guide](https://github.com/oxface/Bondstone/blob/main/docs/operations.md)
+- [Observability guide](https://github.com/oxface/Bondstone/blob/main/docs/observability.md)
+- [Packaging, release, and migration policy](https://github.com/oxface/Bondstone/blob/main/docs/packaging.md)
+- [Messaging architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/messaging.md)

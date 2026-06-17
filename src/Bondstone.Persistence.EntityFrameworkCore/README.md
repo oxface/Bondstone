@@ -19,6 +19,11 @@ provider-neutral EF Core module persistence.
 
 See:
 
+- [Setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md)
+- [Package discovery](https://github.com/oxface/Bondstone/blob/main/docs/package-discovery.md)
+- [Operations guide](https://github.com/oxface/Bondstone/blob/main/docs/operations.md)
+- [Observability guide](https://github.com/oxface/Bondstone/blob/main/docs/observability.md)
+- [Packaging, release, and migration policy](https://github.com/oxface/Bondstone/blob/main/docs/packaging.md)
 - [EF Core persistence architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-ef-core.md)
 - [Persistence contracts](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-core.md)
 - [EF Core persistence tests](https://github.com/oxface/Bondstone/tree/main/tests/Bondstone.Persistence.EntityFrameworkCore.Tests)

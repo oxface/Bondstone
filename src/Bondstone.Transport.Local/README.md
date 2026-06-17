@@ -19,6 +19,11 @@ broker fallback and does not provide broker durability.
 
 See:
 
+- [Setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md)
+- [Package discovery](https://github.com/oxface/Bondstone/blob/main/docs/package-discovery.md)
+- [Operations guide](https://github.com/oxface/Bondstone/blob/main/docs/operations.md)
+- [Observability guide](https://github.com/oxface/Bondstone/blob/main/docs/observability.md)
+- [Packaging, release, and migration policy](https://github.com/oxface/Bondstone/blob/main/docs/packaging.md)
 - [Local transport architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/transport-local.md)
 - [Messaging architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/messaging.md)
 - [Local transport tests](https://github.com/oxface/Bondstone/tree/main/tests/Bondstone.Transport.Local.Tests)

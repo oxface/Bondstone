@@ -79,10 +79,11 @@ note.
 
 - Current contract: production operations guidance is centralized in
   [operations.md](../operations.md), with detailed architecture docs remaining
-  the deeper runtime contract.
+  the deeper runtime contract. V2 replacement and high-level migration
+  guidance lives in [packaging.md](../packaging.md).
 - Stable docs: docs README, setup, architecture, package discovery, packaging,
-  messaging, and hosting docs link to the operations or observability guidance.
-  Package README links remain a follow-up.
+  messaging, hosting, and package README docs link to the operations or
+  observability guidance.
 - Agent guidance: no new agent rule is required; root and docs AGENTS files
   already route documentation and architecture changes through stable docs and
   ADR review.
@@ -93,14 +94,19 @@ note.
   inspection, operation polling/finalization/expiration, EF migration
   ownership, table-shape upgrades, contract evolution, serializer
   compatibility, retention, and Bondstone/app ownership boundaries.
-- Pending or deferred: package README links, deeper adapter failure-handoff
-  tests/docs, and finalized observability vocabulary remain follow-up work.
+  On 2026-06-17, package README links were added for setup, package discovery,
+  operations, observability, and packaging/release guidance.
+- Pending or deferred: deeper adapter failure-handoff tests/docs and finalized
+  observability vocabulary remain follow-up work.
 
 ## Verification
 
 Accepted during v2 planning. Reviewed setup, architecture, public API,
 testing, packaging, and package discovery docs while producing this decision.
 On 2026-06-16, added the production operations guide, observability guide, and
-related stable-doc links. Application is partially applied because package
+related stable-doc links. Application was partially applied because package
 README links, adapter failure-handoff follow-up, and finalized observability
+vocabulary remained open. On 2026-06-17, package README links and v2
+release/migration guidance were added; application remains partially applied
+because adapter failure-handoff follow-up and finalized observability
 vocabulary remain open.

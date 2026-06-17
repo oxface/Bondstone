@@ -4,9 +4,9 @@ This guide maps common Bondstone capabilities to NuGet package IDs and the
 namespaces that expose the setup APIs most consumers import. For a complete
 working host shape, start with the canonical setup path in [setup.md](setup.md).
 For package boundaries, dependency direction, target framework, and publishing
-policy, see [packaging.md](packaging.md). For production operations and
-observability, see [operations.md](operations.md) and
-[observability.md](observability.md).
+policy, including v2 replacement/migration guidance, see
+[packaging.md](packaging.md). For production operations and observability, see
+[operations.md](operations.md) and [observability.md](observability.md).
 
 ## Capability Matrix
 

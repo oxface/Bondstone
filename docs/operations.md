@@ -175,7 +175,9 @@ shape changes. Generate and review migrations in the app repository, including
 per-module schemas when each module maps Bondstone persistence separately.
 Nullable diagnostic additions, such as operation-state diagnostic columns, can
 usually be added without backfilling old rows; behavior remains governed by the
-specific upgrade note.
+specific upgrade note. Bondstone release notes must call out any durable
+table-shape change so applications can generate, review, and apply their own
+EF migrations before deploying upgraded packages.
 
 Migrator processes should compose the module `DbContext` provider options,
 schemas, application entities, and Bondstone EF mappings. They do not need

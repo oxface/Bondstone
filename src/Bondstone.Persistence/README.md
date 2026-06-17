@@ -18,5 +18,9 @@ provider package.
 
 See:
 
-- [Persistence contracts](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-core.md)
+- [Setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md)
 - [Package discovery](https://github.com/oxface/Bondstone/blob/main/docs/package-discovery.md)
+- [Operations guide](https://github.com/oxface/Bondstone/blob/main/docs/operations.md)
+- [Observability guide](https://github.com/oxface/Bondstone/blob/main/docs/observability.md)
+- [Packaging, release, and migration policy](https://github.com/oxface/Bondstone/blob/main/docs/packaging.md)
+- [Persistence contracts](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-core.md)

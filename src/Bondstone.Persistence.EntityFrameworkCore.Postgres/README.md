@@ -22,6 +22,11 @@ that only need provider-neutral EF mappings can reference
 
 See:
 
+- [Setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md)
+- [Package discovery](https://github.com/oxface/Bondstone/blob/main/docs/package-discovery.md)
+- [Operations guide](https://github.com/oxface/Bondstone/blob/main/docs/operations.md)
+- [Observability guide](https://github.com/oxface/Bondstone/blob/main/docs/observability.md)
+- [Packaging, release, and migration policy](https://github.com/oxface/Bondstone/blob/main/docs/packaging.md)
 - [EF/PostgreSQL persistence architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-postgresql.md)
 - [EF Core persistence architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-ef-core.md)
 - [EF/PostgreSQL persistence tests](https://github.com/oxface/Bondstone/tree/main/tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests)

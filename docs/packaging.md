@@ -55,6 +55,62 @@ outbox, inbox, transport-facing persistence contracts, and passive
 module-runtime registration records. Module-aware runtime resolution and
 module execution stay in `Bondstone`.
 
+## V2 Replacement And Migration Guidance
+
+The current docs and package READMEs describe the v2 replacement line. The v1
+public-MVP line is deprecated/delisted for new adoption; registry state should
+preserve that replacement posture when v2 packages are published. Do not
+direct new consumers to v1 package IDs, old README guidance, or old setup
+examples.
+
+The exact package version comes from source-controlled release metadata. At
+the time of this document, `Directory.Build.props` records
+`VersionPrefix` as `1.1.0`, and Release Please owns future changes to that
+value. Do not invent a v2 NuGet version or release date in docs, READMEs, or
+release notes before the source metadata changes.
+
+The active v2 package IDs are the package set listed above. Removed or
+deferred v1 surfaces include:
+
+- `Bondstone.Persistence.Postgres`;
+- `Bondstone.Transport`;
+- `Bondstone.Capabilities.DomainEvents`;
+- `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`;
+- broad broker runtime ownership, provider-neutral transport diagnostics, and
+  Rebus-specific package ownership;
+- non-EF persistence providers until a real consumer need and ADR bring one
+  back;
+- durable receive buffer, finalized metric instruments, and stable
+  misconfiguration error codes, which are accepted or planned direction but
+  not current package behavior.
+
+Consumers migrating from v1 should:
+
+- replace old package references with the active package IDs that match their
+  host capabilities;
+- start from [setup.md](setup.md) for the current `AddBondstone` composition
+  path and [package-discovery.md](package-discovery.md) for namespace and
+  package choice;
+- move PostgreSQL durable persistence to
+  `Bondstone.Persistence.EntityFrameworkCore` plus
+  `Bondstone.Persistence.EntityFrameworkCore.Postgres`;
+- move module-local domain event contracts to `Bondstone` and optional EF
+  domain event record mapping to
+  `Bondstone.Persistence.EntityFrameworkCore`;
+- replace old provider-neutral transport or Rebus package usage with an
+  app-owned `IDurableEnvelopeDispatcher`,
+  `IDurableMessageEnvelopeSerializer`, and `IDurableEnvelopeReceiver`, or use
+  the thin RabbitMQ/Azure Service Bus adapter packages when the application
+  already owns native topology and retry policy;
+- preserve stable durable message identities where payload changes are
+  compatible, and introduce new identities for breaking payload changes;
+- generate and review application EF migrations after package upgrades because
+  Bondstone durable tables are mapped into application `DbContext` models.
+
+Release notes for replacement releases must call out removed package IDs,
+removed or renamed public APIs, durable table-shape changes, and any migration
+steps consumers must perform in their own applications.
+
 ## Package Dependencies
 
 Use this dependency direction:

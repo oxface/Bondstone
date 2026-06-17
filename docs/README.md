@@ -58,7 +58,8 @@ files with the local context each audience needs.
 
 - `setup.md` is the only stable doc for library-user code examples.
 - `packaging.md` owns package IDs, dependency direction, target framework,
-  package artifact policy, versioning, and publishing policy.
+  package artifact policy, versioning, publishing policy, and v2
+  replacement/migration guidance.
 - `package-discovery.md` owns package and namespace discovery guidance for
   common consumer-facing APIs.
 - `operations.md` owns production operations guidance for receive semantics,

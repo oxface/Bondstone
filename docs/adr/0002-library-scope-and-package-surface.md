@@ -153,6 +153,9 @@ not obvious must be captured as a short approval list before implementation.
   Thin RabbitMQ and Azure Service Bus packages were added by the 2026-06-16
   thin broker adapter amendment. The v2 cleanup start inventoried the current
   public API baselines against package discovery, setup, and public API docs.
+  On 2026-06-17, package README links and packaging guidance were updated to
+  point consumers at the active v2 package set and replacement/migration
+  guidance without reintroducing removed package IDs.
 - Pending or deferred: Rebus remains app-owned; further public API cleanup is
   planned as a cleanup sweep, not as compatibility preservation. EF entity
   visibility reductions, provider concrete store visibility, hosting worker
@@ -163,6 +166,7 @@ not obvious must be captured as a short approval list before implementation.
 ## Verification
 
 Read current packaging, package discovery, setup, public API, operations,
-observability, and public API baseline docs. Package verification is covered by
-`pnpm backend:pack`; the public API cleanup slice should also run the
-`Bondstone.PublicApi.Tests` project.
+observability, package README, and public API baseline docs. Package
+verification is covered by `pnpm backend:pack`; the public API cleanup slice
+should also run the `Bondstone.PublicApi.Tests` project. On 2026-06-17,
+verified doc-only application evidence by formatting changed Markdown.

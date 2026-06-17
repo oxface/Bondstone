@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox;
 
-public sealed class PostgreSqlModuleDurableOutboxDispatcher<TDbContext>(
+internal sealed class PostgreSqlModuleDurableOutboxDispatcher<TDbContext>(
     string moduleName,
     TDbContext context,
     IDurableEnvelopeDispatcher envelopeDispatcher,

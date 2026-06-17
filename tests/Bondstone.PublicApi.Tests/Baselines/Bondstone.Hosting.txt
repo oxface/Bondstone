@@ -10,12 +10,6 @@ namespace Bondstone.Hosting.Outbox
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurableOutboxDispatcher(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurableOutboxWorker(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions>? configureOptions = null) { }
     }
-    public sealed class DurableOutboxWorker : Microsoft.Extensions.Hosting.BackgroundService
-    {
-        public DurableOutboxWorker(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory serviceScopeFactory, Microsoft.Extensions.Options.IOptions<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions> options, Microsoft.Extensions.Logging.ILogger<Bondstone.Hosting.Outbox.DurableOutboxWorker> logger) { }
-        protected override System.Threading.Tasks.Task ExecuteAsync(System.Threading.CancellationToken ct) { }
-        public override System.Threading.Tasks.Task StartAsync(System.Threading.CancellationToken ct) { }
-    }
     public sealed class DurableOutboxWorkerOptions
     {
         public DurableOutboxWorkerOptions() { }
@@ -25,10 +19,5 @@ namespace Bondstone.Hosting.Outbox
         public System.TimeSpan PollingInterval { get; set; }
         public string WorkerId { get; set; }
         public void Validate() { }
-    }
-    public sealed class DurableOutboxWorkerOptionsValidator : Microsoft.Extensions.Options.IValidateOptions<Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions>
-    {
-        public DurableOutboxWorkerOptionsValidator() { }
-        public Microsoft.Extensions.Options.ValidateOptionsResult Validate(string? name, Bondstone.Hosting.Outbox.DurableOutboxWorkerOptions options) { }
     }
 }

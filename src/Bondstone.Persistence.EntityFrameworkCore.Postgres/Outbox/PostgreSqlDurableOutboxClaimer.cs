@@ -6,7 +6,7 @@ using Npgsql;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox;
 
-public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
+internal sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
     TDbContext context,
     TimeProvider? timeProvider = null,
     string? schema = null)

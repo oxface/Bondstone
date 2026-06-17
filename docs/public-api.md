@@ -240,21 +240,42 @@ Transport receive settlement cleanup, 2026-06-16:
   worker. `AutoCompleteMessages = true` is rejected during worker registration
   because Bondstone requires manual completion after durable receive succeeds.
 
+V2 public API cleanup continuation, 2026-06-16:
+
+- `DurableOutboxWorker` and `DurableOutboxWorkerOptionsValidator` are no
+  longer public. Hosted worker construction and options validation are DI
+  implementation details behind `UseWorker(...)` and
+  `AddBondstoneDurableOutboxWorker(...)`.
+- `DurableOutboxWorkerOptions` remains public because normal host setup
+  configures it.
+- EF Core entity and configuration types remain public for now as deliberate
+  EF mapping and provider-runtime contracts. The mapping helpers are still the
+  normal setup API, but the mapped CLR types, table names, column names,
+  constraint names, and shared limits are also consumed by the PostgreSQL
+  provider and can support migration or inspection-oriented advanced use.
+- `SystemTextJsonDurablePayloadSerializer` remains public as the default
+  durable payload serializer for normal setup and advanced manual composition.
+  Applications normally configure it through `DurablePayloadJsonOptions` and
+  `ConfigureBondstoneDurablePayloadJson(...)`, but direct construction remains
+  useful for custom send/receive pipelines and tests.
+- `SystemTextJsonDurableMessageEnvelopeSerializer` remains public as the
+  default durable envelope serializer for app-owned or adapter-owned broker
+  integration. Applications normally consume
+  `IDurableMessageEnvelopeSerializer` from DI, but direct construction is a
+  useful advanced composition path for native broker payload tests and custom
+  transport code.
+- PostgreSQL concrete SQL components are no longer public. The inbox
+  registrar, module inbox executor, outbox claimer, outbox lease renewer,
+  outbox dispatch recorder, and module outbox dispatcher are provider package
+  implementation details behind public setup helpers and provider-neutral
+  contracts.
+
 Remaining v2 decisions for approval:
 
-- EF Core entity and configuration types: decide which are deliberate mapping
-  contracts and which can become internal once mapping helpers cover normal
-  use.
-- Provider concrete stores and dispatchers: decide whether advanced manual
-  composition needs direct construction, or whether public interfaces plus
-  service registration helpers are enough.
-- Hosting concrete worker types: decide whether direct construction remains an
-  advanced scheduler/testing contract or should be hidden behind registration
-  helpers.
-- `SystemTextJsonDurablePayloadSerializer` and
-  `SystemTextJsonDurableMessageEnvelopeSerializer`: decide whether these
-  default implementations are deliberate app-facing defaults or only DI
-  implementation details.
+- EF Core concrete stores, scope, and provider-neutral concrete dispatch
+  helpers: decide whether advanced manual composition still needs direct
+  construction, or whether public interfaces plus narrower service
+  registration helpers are enough.
 
 ## Current Scope
 
@@ -366,6 +387,9 @@ Provider/runtime contract:
 Public implementation detail exposed for now:
 
 - `MessageTypeRegistry`
+
+Normal default and advanced composition API:
+
 - `SystemTextJsonDurablePayloadSerializer`
 
 ## Bondstone.Persistence
@@ -403,6 +427,7 @@ Advanced composition API:
 - `IDurableOutboxFailurePolicy`
 - `IDurableEnvelopeDispatcher`
 - `IDurableEnvelopeDispatchRoute`
+- `SystemTextJsonDurableMessageEnvelopeSerializer`
 - `DurableOutboxFailurePolicy`
 - `RoutedDurableEnvelopeDispatcher`
 
@@ -431,7 +456,6 @@ Public implementation detail exposed for now:
 
 - `DurableInboxHandlerExecutor`
 - `DurableOutboxDispatcher`
-- `SystemTextJsonDurableMessageEnvelopeSerializer`
 - `DurableModuleOutboxDispatchAggregator`
 
 ## Bondstone.Persistence.EntityFrameworkCore
@@ -451,17 +475,6 @@ Advanced composition API:
 Provider/runtime contract:
 
 - `EntityFrameworkCoreModulePersistence`
-
-Public implementation detail exposed for now:
-
-- `EntityFrameworkCoreDurableInboxInspectionStore<TDbContext>`
-- `EntityFrameworkCorePersistenceScope<TDbContext>`
-- `EntityFrameworkCoreDurableOutboxWriter<TDbContext>`
-- `EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext>`
-- `EntityFrameworkCoreDurableInboxStore<TDbContext>`
-- `EntityFrameworkCoreDurableOperationStateStore<TDbContext>`
-- `EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>`
-- `EntityFrameworkCoreDurableOutboxInspectionStore<TDbContext>`
 - `OutboxMessageEntity`
 - `OutboxMessageEntityConfiguration`
 - `OutboxMessageEntityConfiguration.Columns`
@@ -474,6 +487,17 @@ Public implementation detail exposed for now:
 - `DomainEventRecordEntityConfiguration`
 - `DomainEventRecordEntityConfiguration.Columns`
 
+Public implementation detail exposed for now:
+
+- `EntityFrameworkCoreDurableInboxInspectionStore<TDbContext>`
+- `EntityFrameworkCorePersistenceScope<TDbContext>`
+- `EntityFrameworkCoreDurableOutboxWriter<TDbContext>`
+- `EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext>`
+- `EntityFrameworkCoreDurableInboxStore<TDbContext>`
+- `EntityFrameworkCoreDurableOperationStateStore<TDbContext>`
+- `EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>`
+- `EntityFrameworkCoreDurableOutboxInspectionStore<TDbContext>`
+
 ## Bondstone.Persistence.EntityFrameworkCore.Postgres
 
 Normal setup API:
@@ -485,14 +509,12 @@ Advanced composition API:
 
 - `PostgreSqlPersistenceExceptionClassifier`
 
-Public implementation detail exposed for now:
+Provider implementation details hidden from public API:
 
-- `PostgreSqlDurableInboxRegistrar<TDbContext>`
-- `PostgreSqlModuleDurableInboxHandlerExecutor<TDbContext>`
-- `PostgreSqlDurableOutboxClaimer<TDbContext>`
-- `PostgreSqlDurableOutboxLeaseRenewer<TDbContext>`
-- `PostgreSqlDurableOutboxDispatchRecorder<TDbContext>`
-- `PostgreSqlModuleDurableOutboxDispatcher<TDbContext>`
+- PostgreSQL concrete inbox registrar, module inbox executor, outbox claimer,
+  lease renewer, dispatch recorder, and module outbox dispatcher classes are
+  internal implementation details behind the public setup helpers and
+  provider-neutral contracts.
 
 ## Bondstone.Hosting
 
@@ -504,11 +526,6 @@ Normal setup API:
 Advanced composition API:
 
 - `BondstoneHostingServiceCollectionExtensions`
-
-Public implementation detail exposed for now:
-
-- `DurableOutboxWorker`
-- `DurableOutboxWorkerOptionsValidator`
 
 ## Bondstone.Transport.Local
 

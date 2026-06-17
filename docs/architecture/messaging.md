@@ -222,8 +222,12 @@ separate boundary fields instead of being inferred from CLR names or transport
 details.
 
 Durable payload serialization is shared through `IDurablePayloadSerializer`.
-The default implementation uses System.Text.Json options configured through
-Bondstone's durable payload JSON surface.
+The public default implementation,
+`SystemTextJsonDurablePayloadSerializer`, uses System.Text.Json options
+configured through Bondstone's durable payload JSON surface.
+`SystemTextJsonDurableMessageEnvelopeSerializer` is the public default for
+serializing the durable envelope itself when app-owned or adapter-owned
+broker integration needs to exchange Bondstone envelopes as JSON.
 
 ## Operation State
 

@@ -22,24 +22,22 @@ that map Bondstone persistence to a non-default schema must pass the same
 schema to PostgreSQL registration so provider-owned SQL targets the mapped
 tables.
 
-`PostgreSqlDurableOutboxClaimer<TDbContext>` claims due pending rows and
-expired processing rows, writes claim lease state, respects scheduled pending
-rows, and returns claimed records.
+The PostgreSQL outbox claimer claims due pending rows and expired processing
+rows, writes claim lease state, respects scheduled pending rows, and returns
+claimed records. The lease renewer extends the claim lease for one active
+processing row when the claimant still owns an unexpired lease.
 
-`PostgreSqlDurableOutboxLeaseRenewer<TDbContext>` extends the claim lease for
-one active processing row when the claimant still owns an unexpired lease.
-
-`PostgreSqlDurableOutboxDispatchRecorder<TDbContext>` records dispatch success,
-retry scheduling, and terminal-failure outcomes only when the row is still
-processing, still owned by the supplied claimant, and still inside the active
-claim lease. The provider follows the core outbox terminal status contract in
+The PostgreSQL dispatch recorder records dispatch success, retry scheduling,
+and terminal-failure outcomes only when the row is still processing, still
+owned by the supplied claimant, and still inside the active claim lease. The
+provider follows the core outbox terminal status contract in
 [persistence-core.md](persistence-core.md).
 
-`PostgreSqlDurableInboxRegistrar<TDbContext>` returns explicit registered,
-already-received, or already-processed results without using duplicate
-exceptions as the public flow. It does not implement inbox leases, stale
-receive recovery, failed receive states, or row mutation helpers for
-already-received unprocessed rows.
+The PostgreSQL inbox registrar returns explicit registered, already-received,
+or already-processed results without using duplicate exceptions as the public
+flow. It does not implement inbox leases, stale receive recovery, failed
+receive states, or row mutation helpers for already-received unprocessed
+rows.
 Read-only inspection for unprocessed inbox rows is provided through the
 EF-backed inspection store.
 

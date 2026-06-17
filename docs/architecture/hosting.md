@@ -10,9 +10,10 @@ discovery, or broker configuration.
 
 ## Outbox Worker
 
-`DurableOutboxWorker` is a standard .NET hosted service over
-`IDurableOutboxDispatcher`. It does not send directly through a transport and
-does not own provider-specific SQL.
+The built-in outbox worker is a standard .NET hosted service over
+`IDurableOutboxDispatcher`, registered through the public worker setup helpers.
+Its concrete hosted-service type is an implementation detail. The worker does
+not send directly through a transport and does not own provider-specific SQL.
 
 The worker uses `DurableOutboxWorkerOptions` for worker id, lease duration,
 batch size, polling interval, and failure delay. It dispatches one batch per
@@ -36,12 +37,12 @@ exhausted.
 The aggregate worker is the only built-in worker topology. It is not a
 fairness or noisy-neighbor isolation model: a slow module dispatcher can delay
 later modules, and a module dispatcher failure stops the current aggregate
-batch by bubbling to the hosted worker. The hosted worker logs the failed
-batch with event id `1001` / `DispatchBatchFailed`, waits for `FailureDelay`,
-and continues with a later batch. Module outboxes remain ownership boundaries;
-selected-module worker registration, per-module worker options, parallel
-aggregate dispatch, dispatch timeouts, and per-module concurrency controls are
-not part of the current worker contract.
+batch by bubbling to the hosted worker. The hosted worker logs the failed batch
+with event id `1001` / `DispatchBatchFailed`, waits for `FailureDelay`, and
+continues with a later batch. Module outboxes remain ownership boundaries;
+selected-module worker registration, per-module worker options, direct worker
+construction, parallel aggregate dispatch, dispatch timeouts, and per-module
+concurrency controls are not part of the current worker contract.
 
 `AddBondstone` is the preferred host registration path. Package-specific
 extensions register provider, transport, and worker services. Runtime

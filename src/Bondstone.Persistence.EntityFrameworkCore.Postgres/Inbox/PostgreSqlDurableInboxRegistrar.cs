@@ -9,7 +9,7 @@ using Npgsql;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Inbox;
 
-public sealed class PostgreSqlDurableInboxRegistrar<TDbContext>(
+internal sealed class PostgreSqlDurableInboxRegistrar<TDbContext>(
     TDbContext context,
     string? schema = null)
     : IDurableInboxRegistrar

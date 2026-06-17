@@ -258,6 +258,21 @@ Durable incoming inbox EF Core mapping, 2026-06-17:
   add hosted workers, adapter handoff, direct receive behavior changes,
   operation failure inference, or cleanup mutation APIs.
 
+Durable incoming inbox worker, 2026-06-17:
+
+- `Bondstone.Hosting.IncomingInbox` is an additive normal setup namespace for
+  the opt-in incoming inbox processing worker.
+- `UseDurableIncomingInboxWorker(...)` and
+  `AddBondstoneDurableIncomingInboxWorker(...)` are additive setup APIs over
+  the existing `IDurableIncomingInboxDispatcher`.
+- `DurableIncomingInboxWorkerOptions` is a public options type for worker id,
+  batch size, polling interval, lease duration, failure delay, max attempts,
+  and retry delays. The concrete worker and options validator remain internal
+  DI implementation details.
+- This slice does not add provider-neutral transport ingestion workers,
+  selected-module or source-transport worker filters, direct receive default
+  behavior changes, operation failure inference, or cleanup mutation APIs.
+
 Public API curation, 2026-06-16:
 
 - The current persistence inspection contracts are intentionally split between

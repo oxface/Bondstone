@@ -1,3 +1,26 @@
+namespace Bondstone.Hosting.IncomingInbox
+{
+    public static class BondstoneIncomingInboxHostingBuilderExtensions
+    {
+        public static Bondstone.Configuration.BondstoneBuilder UseDurableIncomingInboxWorker(this Bondstone.Configuration.BondstoneBuilder builder, System.Action<Bondstone.Hosting.IncomingInbox.DurableIncomingInboxWorkerOptions>? configureOptions = null) { }
+    }
+    public static class BondstoneIncomingInboxHostingServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurableIncomingInboxWorker(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Bondstone.Hosting.IncomingInbox.DurableIncomingInboxWorkerOptions>? configureOptions = null) { }
+    }
+    public sealed class DurableIncomingInboxWorkerOptions
+    {
+        public DurableIncomingInboxWorkerOptions() { }
+        public int BatchSize { get; set; }
+        public System.TimeSpan FailureDelay { get; set; }
+        public System.TimeSpan LeaseDuration { get; set; }
+        public int MaxAttempts { get; set; }
+        public System.TimeSpan PollingInterval { get; set; }
+        public System.Collections.Generic.IReadOnlyList<System.TimeSpan> RetryDelays { get; set; }
+        public string WorkerId { get; set; }
+        public void Validate() { }
+    }
+}
 namespace Bondstone.Hosting.Outbox
 {
     public static class BondstoneHostingBuilderExtensions

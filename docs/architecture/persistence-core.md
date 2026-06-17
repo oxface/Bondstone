@@ -250,8 +250,10 @@ tiny direct-receive inbox. Provider-neutral EF Core ingestion and read-only
 inspection stores exist. PostgreSQL-specific claim, lease-renewal, and
 outcome-recording stores exist for the incoming ledger. Core also provides a
 host-callable `IDurableIncomingInboxDispatcher` that claims due rows and hands
-each row to the existing module receive pipelines. Hosted workers and
-transport adapter handoff are not implemented.
+each row to the existing module receive pipelines. `Bondstone.Hosting`
+provides an opt-in hosted worker for that dispatcher. Transport adapter
+handoff into durable ingestion is not implemented as a provider-neutral
+runtime and remains adapter-owned or application-owned.
 
 The target durable inbox is modeled as a single persisted incoming delivery
 ledger. Its key is the durable receive binding:
@@ -299,6 +301,13 @@ direct inbox is already received but unprocessed, the module receive pipeline
 continues to raise `DurableInboxAlreadyReceivedException`; the incoming
 dispatcher treats that ambiguity as a processing failure and applies incoming
 inbox retry or terminal-failure policy.
+
+The hosted incoming inbox processing worker only schedules dispatcher calls.
+It does not add provider-neutral source-transport or receiver-module filters
+because the current claimer contract is claimant, lease-duration, max-count,
+and cancellation based. Cleanup and retention of pending, processed, retry,
+stale, or terminal incoming rows remain application-owned unless a later
+accepted implementation adds explicit mutation or retention contracts.
 
 Durable inbox terminal failure must not automatically write operation `Failed`.
 Operation state is still the caller-visible result model, and applications

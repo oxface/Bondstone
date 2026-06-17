@@ -10,16 +10,16 @@ policy, including v2 replacement/migration guidance, see
 
 ## Capability Matrix
 
-| Capability                                                                                                                                            | Package ID                                           | Common namespaces                                                                               | Notes                                                                                                                                                                                                               |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Host composition, module registration, command/event contracts, durable send/publish, module execution, payload serialization, domain event contracts | `Bondstone`                                          | `Bondstone.Configuration`, `Bondstone.Modules`, `Bondstone.Messaging`, `Bondstone.DomainEvents` | The normal entrypoint is `services.AddBondstone(...)`; modules register commands, events, durable messaging, and optional persistence through the builder.                                                          |
-| Provider-neutral durable persistence contracts, envelopes, outbox, inbox, operation state, dispatcher and inspection contracts                        | `Bondstone.Persistence`                              | `Bondstone.Persistence`, `Bondstone.Messaging`                                                  | Use directly for custom persistence, custom dispatch composition, terminal outbox inspection, low-level inbox/outbox work, and operation-state reads.                                                               |
-| EF Core durable persistence mappings, module transaction behavior, and EF-backed domain event persistence                                             | `Bondstone.Persistence.EntityFrameworkCore`          | `Bondstone.Persistence.EntityFrameworkCore.Persistence`                                         | Provides `ApplyBondstonePersistence(...)`, granular EF mapping helpers, `UseEntityFrameworkCorePersistence<TDbContext>()`, `UseEntityFrameworkCoreDomainEventPersistence()`, and `ApplyBondstoneDomainEvents(...)`. |
-| EF Core plus PostgreSQL durable persistence helpers                                                                                                   | `Bondstone.Persistence.EntityFrameworkCore.Postgres` | `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence`                                | Preferred EF/PostgreSQL module setup is `module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: ...)`.                                                                                               |
-| Hosted durable outbox worker and default dispatcher registration                                                                                      | `Bondstone.Hosting`                                  | `Bondstone.Hosting.Outbox`                                                                      | Normal hosts use `bondstone.Outbox.UseWorker(...)`; advanced schedulers can use the dispatcher registration separately.                                                                                             |
-| Explicit local in-process transport for samples, tests, and local development                                                                         | `Bondstone.Transport.Local`                          | `Bondstone.Transport.Local.Outbox`                                                              | Use `UseLocalTransport(...)` when the host intentionally routes through local queues and Bondstone receive pipelines.                                                                                               |
-| Thin RabbitMQ envelope adapter                                                                                                                        | `Bondstone.Transport.RabbitMq`                       | `Bondstone.Transport.RabbitMq`                                                                  | Use `UseRabbitMqDispatcher(...)` and optional `UseRabbitMqReceiveWorker(...)` when the app already owns RabbitMQ topology and client/channel registration.                                                          |
-| Thin Azure Service Bus envelope adapter                                                                                                               | `Bondstone.Transport.ServiceBus`                     | `Bondstone.Transport.ServiceBus`                                                                | Use `UseServiceBusDispatcher(...)` and optional `UseServiceBusReceiveWorker(...)` when the app already owns Service Bus topology and client registration.                                                           |
+| Capability                                                                                                                                            | Package ID                                           | Common namespaces                                                                               | Notes                                                                                                                                                                                                                 |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Host composition, module registration, command/event contracts, durable send/publish, module execution, payload serialization, domain event contracts | `Bondstone`                                          | `Bondstone.Configuration`, `Bondstone.Modules`, `Bondstone.Messaging`, `Bondstone.DomainEvents` | The normal entrypoint is `services.AddBondstone(...)`; modules register commands, events, durable messaging, and optional persistence through the builder.                                                            |
+| Provider-neutral durable persistence contracts, envelopes, outbox, inbox, operation state, dispatcher and inspection contracts                        | `Bondstone.Persistence`                              | `Bondstone.Persistence`, `Bondstone.Messaging`                                                  | Use directly for custom persistence, custom dispatch composition, terminal outbox inspection, low-level inbox/outbox work, and operation-state reads.                                                                 |
+| EF Core durable persistence mappings, module transaction behavior, and EF-backed domain event persistence                                             | `Bondstone.Persistence.EntityFrameworkCore`          | `Bondstone.Persistence.EntityFrameworkCore.Persistence`                                         | Provides `ApplyBondstonePersistence(...)`, granular EF mapping helpers, `UseEntityFrameworkCorePersistence<TDbContext>()`, `UseEntityFrameworkCoreDomainEventPersistence()`, and `ApplyBondstoneDomainEvents(...)`.   |
+| EF Core plus PostgreSQL durable persistence helpers                                                                                                   | `Bondstone.Persistence.EntityFrameworkCore.Postgres` | `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence`                                | Preferred EF/PostgreSQL module setup is `module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: ...)`.                                                                                                 |
+| Hosted durable outbox worker and default dispatcher registration; opt-in durable incoming inbox processing worker                                     | `Bondstone.Hosting`                                  | `Bondstone.Hosting.Outbox`, `Bondstone.Hosting.IncomingInbox`                                   | Normal hosts use `bondstone.Outbox.UseWorker(...)`; hosts using the optional incoming ledger can use `bondstone.UseDurableIncomingInboxWorker(...)`. Advanced schedulers can use lower-level registration separately. |
+| Explicit local in-process transport for samples, tests, and local development                                                                         | `Bondstone.Transport.Local`                          | `Bondstone.Transport.Local.Outbox`                                                              | Use `UseLocalTransport(...)` when the host intentionally routes through local queues and Bondstone receive pipelines.                                                                                                 |
+| Thin RabbitMQ envelope adapter                                                                                                                        | `Bondstone.Transport.RabbitMq`                       | `Bondstone.Transport.RabbitMq`                                                                  | Use `UseRabbitMqDispatcher(...)` and optional `UseRabbitMqReceiveWorker(...)` when the app already owns RabbitMQ topology and client/channel registration.                                                            |
+| Thin Azure Service Bus envelope adapter                                                                                                               | `Bondstone.Transport.ServiceBus`                     | `Bondstone.Transport.ServiceBus`                                                                | Use `UseServiceBusDispatcher(...)` and optional `UseServiceBusReceiveWorker(...)` when the app already owns Service Bus topology and client registration.                                                             |
 
 Package IDs match project names. The full package inventory and dependency
 direction live in [packaging.md](packaging.md).
@@ -201,7 +201,7 @@ The direct non-EF `Bondstone.Persistence.Postgres` package was removed after
 MVP. EF Core plus `Bondstone.Persistence.EntityFrameworkCore.Postgres` is the
 supported PostgreSQL persistence path.
 
-## Hosting And Outbox Worker
+## Hosting Workers
 
 Use this import for normal hosted outbox dispatch:
 
@@ -220,6 +220,26 @@ Common APIs include:
 - `services.AddBondstoneDurableOutboxWorker(...)` and
   `services.AddBondstoneDurableOutboxDispatcher()` for advanced or custom
   scheduler composition.
+
+Use this import for opt-in durable incoming inbox processing:
+
+```csharp
+using Bondstone.Hosting.IncomingInbox;
+```
+
+Common APIs include:
+
+- `bondstone.UseDurableIncomingInboxWorker(options => ...)` for the hosted
+  worker over `IDurableIncomingInboxDispatcher`;
+- `DurableIncomingInboxWorkerOptions` for worker id, batch size, polling
+  interval, lease duration, failure delay, max attempts, and retry delays;
+- `services.AddBondstoneDurableIncomingInboxWorker(...)` for advanced worker
+  registration when the host composes the dispatcher itself.
+
+The receive topology remains three separate loops: the outbox dispatch
+worker, a transport receive/ingestion worker or app-owned adapter loop, and
+the incoming inbox processing worker. Cleanup and retention remain
+application-owned.
 
 ## Local Transport
 
@@ -245,7 +265,7 @@ Local transport is explicit routing for samples, tests, and local development.
 It exercises the durable outbox and receive inbox semantics through
 Bondstone's neutral receive pipelines, but it is not broker durability, a
 production fallback, topology management, retry, dead-letter handling, or
-durable inbox worker behavior.
+durable inbox ingestion.
 See [architecture/transport-local.md](architecture/transport-local.md).
 
 ## Domain Events
@@ -298,6 +318,6 @@ records, not outbox records.
 - [architecture/persistence-postgresql.md](architecture/persistence-postgresql.md)
   describes EF/PostgreSQL provider behavior.
 - [architecture/hosting.md](architecture/hosting.md) describes the durable
-  outbox worker.
+  hosted workers.
 - [architecture/transport-local.md](architecture/transport-local.md)
   describes local transport topology and receive semantics.

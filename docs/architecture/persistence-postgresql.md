@@ -46,9 +46,10 @@ failure outcome fields, and increments attempt count. Incoming inbox lease
 renewal and outcome recording only update rows that are still `Processing`,
 still owned by the supplied claimant, and still inside the active claim lease.
 Normal stale ownership or race cases return false or an empty claim result.
-The provider does not add hosted incoming inbox workers, transport adapter
-handoff, direct receive behavior changes, operation failure inference, or
-cleanup mutation APIs.
+The provider does not register hosted incoming inbox workers, transport
+adapter handoff, direct receive behavior changes, operation failure inference,
+or cleanup mutation APIs. Hosted incoming processing lives in
+`Bondstone.Hosting`.
 
 The PostgreSQL inbox registrar returns explicit registered, already-received,
 or already-processed results without using duplicate exceptions as the public

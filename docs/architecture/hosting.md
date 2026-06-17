@@ -78,8 +78,11 @@ dependencies.
 ## Worker Ownership
 
 A Bondstone worker may move records between Bondstone-owned durable states.
-The current built-in example is the hosted outbox worker moving outbox records
-through claim, dispatch, retry, and terminal-failure outcomes.
+The built-in outbox worker moves outbox records through claim, dispatch,
+retry, and terminal-failure outcomes. The built-in incoming inbox processing
+worker moves durable incoming inbox records through claim, retry, processed,
+stale, and terminal receive-failure outcomes before handing each due row to
+the existing module receive pipeline.
 
 Bondstone workers must not manage provider-native infrastructure. Queue,
 exchange, topic, subscription, rule, binding, broker retry, dead-letter,
@@ -100,13 +103,32 @@ reads provider-native deliveries and settles provider-native messages. It may
 call Bondstone durable inbox ingestion and settle the native delivery only
 after durable ingestion succeeds.
 
-A future durable inbox processing worker would be Bondstone-owned because it
-would host the existing durable incoming inbox dispatcher that moves Bondstone
-durable incoming rows through claim, retry, processed, stale, and terminal
-receive failure state before handing each due row to the existing module
-receive pipeline. That worker still must not provision broker topology, own
-broker retry or dead-letter policy, or mutate application cleanup and
-retention state by default.
+The durable incoming inbox processing worker is Bondstone-owned because it
+hosts the existing durable incoming inbox dispatcher over Bondstone durable
+incoming rows. It is opt-in and does not change direct receive defaults. The
+worker uses `DurableIncomingInboxWorkerOptions` for worker id, lease duration,
+batch size, polling interval, failure delay, max attempts, and retry delays.
+It processes one batch per call, immediately continues while rows are claimed,
+waits for the polling interval when no rows are claimed, logs unexpected
+batch failures with a consecutive failure count, waits for the failure delay,
+and then continues. Host cancellation stops the loop. Like the outbox worker,
+it resolves the dispatcher inside a service scope for each batch.
+
+The current worker topology has three distinct loops:
+
+1. a Bondstone outbox dispatch worker claims and dispatches outgoing durable
+   outbox rows;
+2. a transport receive/ingestion worker or app-owned adapter loop reads native
+   transport deliveries and, when using the optional incoming ledger, records
+   durable incoming inbox rows before native settlement;
+3. a Bondstone incoming inbox processing worker claims durable incoming rows
+   and invokes module receive.
+
+The incoming inbox processing worker must not provision broker topology, own
+broker retry or dead-letter policy, infer operation failure, or mutate
+application cleanup and retention state by default. Cleanup remains
+application-owned unless a later accepted implementation adds an explicit
+Bondstone retention worker or mutation API.
 
 Provider SQL remains in provider packages. Transport-specific send, receive,
 and envelope behavior remains in transport adapter packages. Production worker

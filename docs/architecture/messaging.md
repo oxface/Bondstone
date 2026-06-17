@@ -217,8 +217,10 @@ ADR
 [0017](../adr/0017-single-durable-inbox-incoming-ledger.md) accepts the durable
 inbox incoming ledger direction. It is partially applied: provider-neutral
 records, EF ingestion and inspection, PostgreSQL mutation stores, and a
-host-callable processing dispatcher exist, but hosted workers and transport
-adapter handoff do not. Direct receive remains the default. ADR
+host-callable processing dispatcher exist, and `Bondstone.Hosting` provides an
+opt-in incoming inbox processing worker over that dispatcher. Transport
+adapter ingestion handoff is still app-owned or adapter-owned. Direct receive
+remains the default. ADR
 [0012](../adr/0012-direct-receive-inbox-and-durable-receive-buffer.md)
 preserves the superseded separate receive-buffer decision trail.
 
@@ -255,6 +257,14 @@ inbox rows remain loud ambiguity: the receive pipeline raises
 as a processing failure rather than re-running the handler. Terminal durable
 inbox failure is operational evidence for application policy; it does not
 automatically write `Failed` operation state.
+
+The optional receive topology has three worker loops when buffered receive is
+used: the outbox dispatch worker for outgoing rows, a transport
+receive/ingestion loop for native deliveries, and the incoming inbox
+processing worker for durable incoming rows. The incoming worker is opt-in and
+does not replace direct receive. Cleanup, retention, replay, purge, and
+operator mutation of incoming rows remain application-owned unless a later
+accepted implementation adds a dedicated Bondstone cleanup surface.
 
 ## Durable Envelope
 

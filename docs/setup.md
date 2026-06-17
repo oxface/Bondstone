@@ -8,7 +8,8 @@ Install the packages needed for the host:
 
 - `Bondstone` for core module, command, integration-event, domain-event, and
   module execution contracts.
-- `Bondstone.Hosting` when the host runs the durable outbox worker.
+- `Bondstone.Hosting` when the host runs the durable outbox worker or the
+  optional durable incoming inbox processing worker.
 - `Bondstone.Persistence` for provider-neutral durable envelopes, inbox,
   outbox, operation state, and persistence contracts used by custom
   persistence or dispatch composition.
@@ -33,7 +34,7 @@ For a normal PostgreSQL-backed host, start with:
 
 - `Bondstone` for module registration, durable send/publish contracts, and
   module receive pipelines;
-- `Bondstone.Hosting` for the durable outbox worker;
+- `Bondstone.Hosting` for hosted durable workers;
 - `Bondstone.Persistence.EntityFrameworkCore` and
   `Bondstone.Persistence.EntityFrameworkCore.Postgres` for EF-backed module
   persistence;
@@ -116,6 +117,9 @@ Common namespaces for this path are:
   topology.
 - `Bondstone.Hosting.Outbox` for `UseWorker` and
   `DurableOutboxWorkerOptions`.
+- `Bondstone.Hosting.IncomingInbox` for optional
+  `UseDurableIncomingInboxWorker` and
+  `DurableIncomingInboxWorkerOptions`.
 
 Host composition wires modules, local transport, and the hosted outbox worker:
 
@@ -160,6 +164,10 @@ builder.Services.AddBondstone(bondstone =>
 `UseWorker(...)` registers the default durable dispatcher and the hosted
 outbox worker. Use `bondstone.Outbox.UseDurableDispatcher()` only for advanced
 manual dispatcher composition where the host does not want the built-in worker.
+Hosts that use the optional durable incoming ledger can also opt in to
+`bondstone.UseDurableIncomingInboxWorker(...)`; direct receive remains the
+default, and transport ingestion into the incoming ledger is still
+adapter-owned or application-owned.
 
 `Bondstone.Transport.Local` is explicit sample, test, and local-development
 infrastructure. `local.UseModuleQueueConvention()` is complete command
@@ -866,6 +874,13 @@ after the receiver completes, and let failures flow to provider-native retry
 and dead-letter policy. Bondstone's receive responsibility is inbox
 idempotency and module transaction execution. Broker retry schedules, delivery
 counts, and DLQ settings remain provider/app-owned.
+
+The optional durable incoming inbox path adds a separate processing loop:
+native transport receive or adapter code records incoming ledger rows, then
+the hosted incoming inbox processing worker claims due rows and calls module
+receive. This creates the three-worker topology used by buffered receive:
+outbox dispatch, transport receive/ingestion, and incoming inbox processing.
+Cleanup and retention remain app-owned.
 
 If a receive attempt finds an inbox row that was already received but not
 processed, Bondstone fails the module receive with

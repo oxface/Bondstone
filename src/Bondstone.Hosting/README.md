@@ -8,15 +8,18 @@ administration.
 
 ## Quick Path
 
-Add this package when a host should run Bondstone's durable outbox worker.
-Normal setup configures the worker with `bondstone.Outbox.UseWorker(...)`
-inside `AddBondstone`; provider transport setup still belongs to the concrete
-transport packages. See
+Add this package when a host should run Bondstone's durable outbox worker or
+the optional durable incoming inbox processing worker. Normal outbox setup
+configures the worker with `bondstone.Outbox.UseWorker(...)` inside
+`AddBondstone`; optional incoming inbox processing uses
+`bondstone.UseDurableIncomingInboxWorker(...)`. Provider transport setup still
+belongs to the concrete transport packages or the application. See
 [the setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md).
 
 Install this package in executable hosts that need the built-in outbox
-dispatcher worker. Module contract projects and provider-only libraries do not
-need it unless they configure hosted outbox processing.
+dispatcher worker or incoming inbox processing worker. Module contract
+projects and provider-only libraries do not need it unless they configure
+hosted processing.
 
 See:
 

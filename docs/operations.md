@@ -18,6 +18,8 @@ Bondstone owns:
 - the direct receive inbox idempotency boundary;
 - persisted outbox retry state and terminal outbox failure state;
 - the hosted outbox worker over Bondstone-owned outbox records;
+- the opt-in hosted incoming inbox processing worker over Bondstone-owned
+  durable incoming inbox records;
 - read-only inspection contracts for terminal outbox rows and unprocessed inbox
   rows;
 - explicit operation finalization and expiration APIs that application policy
@@ -71,8 +73,9 @@ Bondstone does not currently provide tiny direct-inbox leases, a direct-inbox
 stale-row sweeper, or direct-inbox failed receive state. ADR
 [0017](adr/0017-single-durable-inbox-incoming-ledger.md) records the durable
 inbox incoming-ledger direction. The incoming ledger has provider contracts,
-PostgreSQL mutation stores, and a host-callable processing dispatcher, but no
-hosted incoming inbox worker or transport adapter handoff yet. ADR
+PostgreSQL mutation stores, a host-callable processing dispatcher, and an
+opt-in hosted incoming inbox processing worker. Provider-neutral transport
+adapter handoff into durable ingestion is not implemented. ADR
 [0012](adr/0012-direct-receive-inbox-and-durable-receive-buffer.md) preserves
 the superseded receive-buffer decision trail.
 
@@ -82,7 +85,16 @@ Current direct receive has two runtime stages:
 2. handler state, inbox marker, operation state, and outgoing outbox commit in
    the target module persistence boundary.
 
-The optional durable inbox model splits this into durable-processing stages:
+The optional durable inbox model uses a three-worker topology:
+
+1. the outbox dispatch worker claims and dispatches outgoing durable outbox
+   rows;
+2. a transport receive/ingestion worker or app-owned adapter loop reads native
+   deliveries and records durable incoming inbox rows before native settlement;
+3. the incoming inbox processing worker claims due durable incoming rows and
+   hands them to module receive.
+
+That topology splits receive into durable-processing stages:
 
 1. native transport delivery to a Bondstone durable inbox incoming row;
 2. host-called durable inbox processing claim and handoff to module receive;
@@ -397,6 +409,22 @@ iteration. The current worker has no fairness guarantee and no selected-module
 scheduling option, so noisy-neighbor isolation requires app-owned deployment
 or a future Bondstone worker option.
 
+### Repeated Incoming Inbox Worker Batch Failures
+
+The hosted incoming inbox processing worker logs unexpected process-batch
+failures with event id `2001` and name `ProcessBatchFailed`, includes the
+worker id and consecutive failure count, waits for `FailureDelay`, and
+continues. Repeated failures mean the worker loop is alive but cannot complete
+batches, often because claim, outcome recording, module receive resolution, or
+module persistence is failing before per-row retry or terminal state can be
+recorded.
+
+Applications should monitor the log event by worker id and rate-limit window.
+Correlate it with incoming inbox table state, direct receive metrics, handler
+logs, and provider-native transport health. Cleanup, replay, purge, archival,
+and terminal-row remediation remain application-owned unless a later
+Bondstone cleanup worker or mutation API is explicitly implemented.
+
 ### Operation Expiration Backlog
 
 Applications that expose durable operation results should define an expiry
@@ -446,8 +474,8 @@ EF migrations before deploying upgraded packages.
 
 Migrator processes should compose the module `DbContext` provider options,
 schemas, application entities, and Bondstone EF mappings. They do not need
-local transport, broker transport, receive workers, or the hosted outbox
-worker.
+local transport, broker transport, receive workers, the hosted outbox worker,
+or the hosted incoming inbox processing worker.
 
 ## Contract Evolution
 

@@ -217,6 +217,27 @@ Remaining after the operation visibility quick wins:
 - Left stable misconfiguration error codes deferred because implementing them
   cleanly would require a separate exception/error-code design pass.
 
+2026-06-17 worker ergonomics documentation hardening applied:
+
+- Documented the current aggregate outbox dispatch contract as registration
+  order over module dispatchers, one shared `BatchSize`/`maxCount` budget,
+  failure propagation to the hosted worker, and no current fairness or
+  selected-module scheduling guarantee.
+- Added app-owned health/readiness recipes for terminal outbox failures, stale
+  direct inbox rows, repeated outbox worker batch failures, and operation
+  expiration backlog.
+- Deferred selected-module outbox worker options. The current hosted worker
+  resolves the app-facing `IDurableOutboxDispatcher`, while selected-module
+  targeting must apply only to Bondstone-owned module outbox dispatcher
+  registrations and not to custom/root dispatchers. That needs a small public
+  option and composition design rather than a quiet worker tweak.
+- Deferred a hosted operation expiration worker. The existing
+  `IDurableOperationExpirationProcessor` is intentionally app-scheduled, and a
+  default worker would make cadence, cutoff, terminal status, and user-visible
+  reason look library-owned too early.
+- Did not implement cleanup worker behavior. Cleanup mutates durable evidence
+  and still requires ADR review before any default worker.
+
 ## Implementation Order
 
 Start with small visibility and ergonomics slices before large receive-buffer

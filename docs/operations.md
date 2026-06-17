@@ -277,6 +277,116 @@ state. Expiration finalizes stale `Pending` or `Running` rows according to the
 application's cutoff and reason; it does not inspect broker or outbox state by
 itself.
 
+## Health And Readiness Recipes
+
+Health and readiness checks should distinguish "the host can accept traffic"
+from "operators need to investigate durable evidence." Bondstone exposes
+read-only inspection APIs and metrics for Bondstone-owned durable state, but
+applications own thresholds, alert routing, readiness policy, and any mutation
+or replay procedure.
+
+### Terminal Outbox Failures
+
+Use `IDurableOutboxInspector` per module to count or sample terminal failures
+older than the application's incident threshold:
+
+```csharp
+IReadOnlyList<DurableOutboxRecord> terminalFailures = await outboxInspector
+    .FindTerminalFailedAsync(
+        moduleName,
+        maxCount: 1,
+        failedAtOrBeforeUtc: DateTimeOffset.UtcNow.AddMinutes(-5),
+        ct);
+```
+
+A non-empty result is a strong alert signal because Bondstone has stopped
+retrying those local outbox rows. Whether it should fail readiness depends on
+the app: an API that accepts new durable commands for the same source module
+may choose degraded readiness, while a read-only endpoint may only raise an
+operator alert. Recovery remains app-owned: inspect downstream side effects
+before resetting, replaying, purging, archiving, or compensating.
+
+Pair the inspection check with the `bondstone.outbox.terminal_failed` metric
+for alerting on newly terminal rows. The metric is not a substitute for
+inspection when operators need the durable envelope and failure reason.
+
+### Stale Direct Inbox Rows
+
+Use `IDurableInboxInspector` per module to find unprocessed direct inbox rows
+older than the expected handler and broker retry window:
+
+```csharp
+IReadOnlyList<DurableInboxRecord> staleReceives = await inboxInspector
+    .FindUnprocessedAsync(
+        moduleName,
+        maxCount: 1,
+        receivedAtOrBeforeUtc: DateTimeOffset.UtcNow.AddMinutes(-5),
+        ct);
+```
+
+A non-empty result means a receive attempt is ambiguous. It should usually
+alert operators and may fail readiness for endpoints that depend on that
+module's receive progress. Do not make an automatic health check mark the row
+processed, delete it, re-run the handler, or move broker messages. The runbook
+must first prove whether the handler side effect happened.
+
+Use the `bondstone.direct_receive.already_received` metric as an early warning
+that native redelivery is hitting ambiguous inbox state. Broker delivery count,
+dead-letter state, and retry exhaustion remain provider-native signals.
+
+### Repeated Outbox Worker Batch Failures
+
+The hosted outbox worker logs unexpected dispatch-batch failures with event id
+`1001` and name `DispatchBatchFailed`, waits for `FailureDelay`, and continues.
+Repeated failures mean the worker loop is alive but cannot complete batches,
+often because a module dispatcher, persistence dependency, or transport
+dispatcher is failing before Bondstone can record per-row retry or terminal
+state.
+
+Applications should monitor the log event by worker id and rate-limit window.
+Treat sustained failures as an alert, and consider failing readiness for hosts
+whose primary job is outbox dispatch. Correlate the log with outbox metrics:
+if claimed, retry, terminal, or dispatched counters are not moving while
+batch-failure logs continue, investigate dispatcher construction,
+connectivity, credentials, route configuration, or provider-native transport
+health.
+
+The aggregate module dispatcher runs module dispatchers in registration order
+with one shared batch budget. A failure from one module dispatcher stops the
+current aggregate batch and delays later modules until a later worker
+iteration. The current worker has no fairness guarantee and no selected-module
+scheduling option, so noisy-neighbor isolation requires app-owned deployment
+or a future Bondstone worker option.
+
+### Operation Expiration Backlog
+
+Applications that expose durable operation results should define an expiry
+policy for old `Pending` or `Running` operations. Schedule an app-owned job per
+module and call `IDurableOperationExpirationProcessor` with the application's
+cutoff, terminal status, reason, and batch size:
+
+```csharp
+DurableOperationExpirationResult expiration = await expirationProcessor
+    .MarkExpiredAsync(
+        moduleName,
+        expiresBeforeUtc: DateTimeOffset.UtcNow.AddHours(-1),
+        terminalStatus: DurableOperationStatus.Failed,
+        reason: "Operation exceeded the application expiry policy.",
+        maxCount: 100,
+        ct: ct);
+```
+
+Monitor `CandidateCount` and `FinalizedCount`, plus the
+`bondstone.operation.expiration.candidates` and
+`bondstone.operation.expiration.finalized` metrics. A recurring candidate
+backlog means the app-owned expiration job is not running often enough, the
+batch size is too small, the cutoff is too conservative, or operation
+completion/finalization is blocked upstream.
+
+Bondstone does not register a hosted operation expiration worker by default.
+Keep expiration scheduling explicit in the application so the cadence, cutoff,
+terminal status, and user-visible reason match product policy.
+
 ## EF Migrations And Upgrades
 
 EF-backed Bondstone tables live in the application's `DbContext` model through

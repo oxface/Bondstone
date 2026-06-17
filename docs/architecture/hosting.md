@@ -29,10 +29,10 @@ The public worker registration creates one aggregate worker over the configured
 app-facing `IDurableOutboxDispatcher`. For module-owned persistence, that
 dispatcher can be `DurableModuleOutboxDispatchAggregator`, which calls local
 module outbox dispatchers from module persistence registrations sequentially
-in registration order. The aggregate
-batch uses one shared `BatchSize` budget; each module dispatcher receives only
-the remaining budget, and later modules are skipped after the shared budget is
-exhausted.
+in registration order. The aggregate batch uses one shared `BatchSize` budget;
+each module dispatcher receives only the remaining budget, and later modules
+are skipped after the shared budget is exhausted. Module dispatcher failures
+propagate to the aggregate caller.
 
 The aggregate worker is the only built-in worker topology. It is not a
 fairness or noisy-neighbor isolation model: a slow module dispatcher can delay
@@ -40,9 +40,11 @@ later modules, and a module dispatcher failure stops the current aggregate
 batch by bubbling to the hosted worker. The hosted worker logs the failed batch
 with event id `1001` / `DispatchBatchFailed`, waits for `FailureDelay`, and
 continues with a later batch. Module outboxes remain ownership boundaries;
-selected-module worker registration, per-module worker options, direct worker
-construction, parallel aggregate dispatch, dispatch timeouts, and per-module
-concurrency controls are not part of the current worker contract.
+selected-module worker registration, selected-module worker options,
+per-module worker options, direct worker construction, parallel aggregate
+dispatch, dispatch timeouts, fairness guarantees, selected-module scheduling
+guarantees, and per-module concurrency controls are not part of the current
+worker contract.
 
 `AddBondstone` is the preferred host registration path. Package-specific
 extensions register provider, transport, and worker services. Runtime

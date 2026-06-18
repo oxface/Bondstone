@@ -1,7 +1,7 @@
 # Post-MVP Architecture Review Plan
 
 Date: 2026-06-16
-Review update: 2026-06-17
+Review update: 2026-06-18
 
 ## Purpose
 
@@ -12,10 +12,11 @@ The plan is intentionally a planning handoff, not a durable architecture
 contract. Use the accepted ADRs below as decision boundaries while moving
 implementation tasks into GitHub Issues or GitHub Projects.
 
-The 2026-06-17 architecture review reframes the plan as a
-first-consumer-project hardening plan. The goal is to keep Bondstone's scope
-narrowly focused on durable module boundaries while reducing the operational
-gaps that would make a real consumer project painful or misleading.
+The 2026-06-18 design reset reframes the plan as the v2 MVP replacement for
+the over-ambitious v1 line. Compatibility with the current public packages is
+not a constraint because the only current consumer can migrate from zero. The
+goal is to ship a clean library for module execution, durable messaging, and a
+single durable inbox receive model, then enter feedback-focused maintenance.
 
 ## Accepted Or Amended ADRs
 
@@ -25,6 +26,12 @@ gaps that would make a real consumer project painful or misleading.
 - [0015 Service Extraction Proof Before Broad Bus Features](../adr/0015-service-extraction-proof-before-broad-bus-features.md)
 - [0016 Non-Throwing Operation Wait Ergonomics](../adr/0016-non-throwing-operation-wait-ergonomics.md)
 - [0017 Single Durable Inbox Incoming Ledger](../adr/0017-single-durable-inbox-incoming-ledger.md)
+
+Proposed v2 design reset ADRs:
+
+- [0018 V2 Module Execution And Durable Inbox Reset](../adr/0018-v2-module-execution-and-durable-inbox-reset.md)
+- [0019 Operation Observation Not Orchestration](../adr/0019-operation-observation-not-orchestration.md)
+- [0020 Host-Owned Transport With Module-Aware Bindings](../adr/0020-host-owned-transport-with-module-aware-bindings.md)
 
 Superseded receive-side trail:
 
@@ -37,48 +44,42 @@ not being a smaller general-purpose bus; it is stable, durable module
 boundaries with a credible path from modular monolith to service extraction.
 
 The highest-risk gap before handing Bondstone to the first consumer project is
-receive-side operations. Current direct receive is safe by default but
-operationally sharp: already-received/unprocessed inbox rows are ambiguous and
-fail loudly. That behavior is correct for the current model, but consumers
-will need better productized recovery semantics.
+receive-side coherence. The incremental design now has too much transitional
+language around direct receive, durable incoming inbox, old inbox identity, and
+future buffered receive. V2 should present one durable receive ledger: durable
+inbox.
 
-The second high-risk gap is operation-result observation. The operation store
-is the right abstraction, but result reads are still too happy-path oriented:
-they report completed results well, but a pending operation may actually be
-blocked behind source outbox terminal failure, receive ambiguity, broker
-dead-letter policy, handler failure/retry, or a missing finalization policy.
-Bondstone should not infer all of those as operation failure automatically, but
-it should make the distinction observable and ergonomic.
+The second high-risk gap is module ingress ergonomics. Consumers should not
+have to choose between raw handler calls and durable broker-like receive for
+every HTTP endpoint or `.Contracts` call. V2 should expose clear command and
+query execution pipelines, with durable inbox as the durable ingress rather
+than the only execution path.
+
+The third high-risk gap is operation-result positioning. Operation state and
+results remain valuable, but result waiting must not be presented as
+orchestration. Durable inter-module continuations remain app-owned until a
+future saga/process-manager feature is accepted.
 
 Diagnostics are not currently too scattered in code. The bigger issue is that
 metrics and machine-readable misconfiguration codes are not yet stable.
 
 ## Worker Topology
 
-Current behavior has two worker/listener roles:
+The v2 target topology has three durable worker/listener roles:
 
 - Source outbox worker: current. It claims source-module outbox rows, dispatches
   envelopes to the configured dispatcher, and records dispatched, retry, stale,
   or terminal-failed outbox state.
-- Transport receive worker or app-owned native listener: current and opt-in.
-  It reads broker-native deliveries, parses durable envelopes, calls
-  `IDurableEnvelopeReceiver`, and settles the native message after Bondstone
-  receive succeeds.
+- Transport ingestion worker or app-owned native listener: transport to
+  Bondstone durable inbox record, then native settlement after durable
+  ingestion.
+- Durable inbox processing worker: Bondstone-owned delivery from durable inbox
+  to the target module command or event subscriber pipeline, recording
+  processed, retry, stale, and terminal outcomes.
 
-Current direct receive does not have a separate inbox processing worker. The
-transport receive worker calls the module receive pipeline, and the handler
-runs inside that receive attempt. The inbox table is an idempotency ledger, not
-a queued work table.
-
-The future durable inbox path should introduce the three-stage production
-topology when the application opts into it:
-
-- outbox worker: source outbox to transport;
-- transport ingestion worker/listener: transport to Bondstone-owned durable
-  incoming inbox record, then native settlement after durable ingestion;
-- durable inbox processing worker: Bondstone-owned buffered delivery to inbox,
-  operation state, outgoing outbox, and handler execution inside the target
-  module persistence boundary.
+Direct command execution and query execution are not workers. They are
+same-process module pipeline calls for HTTP, app-owned entrypoints, tests, and
+explicit direct `.Contracts` usage.
 
 A generic cleanup worker is not current behavior and should not be added as a
 default background service without ADR review. Cleanup mutates durable evidence
@@ -90,53 +91,53 @@ cleanup samples.
 
 ## Before First Consumer Project
 
-These items are candidates to complete before treating the current line as
-consumer-ready v2 scope.
+These items are the proposed v2 MVP scope before the first consumer project
+starts migration.
 
-1. Durable incoming inbox design slice.
-   Define the persistence record, claim/lease model, retry attempts, terminal
-   receive failure state, operation interaction, worker options, and retention
-   guidance for the ADR 0017 single incoming ledger. Keep the direct receive
-   path as the simple default unless a later ADR changes it.
+1. Design reset review.
+   Review and accept, revise, or reject ADRs 0018-0020. Produce a single design
+   diagram/report that explains command execution, query execution, durable
+   command send, durable event fanout, HTTP durable ingress, operation
+   observation, and the durable inbox worker topology.
 
-2. Operation-result hardening.
-   Add a non-throwing wait/read API per ADR 0016, then review whether Bondstone
-   needs an operation diagnostic snapshot that can explain "still pending"
-   using source outbox state, terminal source dispatch failure, future receive
-   incoming inbox state, finalization state, and result deserialization
-   failure. Avoid automatically converting transport or inbox failures into
-   operation failure unless application policy explicitly finalizes the
-   operation.
+2. Durable inbox completion sweep.
+   Make durable inbox the only durable receive ledger. Remove, collapse, or
+   hide old direct-receive inbox semantics. Complete the end-to-end proof:
+   transport delivery, durable inbox ingestion, hosted worker claim/lease,
+   module handler execution, outgoing outbox, operation finalization where
+   applicable, and processed/failure outcomes.
 
-3. Operation-linked inspection.
-   Review whether inspectors need filters by operation id and message id, not
-   only module and timestamp. This is a fast way to make "why is my operation
-   pending?" debuggable without turning operation state into a full workflow
-   engine.
+3. Module execution and query ergonomics.
+   Clean up direct module command execution as the immediate command pipeline.
+   Add module query contracts, handlers, executor, diagnostics hooks, tests,
+   and docs. Add small HTTP/minimal API helper ideas only if they remain
+   library-shaped and do not require code generation.
 
-4. Outbox worker fairness and targeting.
-   The aggregate dispatcher currently dispatches module outboxes in registration
-   order with one shared batch budget. Review selected-module worker options,
-   fairness, and operator guidance before real multi-module load.
+4. Operation observation cleanup.
+   Reposition operation APIs around status/result observation. Keep optional
+   short wait helpers only as edge-facing convenience. Remove documentation
+   that implies operation waiting is saga/orchestration. Add operation-linked
+   inspection filters if they are needed to explain pending durable work.
 
-5. Minimal metrics.
-   Stabilize metric names and dimensions for the states Bondstone owns:
-   outbox claimed/dispatched/retry/terminal/stale, direct receive
-   handled/already-processed/already-received, future durable inbox outcomes,
-   operation finalization, and operation expiration.
+5. Transport and fanout ergonomics.
+   Keep transport infrastructure host-owned while durable runtime semantics
+   stay module-owned. Improve receive-worker language and helpers around
+   module command queues and event subscriber bindings. Decide Service Bus
+   durable inbox ingestion parity. Keep event fanout on native
+   exchanges/topics/subscriptions.
 
-6. Stable misconfiguration error codes.
+6. Worker operations and retention.
+   Finish durable inbox lease-renewal policy or document processing limits.
+   Add durable inbox inspection ergonomics, health/readiness recipes, and
+   explicit app-owned cleanup/retention guidance. Do not add a default cleanup
+   worker without a separate accepted ADR.
+
+7. Stable misconfiguration error codes.
    Keep exception messages human-readable, but add a small stable code
    vocabulary for common setup failures: missing module persistence, missing EF
    mappings, missing dispatcher, duplicate module durable registrations,
    invalid durable identities, missing receive binding, and ambiguous dispatch
    routes.
-
-7. First-consumer ingress ergonomics.
-   Keep the current rule that durable send/publish requires a module execution
-   context. Improve docs or add a small module-entrypoint helper so HTTP
-   endpoints, schedulers, and custom app-owned entrypoints naturally execute a
-   registered module command before durable sends happen inside that handler.
 
 8. Route-aware multi-transport ergonomics.
    ADR 0010 is accepted and partially applied. Add route-builder helpers and
@@ -151,24 +152,30 @@ consumer-ready v2 scope.
 
 10. Health/readiness guidance.
     Consider small health-check helpers or documented recipes for terminal
-    outbox failures, stale direct inbox rows, worker dispatch failures, and
-    future durable inbox terminal failures. Keep broker health provider-native
-    or app-owned.
+    outbox failures, durable inbox stale processing rows, worker dispatch
+    failures, and durable inbox terminal failures. Keep broker health
+    provider-native or app-owned.
+
+11. Final v2 cleanup sweep.
+    Remove stale future-tense docs outside ADRs and `docs/todos` if that folder
+    is introduced. Reset sample migrations immediately before v2 publication.
+    Re-run public API review, package validation, full tests, docs review, and
+    prepare the template-project migration handoff prompt.
 
 ## Easy Wins
 
+- Draft the design reset diagram/report before code execution so subsequent
+  agents implement the same model.
 - Add a "why is my operation still pending?" troubleshooting section that
-  distinguishes source outbox pending/terminal failure, broker delivery,
-  direct receive ambiguity, missing finalizer policy, target operation state,
-  and result deserialization failure.
+  distinguishes source outbox pending/terminal failure, durable inbox pending,
+  retry, stale processing, terminal failure, missing finalizer policy, target
+  operation state, and result deserialization failure.
 - Add examples for `IDurableOutboxInspector`, `IDurableInboxInspector`,
   `IDurableOperationFinalizer`, and `IDurableOperationExpirationProcessor` in
   one operations-focused sample or doc section.
-- Add XML doc remarks to operation-result APIs making timeout, pending,
-  failure, cancellation, and deserialization failure behavior hard to
-  misunderstand.
-- Add an explicit "direct receive vs buffered receive" diagram or sequence in
-  docs before implementing the buffer.
+- Rename or reposition wait-oriented operation docs as operation observation.
+- Add the module query pipeline in one coherent slice, with command/query docs
+  updated together.
 - Add tests for outbox aggregate dispatch fairness or at least document the
   current registration-order behavior as intentional pending review.
 - Add a minimal diagnostic-code enum or constants draft behind an ADR before
@@ -258,6 +265,26 @@ Remaining after the operation visibility quick wins:
   worker options, inspection contracts, adapter handoff hooks, migrations,
   public API review, and tests to implementation work items.
 
+2026-06-18 design reset discussion captured:
+
+- Agreed that v2 can break compatibility and should optimize for a clean
+  library model.
+- Agreed that durable inbox should become the only durable receive ledger.
+- Agreed that module command execution and module query execution should be
+  first-class direct pipelines, while durable inbox remains the durable receive
+  ingress.
+- Agreed that `.Contracts` projects share module APIs; they should not imply
+  raw handler calls.
+- Agreed that operation tracking is observation and edge-facing result
+  retrieval, not orchestration. Sagas/process managers are deferred.
+- Agreed that transport topology and event fanout remain host-owned, with
+  module-aware receive bindings and durable inbox ingestion boundaries.
+- Captured the guiding split: host-owned transport infrastructure,
+  module-owned durable runtime semantics. This supports later module extraction
+  without making module implementation code own broker topology.
+- Created proposed ADRs 0018-0020 as the design-reset review package before
+  large implementation chunks begin.
+
 2026-06-17 durable inbox implementation slice 1 applied:
 
 - Added provider-neutral durable inbox contracts and records in
@@ -298,182 +325,70 @@ Remaining after the operation visibility quick wins:
 - Kept direct receive as the current default/simple path until a later ADR
   changes the default.
 
-## Implementation Order
+## Execution Model
 
-Start with small visibility and ergonomics slices before large durable inbox
-runtime work. This should make the first consumer project easier to support
-even if the durable inbox takes more than one implementation pass.
+This planning thread should stay the high-level orchestrator. Large
+implementation chunks should get handoff prompts that include the accepted or
+proposed ADR boundaries, the current plan item, expected tests, and the cleanup
+rules for stable docs.
 
-### 0. Convert Plan To Work Items
+Use bigger coherent chunks rather than repeated two-file design edits. The
+preferred rhythm is:
 
-Create GitHub Issues or Project items for the implementation slices below
-before starting broad code changes. Keep ADR-gated items explicit so a task
-does not quietly change durable ownership while looking like a small cleanup.
+1. design reset diagram/report for review;
+2. accept or revise ADRs 0018-0020;
+3. run subagents for durable inbox completion, module command/query pipelines,
+   operation observation, transport/fanout ergonomics, worker operations, and
+   docs/API/sample cleanup;
+4. merge and review each chunk as code, not as design discovery;
+5. run one final deep sweep for design tightening, stale docs, tests, public
+   API, sample migrations, and template-project handoff.
 
-### 1. Operation Visibility Quick Wins
-
-Do first because these are low-risk and immediately useful during the consumer
-trial:
-
-- add a "why is my operation still pending?" troubleshooting section;
-- add operations examples for outbox inspection, inbox inspection, operation
-  finalization, and operation expiration;
-- add XML doc remarks for operation-result timeout, pending, terminal failure,
-  cancellation, and result-deserialization behavior;
-- document direct receive versus buffered receive as a sequence before
-  implementing buffered receive.
-
-This slice should not add new durable state or infer operation failure from
-transport, inbox, broker, or outbox state.
-
-### 2. Operation-Result API Hardening
-
-Implement the additive non-throwing wait/read API described by ADR 0016. Keep
-the existing throwing wait API for compatibility and tests.
-
-Then add operation-linked inspection support if the design stays narrow:
-
-- terminal outbox lookup by operation id and message id;
-- unprocessed inbox lookup by message id, module, and handler/subscriber
-  identity;
-- documentation showing how these inspectors help explain a pending operation.
-
-Defer a full "operation diagnostic snapshot" API until the narrow inspection
-filters prove insufficient in the consumer trial.
-
-### 3. Minimal Observability Contracts
-
-Add the smallest stable metric vocabulary for Bondstone-owned state
-transitions:
-
-- outbox claimed, dispatched, retry scheduled, terminal failed, stale;
-- direct receive handled, already processed, already received;
-- operation finalized and operation expiration candidates/finalizations.
-
-Add stable misconfiguration codes for the most common setup failures only.
-Avoid broad exception-type churn unless an ADR approves it.
-
-### 4. Worker Ergonomics Before New Workers
-
-Harden the current outbox worker before adding durable inbox workers:
-
-- document the current aggregate dispatch registration-order behavior;
-- review selected-module worker options;
-- decide whether fairness needs code now or only operator guidance;
-- add health/readiness recipes for terminal outbox rows, stale direct inbox
-  rows, and repeated worker dispatch failures.
-
-This is also the right point to decide whether hosted operation expiration is
-still app-owned or deserves an opt-in worker.
-
-### 5. Durable Inbox ADR Design Slice
-
-ADR 0017 replaces the separate receive-buffer shape with a single durable
-inbox incoming ledger. Before runtime implementation, complete the accepted
-`DurableIncomingInbox*` design surface around that decision:
-
-- durable inbox incoming row identity and persisted fields;
-- ingestion boundary and idempotency behavior;
-- claim ownership, lease expiry, retry attempts, and terminal receive failure;
-- interaction with current direct inbox rows, operation state, and outgoing
-  outbox rows;
-- worker options, retention, and inspection surface;
-- adapter handoff rules for RabbitMQ, Service Bus, and app-owned native loops.
-
-Keep the direct receive path as the default unless a later ADR intentionally
-changes that rule.
-
-### 6. Durable Inbox Implementation Slice
-
-Implement the durable inbox in thin vertical cuts:
-
-1. finish EF ingestion and inspection store ergonomics for the accepted
-   incoming ledger;
-2. PostgreSQL-specific concurrency behavior;
-3. durable inbox processing dispatcher/worker;
-4. adapter opt-in integration;
-5. integration tests for crash/retry/terminal failure behavior;
-6. operations and setup docs.
-
-2026-06-17 durable inbox ingestion and inspection slice applied:
-
-- Added EF Core provider/runtime stores for durable incoming inbox ingestion
-  and read-only inspection over the `incoming_inbox_messages` ledger.
-- Kept ingestion idempotent at the provider-neutral EF boundary by returning
-  existing rows for the receive identity and staging only new pending rows.
-- Added broad status inspection plus stale processing-claim and terminal
-  receive-failure inspection filters for operations.
-- Deferred PostgreSQL-specific concurrency SQL, claiming, lease renewal,
-  outcome recording, hosted workers, transport adapter handoff, direct receive
-  behavior changes, operation failure inference, and cleanup mutation APIs.
-
-Do not add cleanup mutation as part of this slice. Retention should start as
-documentation, inspection, and app-owned cleanup.
-
-### 7. Multi-Transport Ergonomics
-
-After the receive and operation visibility work is stable, add route-builder
-helpers and startup conflict validation for ADR 0010. Keep this below the
-topology line: Bondstone chooses exactly one outbound dispatcher for a durable
-envelope, but does not own provider-native topology.
-
-### 8. Compatibility And Consumer Trial Gate
-
-Before handing the line to the first consumer project:
-
-- add ApiCompat or package validation against the latest stable published
-  package;
-- run `pnpm check`, `pnpm backend:test:integration`, and `pnpm backend:pack`;
-- run the modular monolith sample and service-split broker proofs;
-- record consumer-trial findings as GitHub Issues instead of expanding this
-  plan indefinitely.
-
-### 9. Explicitly Deferred
+## Explicitly Deferred
 
 Do not start these until consumer evidence or a new ADR justifies them:
 
-- default cleanup worker for durable tables;
-- automatic operation failure inference from broker/dead-letter/outbox/inbox
-  state;
-- broad broker runtime ownership;
-- public middleware/runtime pipeline;
-- two-transport sample as a showcase rather than a real consumer need.
+- Bondstone-owned sagas, process managers, workflow state machines, replayable
+  orchestration, durable timers, or generic command-result continuation.
+- Polling another module's operation store from a caller module as a supported
+  inter-module orchestration mechanism.
+- Default cleanup workers that mutate durable evidence.
+- Automatic operation failure inference from broker/dead-letter/outbox/durable
+  inbox state.
+- Broad broker runtime ownership, topology provisioning, subscription storage,
+  broker retry, delivery-count abstraction, or provider-neutral DLQ handling.
+- Code generation for HTTP endpoint binding or module contract plumbing.
+- Two-transport samples as showcases before real consumer need.
 
 ## ADR Gates
 
-ADR 0017 supersedes the separate receive-buffer direction from ADR 0012.
-ADRs 0013, 0016, and 0010 still cover worker ownership, operation wait
-ergonomics, and multi-transport routing direction.
+Accept or revise ADRs 0018-0020 before implementation changes that remove
+direct receive semantics, introduce query pipelines, reposition operation
+waiting, or rename receive-worker topology concepts.
 
 Create or amend ADRs before implementation if the work chooses any of these
 directions:
 
-- making durable inbox the default receive model instead of optional;
+- adding a saga/process-manager capability;
 - adding a default cleanup worker that mutates durable evidence;
-- inferring operation failure automatically from outbox, inbox, broker, or
-  durable inbox state;
+- inferring operation failure automatically from outbox, broker, or durable
+  inbox state;
 - making Bondstone own broker retry, dead-letter, delivery-count, topology, or
   subscription policy;
-- adding a public application middleware/runtime pipeline beyond the current
-  fixed module runtime sequence.
+- adding a public application middleware/runtime pipeline beyond command/query
+  execution helpers;
+- resetting sample migrations as a release policy rather than a one-time v2
+  cleanup.
 
-## After First Consumer Hardening
+## After V2 MVP
 
-- Durable inbox design and implementation, including persistence
-  records, leases, retry attempts, terminal receive failure state, worker
-  options, retention, and tests.
-- Stable misconfiguration error codes. Current exception messages remain
-  diagnostic surfaces, but they are not a machine-readable error-code
-  vocabulary.
-- .NET package validation or ApiCompat against the latest stable v2 package
-  after v2 ships, while keeping the current `PublicApiGenerator` baseline test
-  as the human-readable public surface review tool.
-- Service extraction proof expansion beyond the current local modular
-  monolith path and thin adapter proofs, including broader extraction
-  scenarios, route-aware multi-transport ergonomics, and a two-transport
-  sample only when real demand appears.
-- optional hosted operation expiration worker unless application feedback
-  shows it belongs in Bondstone rather than app-owned scheduling.
+- Saga/process-manager design if real projects repeatedly need durable
+  continuations.
+- Projection/query helpers if direct module queries become a migration pain.
+- Broader service extraction proofs beyond the first template-project
+  migration.
+- Optional hosted operation expiration worker if application feedback shows it
+  belongs in Bondstone rather than app-owned scheduling.
 - Optional cleanup worker, only after ADR review proves a safe default
   ownership model for retention and durable-evidence mutation.
 
@@ -481,7 +396,7 @@ directions:
 
 Executed v2 work that already landed before this review was moved into stable
 docs and the application notes of the accepted ADRs linked above. This plan now
-carries first-consumer hardening candidates plus longer-term handoff items.
+carries the v2 MVP orchestration shape plus longer-term deferred items.
 
 The 2026-06-17 update reviewed architecture, operations, observability,
 packaging, setup, public API, testing, ADR 0010, ADR 0012, ADR 0013, ADR 0016,
@@ -501,3 +416,7 @@ additive non-throwing wait API from ADR 0016. Verification:
 `BONDSTONE_UPDATE_PUBLIC_API_BASELINE=1 dotnet test tests/Bondstone.PublicApi.Tests/Bondstone.PublicApi.Tests.csproj --configuration Release`,
 `dotnet build Bondstone.slnx --configuration Release`, and
 `pnpm backend:test`.
+
+On 2026-06-18, proposed ADRs 0018-0020 were created from the design reset
+discussion and this plan was updated to describe the current v2 MVP execution
+model. Verification: `pnpm format:check`.

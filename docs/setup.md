@@ -166,8 +166,34 @@ outbox worker. Use `bondstone.Outbox.UseDurableDispatcher()` only for advanced
 manual dispatcher composition where the host does not want the built-in worker.
 Hosts that use the optional durable incoming ledger can also opt in to
 `bondstone.UseDurableIncomingInboxWorker(...)`; direct receive remains the
-default, and transport ingestion into the incoming ledger is still
-adapter-owned or application-owned.
+default, and transport ingestion into the incoming ledger is explicit
+adapter-owned or application-owned setup.
+
+RabbitMQ hosts that already own queue topology can opt the RabbitMQ receive
+worker into durable incoming inbox ingestion instead of direct module receive:
+
+```csharp
+bondstone.UseRabbitMqReceiveWorker(options =>
+{
+    options.QueueName = "fulfillment.commands";
+    options.IngestCommandToDurableIncomingInbox();
+});
+
+bondstone.UseRabbitMqReceiveWorker(options =>
+{
+    options.QueueName = "billing.order-placed";
+    options.IngestEventToDurableIncomingInbox(
+        BillingModule.ModuleName,
+        "billing.order-placed-projection.v1");
+});
+```
+
+In this mode the RabbitMQ worker deserializes the native delivery body as a
+`DurableMessageEnvelope`, resolves the command route or event subscriber
+binding, stages and commits a durable incoming inbox row, and only then
+acknowledges the RabbitMQ delivery. The separate
+`UseDurableIncomingInboxWorker(...)` processing worker is still required to
+claim durable incoming rows and execute module handlers.
 
 `Bondstone.Transport.Local` is explicit sample, test, and local-development
 infrastructure. `local.UseModuleQueueConvention()` is complete command

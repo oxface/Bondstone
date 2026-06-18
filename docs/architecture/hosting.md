@@ -131,5 +131,9 @@ application-owned unless a later accepted implementation adds an explicit
 Bondstone retention worker or mutation API.
 
 Provider SQL remains in provider packages. Transport-specific send, receive,
-and envelope behavior remains in transport adapter packages. Production worker
-and broker ownership guidance lives in [../operations.md](../operations.md).
+ingestion, settlement, and envelope behavior remains in transport adapter
+packages. `Bondstone.Transport.RabbitMq` provides the first explicit
+durable-incoming-inbox ingestion mode for its opt-in receive worker; other
+transport adapter handoffs remain direct receive or app-owned until they add
+their own opt-in mode. Production worker and broker ownership guidance lives in
+[../operations.md](../operations.md).

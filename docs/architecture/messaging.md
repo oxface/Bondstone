@@ -219,8 +219,9 @@ inbox incoming ledger direction. It is partially applied: provider-neutral
 records, EF ingestion and inspection, PostgreSQL mutation stores, and a
 host-callable processing dispatcher exist, and `Bondstone.Hosting` provides an
 opt-in incoming inbox processing worker over that dispatcher. Transport
-adapter ingestion handoff is still app-owned or adapter-owned. Direct receive
-remains the default. ADR
+adapter ingestion handoff is adapter-owned or app-owned. `Bondstone.Transport.RabbitMq`
+provides the first opt-in adapter handoff from RabbitMQ native deliveries into
+the durable incoming inbox ledger. Direct receive remains the default. ADR
 [0012](../adr/0012-direct-receive-inbox-and-durable-receive-buffer.md)
 preserves the superseded separate receive-buffer decision trail.
 
@@ -243,7 +244,7 @@ replaces it.
 Ingestion parses a native transport delivery into
 `DurableMessageEnvelope`, validate message kind, stable message type
 registration, and the command route or event subscriber binding, then insert
-the durable inbox row idempotently. It would not execute handlers, complete
+the durable inbox row idempotently. It does not execute handlers, complete
 operation state, stage outgoing outbox rows, or infer terminal operation
 state.
 

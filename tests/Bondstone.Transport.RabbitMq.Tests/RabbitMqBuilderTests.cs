@@ -80,5 +80,66 @@ public sealed class RabbitMqBuilderTests
             service => service.ServiceType == typeof(IHostedService)
                 && service.ImplementationType?.FullName
                     == "Bondstone.Transport.RabbitMq.RabbitMqReceiveWorker");
+        RabbitMqReceiveWorkerRegistration registration = Assert.Single(
+            services
+                .Where(service => service.ServiceType == typeof(RabbitMqReceiveWorkerRegistration))
+                .Select(service => service.ImplementationInstance)
+                .Cast<RabbitMqReceiveWorkerRegistration>());
+        Assert.Equal(RabbitMqReceiveWorkerMode.DirectReceive, registration.ReceiveMode);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UseRabbitMqReceiveWorker_WhenDurableIncomingInboxCommandIngestionConfigured_RegistersIngestionMode()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.UseRabbitMqReceiveWorker(static options =>
+            {
+                options.QueueName = "fulfillment.commands";
+                options.SourceTransportName = "rabbitmq:fulfillment-commands";
+                options.IngestCommandToDurableIncomingInbox();
+            });
+        });
+
+        RabbitMqReceiveWorkerRegistration registration = Assert.Single(
+            services
+                .Where(service => service.ServiceType == typeof(RabbitMqReceiveWorkerRegistration))
+                .Select(service => service.ImplementationInstance)
+                .Cast<RabbitMqReceiveWorkerRegistration>());
+        Assert.Equal(RabbitMqReceiveWorkerMode.DurableIncomingInboxIngestion, registration.ReceiveMode);
+        Assert.Null(registration.Binding);
+        Assert.Equal("rabbitmq:fulfillment-commands", registration.SourceTransportName);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void UseRabbitMqReceiveWorker_WhenDurableIncomingInboxEventIngestionConfigured_RegistersSubscriberBinding()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.UseRabbitMqReceiveWorker(static options =>
+            {
+                options.QueueName = "billing.order-placed";
+                options.IngestEventToDurableIncomingInbox(
+                    "billing",
+                    "billing.order-placed-projection.v1");
+            });
+        });
+
+        RabbitMqReceiveWorkerRegistration registration = Assert.Single(
+            services
+                .Where(service => service.ServiceType == typeof(RabbitMqReceiveWorkerRegistration))
+                .Select(service => service.ImplementationInstance)
+                .Cast<RabbitMqReceiveWorkerRegistration>());
+        Assert.Equal(RabbitMqReceiveWorkerMode.DurableIncomingInboxIngestion, registration.ReceiveMode);
+        Assert.NotNull(registration.Binding);
+        Assert.Equal("billing", registration.Binding.SubscriberModule);
+        Assert.Equal("billing.order-placed-projection.v1", registration.Binding.SubscriberIdentity);
+        Assert.Equal("rabbitmq:billing.order-placed", registration.SourceTransportName);
     }
 }

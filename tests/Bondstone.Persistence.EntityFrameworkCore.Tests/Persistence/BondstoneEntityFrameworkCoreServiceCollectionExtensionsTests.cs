@@ -37,6 +37,7 @@ public sealed class BondstoneEntityFrameworkCoreServiceCollectionExtensionsTests
         AssertContainsScoped<
             IDurableIncomingInboxIngestionStore,
             EntityFrameworkCoreDurableIncomingInboxIngestionStore<EntityFrameworkCoreTestDbContext>>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxIngestionPersistenceScope>(services);
         AssertContainsScopedFactory<IDurableIncomingInboxInspectionStore>(services);
         AssertContainsScoped<
             IDurableOperationStateStore,

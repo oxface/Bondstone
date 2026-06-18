@@ -371,6 +371,11 @@ namespace Bondstone.Persistence
     {
         System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> ClaimAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default);
     }
+    public interface IDurableIncomingInboxIngestionPersistenceScope
+    {
+        System.Threading.Tasks.ValueTask<TResult> ExecuteAsync<TResult>(System.Func<Bondstone.Persistence.IDurableIncomingInboxIngestionPersistenceScope, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TResult>> operation, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask SaveChangesAsync(System.Threading.CancellationToken ct = default);
+    }
     public interface IDurableIncomingInboxIngestionStore
     {
         System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxIngestionResult> IngestAsync(Bondstone.Persistence.DurableIncomingInboxRecord record, System.Threading.CancellationToken ct = default);

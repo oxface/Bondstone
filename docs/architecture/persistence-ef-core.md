@@ -160,6 +160,13 @@ incoming inbox entity mapping and fails with a clear
 `ApplyBondstoneIncomingInbox()` mapping error if it is used with a DbContext
 that does not map the incoming ledger.
 
+`AddBondstoneEntityFrameworkCorePersistence<TDbContext>` also registers an
+`IDurableIncomingInboxIngestionPersistenceScope` adapter over the existing EF
+persistence scope. Transport adapters that opt into durable incoming inbox
+ingestion use that scope to save staged incoming rows before native broker
+settlement. The scope is still only an ingestion commit boundary; it does not
+run handlers, record processing outcomes, or own transport behavior.
+
 `EntityFrameworkCoreDurableIncomingInboxInspectionStore<TDbContext>` reads
 incoming inbox rows without tracking. It supports broad status inspection,
 stale processing claim inspection by claim-lease cutoff, and terminal

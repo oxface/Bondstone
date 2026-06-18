@@ -25,6 +25,9 @@ namespace Bondstone.Transport.RabbitMq
         public string? ConsumerTag { get; set; }
         public string? QueueName { get; set; }
         public bool RequeueOnFailure { get; set; }
+        public string? SourceTransportName { get; set; }
+        public Bondstone.Transport.RabbitMq.RabbitMqReceiveWorkerOptions IngestCommandToDurableIncomingInbox() { }
+        public Bondstone.Transport.RabbitMq.RabbitMqReceiveWorkerOptions IngestEventToDurableIncomingInbox(string subscriberModule, string subscriberIdentity) { }
         public Bondstone.Transport.RabbitMq.RabbitMqReceiveWorkerOptions ReceiveCommand() { }
         public Bondstone.Transport.RabbitMq.RabbitMqReceiveWorkerOptions ReceiveEvent(string subscriberModule, string subscriberIdentity) { }
     }

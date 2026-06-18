@@ -40,6 +40,10 @@ public static class BondstoneEntityFrameworkCoreServiceCollectionExtensions
         services.TryAddScoped<
             IDurableIncomingInboxIngestionStore,
             EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbContext>>();
+        services.TryAddScoped<IDurableIncomingInboxIngestionPersistenceScope>(
+            serviceProvider =>
+                new EntityFrameworkCoreDurableIncomingInboxIngestionPersistenceScope(
+                    serviceProvider.GetRequiredService<IEntityFrameworkCorePersistenceScope>()));
         services.TryAddScoped<IDurableIncomingInboxInspectionStore>(serviceProvider =>
             new EntityFrameworkCoreDurableIncomingInboxInspectionStore<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>()));

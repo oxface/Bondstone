@@ -74,8 +74,9 @@ stale-row sweeper, or direct-inbox failed receive state. ADR
 [0017](adr/0017-single-durable-inbox-incoming-ledger.md) records the durable
 inbox incoming-ledger direction. The incoming ledger has provider contracts,
 PostgreSQL mutation stores, a host-callable processing dispatcher, and an
-opt-in hosted incoming inbox processing worker. Provider-neutral transport
-adapter handoff into durable ingestion is not implemented. ADR
+opt-in hosted incoming inbox processing worker. RabbitMQ has the first
+explicit adapter-owned opt-in receive mode that hands native deliveries into
+durable incoming inbox ingestion. ADR
 [0012](adr/0012-direct-receive-inbox-and-durable-receive-buffer.md) preserves
 the superseded receive-buffer decision trail.
 
@@ -152,6 +153,19 @@ acknowledgement, acknowledges after `IDurableEnvelopeReceiver` completes, and
 nacks failed receives according to `RequeueOnFailure`. That option maps only
 to RabbitMQ's native nack requeue flag; broker retry and dead-letter behavior
 remain topology and policy owned by the application.
+
+When the RabbitMQ receive worker is explicitly configured with
+`IngestCommandToDurableIncomingInbox()` or
+`IngestEventToDurableIncomingInbox(...)`, settlement moves to the ingestion
+boundary. The worker parses the delivery body into a `DurableMessageEnvelope`,
+resolves the durable receive binding, calls
+`IDurableIncomingInboxIngestionStore.IngestAsync(...)`, saves through
+`IDurableIncomingInboxIngestionPersistenceScope`, and acknowledges only after
+that persistence boundary succeeds. `AlreadyIngested` duplicate deliveries are
+acknowledged safely. Ingestion, binding resolution, deserialization, or commit
+failures are nacked according to `RequeueOnFailure`; the worker does not run
+handlers, complete operation state, stage outgoing outbox rows, or mutate
+incoming inbox processing outcomes.
 
 The thin Azure Service Bus receive worker completes the message after receive
 completes. Its exposed `ProcessorOptions` is an advanced native-driver escape

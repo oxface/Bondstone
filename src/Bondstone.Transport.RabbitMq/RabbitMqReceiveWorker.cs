@@ -1,4 +1,6 @@
 using Bondstone.Messaging;
+using Bondstone.Modules;
+using Bondstone.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -11,7 +13,8 @@ internal sealed class RabbitMqReceiveWorker(
     IChannel channel,
     IServiceScopeFactory scopeFactory,
     IEnumerable<RabbitMqReceiveWorkerRegistration> registrations,
-    ILogger<RabbitMqReceiveWorker> logger)
+    ILogger<RabbitMqReceiveWorker> logger,
+    TimeProvider? timeProvider = null)
     : BackgroundService
 {
     private readonly IChannel _channel =
@@ -22,6 +25,7 @@ internal sealed class RabbitMqReceiveWorker(
         registrations?.ToArray() ?? throw new ArgumentNullException(nameof(registrations));
     private readonly ILogger<RabbitMqReceiveWorker> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
@@ -77,13 +81,24 @@ internal sealed class RabbitMqReceiveWorker(
         try
         {
             await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
-            IDurableEnvelopeReceiver receiver =
-                scope.ServiceProvider.GetRequiredService<IDurableEnvelopeReceiver>();
+            if (registration.ReceiveMode == RabbitMqReceiveWorkerMode.DurableIncomingInboxIngestion)
+            {
+                await IngestToDurableIncomingInboxAsync(
+                    scope.ServiceProvider,
+                    args.Body,
+                    registration,
+                    stoppingToken);
+            }
+            else
+            {
+                IDurableEnvelopeReceiver receiver =
+                    scope.ServiceProvider.GetRequiredService<IDurableEnvelopeReceiver>();
 
-            await receiver.ReceiveAsync(
-                args.Body,
-                registration.Binding,
-                stoppingToken);
+                await receiver.ReceiveAsync(
+                    args.Body,
+                    registration.Binding,
+                    stoppingToken);
+            }
 
             await _channel.BasicAckAsync(
                 args.DeliveryTag,
@@ -104,5 +119,96 @@ internal sealed class RabbitMqReceiveWorker(
                 requeue: registration.RequeueOnFailure,
                 cancellationToken: CancellationToken.None);
         }
+    }
+
+    private async ValueTask IngestToDurableIncomingInboxAsync(
+        IServiceProvider serviceProvider,
+        ReadOnlyMemory<byte> body,
+        RabbitMqReceiveWorkerRegistration registration,
+        CancellationToken ct)
+    {
+        IDurableMessageEnvelopeSerializer serializer =
+            serviceProvider.GetRequiredService<IDurableMessageEnvelopeSerializer>();
+        DurableMessageEnvelope envelope = serializer.Deserialize(body);
+        DurableIncomingInboxRecord record = CreateIncomingInboxRecord(
+            serviceProvider,
+            envelope,
+            registration);
+
+        IDurableIncomingInboxIngestionStore store =
+            serviceProvider.GetRequiredService<IDurableIncomingInboxIngestionStore>();
+        IDurableIncomingInboxIngestionPersistenceScope persistenceScope =
+            serviceProvider.GetRequiredService<IDurableIncomingInboxIngestionPersistenceScope>();
+
+        await persistenceScope.ExecuteAsync(
+            async (persistence, innerCt) =>
+            {
+                await store.IngestAsync(record, innerCt);
+                await persistence.SaveChangesAsync(innerCt);
+                return true;
+            },
+            ct);
+    }
+
+    private DurableIncomingInboxRecord CreateIncomingInboxRecord(
+        IServiceProvider serviceProvider,
+        DurableMessageEnvelope envelope,
+        RabbitMqReceiveWorkerRegistration registration)
+    {
+        DurableIncomingInboxKey key = envelope.MessageKind switch
+        {
+            MessageKind.Command => ResolveCommandKey(serviceProvider, envelope),
+            MessageKind.Event => ResolveEventKey(serviceProvider, envelope, registration),
+            _ => throw new NotSupportedException(
+                $"RabbitMQ durable incoming inbox ingestion does not support message kind '{envelope.MessageKind}'."),
+        };
+
+        return new DurableIncomingInboxRecord(
+            key,
+            envelope,
+            _timeProvider.GetUtcNow(),
+            sourceTransportName: registration.SourceTransportName);
+    }
+
+    private static DurableIncomingInboxKey ResolveCommandKey(
+        IServiceProvider serviceProvider,
+        DurableMessageEnvelope envelope)
+    {
+        IModuleCommandRouteRegistry routeRegistry =
+            serviceProvider.GetRequiredService<IModuleCommandRouteRegistry>();
+        ModuleCommandRoute route = routeRegistry.GetByMessageTypeName(
+            envelope.TargetModule!,
+            envelope.MessageTypeName);
+        string handlerIdentity = route.HandlerIdentity
+            ?? throw new InvalidOperationException(
+                $"Durable command route for message type '{envelope.MessageTypeName}' does not have a handler identity.");
+
+        return DurableIncomingInboxKey.ForCommandHandler(
+            envelope.MessageId,
+            route.ModuleName,
+            handlerIdentity);
+    }
+
+    private static DurableIncomingInboxKey ResolveEventKey(
+        IServiceProvider serviceProvider,
+        DurableMessageEnvelope envelope,
+        RabbitMqReceiveWorkerRegistration registration)
+    {
+        DurableEnvelopeReceiveBinding binding = registration.Binding
+            ?? throw new ArgumentException(
+                "RabbitMQ durable incoming inbox event ingestion requires subscriber module and subscriber identity binding.",
+                nameof(registration));
+
+        IModuleEventSubscriberRegistry subscriberRegistry =
+            serviceProvider.GetRequiredService<IModuleEventSubscriberRegistry>();
+        ModuleEventSubscriberRegistration subscriber = subscriberRegistry.GetSubscriber(
+            binding.SubscriberModule,
+            envelope.MessageTypeName,
+            binding.SubscriberIdentity);
+
+        return DurableIncomingInboxKey.ForEventSubscriber(
+            envelope.MessageId,
+            subscriber.ModuleName,
+            subscriber.SubscriberIdentity);
     }
 }

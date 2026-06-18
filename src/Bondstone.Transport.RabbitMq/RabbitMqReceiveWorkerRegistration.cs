@@ -6,4 +6,12 @@ internal sealed record RabbitMqReceiveWorkerRegistration(
     string QueueName,
     DurableEnvelopeReceiveBinding? Binding,
     bool RequeueOnFailure,
-    string? ConsumerTag);
+    string? ConsumerTag,
+    RabbitMqReceiveWorkerMode ReceiveMode,
+    string SourceTransportName);
+
+internal enum RabbitMqReceiveWorkerMode
+{
+    DirectReceive,
+    DurableIncomingInboxIngestion,
+}

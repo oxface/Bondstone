@@ -273,6 +273,22 @@ Durable incoming inbox worker, 2026-06-17:
   selected-module or source-transport worker filters, direct receive default
   behavior changes, operation failure inference, or cleanup mutation APIs.
 
+RabbitMQ durable incoming inbox ingestion handoff, 2026-06-17:
+
+- `RabbitMqReceiveWorkerOptions.IngestCommandToDurableIncomingInbox()` and
+  `IngestEventToDurableIncomingInbox(...)` are additive setup APIs for the
+  first transport-to-durable-incoming-inbox adapter handoff.
+- `RabbitMqReceiveWorkerOptions.SourceTransportName` is additive diagnostic
+  metadata stored on durable incoming inbox rows. When omitted, RabbitMQ uses
+  `rabbitmq:{QueueName}`.
+- `IDurableIncomingInboxIngestionPersistenceScope` is an additive
+  provider/runtime contract for committing staged incoming inbox ingestion
+  before native broker settlement. The EF Core package registers an adapter
+  over its existing EF persistence scope.
+- Direct RabbitMQ receive remains the default. The ingestion mode does not
+  execute handlers, complete operation state, stage outgoing outbox rows, or
+  replace the `Bondstone.Hosting` incoming inbox processing worker.
+
 Public API curation, 2026-06-16:
 
 - The current persistence inspection contracts are intentionally split between

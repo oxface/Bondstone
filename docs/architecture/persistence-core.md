@@ -252,8 +252,10 @@ outcome-recording stores exist for the incoming ledger. Core also provides a
 host-callable `IDurableIncomingInboxDispatcher` that claims due rows and hands
 each row to the existing module receive pipelines. `Bondstone.Hosting`
 provides an opt-in hosted worker for that dispatcher. Transport adapter
-handoff into durable ingestion is not implemented as a provider-neutral
-runtime and remains adapter-owned or application-owned.
+handoff into durable ingestion is not a provider-neutral runtime and remains
+adapter-owned or application-owned. RabbitMQ is the first thin adapter with an
+explicit receive-worker mode that ingests native deliveries into this ledger
+before native acknowledgement.
 
 The target durable inbox is modeled as a single persisted incoming delivery
 ledger. Its key is the durable receive binding:

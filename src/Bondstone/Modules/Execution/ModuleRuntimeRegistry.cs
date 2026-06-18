@@ -13,6 +13,9 @@ internal sealed class ModuleRuntimeRegistry
         _inboxHandlerExecutorRegistrations;
     private readonly Lazy<IReadOnlyDictionary<string, DurableModuleInboxInspectionStoreRegistration>>
         _inboxInspectionStoreRegistrations;
+    private readonly Lazy<IReadOnlyDictionary<string,
+        DurableModuleIncomingInboxIngestionBoundaryRegistration>>
+        _incomingInboxIngestionBoundaryRegistrations;
     private readonly Lazy<IReadOnlyDictionary<string, DurableModuleOperationStateStoreRegistration>>
         _operationStateStoreRegistrations;
     private readonly Lazy<IReadOnlyDictionary<string, DurableModuleOutboxInspectionStoreRegistration>>
@@ -45,6 +48,13 @@ internal sealed class ModuleRuntimeRegistry
                     persistenceRegistrationRegistry.InboxInspectionStoreRegistrations,
                     static registration => registration.ModuleName,
                     "durable module inbox inspection store"));
+        _incomingInboxIngestionBoundaryRegistrations =
+            new Lazy<IReadOnlyDictionary<string,
+                DurableModuleIncomingInboxIngestionBoundaryRegistration>>(
+                () => ToModuleMap(
+                    persistenceRegistrationRegistry.IncomingInboxIngestionBoundaryRegistrations,
+                    static registration => registration.ModuleName,
+                    "durable module incoming inbox ingestion boundary"));
         _operationStateStoreRegistrations =
             new Lazy<IReadOnlyDictionary<string, DurableModuleOperationStateStoreRegistration>>(
                 () => ToModuleMap(
@@ -66,6 +76,9 @@ internal sealed class ModuleRuntimeRegistry
 
     public bool HasDurableInboxInspectionStores =>
         _inboxInspectionStoreRegistrations.Value.Count > 0;
+
+    public bool HasDurableIncomingInboxIngestionBoundaries =>
+        _incomingInboxIngestionBoundaryRegistrations.Value.Count > 0;
 
     public bool HasDurableOperationStateStores =>
         _operationStateStoreRegistrations.Value.Count > 0;
@@ -93,6 +106,11 @@ internal sealed class ModuleRuntimeRegistry
     public void ValidateDurableInboxInspectionStores()
     {
         _ = _inboxInspectionStoreRegistrations.Value;
+    }
+
+    public void ValidateDurableIncomingInboxIngestionBoundaries()
+    {
+        _ = _incomingInboxIngestionBoundaryRegistrations.Value;
     }
 
     public void ValidateDurableOperationStateStores()
@@ -146,6 +164,11 @@ internal sealed class ModuleRuntimeRegistry
                     _inboxInspectionStoreRegistrations.Value,
                     module.Name,
                     registration => registration.CreateStore(_serviceProvider))),
+            new Lazy<DurableIncomingInboxIngestionBoundary?>(
+                () => CreateModuleService(
+                    _incomingInboxIngestionBoundaryRegistrations.Value,
+                    module.Name,
+                    registration => registration.CreateBoundary(_serviceProvider))),
             new Lazy<IDurableOperationStateStore?>(
                 () => CreateModuleService(
                     _operationStateStoreRegistrations.Value,

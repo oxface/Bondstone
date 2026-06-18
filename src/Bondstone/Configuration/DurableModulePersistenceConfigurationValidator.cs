@@ -21,6 +21,8 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
             _persistenceRegistrationRegistry.InboxHandlerExecutorRegistrations.ToArray();
         DurableModuleInboxInspectionStoreRegistration[] inboxInspectionStores =
             _persistenceRegistrationRegistry.InboxInspectionStoreRegistrations.ToArray();
+        DurableModuleIncomingInboxIngestionBoundaryRegistration[] incomingInboxIngestionBoundaries =
+            _persistenceRegistrationRegistry.IncomingInboxIngestionBoundaryRegistrations.ToArray();
         DurableModuleOperationStateStoreRegistration[] operationStateStores =
             _persistenceRegistrationRegistry.OperationStateStoreRegistrations.ToArray();
         DurableModuleOutboxDispatcherRegistration[] outboxDispatchers =
@@ -28,12 +30,16 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
         DurableModuleOutboxInspectionStoreRegistration[] outboxInspectionStores =
             _persistenceRegistrationRegistry.OutboxInspectionStoreRegistrations.ToArray();
 
-        if (outboxWriters.Length == 0
-            && inboxExecutors.Length == 0
-            && inboxInspectionStores.Length == 0
-            && operationStateStores.Length == 0
-            && outboxDispatchers.Length == 0
-            && outboxInspectionStores.Length == 0)
+        bool hasDurableModuleRoleRegistrations =
+            outboxWriters.Length > 0
+            || inboxExecutors.Length > 0
+            || inboxInspectionStores.Length > 0
+            || operationStateStores.Length > 0
+            || outboxDispatchers.Length > 0
+            || outboxInspectionStores.Length > 0;
+
+        if (!hasDurableModuleRoleRegistrations
+            && incomingInboxIngestionBoundaries.Length == 0)
         {
             return;
         }
@@ -43,9 +49,16 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
             outboxWriters.Select(static registration => registration.ModuleName)
                 .Concat(inboxExecutors.Select(static registration => registration.ModuleName))
                 .Concat(inboxInspectionStores.Select(static registration => registration.ModuleName))
+                .Concat(incomingInboxIngestionBoundaries.Select(static registration =>
+                    registration.ModuleName))
                 .Concat(operationStateStores.Select(static registration => registration.ModuleName))
                 .Concat(outboxDispatchers.Select(static registration => registration.ModuleName))
                 .Concat(outboxInspectionStores.Select(static registration => registration.ModuleName)));
+
+        if (!hasDurableModuleRoleRegistrations)
+        {
+            return;
+        }
 
         HashSet<string> modulesWithOutboxWriter = outboxWriters
             .Select(static registration => registration.ModuleName)

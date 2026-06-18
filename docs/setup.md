@@ -190,8 +190,12 @@ bondstone.UseRabbitMqReceiveWorker(options =>
 
 In this mode the RabbitMQ worker deserializes the native delivery body as a
 `DurableMessageEnvelope`, resolves the command route or event subscriber
-binding, stages and commits a durable incoming inbox row, and only then
-acknowledges the RabbitMQ delivery. The separate
+binding, resolves the receiver module's durable incoming inbox ingestion
+boundary, stages and commits a durable incoming inbox row, and only then
+acknowledges the RabbitMQ delivery. EF-backed module persistence writes this
+row through the receiver module's DbContext; single-store hosts with no module
+runtime registrations can use the root-level ingestion store/scope fallback.
+The separate
 `UseDurableIncomingInboxWorker(...)` processing worker is still required to
 claim durable incoming rows and execute module handlers.
 

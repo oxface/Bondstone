@@ -156,7 +156,9 @@ public sealed class RabbitMqReceiveWorkerTests
                 module.UseDurableMessaging();
                 module.UsePersistence("test persistence");
                 module.Commands.RegisterHandler<ReserveInventoryCommand, ReserveInventoryHandler>();
-            }));
+            }),
+            services => services.AddSingleton<IDurableEnvelopeReceiver>(
+                new ThrowingEnvelopeReceiver()));
         var worker = new RabbitMqReceiveWorker(
             channel,
             provider.GetRequiredService<IServiceScopeFactory>(),
@@ -180,6 +182,47 @@ public sealed class RabbitMqReceiveWorkerTests
         Settlement settlement = Assert.Single(recorder.Settlements);
         Assert.Equal("ack", settlement.Kind);
         Assert.Empty(provider.GetRequiredService<HandlerCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ReceiveAsync_WhenDurableIncomingInboxIngestionHasModuleBoundaries_UsesReceiverModuleBoundary()
+    {
+        IChannel channel = RecordingChannelProxy.Create(out RecordingChannelProxy recorder);
+        var fulfillmentStore = new RecordingIncomingInboxIngestionStore();
+        var billingStore = new RecordingIncomingInboxIngestionStore();
+        var fulfillmentScope = new RecordingIncomingInboxIngestionScope();
+        var billingScope = new RecordingIncomingInboxIngestionScope();
+        await using ServiceProvider provider = BuildModuleBoundaryIngestionProvider(
+            ("fulfillment", fulfillmentStore, fulfillmentScope),
+            ("billing", billingStore, billingScope));
+        var worker = new RabbitMqReceiveWorker(
+            channel,
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            [],
+            new RecordingLogger<RabbitMqReceiveWorker>());
+        var registration = new RabbitMqReceiveWorkerRegistration(
+            "fulfillment.commands",
+            Binding: null,
+            RequeueOnFailure: false,
+            ConsumerTag: null,
+            RabbitMqReceiveWorkerMode.DurableIncomingInboxIngestion,
+            "rabbitmq:fulfillment.commands");
+
+        await InvokeReceiveAsync(
+            worker,
+            CreateDelivery(
+                deliveryTag: 106,
+                CreateEnvelopeBody(CreateCommandEnvelope())),
+            registration);
+
+        Settlement settlement = Assert.Single(recorder.Settlements);
+        Assert.Equal("ack", settlement.Kind);
+        DurableIncomingInboxRecord record = Assert.Single(fulfillmentStore.Records);
+        Assert.Equal("fulfillment", record.ReceiverModule);
+        Assert.Empty(billingStore.Records);
+        Assert.Equal(1, fulfillmentScope.SaveCount);
+        Assert.Equal(0, billingScope.SaveCount);
     }
 
     [Fact]
@@ -394,14 +437,63 @@ public sealed class RabbitMqReceiveWorkerTests
     private static ServiceProvider BuildIngestionProvider(
         IDurableIncomingInboxIngestionStore store,
         IDurableIncomingInboxIngestionPersistenceScope persistenceScope,
-        Action<Bondstone.Configuration.BondstoneBuilder> configure)
+        Action<Bondstone.Configuration.BondstoneBuilder> configure,
+        Action<IServiceCollection>? configureServices = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(store);
         services.AddSingleton(persistenceScope);
         services.AddSingleton<HandlerCallLog>();
+        configureServices?.Invoke(services);
         services.AddBondstone(configure);
         return services.BuildServiceProvider(validateScopes: true);
+    }
+
+    private static ServiceProvider BuildModuleBoundaryIngestionProvider(
+        (string ModuleName,
+            RecordingIncomingInboxIngestionStore Store,
+            RecordingIncomingInboxIngestionScope Scope) fulfillmentBoundary,
+        (string ModuleName,
+            RecordingIncomingInboxIngestionStore Store,
+            RecordingIncomingInboxIngestionScope Scope) billingBoundary)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<HandlerCallLog>();
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddIncomingInboxIngestionBoundary(
+                CreateBoundaryRegistration(fulfillmentBoundary));
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddIncomingInboxIngestionBoundary(
+                CreateBoundaryRegistration(billingBoundary));
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<ReserveInventoryCommand, ReserveInventoryHandler>();
+            });
+            bondstone.Module("billing", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Events.RegisterSubscriber<OrderPlacedEvent, OrderPlacedHandler>(
+                    "billing.order-placed-projection.v1");
+            });
+        });
+        return services.BuildServiceProvider(validateScopes: true);
+    }
+
+    private static DurableModuleIncomingInboxIngestionBoundaryRegistration CreateBoundaryRegistration(
+        (string ModuleName,
+            RecordingIncomingInboxIngestionStore Store,
+            RecordingIncomingInboxIngestionScope Scope) boundary)
+    {
+        return new DurableModuleIncomingInboxIngestionBoundaryRegistration(
+            boundary.ModuleName,
+            _ => new DurableIncomingInboxIngestionBoundary(
+                boundary.Store,
+                boundary.Scope));
     }
 
     private static BasicDeliverEventArgs CreateDelivery(
@@ -504,6 +596,49 @@ public sealed class RabbitMqReceiveWorkerTests
 
             await _completeReceive.Task;
             return CreateHandledResult();
+        }
+    }
+
+    private sealed class ThrowingEnvelopeReceiver : IDurableEnvelopeReceiver
+    {
+        public ValueTask<DurableInboxHandleResult> ReceiveAsync(
+            DurableMessageEnvelope envelope,
+            DurableEnvelopeReceiveBinding? binding = null,
+            CancellationToken ct = default)
+        {
+            throw new InvalidOperationException("Direct receive should not run during ingestion.");
+        }
+
+        public ValueTask<DurableInboxHandleResult> ReceiveAsync(
+            ReadOnlyMemory<byte> utf8Json,
+            DurableEnvelopeReceiveBinding? binding = null,
+            CancellationToken ct = default)
+        {
+            throw new InvalidOperationException("Direct receive should not run during ingestion.");
+        }
+
+        public ValueTask<DurableInboxHandleResult> ReceiveAsync(
+            string json,
+            DurableEnvelopeReceiveBinding? binding = null,
+            CancellationToken ct = default)
+        {
+            throw new InvalidOperationException("Direct receive should not run during ingestion.");
+        }
+
+        public ValueTask<DurableInboxHandleResult> ReceiveCommandAsync(
+            DurableMessageEnvelope envelope,
+            CancellationToken ct = default)
+        {
+            throw new InvalidOperationException("Command receive should not run during ingestion.");
+        }
+
+        public ValueTask<DurableInboxHandleResult> ReceiveEventAsync(
+            DurableMessageEnvelope envelope,
+            string subscriberModule,
+            string subscriberIdentity,
+            CancellationToken ct = default)
+        {
+            throw new InvalidOperationException("Event receive should not run during ingestion.");
         }
     }
 
@@ -623,6 +758,8 @@ public sealed class RabbitMqReceiveWorkerTests
         public TaskCompletionSource SaveStarted { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        public int SaveCount { get; private set; }
+
         public ValueTask<TResult> ExecuteAsync<TResult>(
             Func<IDurableIncomingInboxIngestionPersistenceScope, CancellationToken, ValueTask<TResult>> operation,
             CancellationToken ct = default)
@@ -633,6 +770,7 @@ public sealed class RabbitMqReceiveWorkerTests
         public async ValueTask SaveChangesAsync(
             CancellationToken ct = default)
         {
+            SaveCount++;
             _order?.Add("save");
             SaveStarted.TrySetResult();
             if (_order is not null)

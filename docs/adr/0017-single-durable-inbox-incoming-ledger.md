@@ -1,6 +1,6 @@
 # 0017 Single Durable Inbox Incoming Ledger
 
-Status: Accepted
+Status: Amended
 Application: Partially Applied
 Date: 2026-06-17
 
@@ -83,6 +83,26 @@ Direct receive remains available as the simple/default receive path until a
 later accepted ADR changes the default. The durable inbox incoming ledger is
 the target for service extraction and stronger receive recovery.
 
+## Amendment 2026-06-18 Module-Aware Ingestion Boundary
+
+Durable incoming inbox ingestion is receiver-module aware when module-owned
+persistence is configured. The ingestion boundary is resolved from the durable
+incoming inbox receiver module, which is the command target module for
+commands and the subscriber module for events. Transport adapters still remain
+provider-neutral: they resolve the durable receive identity and call the
+provider/runtime ingestion boundary, but they do not know EF Core,
+PostgreSQL, or DbContext types.
+
+Provider packages may register one durable incoming inbox ingestion boundary
+per module. That boundary groups the ingestion store and commit scope so the
+row write and commit use the same module persistence boundary. When no
+module-owned durable runtime registrations or module ingestion boundaries are
+registered, Bondstone may fall back to root-level ingestion store and scope
+services for advanced single-store composition. Once module persistence
+registrations exist, missing receiver-module ingestion boundaries should fail
+loudly rather than silently writing the incoming ledger to an unrelated root
+store.
+
 ## Consequences
 
 The receive-side product model becomes easier to explain: one incoming durable
@@ -119,7 +139,9 @@ project adopts buffered receive.
 
 - Current contract: direct receive still uses the existing inbox idempotency
   boundary and treats already-received/unprocessed rows as ambiguous receive
-  failures.
+  failures. Durable incoming inbox ingestion resolves a receiver-module
+  ingestion boundary when module-owned persistence is configured, with
+  root-level fallback only for advanced single-store composition.
 - Stable docs: messaging, hosting, persistence-core, persistence-ef-core,
   observability, public-api, packaging, package-discovery, operations, and the
   post-MVP plan describe the durable inbox direction and mark old
@@ -127,13 +149,15 @@ project adopts buffered receive.
 - Agent guidance: root and architecture AGENTS files already route durable
   runtime, persistence, hosting, transport, and public API changes through ADR
   review. No new agent rule is needed.
-- Application evidence: the current receive-buffer abstraction and EF mapping
-  slices exist as work-in-progress/provider APIs, but they should be renamed or
-  remodeled into durable inbox/incoming-ledger APIs before consumer adoption.
-- Pending or deferred: rename or replace receive-buffer public APIs, EF
-  mapping, table names, docs, tests, and future PostgreSQL stores; define
-  durable inbox ingestion, claim/lease, retry, terminal failure, inspection,
-  worker options, adapter handoff, migration, and cleanup guidance.
+- Application evidence: provider-neutral durable incoming inbox records,
+  ingestion boundary resolution, EF Core ingestion and inspection stores,
+  PostgreSQL claim/lease/outcome stores, the hosted incoming inbox processing
+  worker, and RabbitMQ durable ingestion handoff are implemented. The EF
+  module opt-in registers a module incoming ingestion boundary that uses the
+  receiver module's DbContext. RabbitMQ ingestion resolves that boundary after
+  building the incoming record and acknowledges only after commit.
+- Pending or deferred: define migration, cleanup, retention, and broader
+  adapter guidance as real consumer needs require.
 
 ## Verification
 
@@ -143,3 +167,8 @@ design direction against current Wolverine, MassTransit, and Brighter inbound
 durability documentation during design discussion. Updated stable docs to make
 the durable inbox incoming ledger the current direction while preserving direct
 receive as current behavior.
+
+On 2026-06-18, the module-aware ingestion boundary amendment was applied to
+code, stable docs, and public API baselines. Verified with focused RabbitMQ,
+EF Core, and core persistence tests, public API baseline refresh, and
+`pnpm check`.

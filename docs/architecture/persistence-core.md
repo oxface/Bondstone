@@ -115,7 +115,12 @@ registration carries a module name plus a factory for the executable
 module, plus factories for the module's executable `IDurableOutboxDispatcher`
 when the provider supports local outbox dispatch and
 `IDurableOutboxInspectionStore` when the provider supports terminal-row
-inspection. Providers store these
+inspection. Providers may also register one
+`DurableModuleIncomingInboxIngestionBoundaryRegistration` per module for the
+optional durable incoming inbox ingestion path. That boundary groups the
+module's `IDurableIncomingInboxIngestionStore` and
+`IDurableIncomingInboxIngestionPersistenceScope` so ingestion writes and saves
+through the same receiver-module persistence boundary. Providers store these
 records in `DurableModulePersistenceRegistrationRegistry`; individual module
 runtime registrations are not service descriptors. Provider packages should
 use Bondstone's advanced service-collection helper to get or create that
@@ -131,13 +136,14 @@ should not create owned disposable resources outside DI ownership.
 Provider packages must register at most one runtime registration for each
 module command/receive durable role, at most one module outbox dispatcher
 registration for each local module outbox, at most one module inbox
-inspection-store registration for each module store, and at most one module
-outbox inspection-store registration for each module store. The durable runtime registry
-rejects duplicate module outbox writer, inbox handler executor,
-inbox inspection-store, operation-state store, outbox dispatcher, and outbox
-inspection-store registrations when provider setup adds them; the runtime map
-keeps defensive duplicate validation when those
-services are resolved. Provider
+inspection-store registration for each module store, at most one module
+outbox inspection-store registration for each module store, and at most one
+module incoming inbox ingestion boundary for each module. The durable runtime
+registry rejects duplicate module outbox writer, inbox handler executor,
+inbox inspection-store, operation-state store, outbox dispatcher, outbox
+inspection-store, and incoming inbox ingestion boundary registrations when
+provider setup adds them; the runtime map keeps defensive duplicate validation
+when those services are resolved. Provider
 composition errors therefore fail with module-specific diagnostics. When a
 module declares
 persistence but the matching module-owned service is missing, runtime
@@ -165,6 +171,16 @@ receive paths such as `IDurableOutboxWriter`,
 fallback is supported advanced single-store composition and compatibility
 behavior for those lower-level paths. It does not replace the preferred
 module-owned durable messaging path.
+
+Durable incoming inbox ingestion follows the same ownership rule but resolves
+by receiver module after the adapter has built the `DurableIncomingInboxRecord`.
+When a module incoming ingestion boundary is registered, ingestion uses that
+boundary. When any module-owned persistence registrations exist and the
+receiver module has no ingestion boundary, resolution fails with a
+module-specific configuration error instead of using an unrelated root store.
+Only hosts with no module-owned runtime registrations or module ingestion
+boundaries use the root-level `IDurableIncomingInboxIngestionStore` plus
+`IDurableIncomingInboxIngestionPersistenceScope` fallback.
 
 `IDurableOperationReader` is intentionally different: Bondstone's default
 operation reader aggregates configured module-owned operation-state store
@@ -247,8 +263,11 @@ preserves the superseded separate receive-buffer decision trail. The accepted
 provider-neutral names use `DurableIncomingInbox*` and
 `IDurableIncomingInbox*` to distinguish this richer incoming ledger from the
 tiny direct-receive inbox. Provider-neutral EF Core ingestion and read-only
-inspection stores exist. PostgreSQL-specific claim, lease-renewal, and
-outcome-recording stores exist for the incoming ledger. Core also provides a
+inspection stores exist. Core provides a module-aware ingestion boundary
+resolver so transport ingestion can write through the receiver module's
+persistence boundary when module persistence is configured. PostgreSQL-specific
+claim, lease-renewal, and outcome-recording stores exist for the incoming
+ledger. Core also provides a
 host-callable `IDurableIncomingInboxDispatcher` that claims due rows and hands
 each row to the existing module receive pipelines. `Bondstone.Hosting`
 provides an opt-in hosted worker for that dispatcher. Transport adapter

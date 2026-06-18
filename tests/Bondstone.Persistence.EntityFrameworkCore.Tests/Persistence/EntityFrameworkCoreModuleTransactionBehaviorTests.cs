@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Messaging;
@@ -414,6 +415,73 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
                 == "Bondstone.Persistence.EntityFrameworkCore.Persistence.EntityFrameworkCoreModuleTransactionRunner");
     }
 
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task IncomingInboxIngestionBoundary_WhenModuleUsesEntityFrameworkCorePersistence_UsesReceiverModuleDbContext()
+    {
+        string fulfillmentDatabaseName = Guid.NewGuid().ToString("N");
+        string billingDatabaseName = Guid.NewGuid().ToString("N");
+        var services = new ServiceCollection();
+        services.AddDbContext<FulfillmentIncomingInboxDbContext>(options =>
+            options
+                .UseInMemoryDatabase(fulfillmentDatabaseName)
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+        services.AddDbContext<BillingIncomingInboxDbContext>(options =>
+            options
+                .UseInMemoryDatabase(billingDatabaseName)
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseEntityFrameworkCorePersistence<FulfillmentIncomingInboxDbContext>();
+            });
+            bondstone.Module("billing", module =>
+            {
+                module.UseEntityFrameworkCorePersistence<BillingIncomingInboxDbContext>();
+            });
+        });
+
+        var record = new DurableIncomingInboxRecord(
+            DurableIncomingInboxKey.ForCommandHandler(
+                Guid.Parse("875c60be-d67f-475e-b84e-367f36f76c4c"),
+                "billing",
+                "billing.record-payment.v1"),
+            new DurableMessageEnvelope(
+                Guid.Parse("875c60be-d67f-475e-b84e-367f36f76c4c"),
+                MessageKind.Command,
+                "billing.record-payment.v1",
+                "fulfillment",
+                "billing",
+                "{}",
+                DateTimeOffset.Parse("2026-06-18T10:15:00+00:00")),
+            DateTimeOffset.Parse("2026-06-18T10:16:00+00:00"),
+            sourceTransportName: "rabbitmq:billing.commands");
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider(
+            validateScopes: true);
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IDurableIncomingInboxIngestionBoundaryResolver resolver = scope.ServiceProvider
+            .GetRequiredService<IDurableIncomingInboxIngestionBoundaryResolver>();
+        DurableIncomingInboxIngestionBoundary boundary = resolver.Resolve("billing");
+
+        await boundary.IngestAndSaveAsync(record);
+
+        using IServiceScope verificationScope = serviceProvider.CreateScope();
+        FulfillmentIncomingInboxDbContext fulfillmentContext = verificationScope.ServiceProvider
+            .GetRequiredService<FulfillmentIncomingInboxDbContext>();
+        BillingIncomingInboxDbContext billingContext = verificationScope.ServiceProvider
+            .GetRequiredService<BillingIncomingInboxDbContext>();
+
+        Assert.Empty(await fulfillmentContext.Set<IncomingInboxMessageEntity>().ToListAsync());
+        IncomingInboxMessageEntity entity = Assert.Single(
+            await billingContext.Set<IncomingInboxMessageEntity>().ToListAsync());
+        Assert.Equal("billing", entity.ReceiverModule);
+        Assert.Equal("rabbitmq:billing.commands", entity.SourceTransportName);
+    }
+
     public sealed class LoggingCommandHandler(CommandCallLog log)
         : ICommandHandler<StoreHandledCommand>
     {
@@ -567,6 +635,26 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
                 {
                     entity.HasKey(record => record.Id);
                 });
+        }
+    }
+
+    public sealed class FulfillmentIncomingInboxDbContext(
+        DbContextOptions<FulfillmentIncomingInboxDbContext> options)
+        : DbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.ApplyBondstoneIncomingInbox();
+        }
+    }
+
+    public sealed class BillingIncomingInboxDbContext(
+        DbContextOptions<BillingIncomingInboxDbContext> options)
+        : DbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.ApplyBondstoneIncomingInbox();
         }
     }
 

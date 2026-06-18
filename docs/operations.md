@@ -158,14 +158,17 @@ When the RabbitMQ receive worker is explicitly configured with
 `IngestCommandToDurableIncomingInbox()` or
 `IngestEventToDurableIncomingInbox(...)`, settlement moves to the ingestion
 boundary. The worker parses the delivery body into a `DurableMessageEnvelope`,
-resolves the durable receive binding, calls
-`IDurableIncomingInboxIngestionStore.IngestAsync(...)`, saves through
-`IDurableIncomingInboxIngestionPersistenceScope`, and acknowledges only after
-that persistence boundary succeeds. `AlreadyIngested` duplicate deliveries are
-acknowledged safely. Ingestion, binding resolution, deserialization, or commit
-failures are nacked according to `RequeueOnFailure`; the worker does not run
-handlers, complete operation state, stage outgoing outbox rows, or mutate
-incoming inbox processing outcomes.
+resolves the durable receive binding, resolves the receiver module's durable
+incoming inbox ingestion boundary, calls its ingest-and-save operation, and
+acknowledges only after that persistence boundary succeeds. EF-backed module
+persistence uses the receiver module's DbContext for this write. Advanced
+single-store hosts with no module runtime registrations can still use the
+root-level ingestion store/scope fallback. `AlreadyIngested` duplicate
+deliveries are acknowledged safely. Ingestion, binding resolution,
+deserialization, boundary resolution, or commit failures are nacked according
+to `RequeueOnFailure`; the worker does not run handlers, complete operation
+state, stage outgoing outbox rows, or mutate incoming inbox processing
+outcomes.
 
 The thin Azure Service Bus receive worker completes the message after receive
 completes. Its exposed `ProcessorOptions` is an advanced native-driver escape

@@ -167,6 +167,17 @@ ingestion use that scope to save staged incoming rows before native broker
 settlement. The scope is still only an ingestion commit boundary; it does not
 run handlers, record processing outcomes, or own transport behavior.
 
+When a module declares EF persistence with
+`UseEntityFrameworkCorePersistence<TDbContext>` or
+`UseEntityFrameworkCoreModulePersistence<TDbContext>`, the EF package also
+registers a module incoming inbox ingestion boundary. The boundary resolves
+the receiver module's `TDbContext`, creates the matching EF ingestion store,
+and saves through an EF persistence scope for that same context. This mirrors
+the module transaction runner's DbContext selection without making transport
+packages know EF Core or DbContext types. Root-level EF ingestion services
+remain the fallback only for advanced single-store composition when no module
+runtime registrations or module ingestion boundaries are present.
+
 `EntityFrameworkCoreDurableIncomingInboxInspectionStore<TDbContext>` reads
 incoming inbox rows without tracking. It supports broad status inspection,
 stale processing claim inspection by claim-lease cutoff, and terminal

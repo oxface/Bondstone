@@ -223,6 +223,12 @@ Durable incoming inbox provider-neutral contracts, 2026-06-17:
   ingestion, claim, lease renewal, outcome recording, and inspection of the
   incoming ledger. Inspection supports broad status reads plus stale
   processing claim and terminal receive-failure queries for operations.
+- `DurableIncomingInboxIngestionBoundary` and
+  `IDurableIncomingInboxIngestionBoundaryResolver` are additive
+  provider/runtime contracts for resolving the ingestion store and commit
+  scope by receiver module before broker acknowledgement. The boundary exposes
+  the paired store/scope and the common ingest-and-save operation used by
+  adapters.
 - `IDurableIncomingInboxDispatcher`,
   `DurableIncomingInboxDispatcher`,
   `IDurableIncomingInboxFailurePolicy`,
@@ -253,6 +259,10 @@ Durable incoming inbox EF Core mapping, 2026-06-17:
   additive provider/runtime implementations for idempotent EF ingestion and
   read-only EF inspection. They are registered by
   `AddBondstoneEntityFrameworkCorePersistence<TDbContext>`.
+- `DurableModuleIncomingInboxIngestionBoundaryRegistration` is an additive
+  advanced module runtime registration type for provider packages. The EF
+  module persistence opt-ins register one boundary per module so ingestion
+  uses the receiver module's `DbContext`.
 - PostgreSQL-specific incoming inbox mutation stores live in
   `Bondstone.Persistence.EntityFrameworkCore.Postgres`. This slice does not
   add hosted workers, adapter handoff, direct receive behavior changes,
@@ -285,6 +295,10 @@ RabbitMQ durable incoming inbox ingestion handoff, 2026-06-17:
   provider/runtime contract for committing staged incoming inbox ingestion
   before native broker settlement. The EF Core package registers an adapter
   over its existing EF persistence scope.
+- The worker resolves `IDurableIncomingInboxIngestionBoundaryResolver` after
+  creating the durable incoming inbox record, so module-owned persistence
+  writes through the receiver module boundary while advanced single-store
+  hosts can still use the root store/scope fallback.
 - Direct RabbitMQ receive remains the default. The ingestion mode does not
   execute handlers, complete operation state, stage outgoing outbox rows, or
   replace the `Bondstone.Hosting` incoming inbox processing worker.

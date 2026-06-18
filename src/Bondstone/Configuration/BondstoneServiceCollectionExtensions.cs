@@ -69,6 +69,11 @@ public static class BondstoneServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IDurableIncomingInboxOutcomeRecorder>(),
                 serviceProvider.GetRequiredService<IDurableIncomingInboxFailurePolicy>(),
                 serviceProvider.GetService<TimeProvider>()));
+        services.TryAddScoped<IDurableIncomingInboxIngestionBoundaryResolver>(
+            serviceProvider =>
+                new DurableIncomingInboxIngestionBoundaryResolver(
+                    () => CreateFallbackIncomingInboxIngestionBoundary(serviceProvider),
+                    serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
         services.TryAddSingleton<
             IDurableMessageEnvelopeSerializer,
             SystemTextJsonDurableMessageEnvelopeSerializer>();
@@ -171,6 +176,19 @@ public static class BondstoneServiceCollectionExtensions
         var registry = new MessageTypeRegistry();
         services.AddSingleton<IMessageTypeRegistry>(registry);
         return registry;
+    }
+
+    private static DurableIncomingInboxIngestionBoundary? CreateFallbackIncomingInboxIngestionBoundary(
+        IServiceProvider serviceProvider)
+    {
+        IDurableIncomingInboxIngestionStore? store =
+            serviceProvider.GetService<IDurableIncomingInboxIngestionStore>();
+        IDurableIncomingInboxIngestionPersistenceScope? persistenceScope =
+            serviceProvider.GetService<IDurableIncomingInboxIngestionPersistenceScope>();
+
+        return store is null || persistenceScope is null
+            ? null
+            : new DurableIncomingInboxIngestionBoundary(store, persistenceScope);
     }
 
     private static TImplementation GetOrAddOwnedSingleton<TService, TImplementation>(

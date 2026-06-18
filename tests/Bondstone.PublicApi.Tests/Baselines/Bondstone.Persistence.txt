@@ -158,6 +158,13 @@ namespace Bondstone.Persistence
         Retry = 1,
         TerminalFailure = 2,
     }
+    public sealed class DurableIncomingInboxIngestionBoundary
+    {
+        public DurableIncomingInboxIngestionBoundary(Bondstone.Persistence.IDurableIncomingInboxIngestionStore store, Bondstone.Persistence.IDurableIncomingInboxIngestionPersistenceScope persistenceScope) { }
+        public Bondstone.Persistence.IDurableIncomingInboxIngestionPersistenceScope PersistenceScope { get; }
+        public Bondstone.Persistence.IDurableIncomingInboxIngestionStore Store { get; }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxIngestionResult> IngestAndSaveAsync(Bondstone.Persistence.DurableIncomingInboxRecord record, System.Threading.CancellationToken ct = default) { }
+    }
     public sealed class DurableIncomingInboxIngestionResult : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxIngestionResult>
     {
         public DurableIncomingInboxIngestionResult(Bondstone.Persistence.DurableIncomingInboxIngestionStatus status, Bondstone.Persistence.DurableIncomingInboxRecord record) { }
@@ -224,6 +231,12 @@ namespace Bondstone.Persistence
         public string ModuleName { get; }
         public Bondstone.Persistence.IDurableInboxInspectionStore CreateStore(System.IServiceProvider serviceProvider) { }
     }
+    public sealed class DurableModuleIncomingInboxIngestionBoundaryRegistration
+    {
+        public DurableModuleIncomingInboxIngestionBoundaryRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.DurableIncomingInboxIngestionBoundary> createBoundary) { }
+        public string ModuleName { get; }
+        public Bondstone.Persistence.DurableIncomingInboxIngestionBoundary CreateBoundary(System.IServiceProvider serviceProvider) { }
+    }
     public sealed class DurableModuleOperationStateStoreRegistration
     {
         public DurableModuleOperationStateStoreRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableOperationStateStore> createStore) { }
@@ -258,12 +271,14 @@ namespace Bondstone.Persistence
         public DurableModulePersistenceRegistrationRegistry() { }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleInboxHandlerExecutorRegistration> InboxHandlerExecutorRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleInboxInspectionStoreRegistration> InboxInspectionStoreRegistrations { get; }
+        public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleIncomingInboxIngestionBoundaryRegistration> IncomingInboxIngestionBoundaryRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOperationStateStoreRegistration> OperationStateStoreRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOutboxDispatcherRegistration> OutboxDispatcherRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOutboxInspectionStoreRegistration> OutboxInspectionStoreRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOutboxWriterRegistration> OutboxWriterRegistrations { get; }
         public void AddInboxHandlerExecutor(Bondstone.Persistence.DurableModuleInboxHandlerExecutorRegistration registration) { }
         public void AddInboxInspectionStore(Bondstone.Persistence.DurableModuleInboxInspectionStoreRegistration registration) { }
+        public void AddIncomingInboxIngestionBoundary(Bondstone.Persistence.DurableModuleIncomingInboxIngestionBoundaryRegistration registration) { }
         public void AddOperationStateStore(Bondstone.Persistence.DurableModuleOperationStateStoreRegistration registration) { }
         public void AddOutboxDispatcher(Bondstone.Persistence.DurableModuleOutboxDispatcherRegistration registration) { }
         public void AddOutboxInspectionStore(Bondstone.Persistence.DurableModuleOutboxInspectionStoreRegistration registration) { }
@@ -370,6 +385,10 @@ namespace Bondstone.Persistence
     public interface IDurableIncomingInboxClaimer
     {
         System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> ClaimAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxIngestionBoundaryResolver
+    {
+        Bondstone.Persistence.DurableIncomingInboxIngestionBoundary Resolve(string receiverModule);
     }
     public interface IDurableIncomingInboxIngestionPersistenceScope
     {

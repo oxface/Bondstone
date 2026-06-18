@@ -7,6 +7,7 @@ internal sealed class ModuleRuntimeDescriptor(
     Lazy<IDurableOutboxWriter?> durableOutboxWriter,
     Lazy<IDurableInboxHandlerExecutor?> durableInboxHandlerExecutor,
     Lazy<IDurableInboxInspectionStore?> durableInboxInspectionStore,
+    Lazy<DurableIncomingInboxIngestionBoundary?> durableIncomingInboxIngestionBoundary,
     Lazy<IDurableOperationStateStore?> durableOperationStateStore,
     Lazy<IDurableOutboxInspectionStore?> durableOutboxInspectionStore)
 {
@@ -18,6 +19,9 @@ internal sealed class ModuleRuntimeDescriptor(
     private readonly Lazy<IDurableInboxInspectionStore?> _durableInboxInspectionStore =
         durableInboxInspectionStore
         ?? throw new ArgumentNullException(nameof(durableInboxInspectionStore));
+    private readonly Lazy<DurableIncomingInboxIngestionBoundary?>
+        _durableIncomingInboxIngestionBoundary = durableIncomingInboxIngestionBoundary
+        ?? throw new ArgumentNullException(nameof(durableIncomingInboxIngestionBoundary));
     private readonly Lazy<IDurableOperationStateStore?> _durableOperationStateStore =
         durableOperationStateStore
         ?? throw new ArgumentNullException(nameof(durableOperationStateStore));
@@ -48,6 +52,13 @@ internal sealed class ModuleRuntimeDescriptor(
     {
         store = _durableInboxInspectionStore.Value;
         return store is not null;
+    }
+
+    public bool TryGetDurableIncomingInboxIngestionBoundary(
+        out DurableIncomingInboxIngestionBoundary? boundary)
+    {
+        boundary = _durableIncomingInboxIngestionBoundary.Value;
+        return boundary is not null;
     }
 
     public bool TryGetDurableOperationStateStore(

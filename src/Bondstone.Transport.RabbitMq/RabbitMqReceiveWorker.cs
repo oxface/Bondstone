@@ -135,19 +135,12 @@ internal sealed class RabbitMqReceiveWorker(
             envelope,
             registration);
 
-        IDurableIncomingInboxIngestionStore store =
-            serviceProvider.GetRequiredService<IDurableIncomingInboxIngestionStore>();
-        IDurableIncomingInboxIngestionPersistenceScope persistenceScope =
-            serviceProvider.GetRequiredService<IDurableIncomingInboxIngestionPersistenceScope>();
+        IDurableIncomingInboxIngestionBoundaryResolver boundaryResolver =
+            serviceProvider.GetRequiredService<IDurableIncomingInboxIngestionBoundaryResolver>();
+        DurableIncomingInboxIngestionBoundary boundary =
+            boundaryResolver.Resolve(record.ReceiverModule);
 
-        await persistenceScope.ExecuteAsync(
-            async (persistence, innerCt) =>
-            {
-                await store.IngestAsync(record, innerCt);
-                await persistence.SaveChangesAsync(innerCt);
-                return true;
-            },
-            ct);
+        await boundary.IngestAndSaveAsync(record, ct);
     }
 
     private DurableIncomingInboxRecord CreateIncomingInboxRecord(

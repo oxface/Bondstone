@@ -125,6 +125,65 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void IncomingInboxIngestion_WhenDuplicateModuleBoundariesAreRegistered_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        RegisterIncomingInboxIngestionBoundary(
+            services,
+            new DurableModuleIncomingInboxIngestionBoundaryRegistration(
+                "fulfillment",
+                _ => CreateTestIncomingInboxIngestionBoundary()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => RegisterIncomingInboxIngestionBoundary(
+                services,
+                new DurableModuleIncomingInboxIngestionBoundaryRegistration(
+                    " fulfillment ",
+                    _ => CreateTestIncomingInboxIngestionBoundary())));
+
+        Assert.Contains("durable module incoming inbox ingestion boundary", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("exactly one", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void IncomingInboxIngestion_WhenReceiverModuleBoundaryIsMissing_ThrowsProviderSpecificError()
+    {
+        var services = new ServiceCollection();
+        RegisterIncomingInboxIngestionBoundary(
+            services,
+            new DurableModuleIncomingInboxIngestionBoundaryRegistration(
+                "billing",
+                _ => CreateTestIncomingInboxIngestionBoundary()));
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UsePersistence("test persistence");
+            });
+            bondstone.Module("billing", module =>
+            {
+                module.UsePersistence("test persistence");
+            });
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider(
+            validateScopes: true);
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => scope.ServiceProvider
+                .GetRequiredService<IDurableIncomingInboxIngestionBoundaryResolver>()
+                .Resolve("fulfillment"));
+
+        Assert.Contains("durable module incoming inbox ingestion boundary", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test persistence", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task CommandSender_WhenModuleOutboxWriterIsMissing_ThrowsProviderSpecificError()
     {
         var services = new ServiceCollection();
@@ -437,6 +496,21 @@ public sealed class DurableModulePersistenceRegistrationTests
             .AddOperationStateStore(registration);
     }
 
+    private static void RegisterIncomingInboxIngestionBoundary(
+        IServiceCollection services,
+        DurableModuleIncomingInboxIngestionBoundaryRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddIncomingInboxIngestionBoundary(registration);
+    }
+
+    private static DurableIncomingInboxIngestionBoundary CreateTestIncomingInboxIngestionBoundary()
+    {
+        return new DurableIncomingInboxIngestionBoundary(
+            new TestIncomingInboxIngestionStore(),
+            new TestIncomingInboxIngestionScope());
+    }
+
     private static DurableMessageEnvelope CreateTestCommandEnvelope()
     {
         return new DurableMessageEnvelope(
@@ -635,6 +709,32 @@ public sealed class DurableModulePersistenceRegistrationTests
             DateTimeOffset? receivedAtOrBeforeUtc = null,
             string? moduleName = null,
             CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class TestIncomingInboxIngestionStore : IDurableIncomingInboxIngestionStore
+    {
+        public ValueTask<DurableIncomingInboxIngestionResult> IngestAsync(
+            DurableIncomingInboxRecord record,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class TestIncomingInboxIngestionScope
+        : IDurableIncomingInboxIngestionPersistenceScope
+    {
+        public ValueTask<TResult> ExecuteAsync<TResult>(
+            Func<IDurableIncomingInboxIngestionPersistenceScope, CancellationToken, ValueTask<TResult>> operation,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public ValueTask SaveChangesAsync(CancellationToken ct = default)
         {
             throw new NotSupportedException();
         }

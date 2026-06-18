@@ -1,4 +1,7 @@
+using Bondstone.Configuration;
 using Bondstone.Modules;
+using Bondstone.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -43,9 +46,29 @@ public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
         module.UsePersistence(
             EntityFrameworkCoreModulePersistence.ProviderName,
             typeof(TDbContext));
+        module.RegisterEntityFrameworkCoreIncomingInboxIngestionBoundary<TDbContext>();
         module.TryAddEntityFrameworkCoreModuleTransactionSystemBehaviors();
 
         return module;
+    }
+
+    private static void RegisterEntityFrameworkCoreIncomingInboxIngestionBoundary<TDbContext>(
+        this BondstoneModuleBuilder module)
+        where TDbContext : DbContext
+    {
+        module.Services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddIncomingInboxIngestionBoundary(
+                new DurableModuleIncomingInboxIngestionBoundaryRegistration(
+                    module.Name,
+                    serviceProvider =>
+                    {
+                        TDbContext context = serviceProvider.GetRequiredService<TDbContext>();
+                        return new DurableIncomingInboxIngestionBoundary(
+                            new EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbContext>(
+                                context),
+                            new EntityFrameworkCoreDurableIncomingInboxIngestionPersistenceScope(
+                                new EntityFrameworkCorePersistenceScope<TDbContext>(context)));
+                    }));
     }
 
     private static void TryAddEntityFrameworkCoreModuleTransactionSystemBehaviors(

@@ -17,6 +17,10 @@ documentsIncluded:
   epics:
     - _bmad-output/planning-artifacts/epics.md
   ux: []
+  activeStories:
+    - _bmad-output/implementation-artifacts/1-2-create-native-architecture.md
+    - _bmad-output/implementation-artifacts/1-3-create-native-epics.md
+    - _bmad-output/implementation-artifacts/1-4-create-readiness-report.md
 ---
 
 # Implementation Readiness Assessment Report
@@ -35,7 +39,7 @@ documentsIncluded:
 **Sharded Documents:**
 
 - Folder: `_bmad-output/planning-artifacts/prds/`
-  - `index.md` (526 bytes, modified 2026-06-18 14:16)
+  - `index.md` (276 bytes, modified 2026-06-18 16:15)
   - `prd-Bondstone-2026-06-18/prd.md` (11,882 bytes, modified 2026-06-18 14:09)
   - `prd-Bondstone-2026-06-18/addendum.md` (905 bytes, modified 2026-06-18 14:16)
   - `prd-Bondstone-2026-06-18/.decision-log.md` (530 bytes, modified 2026-06-18 14:16)
@@ -70,10 +74,17 @@ documentsIncluded:
 
 - None found.
 
+### Active Story Files Found
+
+- `_bmad-output/implementation-artifacts/1-2-create-native-architecture.md` (10,311 bytes, modified 2026-06-18 16:20)
+- `_bmad-output/implementation-artifacts/1-3-create-native-epics.md` (8,886 bytes, modified 2026-06-18 16:20)
+- `_bmad-output/implementation-artifacts/1-4-create-readiness-report.md` (8,320 bytes, modified 2026-06-18 16:20)
+
 ### Discovery Issues
 
-- No duplicate PRD, architecture, or epics document formats were found.
-- UX document not found. This is expected for Bondstone because the PRD marks UX as not applicable for this library/framework scope.
+- No duplicate PRD, architecture, epics, or UX document formats were found.
+- UX document not found. This is expected if the PRD marks UX as not applicable for Bondstone's library/framework scope.
+- Active Story 1.4 targets this readiness report, so later steps must account for self-reference risk when assessing whether the report is already complete.
 
 ## PRD Analysis
 
@@ -217,23 +228,27 @@ Total NFRs: 6.
 
 ### Additional Requirements
 
-- UX is explicitly not applicable because Bondstone is a library/framework and this change has no user interface.
-- Success metrics require stock BMAD readiness discovery under `_bmad-output/planning-artifacts/`, removal of retired-source routing, cleanup of obsolete docs, current root README/AGENTS routing, lean project context, and `/docs` staying consumer/repository focused.
-- The addendum records that internal implementation architecture details were promoted into `_bmad-output/planning-artifacts/architecture.md`, while consumer-facing setup, operations, observability, packaging, public API, samples, testing, and repository workflow guidance remain under `docs/`.
-- The decision log records native BMAD PRD workspace adoption, retirement of the non-native planning and decision-file workflow, and UX as not applicable.
+- UX design is explicitly not applicable because Bondstone is a library/framework and this change has no user interface.
+- Success metrics require stock BMAD readiness discovery under `_bmad-output/planning-artifacts/`, removal of retired-source routing, obsolete doc cleanup, current root README/AGENTS routing, lean project context, and `/docs` staying consumer/repository focused.
+- The addendum records that durable implementation architecture was promoted into `_bmad-output/planning-artifacts/architecture.md`, while consumer-facing setup, operations, observability, packaging, public API, samples, testing, and repository workflow guidance remain under `docs/`.
+- The PRD-local decision log records adoption of the native BMAD planning chain, retirement of the non-native planning and decision-file workflow, and UX as not applicable.
 - Open implementation decisions remain for GitHub workflow label simplification, stable misconfiguration-code representation, and final public API compatibility promise before stable v2 release.
 
 ### PRD Completeness Assessment
 
-The PRD is complete and internally coherent for readiness validation. It clearly separates documentation-reset scope from future runtime implementation, identifies the BMAD planning chain, captures the runtime guardrails needed to avoid design drift, and marks UX as not applicable. The remaining open items are implementation decisions intentionally deferred to later stories rather than blockers for readiness.
+The PRD is complete and coherent for readiness validation. It clearly separates the documentation/planning reset from future runtime implementation, identifies the authoritative BMAD planning chain, defines non-goals, captures runtime guardrails needed to avoid design drift, and explicitly marks UX as not applicable. The open items are scoped implementation decisions for later stories rather than blockers for active Story 1.2, Story 1.3, or Story 1.4 readiness.
 
 ## Epic Coverage Validation
 
 ### Epic FR Coverage Extracted
 
-`epics.md` includes an explicit FR Coverage Map. It claims coverage for all PRD FRs from FR1.1 through FR10.5.
+`_bmad-output/planning-artifacts/epics.md` includes an explicit FR Coverage Map. It claims coverage for all 49 numbered PRD sub-requirements from FR1.1 through FR10.5.
 
-Total FRs in epics: 49 numbered PRD sub-requirements.
+The remaining Epic 1 planning-authority slice covers the following PRD requirements. Story lifecycle state is tracked in the story files and `sprint-status.yaml`, not in this readiness assessment:
+
+- Story 1.2 covers FR1.1, FR1.3, and FR2.3.
+- Story 1.3 covers FR1.1 and FR1.4.
+- Story 1.4 covers FR1.5.
 
 ### Coverage Matrix
 
@@ -252,7 +267,7 @@ Total FRs in epics: 49 numbered PRD sub-requirements.
 | FR2.6     | `/docs` remains consumer-facing and points internal design to BMAD architecture.                                | Story 3.3, Story 3.4                                                | Covered |
 | FR3.1     | Bondstone remains a library/framework, not bus/workflow/generator/app framework.                                | Story 5.1                                                           | Covered |
 | FR3.2     | Core value proposition preserves contracts, identities, outbox, inbox, operations, and service extraction.      | Story 5.1, Story 5.4, Story 6.1, Story 6.2, Story 7.2               | Covered |
-| FR3.3     | Modular monoliths first-class; service extraction without replacing contracts or semantics.                     | Story 5.1, Story 5.2, Story 5.3, Story 7.1, Story 8.5               | Covered |
+| FR3.3     | Modular monoliths first-class; service extraction without replacing contracts or semantics.                     | Story 5.1, Story 5.2, Story 5.3, Story 7.1                          | Covered |
 | FR3.4     | Microservice use supported with module-owned durability and host-owned transport.                               | Story 5.1, Story 7.1                                                | Covered |
 | FR4.1     | Modules own module name, durable messaging, persistence binding, and registrations.                             | Story 5.2                                                           | Covered |
 | FR4.2     | Hosts compose modules through `AddBondstone` and module-owned extensions.                                       | Story 5.2                                                           | Covered |
@@ -291,11 +306,9 @@ Total FRs in epics: 49 numbered PRD sub-requirements.
 
 ### Missing Requirements
 
-No missing FR coverage found.
+No missing FR coverage found in the epics coverage map.
 
-### FRs In Epics But Not In PRD
-
-No out-of-PRD FR references were found in the epics coverage map. Some stories intentionally refine PRD requirements with architecture-derived acceptance criteria, which is appropriate because the architecture is an input document for the epics.
+No out-of-PRD FR references were found in the coverage map. Some stories intentionally refine PRD requirements with architecture-derived acceptance criteria, which is appropriate because the architecture is an input document for the epics.
 
 ### Coverage Statistics
 
@@ -303,6 +316,14 @@ No out-of-PRD FR references were found in the epics coverage map. Some stories i
 - FRs covered in epics: 49
 - Missing FRs: 0
 - Coverage percentage: 100%
+
+### Active Story Coverage Assessment
+
+The active stories are internally consistent with Epic 1 sequencing:
+
+- Story 1.2 validates architecture authority and covers FR1.3 before runtime implementation begins.
+- Story 1.3 validates epics and FR traceability, which is required before broader sprint execution.
+- Story 1.4 validates the readiness report itself. Because this report is being regenerated during the active-story readiness check, Story 1.4 is necessarily self-referential and should be code-reviewed after this run completes.
 
 ## UX Alignment Assessment
 
@@ -312,44 +333,50 @@ Not found.
 
 ### Alignment Issues
 
-No UX alignment issues found. The absence of UX documentation is consistent with the PRD, architecture, and epics:
+No UX alignment issues found. The absence of UX documentation is consistent with the PRD, architecture, epics, and active Story 1.4:
 
 - The PRD non-goals explicitly say not to add UI, auth, billing, account management, deployment platform, or SaaS-product requirements.
-- The PRD UX section states that no UX design requirements apply because Bondstone is a library/framework and the change has no user interface.
+- The PRD UX section states that no UX design requirements apply because Bondstone is a library/framework and this change has no user interface.
 - The PRD requires readiness to mark UX as explicitly not applicable.
-- The addendum also records UX as not applicable for this library/framework reset.
-- Epic 1 Story 1.1 requires the PRD to mark UX as not applicable.
+- The PRD addendum records UX as not applicable for this library/framework reset.
 - Epic 1 Story 1.4 requires the readiness report to mark UX as not applicable.
+- Active Story 1.4 instructs the developer not to treat UX absence as a gap.
 - The architecture frames Bondstone as a .NET library and explicitly excludes SaaS application framework scope.
 
 ### Warnings
 
-No warning. UX is not implied by the assessed scope.
+No warning. UX is not implied by the assessed active-story scope. Story 1.2, Story 1.3, and Story 1.4 are planning-artifact verification stories with no user-facing interface surface.
 
 ## Epic Quality Review
 
 ### Epic Structure Validation
 
-| Epic                                                      | User Value Focus                                                                                                                       | Independence                                                      | Assessment |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------- |
-| Epic 1: Establish BMAD-Native Planning Authority          | Maintainer and implementation-agent value is clear: discoverable planning artifacts.                                                   | Stands alone.                                                     | Pass       |
-| Epic 2: Keep Retired Planning Workflows Removed           | Maintainer/agent value is clear: obsolete workflows stay out of current routing.                                                       | Depends only on Epic 1 authority.                                 | Pass       |
-| Epic 3: Deduplicate Repository And Consumer Documentation | Repository visitor, docs maintainer, and implementation-agent value is clear.                                                          | Can use Epic 1 and Epic 2 outputs.                                | Pass       |
-| Epic 4: Align Package And Scoped Agent References         | Package/test/GitHub workflow maintainers get current references.                                                                       | Naturally follows docs cleanup; no future dependency found.       | Pass       |
-| Epic 5: Runtime Module Boundaries And Message Contracts   | Maintainer, host developer, consumer, and application-developer value is clear: product boundary and contract semantics are protected. | Can follow documentation reset; no future dependency found.       | Pass       |
-| Epic 6: Durable Persistence And Receive Ledger            | Module-owner, operator, and library-consumer value is clear: durable evidence and persistence ownership are provable.                  | Can follow contract semantics; no future dependency found.        | Pass       |
-| Epic 7: Transport, Operations, And Diagnostics            | Host-developer, operator, and consumer value is clear: transport ownership, operations, and diagnostics stay explicit.                 | Can follow persistence/receive work; no forward dependency found. | Pass       |
-| Epic 8: Public API, Verification, And Trial Readiness     | Maintainer, library-consumer, and first-consumer-trial value is clear.                                                                 | Correctly follows prior work.                                     | Pass       |
+| Epic                                                      | User Value Focus                                                                                                                       | Independence                                                         | Assessment |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------- |
+| Epic 1: Establish BMAD-Native Planning Authority          | Maintainer and implementation-agent value is clear: discoverable native BMAD planning artifacts.                                       | Stands alone and is already partly complete through Story 1.1.       | Pass       |
+| Epic 2: Keep Retired Planning Workflows Removed           | Maintainer/agent value is clear: obsolete workflows stay out of current routing.                                                       | Can use Epic 1 output; does not require later epics.                 | Pass       |
+| Epic 3: Deduplicate Repository And Consumer Documentation | Repository visitor, docs maintainer, and implementation-agent value is clear.                                                          | Can use Epic 1 and Epic 2 outputs; no future dependency found.       | Pass       |
+| Epic 4: Align Package And Scoped Agent References         | Package/test/workflow maintainers get current references.                                                                              | Naturally follows documentation cleanup; no future dependency found. | Pass       |
+| Epic 5: Runtime Module Boundaries And Message Contracts   | Maintainer, host developer, consumer, and application-developer value is clear: product boundary and contract semantics are protected. | Can follow documentation reset; no future dependency found.          | Pass       |
+| Epic 6: Durable Persistence And Receive Ledger            | Module-owner, operator, and library-consumer value is clear: durable evidence and persistence ownership are provable.                  | Can follow contract semantics; no forward dependency found.          | Pass       |
+| Epic 7: Transport, Operations, And Diagnostics            | Host-developer, operator, and consumer value is clear: transport ownership, operations, and diagnostics stay explicit.                 | Can follow persistence/receive work; no forward dependency found.    | Pass       |
+| Epic 8: Public API, Verification, And Trial Readiness     | Maintainer, library-consumer, and first-consumer-trial value is clear.                                                                 | Correctly follows prior work.                                        | Pass       |
 
-### Story Quality Assessment
+### Active Story Quality Assessment
 
-- All 32 stories include a named actor, desired outcome, acceptance criteria, verification guidance, rollback guidance, and FR traceability.
-- Runtime stories in Epics 5 through 8 use scenario-oriented Given/When/Then-style acceptance criteria for high-risk behavior.
-- Documentation cleanup stories use direct testable bullet criteria. This is acceptable for low-risk document/reference work, though not strict BDD style.
-- No story references a future story as a prerequisite.
-- No starter-template requirement was found in architecture, so no starter-template story is required.
-- This is a brownfield library repository. Greenfield application setup and upfront database creation checks are not applicable.
-- Persistence stories create/prove database behavior when the relevant durable persistence behavior is introduced rather than through an upfront all-schema story.
+| Active Story                          | Value                                                                             | Independence                                                                                                                                               | Acceptance Criteria                                                                                                | Readiness                        |
+| ------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
+| Story 1.2: Create Native Architecture | Clear implementation-agent value: central architecture rules before runtime work. | Can be verified from existing PRD, architecture, project context, and Story 1.1 learnings.                                                                 | Testable numbered criteria with explicit discovery, ownership, retired-workflow, rollback, and verification tasks. | Ready for lifecycle progression. |
+| Story 1.3: Create Native Epics        | Clear developer-agent value: implementation sequence without obsolete plans.      | Can be verified from existing PRD, architecture, epics, and Story 1.1 learnings; it does not require Story 1.2 completion, only the architecture artifact. | Testable numbered criteria with FR traceability and sequencing checks.                                             | Ready for lifecycle progression. |
+| Story 1.4: Create Readiness Report    | Clear maintainer value: aligned source-of-truth assessment before implementation. | Can be verified from current PRD, architecture, epics, and readiness output, but it targets the report being regenerated by this workflow.                 | Testable numbered criteria covering alignment, UX, artifact inclusion, concerns, and missing coverage.             | Ready for lifecycle progression. |
+
+### Dependency Analysis
+
+- No active story depends on a future story implementation.
+- Story 1.3 says it should not depend on Story 1.2 being implemented in this working session, which prevents a forward dependency while still using the architecture artifact as source input.
+- Story 1.4 is intentionally dependent on existing PRD, architecture, and epics artifacts, not future runtime work.
+- No database/entity creation timing issue applies because the active stories are documentation/planning verification stories.
+- No starter-template requirement applies because this is a brownfield library repository and the architecture does not specify a starter-template setup story.
 
 ### Critical Violations
 
@@ -361,38 +388,33 @@ None found.
 
 ### Minor Concerns
 
-1. Some epic titles remain architecture-domain phrased.
-   - Examples: "Durable Persistence And Receive Ledger", "Transport, Operations, And Diagnostics".
-   - Impact: The title wording is less user-outcome-oriented than the goals and stories.
-   - Recommendation: This is not a blocker because each epic goal and story set names clear maintainer, operator, host-developer, consumer, or library-consumer value. Consider renaming later only if sprint planning participants find the titles too technical.
+1. Story 1.4 is self-referential during this active readiness run.
+   - Evidence: Story 1.4 asks the developer to verify `_bmad-output/planning-artifacts/implementation-readiness-report-2026-06-18.md`, and this workflow is regenerating that same report.
+   - Impact: This is not a blocker, but the story should be code-reviewed after this report is complete so review can evaluate the final artifact rather than an in-progress report.
+   - Recommendation: Keep Story 1.4 active, then run `bmad-code-review` after the report reaches final assessment.
 
-2. Low-risk documentation stories do not use strict Given/When/Then acceptance criteria.
-   - Examples: Stories 1.1 through 4.3 and Story 8.3 use direct bullet acceptance criteria.
-   - Impact: Minor style inconsistency. The criteria remain testable and fit documentation/reference cleanup work.
-   - Recommendation: Keep as-is unless the team wants all stories, including documentation stories, converted to strict BDD format.
-
-3. Story 7.1 is intentionally dense.
-   - Example: It covers thin adapter scope, single-route dispatch, event fanout, host-owned topology, Bondstone-owned semantics, local transport limits, and settlement timing.
-   - Impact: It remains coherent around the transport boundary, but it may split naturally during implementation if adapter work is larger than expected.
-   - Recommendation: Leave as one planning story for now; split during sprint planning if implementation estimates exceed one reviewable slice.
+2. Low-risk documentation stories use direct numbered acceptance criteria rather than strict Given/When/Then.
+   - Evidence: Stories 1.2, 1.3, and 1.4 use numbered documentation-verification criteria.
+   - Impact: Minor style inconsistency only; the criteria are specific and independently verifiable.
+   - Recommendation: Keep as-is unless the team decides strict BDD formatting should apply to documentation stories.
 
 ### Best Practices Compliance Checklist
 
-| Check                                | Result                     | Notes                                                                                                                      |
-| ------------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Epics deliver user/stakeholder value | Pass                       | Value is clear for maintainer, implementation agent, library consumer, host developer, operator, and first-consumer trial. |
-| Epics can function independently     | Pass                       | No Epic N requires Epic N+1 to work.                                                                                       |
-| Stories appropriately sized          | Pass with watch item       | Story 7.1 is dense but coherent; split later only if estimates demand it.                                                  |
-| No forward dependencies              | Pass                       | No future-story prerequisites found.                                                                                       |
-| Database tables created when needed  | Pass / N/A                 | Brownfield library; persistence proof is tied to durable persistence stories, not upfront schema work.                     |
-| Clear acceptance criteria            | Pass with minor style note | High-risk runtime stories use scenario criteria; documentation stories use direct testable bullets.                        |
-| Traceability to FRs maintained       | Pass                       | FR Coverage Map and per-story Covers metadata are present.                                                                 |
+| Check                                | Result                     | Notes                                                                                                     |
+| ------------------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Epics deliver user/stakeholder value | Pass                       | Value is clear for maintainers, implementation agents, library consumers, host developers, and operators. |
+| Epics can function independently     | Pass                       | No Epic N requires Epic N+1 to work.                                                                      |
+| Active stories appropriately sized   | Pass                       | Stories 1.2, 1.3, and 1.4 are narrow verification slices.                                                 |
+| No forward dependencies              | Pass                       | Active stories rely on existing artifacts, not future stories.                                            |
+| Database tables created when needed  | Pass / N/A                 | Active stories are documentation/planning verification stories.                                           |
+| Clear acceptance criteria            | Pass with minor style note | Criteria are direct and testable, though not strict BDD.                                                  |
+| Traceability to FRs maintained       | Pass                       | Active stories include `Covers:` mapping in epics and explicit FR references in story files.              |
 
 ### Quality Recommendations
 
-- Treat the epics as implementation-ready for planning.
-- During sprint planning, estimate Story 7.1 carefully and split adapter-specific work only if it is too large for one reviewable implementation slice.
-- Keep the current acceptance-criteria style unless the team decides strict BDD formatting should apply to documentation stories as well as runtime stories.
+- Treat Stories 1.2, 1.3, and 1.4 as narrow verification stories ready for lifecycle progression through review.
+- Code-review Story 1.4 after this readiness report is complete because its target artifact changes during this workflow.
+- Keep direct numbered acceptance criteria for documentation stories unless the team wants uniform BDD formatting across all story types.
 
 ## Summary and Recommendations
 
@@ -400,7 +422,13 @@ None found.
 
 READY.
 
-The corrected planning artifacts are ready to drive implementation planning. PRD, architecture, and epics are discoverable and aligned; all 49 numbered PRD FR sub-requirements have explicit epic/story coverage; UX is correctly not applicable; and epic quality review found no critical or major defects.
+The active stories are narrow verification stories with complete source-of-truth coverage:
+
+- Story 1.2: Create Native Architecture
+- Story 1.3: Create Native Epics
+- Story 1.4: Create Readiness Report
+
+The PRD, architecture, epics, and active story files are discoverable. PRD FR coverage through the epics is complete, UX is correctly not applicable, and active stories are narrow, independently completable planning-artifact verification slices. Current lifecycle state should be read from the story files and `sprint-status.yaml`.
 
 ### Critical Issues Requiring Immediate Action
 
@@ -408,25 +436,24 @@ None.
 
 ### Issues Identified
 
-This assessment identified 3 minor watch items across epic quality:
+This assessment identified 2 minor concerns across active-story readiness:
 
-1. Some epic titles remain architecture-domain phrased even though their goals and stories express stakeholder value.
-2. Low-risk documentation stories use direct bullet acceptance criteria rather than strict Given/When/Then format.
-3. Story 7.1 is dense and may need splitting during sprint planning if implementation estimates are too large.
+1. Story 1.4 is self-referential during this workflow because it validates the readiness report currently being regenerated.
+2. Active documentation stories use direct numbered acceptance criteria rather than strict Given/When/Then criteria.
 
-No missing FR coverage, UX alignment issue, forward dependency, or critical story sizing defect was found.
+No missing FR coverage, UX alignment issue, duplicate document conflict, forward dependency, or critical story-sizing defect was found.
 
 ### Recommended Next Steps
 
-1. Proceed with sprint planning from `_bmad-output/planning-artifacts/epics.md`.
-2. Use the FR Coverage Map as the traceability anchor when creating implementation stories.
-3. Estimate Story 7.1 carefully and split adapter-specific work only if it exceeds one reviewable implementation slice.
-4. Keep `pnpm check` as the default quality gate and use `pnpm backend:test:integration` for PostgreSQL or transport-provider behavior.
-5. Re-run readiness after any PRD, architecture, or epic changes that alter runtime scope or package/public API strategy.
+1. Use the story files and `sprint-status.yaml` as the lifecycle authority for Stories 1.2, 1.3, and 1.4.
+2. For Story 1.4, review the final completed report rather than an in-progress report snapshot.
+3. Run or complete `bmad-code-review` after each active story reaches review, with extra attention to Story 1.4's self-referential report update.
+4. Keep documentation-story acceptance criteria in direct numbered form unless the team chooses to standardize all stories on strict BDD.
+5. Preserve the BMAD source-of-truth boundaries: PRD for requirements, architecture for internal design, epics for sequencing, project-context for lean agent rules, and `/docs` for consumer/repository guidance.
 
 ### Final Note
 
-The previous readiness blockers have been addressed. The planning set now provides a complete, traceable implementation path for the documentation-source-of-truth reset and the sequenced v2 runtime work. The remaining watch items are sprint-planning refinements, not implementation-readiness blockers.
+This assessment found 0 critical issues, 0 major issues, and 2 minor concerns. The concerns do not block implementation. They should guide review attention, especially for Story 1.4 after this report is complete.
 
 **Assessment Date:** 2026-06-18
 **Assessor:** Codex using `bmad-check-implementation-readiness`

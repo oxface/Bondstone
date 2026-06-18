@@ -267,7 +267,8 @@ It exercises durable outbox dispatch and module receive idempotency semantics
 through Bondstone's neutral receive pipelines, but it is not broker
 durability, a production fallback, topology management, retry, dead-letter
 handling, or durable inbox ingestion.
-See [architecture/transport-local.md](architecture/transport-local.md).
+See the [BMAD architecture](../_bmad-output/planning-artifacts/architecture.md)
+for internal transport behavior and limitations.
 
 ## Domain Events
 
@@ -309,16 +310,5 @@ records, not outbox records.
 - [observability.md](observability.md) describes current diagnostics and the
   OpenTelemetry-native direction.
 - [public-api.md](public-api.md) classifies the current public API surface.
-- [architecture/messaging.md](architecture/messaging.md) describes commands,
-  integration events, domain events, receive pipelines, and transport
-  boundaries.
-- [architecture/persistence-core.md](architecture/persistence-core.md)
-  describes provider-neutral persistence contracts.
-- [architecture/persistence-ef-core.md](architecture/persistence-ef-core.md)
-  describes EF Core mappings and transaction behavior.
-- [architecture/persistence-postgresql.md](architecture/persistence-postgresql.md)
-  describes EF/PostgreSQL provider behavior.
-- [architecture/hosting.md](architecture/hosting.md) describes the durable
-  hosted workers.
-- [architecture/transport-local.md](architecture/transport-local.md)
-  describes local transport topology and receive semantics.
+- [BMAD architecture](../_bmad-output/planning-artifacts/architecture.md) owns
+  internal runtime architecture, persistence, hosting, and transport behavior.

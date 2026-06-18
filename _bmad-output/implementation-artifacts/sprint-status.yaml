@@ -1,5 +1,5 @@
 # generated: 2026-06-18T15:39:19+00:00
-# last_updated: 2026-06-18T16:50:25+00:00
+# last_updated: 2026-06-18T19:02:36+00:00
 # project: Bondstone
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-18T15:39:19+00:00
-last_updated: 2026-06-18T16:50:25+00:00
+last_updated: 2026-06-18T19:02:36+00:00
 project: Bondstone
 project_key: NOKEY
 tracking_system: file-system
@@ -48,18 +48,18 @@ development_status:
   1-3-create-native-epics: done
   1-4-create-readiness-report: done
   epic-1-retrospective: optional
-  epic-2: backlog
-  2-1-guard-against-non-native-planning-artifacts: backlog
-  2-2-guard-against-duplicate-architecture-artifacts: backlog
-  2-3-guard-against-retired-decision-files: backlog
-  2-4-guard-against-retired-decision-skills: backlog
+  epic-2: done
+  2-1-guard-against-non-native-planning-artifacts: done
+  2-2-guard-against-duplicate-architecture-artifacts: done
+  2-3-guard-against-retired-decision-files: done
+  2-4-guard-against-retired-decision-skills: done
   epic-2-retrospective: optional
-  epic-3: backlog
-  3-1-rewrite-root-readme: backlog
-  3-2-rewrite-root-agents: backlog
-  3-3-rewrite-docs-indexes: backlog
-  3-4-keep-internal-architecture-out-of-consumer-docs: backlog
-  3-5-rewrite-project-context: backlog
+  epic-3: done
+  3-1-rewrite-root-readme: done
+  3-2-rewrite-root-agents: done
+  3-3-rewrite-docs-indexes: done
+  3-4-keep-internal-architecture-out-of-consumer-docs: done
+  3-5-rewrite-project-context: done
   epic-3-retrospective: optional
   epic-4: backlog
   4-1-update-source-package-references: backlog

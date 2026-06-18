@@ -432,12 +432,9 @@ serialization, EF mapping helpers for Bondstone tables, module-bound
 PostgreSQL durable infrastructure, local transport dispatch through the
 provider-neutral receive pipelines, and the hosted outbox polling loop.
 
-For deeper behavior and limitations, see [architecture/modules.md](architecture/modules.md),
-[architecture/persistence-ef-core.md](architecture/persistence-ef-core.md),
-[architecture/persistence-postgresql.md](architecture/persistence-postgresql.md),
-[architecture/transport-local.md](architecture/transport-local.md), and
-[architecture/hosting.md](architecture/hosting.md). For production runbooks
-and retention guidance, see [operations.md](operations.md).
+For deeper internal behavior and limitations, see the
+[BMAD architecture](../_bmad-output/planning-artifacts/architecture.md). For
+production runbooks and retention guidance, see [operations.md](operations.md).
 
 ## Host Composition
 
@@ -557,9 +554,9 @@ message kind, stable message type identity, source module, target module, or
 partition metadata.
 
 Bondstone owns retry and terminal failure for outgoing persisted outbox
-records. Current outbox status semantics are described in
-[architecture/persistence-core.md](architecture/persistence-core.md); they are
-separate from provider-native receive DLQs. Operators can inspect terminal
+records. Current outbox status semantics are described in the
+[BMAD architecture](../_bmad-output/planning-artifacts/architecture.md); they
+are separate from provider-native receive DLQs. Operators can inspect terminal
 outbox rows through `IDurableOutboxInspector`:
 
 ```csharp

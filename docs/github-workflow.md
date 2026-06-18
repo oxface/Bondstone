@@ -35,6 +35,8 @@ boundaries, target frameworks, provider or transport support, migration
 policy, compatibility, release/publishing, sample architecture, repository
 workflow, or agent harness behavior. The label means the BMAD PRD,
 architecture, or epics may need to be updated before implementation.
+Ordinary issues outside those surfaces should proceed without this label; it
+is a BMAD review signal, not a blanket implementation blocker.
 
 ## Issue Formats
 

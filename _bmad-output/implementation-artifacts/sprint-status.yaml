@@ -1,5 +1,5 @@
 # generated: 2026-06-18T15:39:19+00:00
-# last_updated: 2026-06-18T19:55:40+00:00
+# last_updated: 2026-06-18T21:11:37+00:00
 # project: Bondstone
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-18T15:39:19+00:00
-last_updated: 2026-06-18T19:55:40+00:00
+last_updated: 2026-06-18T21:11:37+00:00
 project: Bondstone
 project_key: NOKEY
 tracking_system: file-system
@@ -63,8 +63,8 @@ development_status:
   epic-3-retrospective: optional
   epic-4: in-progress
   4-1-update-source-package-references: done
-  4-2-update-test-references: backlog
-  4-3-update-github-workflow-guidance: backlog
+  4-2-update-test-references: done
+  4-3-update-github-workflow-guidance: done
   epic-4-retrospective: optional
   epic-5: backlog
   5-1-product-boundary-and-extraction-guardrail: backlog

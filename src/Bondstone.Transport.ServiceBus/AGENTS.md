@@ -6,7 +6,6 @@ envelopes.
 Start with:
 
 - [README.md](README.md) for package scope.
-- [../../docs/adr/0008-thin-broker-adapters.md](../../docs/adr/0008-thin-broker-adapters.md)
-  before changing adapter behavior.
-- [../../docs/architecture/messaging.md](../../docs/architecture/messaging.md)
-  for receive and durable envelope rules.
+- [../../\_bmad-output/planning-artifacts/architecture.md](../../_bmad-output/planning-artifacts/architecture.md)
+  before changing adapter behavior, receive behavior, or durable envelope
+  rules.

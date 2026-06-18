@@ -28,6 +28,5 @@ See:
 - [Operations guide](https://github.com/oxface/Bondstone/blob/main/docs/operations.md)
 - [Observability guide](https://github.com/oxface/Bondstone/blob/main/docs/observability.md)
 - [Packaging, release, and migration policy](https://github.com/oxface/Bondstone/blob/main/docs/packaging.md)
-- [Hosting architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/hosting.md)
-- [Persistence contracts](https://github.com/oxface/Bondstone/blob/main/docs/architecture/persistence-core.md)
+- [BMAD architecture](https://github.com/oxface/Bondstone/blob/main/_bmad-output/planning-artifacts/architecture.md)
 - [Hosting tests](https://github.com/oxface/Bondstone/tree/main/tests/Bondstone.Hosting.Tests)

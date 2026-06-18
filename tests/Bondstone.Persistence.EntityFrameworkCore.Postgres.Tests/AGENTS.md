@@ -6,5 +6,5 @@ Start with:
 
 - [README.md](README.md) for test scope.
 - [../../docs/testing.md](../../docs/testing.md) for integration-test rules.
-- [../../docs/architecture/persistence-postgresql.md](../../docs/architecture/persistence-postgresql.md)
+- [../../\_bmad-output/planning-artifacts/architecture.md](../../_bmad-output/planning-artifacts/architecture.md)
   before changing provider behavior.

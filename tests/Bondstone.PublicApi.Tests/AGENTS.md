@@ -11,7 +11,6 @@ Start with:
 - [../../docs/testing.md](../../docs/testing.md) for test categories and
   verification entrypoints.
 
-Public API baseline updates are compatibility-sensitive. Check
-[ADR 0002](../../docs/adr/0002-library-scope-and-package-surface.md),
-[docs/public-api.md](../../docs/public-api.md), and GitHub issue context before
-accepting changed baselines.
+Public API baseline updates are compatibility-sensitive. Check the BMAD
+architecture artifact, [docs/public-api.md](../../docs/public-api.md), and
+GitHub issue context before accepting changed baselines.

@@ -5,9 +5,8 @@ metrics, structured logs, and clear misconfiguration errors should make the
 durable module boundary observable without turning Bondstone into a broker
 monitoring stack.
 
-This page describes current behavior only. ADR
-[0011](adr/0011-otel-native-diagnostics-and-misconfiguration-reporting.md)
-records the broader diagnostics direction.
+This page describes current behavior only. The broader diagnostics direction
+is owned by the BMAD architecture artifact.
 
 ## Current Activity Sources
 

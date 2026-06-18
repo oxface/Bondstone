@@ -6,10 +6,11 @@ Bondstone.
 ## Layout
 
 Bondstone uses a library-maintenance repository layout with repository
-automation at the root, stable docs under `docs/`, samples under `samples/`,
-package projects under `src/`, tests under `tests/`, and repository agent
-skills under `.agents/skills/`. Current package projects and dependency
-direction are recorded in [packaging.md](packaging.md).
+automation at the root, BMAD planning artifacts under `_bmad-output/`,
+consumer docs under `docs/`, samples under `samples/`, package projects under
+`src/`, tests under `tests/`, and repository agent skills under
+`.agents/skills/`. Current package projects and dependency direction are
+recorded in [packaging.md](packaging.md).
 
 Tests live under `tests/`, grouped by package or integration boundary. Tests
 extracted from the previous root framework test project should be moved or
@@ -31,7 +32,7 @@ Significant folders should have:
 - `README.md` for humans navigating that folder.
 
 These files are indexes, not alternate architecture docs. Keep them short,
-name the folder's scope, and reference the stable docs, ADR workflows, sibling
+name the folder's scope, and reference BMAD artifacts, consumer docs, sibling
 packages, tests, and verification entrypoints that matter for that area. Avoid
 copying durable rules from architecture, packaging, testing, or sample docs
 unless the local rule is unusually important and repeated agent misses justify
@@ -43,17 +44,19 @@ parent index is enough.
 
 ## Work Tracking
 
-Repository docs describe current behavior. ADRs preserve durable decisions and
-decision history. Use GitHub Issues and GitHub Projects for backlog work,
+BMAD artifacts describe durable requirements, architecture, and implementation
+sequence. Repository docs describe consumer-facing behavior and repository
+operations. Use GitHub Issues and GitHub Projects for backlog work,
 real-project findings, cleanup tasks, prioritization, and ownership. When an
-issue creates a durable technical decision, add or update an ADR. When an issue
-changes current behavior, update stable docs in the same change.
+issue changes durable requirements, architecture, or sequencing, update the
+appropriate BMAD artifact. When an issue changes consumer-facing behavior,
+update docs in the same change.
 Issue formats, project statuses, label conventions, and completion comments
 are recorded in [github-workflow.md](github-workflow.md).
 
 Do not keep long-lived transitional plans under `docs/`. Once a plan is
-accepted or implemented, move durable decisions into ADRs/stable docs and
-remaining work into GitHub Issues or Projects.
+accepted or implemented, move durable requirements, architecture, and sequence
+into BMAD artifacts and remaining work into GitHub Issues or Projects.
 
 ## Tooling
 
@@ -86,7 +89,7 @@ tools. Avoid frontend-only devcontainer features unless samples later require
 them.
 
 Do not add frontend/browser tooling such as Playwright unless an accepted
-sample or documentation ADR creates a real need for it.
+sample direction or BMAD architecture update creates a real need for it.
 
 Use Release Please for release pull requests, changelog updates, GitHub
 releases, and tags. Use GitHub Actions for package verification and NuGet

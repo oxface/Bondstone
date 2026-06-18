@@ -6,10 +6,7 @@ composition contracts.
 Start with:
 
 - [README.md](README.md) for package scope.
-- [../../docs/architecture/messaging.md](../../docs/architecture/messaging.md)
-  for durable message behavior.
-- [../../docs/architecture/modules.md](../../docs/architecture/modules.md) for
-  module registration and execution.
-- [../../docs/architecture/persistence-core.md](../../docs/architecture/persistence-core.md)
-  for provider-neutral persistence contracts.
+- [../../\_bmad-output/planning-artifacts/architecture.md](../../_bmad-output/planning-artifacts/architecture.md)
+  for durable message behavior, module registration and execution, and
+  provider-neutral persistence contracts.
 - [../../docs/packaging.md](../../docs/packaging.md) for dependency direction.

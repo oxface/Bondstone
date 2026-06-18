@@ -626,8 +626,8 @@ factories in Bondstone runtime registries, plus transaction runners and
 dispatch services used by durable messaging.
 
 The direct non-EF `Bondstone.Persistence.Postgres` package was removed after
-MVP. New PostgreSQL modules should use EF Core persistence unless an ADR
-reintroduces a non-EF provider for a real consumer need.
+MVP. New PostgreSQL modules should use EF Core persistence unless BMAD
+architecture reintroduces a non-EF provider for a real consumer need.
 
 ## Application Handler Concerns
 

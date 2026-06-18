@@ -9,7 +9,7 @@ implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"
 project_knowledge: "{project-root}/docs"
 
 # Core Configuration Values
-user_name: Oxface
+user_name: Dude
 project_name: Bondstone
 communication_language: English
 document_output_language: English

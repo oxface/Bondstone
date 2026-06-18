@@ -1,0 +1,92 @@
+# generated: 2026-06-18T15:39:19+00:00
+# last_updated: 2026-06-18T16:15:34+00:00
+# project: Bondstone
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: /workspaces/Bondstone/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog -> in-progress: Automatically when first story is created (via create-story)
+#   - in-progress -> done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-06-18T15:39:19+00:00
+last_updated: 2026-06-18T16:15:34+00:00
+project: Bondstone
+project_key: NOKEY
+tracking_system: file-system
+story_location: /workspaces/Bondstone/_bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: in-progress
+  1-1-create-native-prd: done
+  1-2-create-native-architecture: backlog
+  1-3-create-native-epics: backlog
+  1-4-create-readiness-report: backlog
+  epic-1-retrospective: optional
+  epic-2: backlog
+  2-1-guard-against-non-native-planning-artifacts: backlog
+  2-2-guard-against-duplicate-architecture-artifacts: backlog
+  2-3-guard-against-retired-decision-files: backlog
+  2-4-guard-against-retired-decision-skills: backlog
+  epic-2-retrospective: optional
+  epic-3: backlog
+  3-1-rewrite-root-readme: backlog
+  3-2-rewrite-root-agents: backlog
+  3-3-rewrite-docs-indexes: backlog
+  3-4-keep-internal-architecture-out-of-consumer-docs: backlog
+  3-5-rewrite-project-context: backlog
+  epic-3-retrospective: optional
+  epic-4: backlog
+  4-1-update-source-package-references: backlog
+  4-2-update-test-references: backlog
+  4-3-update-github-workflow-guidance: backlog
+  epic-4-retrospective: optional
+  epic-5: backlog
+  5-1-product-boundary-and-extraction-guardrail: backlog
+  5-2-module-registration-and-host-composition: backlog
+  5-3-immediate-command-and-query-boundaries: backlog
+  5-4-durable-message-kind-and-domain-event-boundaries: backlog
+  epic-5-retrospective: optional
+  epic-6: backlog
+  6-1-source-outbox-atomicity: backlog
+  6-2-durable-receive-transaction-boundary: backlog
+  6-3-ef-postgresql-production-persistence-and-migrations: backlog
+  epic-6-retrospective: optional
+  epic-7: backlog
+  7-1-thin-transport-and-fanout-ergonomics: backlog
+  7-2-operation-observation-cleanup: backlog
+  7-3-app-owned-worker-operations-and-retention: backlog
+  7-4-opentelemetry-diagnostics-and-stable-setup-codes: backlog
+  epic-7-retrospective: optional
+  epic-8: backlog
+  8-1-public-api-and-package-collaboration-validation: backlog
+  8-2-package-policy-and-discovery-documentation: backlog
+  8-3-documentation-reference-sweep: backlog
+  8-4-verification-gate: backlog
+  8-5-consumer-trial-handoff: backlog
+  epic-8-retrospective: optional

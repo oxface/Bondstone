@@ -1,5 +1,6 @@
 using Azure.Messaging.ServiceBus;
 using Bondstone.Configuration;
+using Bondstone.Hosting.IncomingInbox;
 using Bondstone.Hosting.Outbox;
 using Bondstone.Messaging;
 using Bondstone.Modules;
@@ -147,6 +148,7 @@ public sealed class ModularMonolithBrokerAdapterSampleTests(
         BondstoneBuilder bondstone)
     {
         bondstone.UseRabbitMqDispatcher(ConfigureRabbitMqDispatcher);
+        bondstone.UseDurableIncomingInboxWorker();
         bondstone.UseRabbitMqReceiveWorker(options =>
         {
             options.QueueName = RabbitMqOrderingInventoryReservedQueue;
@@ -160,6 +162,7 @@ public sealed class ModularMonolithBrokerAdapterSampleTests(
         BondstoneBuilder bondstone)
     {
         bondstone.UseRabbitMqDispatcher(ConfigureRabbitMqDispatcher);
+        bondstone.UseDurableIncomingInboxWorker();
         bondstone.UseRabbitMqReceiveWorker(options =>
         {
             options.QueueName = RabbitMqFulfillmentCommandsQueue;

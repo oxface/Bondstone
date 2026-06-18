@@ -56,6 +56,7 @@ namespace Bondstone.Configuration
     public static class DurableModulePersistenceServiceCollectionExtensions
     {
         public static Bondstone.Persistence.DurableModulePersistenceRegistrationRegistry GetOrAddDurableModulePersistenceRegistrationRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection UseDurableModuleIncomingInboxDispatcherAggregator(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection UseDurableModuleOutboxDispatchAggregator(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     public interface IBondstoneConfigurationValidator
@@ -542,19 +543,10 @@ namespace Bondstone.Persistence
         public System.Collections.Generic.IReadOnlyList<System.TimeSpan> RetryDelays { get; }
         public static System.Collections.Generic.IReadOnlyList<System.TimeSpan> DefaultRetryDelays { get; }
     }
-    public sealed class DurableIncomingInboxProcessingResult : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxProcessingResult>
+    public sealed class DurableModuleIncomingInboxDispatcherAggregator : Bondstone.Persistence.IDurableIncomingInboxDispatcher
     {
-        public DurableIncomingInboxProcessingResult(int claimedCount, int processedCount, int retryScheduledCount, int terminalFailedCount, int staleCount) { }
-        public int ClaimedCount { get; }
-        public int CompletedCount { get; }
-        public int ProcessedCount { get; }
-        public int RetryScheduledCount { get; }
-        public int StaleCount { get; }
-        public int TerminalFailedCount { get; }
-    }
-    public interface IDurableIncomingInboxDispatcher
-    {
-        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxProcessingResult> ProcessAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default);
+        public DurableModuleIncomingInboxDispatcherAggregator(System.IServiceProvider serviceProvider, Bondstone.Persistence.DurableModulePersistenceRegistrationRegistry registrationRegistry) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxProcessingResult> ProcessAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default) { }
     }
     public interface IDurableIncomingInboxFailurePolicy
     {

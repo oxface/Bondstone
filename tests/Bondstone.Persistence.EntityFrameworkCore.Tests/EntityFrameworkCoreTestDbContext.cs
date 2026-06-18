@@ -18,6 +18,5 @@ internal sealed class EntityFrameworkCoreTestDbContext(DbContextOptions<EntityFr
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyBondstonePersistence();
-        modelBuilder.ApplyBondstoneIncomingInbox();
     }
 }

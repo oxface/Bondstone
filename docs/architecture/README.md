@@ -38,7 +38,7 @@ persistence path is `Bondstone.Persistence.EntityFrameworkCore` plus
 Bondstone ships thin RabbitMQ and Azure Service Bus adapter packages for
 native-driver envelope plumbing. Other broker integrations, including Rebus,
 remain app-owned code around Bondstone's durable envelope serializer, outbound
-`IDurableEnvelopeDispatcher`, and inbound `IDurableEnvelopeReceiver`.
+`IDurableEnvelopeDispatcher`, and durable inbox ingestion boundary.
 Bondstone owns persisted outbox retry and terminal failure state; broker
 retry, dead-letter policy, topology, provisioning, and consumer lifecycle
 remain app-owned.

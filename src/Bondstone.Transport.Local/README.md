@@ -17,7 +17,7 @@ module and subscriber identity are part of the inbox key.
 
 Production-oriented broker hosts should keep native transport code app-owned
 and bridge through `IDurableEnvelopeDispatcher`,
-`IDurableMessageEnvelopeSerializer`, and `IDurableEnvelopeReceiver`.
+`IDurableMessageEnvelopeSerializer`, and durable inbox ingestion.
 
 Install this package only when the host intentionally routes durable messages
 through local queues and Bondstone receive pipelines. It is not a production

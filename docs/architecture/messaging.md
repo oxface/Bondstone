@@ -153,9 +153,10 @@ gets the normal durable send/publish context. Bondstone does not currently
 provide module-scoped durable sender/publisher clients or public APIs for
 arbitrary source-module selection.
 
-## Inbox Identity
+## Receive Idempotency
 
-Receive-side handle-once execution is represented by
+Module receive pipelines still use an implementation-detail idempotency
+marker while processing a durable inbox row. The marker is represented by
 `IDurableInboxHandlerExecutor`. It accepts a durable inbox record, a handler
 delegate, and a cancellation token. It runs the handler only when the inbox
 record is newly registered, stages the processed marker after the handler
@@ -186,8 +187,10 @@ stale receive recovery model that can prove a second handler execution is
 safe. Recovery for those rows is currently operator-owned or application-owned:
 the application must inspect its persisted inbox and provider state, decide
 whether and how to mutate the row or broker message, and own the safety proof.
-Bondstone does not provide a default stale-row sweeper, recovery hook, failed
-receive state, or provider-neutral receive dead-letter abstraction.
+Bondstone does not provide a default stale-row sweeper, recovery hook, direct
+idempotency-row mutation helper, or provider-neutral receive dead-letter
+abstraction. Durable receive retry and terminal failure state belongs to the
+durable incoming inbox ledger described below.
 
 ## Neutral Receive Pipeline
 
@@ -204,68 +207,55 @@ state. They do not configure broker listeners, discover handlers from broker
 messages, own retry/dead-letter policy, or replace provider-native
 acknowledgement behavior.
 
-Direct transport receive adapters should parse their provider-native body into
-the neutral durable envelope and call these pipelines inside the provider
-message acknowledgement boundary. An already-received unprocessed inbox row is
-a dispatch failure for normal module receive, so provider settlement must
-follow the same failure handoff as other dispatch exceptions rather than
-acknowledging the message as handled.
+Transport receive adapters should ingest provider-native deliveries into the
+durable inbox before provider settlement, then let the incoming inbox worker
+call these pipelines after claiming a durable row. An already-received
+unprocessed idempotency row is a module receive failure, so the incoming
+dispatcher schedules retry or terminal failure on the durable inbox row rather
+than acknowledging it as processed.
 
-## Future Optional Durable Inbox
+## Durable Inbox
 
-ADR
-[0017](../adr/0017-single-durable-inbox-incoming-ledger.md) accepts the durable
-inbox incoming ledger direction. It is partially applied: provider-neutral
-records, EF ingestion and inspection, PostgreSQL mutation stores, and a
-host-callable processing dispatcher exist, and `Bondstone.Hosting` provides an
-opt-in incoming inbox processing worker over that dispatcher. Transport
-adapter ingestion handoff is adapter-owned or app-owned. `Bondstone.Transport.RabbitMq`
-provides the first opt-in adapter handoff from RabbitMQ native deliveries into
-the durable incoming inbox ledger. Direct receive remains the default. ADR
-[0012](../adr/0012-direct-receive-inbox-and-durable-receive-buffer.md)
-preserves the superseded separate receive-buffer decision trail.
-
-The durable inbox is the target single durable delivery ledger in front of the
-existing module receive pipelines. Its identity is the stable receive
-binding:
+The durable inbox is the runtime durable receive ledger for adapters that
+ingest durable deliveries before settlement. Its identity is the stable
+receive binding:
 
 - command rows use message id, target module, and stable command handler
   identity;
 - event rows use message id, subscriber module, and stable subscriber
   identity.
 
-Buffered receive should not permanently maintain both a receive-buffer ledger
-and a separate inbox idempotency ledger for the same message. The durable
-inbox owns durable ingestion, claim, retry, processed, and terminal receive
-failure state around processing attempts. The current tiny inbox remains the
-direct-receive idempotency boundary until a later implementation migrates or
-replaces it.
+The durable inbox owns durable ingestion, claim, retry, processed, and
+terminal receive failure state around processing attempts. Current processing
+still writes the smaller module receive `inbox_messages` idempotency marker
+inside the handler transaction. That marker is a temporary implementation
+detail used to make retries idempotent while the incoming inbox row remains
+the operator-facing receive outcome.
 
-Ingestion parses a native transport delivery into
-`DurableMessageEnvelope`, validate message kind, stable message type
-registration, and the command route or event subscriber binding, then insert
-the durable inbox row idempotently. It does not execute handlers, complete
-operation state, stage outgoing outbox rows, or infer terminal operation
-state.
+Ingestion parses a native transport delivery into `DurableMessageEnvelope`,
+validates message kind, stable message type registration, and the command
+route or event subscriber binding, then inserts the durable inbox row
+idempotently. It does not execute handlers, complete operation state, stage
+outgoing outbox rows, or infer terminal operation state.
 
 Processing claims due durable inbox rows and calls
 `IModuleCommandReceivePipeline` or `IModuleEventReceivePipeline`. A handled or
 already-processed pipeline outcome marks the durable inbox processed.
 Exceptions are processing failures that are retried or marked terminal
-according to durable inbox policy. Already-received but unprocessed direct
-inbox rows remain loud ambiguity: the receive pipeline raises
+according to durable inbox policy. Already-received but unprocessed
+idempotency rows remain loud ambiguity: the receive pipeline raises
 `DurableInboxAlreadyReceivedException`, and the incoming dispatcher treats that
 as a processing failure rather than re-running the handler. Terminal durable
 inbox failure is operational evidence for application policy; it does not
 automatically write `Failed` operation state.
 
-The optional receive topology has three worker loops when buffered receive is
-used: the outbox dispatch worker for outgoing rows, a transport
-receive/ingestion loop for native deliveries, and the incoming inbox
-processing worker for durable incoming rows. The incoming worker is opt-in and
-does not replace direct receive. Cleanup, retention, replay, purge, and
-operator mutation of incoming rows remain application-owned unless a later
-accepted implementation adds a dedicated Bondstone cleanup surface.
+The receive topology has three worker loops: the outbox dispatch worker for
+outgoing rows, a transport receive/ingestion loop for native deliveries, and
+the incoming inbox processing worker for durable incoming rows. The incoming
+worker is opt-in host composition because the application chooses which
+workers run in each process. Cleanup, retention, replay, purge, and operator
+mutation of incoming rows remain application-owned unless a later accepted
+implementation adds a dedicated Bondstone cleanup surface.
 
 ## Durable Envelope
 
@@ -409,8 +399,8 @@ or explicit metadata. Zero matches and ambiguous matches are loud
 dispatch-time errors. This is route-aware dispatch, not a broker topology map.
 
 Inbound broker integrations should use `IDurableMessageEnvelopeSerializer` to
-read the durable envelope body and `IDurableEnvelopeReceiver` to execute
-module receive. Command envelopes route by `TargetModule`. Event receive is
+read the durable envelope body and ingest a durable inbox row before native
+settlement. Command envelopes route by `TargetModule`. Event receive is
 explicit: the app supplies the subscriber module and stable subscriber
 identity selected by its native subscription. Multiple native receive workers
 may coexist when explicitly registered, but Bondstone does not maintain a

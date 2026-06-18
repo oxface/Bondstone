@@ -52,4 +52,25 @@ public static class DurableModulePersistenceServiceCollectionExtensions
         services.TryAddTransient<IDurableOutboxDispatcher, DurableModuleOutboxDispatchAggregator>();
         return services;
     }
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static IServiceCollection UseDurableModuleIncomingInboxDispatcherAggregator(
+        this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        ServiceDescriptor[] defaultDispatcherDescriptors = services
+            .Where(descriptor =>
+                descriptor.ServiceType == typeof(IDurableIncomingInboxDispatcher)
+                && descriptor.ImplementationType == typeof(DurableIncomingInboxDefaultDispatcher))
+            .ToArray();
+
+        foreach (ServiceDescriptor descriptor in defaultDispatcherDescriptors)
+        {
+            services.Remove(descriptor);
+        }
+
+        services.TryAddTransient<IDurableIncomingInboxDispatcher, DurableModuleIncomingInboxDispatcherAggregator>();
+        return services;
+    }
 }

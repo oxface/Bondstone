@@ -12,3 +12,5 @@ GitHub Issues or GitHub Projects using [../github-workflow.md](../github-workflo
 
 - [post-mvp-architecture-review-plan.md](post-mvp-architecture-review-plan.md)
   records the prioritized work from the post-MVP architecture review.
+- [v2-design-reset-report.md](v2-design-reset-report.md) records the
+  reviewable v2 design reset before implementation begins.

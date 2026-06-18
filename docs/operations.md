@@ -13,19 +13,22 @@ Bondstone owns:
 - durable message envelopes, stable message identity, trace context fields,
   and durable payload serialization;
 - module command and event subscriber execution;
-- EF mapping helpers for Bondstone outbox, inbox, operation-state, and optional
-  domain event tables;
-- the direct receive inbox idempotency boundary;
+- EF mapping helpers for Bondstone outbox, receive idempotency inbox, durable
+  incoming inbox, operation-state, and optional domain event tables;
+- the durable incoming inbox receive ledger;
+- the implementation-detail receive idempotency boundary used by module
+  processing;
 - persisted outbox retry state and terminal outbox failure state;
 - the hosted outbox worker over Bondstone-owned outbox records;
-- the opt-in hosted incoming inbox processing worker over Bondstone-owned
-  durable incoming inbox records;
+- the hosted incoming inbox processing worker over Bondstone-owned durable
+  incoming inbox records;
 - read-only inspection contracts for terminal outbox rows and unprocessed inbox
   rows;
 - explicit operation finalization and expiration APIs that application policy
   can call;
-- OpenTelemetry-native metrics for Bondstone-owned outbox, direct receive, and
-  operation finalization or expiration transitions.
+- OpenTelemetry-native metrics for Bondstone-owned outbox, module receive
+  idempotency outcomes, incoming inbox processing, and operation finalization
+  or expiration transitions.
 
 The application owns:
 
@@ -43,50 +46,21 @@ The application owns:
 
 ## Receive Semantics
 
-Bondstone receive is a direct broker-to-module execution path today. A native
-transport delivery is parsed into `DurableMessageEnvelope`, then
-`IDurableEnvelopeReceiver` calls the command or event receive pipeline. The
-pipeline resolves the stable message identity, deserializes the payload,
-derives the inbox key, and executes the target handler inside the module
-persistence boundary when the module has durable EF persistence.
+Bondstone durable receive uses the durable inbox as the runtime receive ledger.
+A native transport delivery is parsed into `DurableMessageEnvelope`, resolved
+against a module-aware command or event subscriber binding, recorded as a
+durable incoming inbox row, and settled only after durable ingestion succeeds.
+The Bondstone incoming inbox worker later claims due rows and invokes the
+module command or event subscriber pipeline.
 
-For commands, the inbox key is the message id, target module, and stable
-handler identity. For integration events, the inbox key is the message id,
-subscriber module, and stable subscriber identity. Handler state, inbox
-markers, operation-state updates, and outgoing outbox rows commit together in
-the module transaction when EF module persistence is configured.
+For commands, durable inbox identity is the message id, target module, and
+stable handler identity. For integration events, durable inbox identity is the
+message id, subscriber module, and stable subscriber identity. The durable
+inbox row stores structured durable envelope fields plus status, attempt
+count, claim owner, claim lease, retry schedule, processed timestamp,
+terminal failure timestamp, and failure reason.
 
-Already processed inbox rows are idempotent duplicate receives. Bondstone skips
-the handler because the durable receive identity is already complete.
-Bondstone emits a direct receive already-processed metric for this outcome.
-
-Already received but unprocessed inbox rows are ambiguous. They can mean the
-process failed after recording the receive but before the processed marker, or
-they can mean application side effects happened but the process stopped before
-Bondstone could record completion. Bondstone therefore raises
-`DurableInboxAlreadyReceivedException` through the module receive path instead
-of re-running the handler or silently treating the message as handled.
-Bondstone emits a direct receive already-received metric for this ambiguous
-outcome.
-
-Bondstone does not currently provide tiny direct-inbox leases, a direct-inbox
-stale-row sweeper, or direct-inbox failed receive state. ADR
-[0017](adr/0017-single-durable-inbox-incoming-ledger.md) records the durable
-inbox incoming-ledger direction. The incoming ledger has provider contracts,
-PostgreSQL mutation stores, a host-callable processing dispatcher, and an
-opt-in hosted incoming inbox processing worker. RabbitMQ has the first
-explicit adapter-owned opt-in receive mode that hands native deliveries into
-durable incoming inbox ingestion. ADR
-[0012](adr/0012-direct-receive-inbox-and-durable-receive-buffer.md) preserves
-the superseded receive-buffer decision trail.
-
-Current direct receive has two runtime stages:
-
-1. native transport delivery to Bondstone module receive;
-2. handler state, inbox marker, operation state, and outgoing outbox commit in
-   the target module persistence boundary.
-
-The optional durable inbox model uses a three-worker topology:
+The durable receive topology has three worker/listener roles:
 
 1. the outbox dispatch worker claims and dispatches outgoing durable outbox
    rows;
@@ -104,83 +78,65 @@ That topology splits receive into durable-processing stages:
 4. incoming durable inbox processed, retry, terminal failure, or stale outcome
    recording through claim-owner and lease-aware mutation.
 
-That model uses one richer incoming durable inbox ledger rather than a
-receive-buffer row plus a separate inbox idempotency row for the same buffered
-message. Durable inbox identity is message id plus the resolved receive
-binding: target module and stable handler identity for a command, or
-subscriber module and stable subscriber identity for an event. The durable
-inbox row stores structured durable envelope fields plus status, attempt
-count, claim owner, claim lease, retry schedule, processed timestamp,
-terminal failure timestamp, and failure reason.
-
-In that optional model, native broker settlement would happen after durable
-ingestion succeeds, before handler processing. The host-callable Bondstone
-processing dispatcher claims due durable inbox rows and calls the existing
-module receive pipeline. In the current slice, incoming-ledger outcome
-recording happens after the module receive pipeline returns. If the process
-crashes after handler state, successful command operation completion, outgoing
-outbox rows, and the tiny direct inbox processed marker commit but before the
-incoming row is marked processed, a later retry relies on the tiny direct inbox
-to report already processed and let the incoming dispatcher catch the ledger
-up. Durable inbox retry and terminal receive failure state is recorded with
-claim-owner and lease-aware updates. Broker retry, dead-letter policy, delivery
-counts, topology, and cleanup or retention remain outside Bondstone's default
+The current processing dispatcher records incoming-ledger outcomes after the
+module receive pipeline returns. Handler state, successful command operation
+completion, outgoing outbox rows, and the implementation-detail receive
+idempotency marker commit in the target module transaction when EF module
+persistence is configured. If the process crashes after that module
+transaction commits but before the incoming row is marked processed, a later
+retry sees the idempotency marker as already processed and lets the incoming
+dispatcher catch the durable inbox row up to `Processed`. Durable inbox retry
+and terminal receive failure state is recorded with claim-owner and
+lease-aware updates. Broker retry, dead-letter policy, delivery counts,
+topology, and cleanup or retention remain outside Bondstone's default
 ownership.
 
-If module receive encounters a tiny direct inbox row that is already received
-but not processed, it raises `DurableInboxAlreadyReceivedException`. The
-incoming dispatcher treats that loud ambiguity as a processing failure and
-will retry or terminally fail the incoming row according to incoming inbox
-policy. Operator runbooks should inspect the direct inbox row, incoming ledger
-row, handler state, operation state, outbox rows, broker state, and application
-logs before deciding whether any manual mutation or compensation is safe.
+If module receive encounters an implementation-detail receive idempotency row
+that is already received but not processed, it raises
+`DurableInboxAlreadyReceivedException`. The incoming dispatcher treats that
+loud ambiguity as a processing failure and will retry or terminally fail the
+incoming row according to incoming inbox policy. Operator runbooks should
+inspect the idempotency row, incoming ledger row, handler state, operation
+state, outbox rows, broker state, and application logs before deciding whether
+any manual mutation or compensation is safe.
 
-Terminal durable inbox receive failure would be durable operational evidence,
-not automatic operation failure. Applications that want a user-visible terminal
-operation outcome would inspect the terminal durable inbox row and explicitly
+Terminal durable inbox receive failure is durable operational evidence, not
+automatic operation failure. Applications that want a user-visible terminal
+operation outcome inspect the terminal durable inbox row and explicitly
 finalize the operation through application policy.
-
-The durable incoming inbox path remains opt-in. Direct receive remains the
-default unless a later ADR changes it, so current operators should treat
-unprocessed direct inbox rows as ambiguous receive attempts that need
-application-owned investigation.
 
 ## Broker Settlement
 
-Broker receive adapters should settle native deliveries only after Bondstone
-receive succeeds. The thin RabbitMQ receive worker always consumes with manual
-acknowledgement, acknowledges after `IDurableEnvelopeReceiver` completes, and
-nacks failed receives according to `RequeueOnFailure`. That option maps only
-to RabbitMQ's native nack requeue flag; broker retry and dead-letter behavior
-remain topology and policy owned by the application.
-
-When the RabbitMQ receive worker is explicitly configured with
-`IngestCommandToDurableIncomingInbox()` or
-`IngestEventToDurableIncomingInbox(...)`, settlement moves to the ingestion
-boundary. The worker parses the delivery body into a `DurableMessageEnvelope`,
-resolves the durable receive binding, resolves the receiver module's durable
-incoming inbox ingestion boundary, calls its ingest-and-save operation, and
-acknowledges only after that persistence boundary succeeds. EF-backed module
-persistence uses the receiver module's DbContext for this write. Advanced
-single-store hosts with no module runtime registrations can still use the
-root-level ingestion store/scope fallback. `AlreadyIngested` duplicate
-deliveries are acknowledged safely. Ingestion, binding resolution,
-deserialization, boundary resolution, or commit failures are nacked according
-to `RequeueOnFailure`; the worker does not run handlers, complete operation
-state, stage outgoing outbox rows, or mutate incoming inbox processing
-outcomes.
+Broker receive adapters should settle native deliveries only after durable
+inbox ingestion succeeds. The thin RabbitMQ receive worker always consumes
+with manual acknowledgement. `ReceiveCommand()`, `ReceiveEvent(...)`, and the
+explicit `Ingest*ToDurableIncomingInbox(...)` aliases parse the delivery body
+into a `DurableMessageEnvelope`, resolve the durable receive binding, resolve
+the receiver module's durable incoming inbox ingestion boundary, call its
+ingest-and-save operation, and acknowledge only after that persistence
+boundary succeeds. EF-backed module persistence uses the receiver module's
+DbContext for this write. Advanced single-store hosts with no module runtime
+registrations can still use the root-level ingestion store/scope fallback.
+`AlreadyIngested` duplicate deliveries are acknowledged safely. Ingestion,
+binding resolution, deserialization, boundary resolution, or commit failures
+are nacked according to `RequeueOnFailure`; the worker does not run handlers,
+complete operation state, stage outgoing outbox rows, or mutate incoming inbox
+processing outcomes.
 
 The thin Azure Service Bus receive worker completes the message after receive
 completes. Its exposed `ProcessorOptions` is an advanced native-driver escape
 hatch, but `AutoCompleteMessages` must remain `false` so Bondstone can
-complete messages only after durable receive succeeds. Receive exceptions flow
-to the Service Bus processor error path and provider-native retry behavior.
+complete messages only after the direct module receive pipeline succeeds.
+Service Bus durable inbox ingestion parity is not implemented in this slice;
+receive exceptions flow to the Service Bus processor error path and
+provider-native retry behavior.
 
-If the module transaction commits but native settlement fails, broker
-redelivery should find the processed inbox row and skip the handler. If
-Bondstone receive fails, including because an unprocessed inbox row is found,
-the adapter or app-owned receive loop should use the provider-native failure
-handoff instead of acknowledging the message as handled.
+If durable inbox ingestion commits but native settlement fails, broker
+redelivery should return `AlreadyIngested` and acknowledge without running the
+handler. If durable inbox processing later fails, the incoming row moves to
+retry or terminal failure according to incoming inbox policy; provider-native
+settlement has already completed and broker retry is no longer the receive
+ledger.
 
 Bondstone does not own broker retry schedules, delivery counts, error queues,
 dead-letter queues, or dead-letter routing.
@@ -437,9 +393,9 @@ module persistence is failing before per-row retry or terminal state can be
 recorded.
 
 Applications should monitor the log event by worker id and rate-limit window.
-Correlate it with incoming inbox table state, direct receive metrics, handler
-logs, and provider-native transport health. Cleanup, replay, purge, archival,
-and terminal-row remediation remain application-owned unless a later
+Correlate it with incoming inbox table state, module receive idempotency
+metrics, handler logs, and provider-native transport health. Cleanup, replay,
+purge, archival, and terminal-row remediation remain application-owned unless a later
 Bondstone cleanup worker or mutation API is explicitly implemented.
 
 ### Operation Expiration Backlog

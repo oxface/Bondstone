@@ -88,8 +88,9 @@ story is:
 - register remote outgoing contracts with `BondstoneBuilder.RegisterMessage<T>()`
   so the source service can serialize commands without referencing target
   implementation assemblies;
-- use app-owned broker code around `IDurableEnvelopeDispatcher` and
-  `IDurableEnvelopeReceiver` when a broker boundary is needed;
+- use app-owned broker code around `IDurableEnvelopeDispatcher`,
+  `IDurableMessageEnvelopeSerializer`, and durable inbox ingestion when a
+  broker boundary is needed;
 - observe durable operation results from the target service because the target
   module owns the completed result state;
 - keep broker provisioning, deployment, authentication, and product UI outside

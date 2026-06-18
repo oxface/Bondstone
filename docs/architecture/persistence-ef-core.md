@@ -14,8 +14,9 @@ names, constraint names, and shared model limits. Provider packages adapt those
 names to their SQL dialect instead of redefining them.
 
 `ApplyBondstonePersistence` applies the durable EF Core persistence bundle to
-a consumer-owned `ModelBuilder`: outbox, inbox, and operation state. Domain
-event persistence is optional and is not included in this bundle.
+a consumer-owned `ModelBuilder`: outbox, receive idempotency inbox, durable
+incoming inbox, and operation state. Domain event persistence is optional and
+is not included in this bundle.
 
 Hosts that only need selected durable persistence pieces can use the granular
 mapping helpers:
@@ -24,20 +25,19 @@ mapping helpers:
 modelBuilder.ApplyBondstoneOutbox();
 modelBuilder.ApplyBondstoneInbox();
 modelBuilder.ApplyBondstoneOperationState();
+modelBuilder.ApplyBondstoneIncomingInbox();
 ```
 
 `ApplyBondstoneOutbox` maps outbox messages, `ApplyBondstoneInbox` maps inbox
-messages, and `ApplyBondstoneOperationState` maps durable operation state.
-Modules that only need module-owned EF transactions do not need to map durable
-messaging tables unless their configured module behavior uses those stores.
-Consumers own migrations. Bondstone does not ship migrations or
-provider-specific migration conventions in the generic EF Core package.
+messages, `ApplyBondstoneIncomingInbox` maps durable inbox incoming rows, and
+`ApplyBondstoneOperationState` maps durable operation state. Modules that only
+need module-owned EF transactions do not need to map durable messaging tables
+unless their configured module behavior uses those stores. Consumers own
+migrations. Bondstone does not ship migrations or provider-specific migration
+conventions in the generic EF Core package.
 
-`ApplyBondstoneIncomingInbox` maps the optional durable inbox incoming-ledger
-table accepted by ADR 0017. The mapping is intentionally granular and not
-included in `ApplyBondstonePersistence`. Mapping the table does not register
-durable inbox hosted workers, transport handoff, provider-specific mutation
-stores, or direct receive behavior.
+Mapping the durable incoming inbox table does not register hosted workers,
+transport handoff, provider-specific mutation stores, or cleanup behavior.
 
 For modules that call `UseDurableMessaging()` with EF persistence, Bondstone
 validates the module DbContext model during module command and event
@@ -144,11 +144,13 @@ jobs; the EF package does not schedule expiry or choose terminal status
 policy.
 
 The durable incoming inbox mapping uses `IncomingInboxMessageEntity`, mapped
-to `incoming_inbox_messages` by default. Its shape is the accepted durable
-inbox incoming ledger: durable receive identity, structural durable envelope
-fields, source transport diagnostic name, ingested timestamp, status, attempt
-count, retry and terminal outcome timestamps, failure reason, and claim
-owner/lease fields.
+to `incoming_inbox_messages` by default. Its shape is the durable incoming
+receive ledger: durable receive identity, structural durable envelope fields,
+source transport diagnostic name, ingested timestamp, status, attempt count,
+retry and terminal outcome timestamps, failure reason, and claim owner/lease
+fields. Current module processing also writes the older EF `inbox_messages`
+idempotency row inside the module receive transaction; that row is a temporary
+processing marker, not the operator-facing incoming receive ledger.
 
 `EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbContext>` stages a
 new pending `IncomingInboxMessageEntity` when no row exists for the durable

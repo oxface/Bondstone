@@ -92,9 +92,9 @@ Post-MVP transport simplification, 2026-06-16:
 - The renamed envelope dispatcher contract uses `DispatchAsync(...)` to make
   the neutral handoff about dispatching persisted Bondstone envelopes, not
   owning broker transport runtime.
-- `Bondstone.Transport.RabbitMq` was removed from the active package set.
-  Broker integration is now app-owned through `IDurableEnvelopeDispatcher`,
-  `IDurableMessageEnvelopeSerializer`, and `IDurableEnvelopeReceiver`.
+- `Bondstone.Transport.RabbitMq` was later returned as a thin adapter package.
+  Broker integration remains app-owned around `IDurableEnvelopeDispatcher`,
+  `IDurableMessageEnvelopeSerializer`, and durable inbox ingestion.
 - This is an intentional compatibility-breaking public API cleanup made while
   external usage is still bounded.
 
@@ -205,7 +205,7 @@ Non-throwing operation wait, 2026-06-17:
   caller patience and does not write `Failed`, `Cancelled`, or any other
   operation state.
 
-Durable incoming inbox provider-neutral contracts, 2026-06-17:
+Durable incoming inbox provider-neutral contracts, 2026-06-18:
 
 - `DurableIncomingInboxKey`, `DurableIncomingInboxRecord`,
   `DurableIncomingInboxState`, `DurableIncomingInboxStatus`,
@@ -213,9 +213,8 @@ Durable incoming inbox provider-neutral contracts, 2026-06-17:
   `DurableIncomingInboxIngestionStatus`,
   `DurableIncomingInboxFailureDecision`, and
   `DurableIncomingInboxFailureDecisionKind` are provider-neutral records and
-  values for the optional durable inbox incoming ledger accepted by ADR 0017.
-  The names deliberately avoid colliding with the tiny direct-receive
-  `DurableInboxRecord`.
+  values for the durable inbox incoming ledger. The names deliberately avoid
+  colliding with the lower-level receive idempotency `DurableInboxRecord`.
 - `IDurableIncomingInboxIngestionStore`, `IDurableIncomingInboxClaimer`,
   `IDurableIncomingInboxLeaseRenewer`,
   `IDurableIncomingInboxOutcomeRecorder`, and
@@ -234,23 +233,26 @@ Durable incoming inbox provider-neutral contracts, 2026-06-17:
   `IDurableIncomingInboxFailurePolicy`,
   `DurableIncomingInboxFailurePolicy`,
   `DurableIncomingInboxProcessingOptions`, and
-  `DurableIncomingInboxProcessingResult` are additive host-callable processing
-  APIs for the optional incoming ledger. They claim due rows, invoke the
+  `DurableIncomingInboxProcessingResult` are host-callable processing APIs for
+  the incoming ledger. They claim due rows, invoke the
   existing module receive pipelines, and record processed, retry, terminal
   failure, or stale outcomes through the incoming inbox store contracts.
-- The PostgreSQL provider supplies internal runtime stores for incoming inbox
-  claim, lease renewal, and outcome recording. This slice does not add hosted
-  workers, transport adapter handoff, direct receive default behavior changes,
-  operation failure inference, or cleanup mutation APIs. Processing outcome is
-  recorded after module receive returns, so a crash between the module receive
-  commit and incoming-ledger outcome recording relies on the existing direct
-  inbox idempotency row during retry.
+- The PostgreSQL provider supplies runtime stores for incoming inbox claim,
+  lease renewal, outcome recording, and module-owned processing dispatch.
+  This slice does not add Service Bus adapter handoff parity, operation
+  failure inference, or cleanup mutation APIs. Processing outcome is recorded
+  after module receive returns, so a crash between the module receive commit
+  and incoming-ledger outcome recording relies on the existing receive
+  idempotency row during retry.
 
-Durable incoming inbox EF Core mapping, 2026-06-17:
+Durable incoming inbox EF Core mapping, 2026-06-18:
 
-- `ApplyBondstoneIncomingInbox(...)` is an additive granular EF Core setup API
-  for mapping the optional durable incoming inbox table. It is intentionally
-  not part of `ApplyBondstonePersistence(...)`.
+- `ApplyBondstonePersistence(...)` maps the durable incoming inbox table along
+  with outbox, receive idempotency inbox, and operation state. This is an
+  intentional v2 table-shape change so normal durable EF mapping can host
+  durable receive.
+- `ApplyBondstoneIncomingInbox(...)` remains a granular EF Core setup API for
+  hosts that map selected Bondstone tables explicitly.
 - `IncomingInboxMessageEntity` and
   `IncomingInboxMessageEntityConfiguration` expose the accepted durable inbox
   incoming ledger table shape and map `incoming_inbox_messages` by default.
@@ -265,13 +267,13 @@ Durable incoming inbox EF Core mapping, 2026-06-17:
   uses the receiver module's `DbContext`.
 - PostgreSQL-specific incoming inbox mutation stores live in
   `Bondstone.Persistence.EntityFrameworkCore.Postgres`. This slice does not
-  add hosted workers, adapter handoff, direct receive behavior changes,
-  operation failure inference, or cleanup mutation APIs.
+  add Service Bus adapter handoff parity, operation failure inference, or
+  cleanup mutation APIs.
 
-Durable incoming inbox worker, 2026-06-17:
+Durable incoming inbox worker, 2026-06-18:
 
 - `Bondstone.Hosting.IncomingInbox` is an additive normal setup namespace for
-  the opt-in incoming inbox processing worker.
+  the incoming inbox processing worker.
 - `UseDurableIncomingInboxWorker(...)` and
   `AddBondstoneDurableIncomingInboxWorker(...)` are additive setup APIs over
   the existing `IDurableIncomingInboxDispatcher`.
@@ -280,14 +282,23 @@ Durable incoming inbox worker, 2026-06-17:
   and retry delays. The concrete worker and options validator remain internal
   DI implementation details.
 - This slice does not add provider-neutral transport ingestion workers,
-  selected-module or source-transport worker filters, direct receive default
-  behavior changes, operation failure inference, or cleanup mutation APIs.
+  selected-module or source-transport worker filters, operation failure
+  inference, or cleanup mutation APIs.
+- `DurableModuleIncomingInboxDispatcherRegistration`,
+  `DurableModuleIncomingInboxDispatcherRegistrationRegistry`, and
+  `DurableModuleIncomingInboxDispatcherAggregator` are advanced
+  provider/runtime composition types hidden from normal IntelliSense. They let
+  provider packages aggregate module-owned durable incoming inbox processors
+  behind the app-facing `IDurableIncomingInboxDispatcher`.
 
-RabbitMQ durable incoming inbox ingestion handoff, 2026-06-17:
+RabbitMQ durable incoming inbox ingestion handoff, 2026-06-18:
 
+- `RabbitMqReceiveWorkerOptions.ReceiveCommand()` and `ReceiveEvent(...)`
+  now select durable incoming inbox ingestion. This is an intentional v2
+  behavior change away from the old direct broker-to-handler receive path.
 - `RabbitMqReceiveWorkerOptions.IngestCommandToDurableIncomingInbox()` and
-  `IngestEventToDurableIncomingInbox(...)` are additive setup APIs for the
-  first transport-to-durable-incoming-inbox adapter handoff.
+  `IngestEventToDurableIncomingInbox(...)` remain aliases for hosts that
+  prefer to name the ingestion boundary directly.
 - `RabbitMqReceiveWorkerOptions.SourceTransportName` is additive diagnostic
   metadata stored on durable incoming inbox rows. When omitted, RabbitMQ uses
   `rabbitmq:{QueueName}`.
@@ -299,9 +310,9 @@ RabbitMQ durable incoming inbox ingestion handoff, 2026-06-17:
   creating the durable incoming inbox record, so module-owned persistence
   writes through the receiver module boundary while advanced single-store
   hosts can still use the root store/scope fallback.
-- Direct RabbitMQ receive remains the default. The ingestion mode does not
-  execute handlers, complete operation state, stage outgoing outbox rows, or
-  replace the `Bondstone.Hosting` incoming inbox processing worker.
+- The ingestion mode does not execute handlers, complete operation state,
+  stage outgoing outbox rows, or replace the `Bondstone.Hosting` incoming
+  inbox processing worker.
 
 Public API curation, 2026-06-16:
 

@@ -2,6 +2,7 @@ using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
@@ -291,21 +292,21 @@ public sealed class RabbitMqIntegrationTests(RabbitMqFixture fixture)
         services.AddSingleton<IDurableEnvelopeReceiver>(receiver);
         services.AddBondstone(bondstone =>
         {
-            bondstone.UseRabbitMqReceiveWorker(options =>
-            {
-                options.QueueName = queueName;
-                if (receiveEvent)
-                {
-                    options.ReceiveEvent(
-                        SubscriberModule,
-                        SubscriberIdentity);
-                }
-                else
-                {
-                    options.ReceiveCommand();
-                }
-            });
         });
+        services.AddSingleton(
+            new RabbitMqReceiveWorkerRegistration(
+                queueName,
+                receiveEvent
+                    ? new DurableEnvelopeReceiveBinding(
+                        SubscriberModule,
+                        SubscriberIdentity)
+                    : null,
+                RequeueOnFailure: false,
+                ConsumerTag: null,
+                RabbitMqReceiveWorkerMode.DirectReceive,
+                $"rabbitmq:{queueName}"));
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostedService, RabbitMqReceiveWorker>());
         return services.BuildServiceProvider(validateScopes: true);
     }
 

@@ -1,7 +1,7 @@
 # 0019 Operation Observation Not Orchestration
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Pending
 Date: 2026-06-18
 
 ## Context
@@ -28,8 +28,8 @@ edge-facing result retrieval, not orchestration.
 
 Durable command tracking should support:
 
-- durable ingress creating and returning an operation id;
-- durable command sending carrying an operation id supplied by the caller;
+- durable ingress or durable command sending carrying an operation id supplied
+  by the caller or generated at the accepting edge and returned to the caller;
 - target module durable inbox processing finalizing operation state/result in
   the target module persistence boundary;
 - reading operation status/result later by operation id;
@@ -40,6 +40,10 @@ waiting for operation results inside module handlers. Bondstone should not add
 automatic operation-result subscriptions, polling another module's operation
 store from a caller module, generic command-completion events, or automatic
 operation chaining in v2.
+
+Operation observation APIs are for edge endpoints, UI refresh loops, operator
+tools, tests, and app-owned schedulers. Module handlers should not poll or wait
+on another module's operation state as durable business flow.
 
 Durable inter-module continuations should be expressed with explicit
 integration events and app-owned process state until a later accepted saga or
@@ -76,10 +80,11 @@ after real consumer evidence.
 
 ## Application Notes
 
-- Current contract: not binding until accepted. Current APIs still expose
-  wait-oriented names introduced during operation-result hardening.
-- Stable docs: when accepted, apply to messaging, operations, setup,
-  package-discovery, public-api, and samples docs.
+- Current contract: accepted for v2, pending implementation. Current APIs
+  still expose wait-oriented names introduced during operation-result
+  hardening.
+- Stable docs: apply to messaging, operations, setup, package-discovery,
+  public-api, and samples docs after implementation lands.
 - Agent guidance: no agent instruction change yet.
 - Application evidence: operation state/finalization/result reader APIs exist,
   but their v2 positioning and naming are not yet cleaned up.
@@ -88,5 +93,6 @@ after real consumer evidence.
 
 ## Verification
 
-No executable verification. This ADR records a proposed scope boundary from
-the 2026-06-18 orchestration discussion.
+This ADR records the accepted scope boundary from the 2026-06-18 orchestration
+discussion. Application remains pending until implementation and stable docs
+are updated. Verification: `pnpm format:check`.

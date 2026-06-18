@@ -45,9 +45,10 @@ builder.Services.AddBondstone(bondstone =>
 
 Provider-native transport configuration, broker administration, retry,
 dead-letter policy, worker settings, credentials, and topology declaration stay
-app-owned. Broker hosts bridge native transport code into Bondstone through
-`IDurableEnvelopeDispatcher`, `IDurableMessageEnvelopeSerializer`, and
-`IDurableEnvelopeReceiver`.
+app-owned. Broker hosts bridge outbound native transport code through
+`IDurableEnvelopeDispatcher` and `IDurableMessageEnvelopeSerializer`; inbound
+durable receive ingests native deliveries into the durable inbox before native
+settlement.
 
 ## Durable Messaging Capability
 
@@ -239,10 +240,11 @@ Core module receive is provider-neutral:
   subscriber module and subscriber identity.
 
 App-owned transport readers should parse provider-native messages into
-`DurableMessageEnvelope` and call `IDurableEnvelopeReceiver` inside the
-provider acknowledgement boundary. Commands route by envelope target module;
-events require the app to supply the subscriber module and stable subscriber
-identity selected by that native subscription.
+`DurableMessageEnvelope`, resolve the module-aware receive binding, ingest a
+durable inbox row, and settle the provider message only after ingestion
+succeeds. Commands route by envelope target module; events require the app to
+supply the subscriber module and stable subscriber identity selected by that
+native subscription.
 
 ## Persistence Boundaries
 

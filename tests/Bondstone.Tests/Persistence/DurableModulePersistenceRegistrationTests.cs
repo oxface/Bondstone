@@ -106,6 +106,25 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void IncomingInboxDispatcherAggregator_WhenDuplicateModuleDispatchersAreRegistered_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        RegisterIncomingInboxDispatcher(services, new DurableModuleIncomingInboxDispatcherRegistration(
+            "fulfillment",
+            _ => new TestModuleIncomingInboxDispatcher()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => RegisterIncomingInboxDispatcher(services, new DurableModuleIncomingInboxDispatcherRegistration(
+                " fulfillment ",
+                _ => new TestModuleIncomingInboxDispatcher())));
+
+        Assert.Contains("durable module incoming inbox dispatcher", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("exactly one", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void OutboxInspector_WhenDuplicateModuleInspectionStoresAreRegistered_ThrowsClearError()
     {
         var services = new ServiceCollection();
@@ -350,6 +369,44 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void IncomingInboxDispatcher_WhenModuleDispatcherIsMissing_FailsAtStartup()
+    {
+        var fulfillmentWriter = new CapturingModuleOutboxWriter("fulfillment");
+        var fulfillmentInboxExecutor = new CapturingModuleInboxHandlerExecutor("fulfillment");
+        var services = new ServiceCollection();
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
+            fulfillmentWriter.ModuleName,
+            _ => fulfillmentWriter));
+        RegisterInboxHandlerExecutor(services, new DurableModuleInboxHandlerExecutorRegistration(
+            fulfillmentInboxExecutor.ModuleName,
+            _ => fulfillmentInboxExecutor));
+        RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
+            "fulfillment",
+            _ => new CapturingModuleOperationStateStore("fulfillment")));
+        RegisterOutboxDispatcher(services, new DurableModuleOutboxDispatcherRegistration(
+            "fulfillment",
+            _ => new TestModuleOutboxDispatcher()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                    module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
+                });
+            }));
+
+        Assert.Contains("missing durable module persistence role registrations", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("incoming inbox dispatcher", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(fulfillmentWriter.Envelopes);
+        Assert.Equal(0, fulfillmentInboxExecutor.HandleCalls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task CommandSender_WhenModuleOperationStoreIsMissing_ThrowsProviderSpecificError()
     {
         var services = new ServiceCollection();
@@ -478,6 +535,14 @@ public sealed class DurableModulePersistenceRegistrationTests
     {
         services.GetOrAddDurableModulePersistenceRegistrationRegistry()
             .AddOutboxDispatcher(registration);
+    }
+
+    private static void RegisterIncomingInboxDispatcher(
+        IServiceCollection services,
+        DurableModuleIncomingInboxDispatcherRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddIncomingInboxDispatcher(registration);
     }
 
     private static void RegisterOutboxInspectionStore(
@@ -628,6 +693,19 @@ public sealed class DurableModulePersistenceRegistrationTests
         : IDurableOutboxDispatcher
     {
         public ValueTask<DurableOutboxDispatchResult> DispatchAsync(
+            string claimedBy,
+            TimeSpan leaseDuration,
+            int maxCount = 100,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class TestModuleIncomingInboxDispatcher
+        : IDurableIncomingInboxDispatcher
+    {
+        public ValueTask<DurableIncomingInboxProcessingResult> ProcessAsync(
             string claimedBy,
             TimeSpan leaseDuration,
             int maxCount = 100,

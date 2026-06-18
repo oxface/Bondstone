@@ -9,7 +9,7 @@ Install the packages needed for the host:
 - `Bondstone` for core module, command, integration-event, domain-event, and
   module execution contracts.
 - `Bondstone.Hosting` when the host runs the durable outbox worker or the
-  optional durable incoming inbox processing worker.
+  durable incoming inbox processing worker.
 - `Bondstone.Persistence` for provider-neutral durable envelopes, inbox,
   outbox, operation state, and persistence contracts used by custom
   persistence or dispatch composition.
@@ -52,14 +52,16 @@ host uses the thin RabbitMQ or Azure Service Bus adapter packages. For fully
 custom broker plumbing, register outbound
 publishing with `UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
 `IDurableEnvelopeDispatcher`, serialize `DurableMessageEnvelope` with
-`IDurableMessageEnvelopeSerializer`, and call `IDurableEnvelopeReceiver` from
-the chosen transport's receive handler. Broker topology, consumers, retry, and
-dead-letter policy remain application-owned. The built-in broker receive
-workers settle native messages only after Bondstone durable receive succeeds;
-RabbitMQ failure requeue and Service Bus processor settings remain native
-driver knobs, not Bondstone retry policy. Lower-level persistence, receive,
-dispatcher, and local transport types remain available for advanced composition
-and tests, but they are not the quick-start path.
+`IDurableMessageEnvelopeSerializer`, and ingest inbound deliveries into the
+durable inbox before native settlement. Broker topology, consumers, retry, and
+dead-letter policy remain application-owned. The RabbitMQ receive worker
+settles native messages only after Bondstone durable incoming inbox ingestion
+succeeds. The Azure Service Bus receive worker still uses the direct receive
+pipeline; Service Bus durable inbox ingestion parity is pending. RabbitMQ
+failure requeue and Service Bus processor settings remain native driver knobs,
+not Bondstone retry policy. Lower-level persistence, receive, dispatcher, and
+local transport types remain available for advanced composition and tests, but
+they are not the quick-start path.
 
 After composing a host, use the modular monolith sample as the adoption proof
 and [testing.md](testing.md) for verification entrypoints. Use
@@ -164,25 +166,25 @@ builder.Services.AddBondstone(bondstone =>
 `UseWorker(...)` registers the default durable dispatcher and the hosted
 outbox worker. Use `bondstone.Outbox.UseDurableDispatcher()` only for advanced
 manual dispatcher composition where the host does not want the built-in worker.
-Hosts that use the optional durable incoming ledger can also opt in to
-`bondstone.UseDurableIncomingInboxWorker(...)`; direct receive remains the
-default, and transport ingestion into the incoming ledger is explicit
-adapter-owned or application-owned setup.
+Hosts that receive durable broker deliveries should also opt in to
+`bondstone.UseDurableIncomingInboxWorker(...)`. Transport listeners ingest
+native deliveries into the durable inbox first; the incoming inbox worker then
+claims those rows and invokes the module command or event subscriber pipeline.
 
-RabbitMQ hosts that already own queue topology can opt the RabbitMQ receive
-worker into durable incoming inbox ingestion instead of direct module receive:
+RabbitMQ hosts that already own queue topology configure each receive worker
+as a module-aware binding into the durable inbox:
 
 ```csharp
 bondstone.UseRabbitMqReceiveWorker(options =>
 {
     options.QueueName = "fulfillment.commands";
-    options.IngestCommandToDurableIncomingInbox();
+    options.ReceiveCommand();
 });
 
 bondstone.UseRabbitMqReceiveWorker(options =>
 {
     options.QueueName = "billing.order-placed";
-    options.IngestEventToDurableIncomingInbox(
+    options.ReceiveEvent(
         BillingModule.ModuleName,
         "billing.order-placed-projection.v1");
 });
@@ -195,9 +197,11 @@ boundary, stages and commits a durable incoming inbox row, and only then
 acknowledges the RabbitMQ delivery. EF-backed module persistence writes this
 row through the receiver module's DbContext; single-store hosts with no module
 runtime registrations can use the root-level ingestion store/scope fallback.
-The separate
-`UseDurableIncomingInboxWorker(...)` processing worker is still required to
-claim durable incoming rows and execute module handlers.
+The explicit `IngestCommandToDurableIncomingInbox()` and
+`IngestEventToDurableIncomingInbox(...)` aliases remain available for hosts
+that prefer to name the ingestion boundary directly. The separate
+`UseDurableIncomingInboxWorker(...)` processing worker claims durable incoming
+rows and executes module handlers.
 
 `Bondstone.Transport.Local` is explicit sample, test, and local-development
 infrastructure. `local.UseModuleQueueConvention()` is complete command
@@ -483,14 +487,15 @@ For a real broker, the host or chosen transport library owns topology,
 subscriptions, native consumers, acknowledgement, retry, and dead-letter
 policy. Register outbound publishing with
 `UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
-`IDurableEnvelopeDispatcher` to publish claimed outbox records, use
-`IDurableMessageEnvelopeSerializer` to write/read `DurableMessageEnvelope`,
-and call `IDurableEnvelopeReceiver` from the native receive handler. Commands
-route by `TargetModule`; event receive calls must provide the selected
-subscriber module and stable subscriber identity. Normal host composition uses
-one outbound dispatcher per service provider. If a host needs more than one
-outbound transport, register one explicit aggregate dispatcher rather than
-stacking built-in dispatcher registrations.
+`IDurableEnvelopeDispatcher` to publish claimed outbox records, and use
+`IDurableMessageEnvelopeSerializer` to write/read `DurableMessageEnvelope`.
+Inbound durable receive should ingest into the durable inbox before native
+settlement and then let the incoming inbox worker invoke module handlers.
+Commands route by `TargetModule`; event receive bindings must provide the
+selected subscriber module and stable subscriber identity. Normal host
+composition uses one outbound dispatcher per service provider. If a host needs
+more than one outbound transport, register one explicit aggregate dispatcher
+rather than stacking built-in dispatcher registrations.
 
 RabbitMQ and Azure Service Bus have thin adapter packages when the app wants
 driver-level envelope plumbing without a transport DSL:
@@ -535,10 +540,14 @@ bondstone.UseServiceBusReceiveWorker(options =>
 ```
 
 The app still registers RabbitMQ `IChannel` or Azure `ServiceBusClient`, owns
-native entities and bindings, and chooses retry/dead-letter behavior. Rebus is
-not a Bondstone package; use Rebus-owned routing and handlers around
-`IDurableEnvelopeDispatcher` and `IDurableEnvelopeReceiver` if an app chooses
-Rebus. Advanced multi-transport hosts can compose
+native entities and bindings, and chooses retry/dead-letter behavior. RabbitMQ
+receive workers perform durable incoming inbox ingestion before ack. The
+Service Bus receive worker remains direct receive until parity is implemented;
+apps that need durable incoming inbox ingestion with Service Bus can own a
+native loop and call the ingestion boundary explicitly. Rebus is not a
+Bondstone package; use Rebus-owned routing and handlers around
+`IDurableEnvelopeDispatcher`, `IDurableMessageEnvelopeSerializer`, and durable
+inbox ingestion if an app chooses Rebus. Advanced multi-transport hosts can compose
 `IDurableEnvelopeDispatchRoute` with `RoutedDurableEnvelopeDispatcher` so
 exactly one route owns each durable envelope based on envelope data such as
 message kind, stable message type identity, source module, target module, or
@@ -893,31 +902,22 @@ await durableEventPublisher.PublishAsync(
 
 ## Receive Direction
 
-Core exposes provider-neutral module receive over `DurableMessageEnvelope`:
+Durable receive uses the durable incoming inbox. Provider receive adapters
+parse their provider-native message body into the neutral durable envelope,
+resolve the command or subscriber binding, insert the durable inbox row,
+acknowledge only after ingestion commits, and let ingestion failures flow to
+provider-native retry and dead-letter policy. The hosted incoming inbox
+processing worker then claims due rows and calls module receive. This creates
+the three-worker topology used by durable receive: outbox dispatch, transport
+receive/ingestion, and incoming inbox processing. Cleanup and retention remain
+app-owned.
 
-- `IDurableEnvelopeReceiver.ReceiveCommandAsync(...)`
-- `IDurableEnvelopeReceiver.ReceiveEventAsync(...)`
-
-Direct provider receive adapters should parse their provider-native message
-body into the neutral durable envelope, call the receiver, acknowledge only
-after the receiver completes, and let failures flow to provider-native retry
-and dead-letter policy. Bondstone's receive responsibility is inbox
-idempotency and module transaction execution. Broker retry schedules, delivery
-counts, and DLQ settings remain provider/app-owned.
-
-The optional durable incoming inbox path adds a separate processing loop:
-native transport receive or adapter code records incoming ledger rows, then
-the hosted incoming inbox processing worker claims due rows and calls module
-receive. This creates the three-worker topology used by buffered receive:
-outbox dispatch, transport receive/ingestion, and incoming inbox processing.
-Cleanup and retention remain app-owned.
-
-If a receive attempt finds an inbox row that was already received but not
-processed, Bondstone fails the module receive with
+If processing finds an implementation-detail idempotency row that was already
+received but not processed, Bondstone fails the module receive with
 `DurableInboxAlreadyReceivedException` instead of re-running the handler. The
-provider worker then uses its normal failure handoff. Recovery of the stale
-inbox row is an operator or application procedure. Operators can inspect
-unprocessed inbox rows through
+incoming dispatcher then records retry or terminal failure for the durable
+inbox row. Recovery of the stale idempotency row is an operator or application
+procedure. Operators can inspect unprocessed idempotency rows through
 `IDurableInboxInspector`:
 
 ```csharp
@@ -933,7 +933,7 @@ Inspection is read-only. Marking rows processed, deleting rows, re-running a
 handler, moving broker messages, or issuing a compensating action remains an
 application/operator runbook decision because the application must prove what
 happened during the ambiguous receive attempt. See [operations.md](operations.md)
-for the full direct receive failure model.
+for the receive failure model.
 
 The default modular monolith sample uses explicit `Bondstone.Transport.Local`
 queue routing for local development and fast adoption. RabbitMQ and Azure

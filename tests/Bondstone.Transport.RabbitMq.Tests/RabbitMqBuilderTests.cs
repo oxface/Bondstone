@@ -85,7 +85,7 @@ public sealed class RabbitMqBuilderTests
                 .Where(service => service.ServiceType == typeof(RabbitMqReceiveWorkerRegistration))
                 .Select(service => service.ImplementationInstance)
                 .Cast<RabbitMqReceiveWorkerRegistration>());
-        Assert.Equal(RabbitMqReceiveWorkerMode.DirectReceive, registration.ReceiveMode);
+        Assert.Equal(RabbitMqReceiveWorkerMode.DurableIncomingInboxIngestion, registration.ReceiveMode);
     }
 
     [Fact]

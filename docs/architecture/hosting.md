@@ -90,23 +90,23 @@ prefetch, concurrency, subscription policy, and provider monitoring remain
 application-owned or provider-native.
 
 Transport adapter receive workers are explicit opt-in ergonomics around native
-deliveries and Bondstone envelopes. They may read a native delivery, call
-`IDurableEnvelopeReceiver`, and perform native settlement according to adapter
-options. They must not infer topology from module registrations or become a
-provider-neutral bus host. Application hosts may bypass adapter workers and
-call `IDurableMessageEnvelopeSerializer` plus `IDurableEnvelopeReceiver` from
-their own native receive loops.
+deliveries and Bondstone envelopes. They may read a native delivery, ingest it
+into Bondstone's durable inbox, and perform native settlement according to
+adapter options. They must not infer topology from module registrations or
+become a provider-neutral bus host. Application hosts may bypass adapter
+workers and call `IDurableMessageEnvelopeSerializer` plus the durable incoming
+inbox ingestion boundary from their own native receive loops.
 
-The optional durable inbox topology keeps this split. A transport ingestion
-worker or native listener remains adapter-owned or application-owned because it
-reads provider-native deliveries and settles provider-native messages. It may
-call Bondstone durable inbox ingestion and settle the native delivery only
-after durable ingestion succeeds.
+A transport ingestion worker or native listener remains adapter-owned or
+application-owned because it reads provider-native deliveries and settles
+provider-native messages. It may call Bondstone durable inbox ingestion and
+settle the native delivery only after durable ingestion succeeds.
 
 The durable incoming inbox processing worker is Bondstone-owned because it
 hosts the existing durable incoming inbox dispatcher over Bondstone durable
-incoming rows. It is opt-in and does not change direct receive defaults. The
-worker uses `DurableIncomingInboxWorkerOptions` for worker id, lease duration,
+incoming rows. It is opt-in host composition because the application decides
+which workers run in each process. The worker uses
+`DurableIncomingInboxWorkerOptions` for worker id, lease duration,
 batch size, polling interval, failure delay, max attempts, and retry delays.
 It processes one batch per call, immediately continues while rows are claimed,
 waits for the polling interval when no rows are claimed, logs unexpected
@@ -119,8 +119,8 @@ The current worker topology has three distinct loops:
 1. a Bondstone outbox dispatch worker claims and dispatches outgoing durable
    outbox rows;
 2. a transport receive/ingestion worker or app-owned adapter loop reads native
-   transport deliveries and, when using the optional incoming ledger, records
-   durable incoming inbox rows before native settlement;
+   transport deliveries and records durable incoming inbox rows before native
+   settlement;
 3. a Bondstone incoming inbox processing worker claims durable incoming rows
    and invokes module receive.
 
@@ -133,7 +133,8 @@ Bondstone retention worker or mutation API.
 Provider SQL remains in provider packages. Transport-specific send, receive,
 ingestion, settlement, and envelope behavior remains in transport adapter
 packages. `Bondstone.Transport.RabbitMq` provides the first explicit
-durable-incoming-inbox ingestion mode for its opt-in receive worker; other
-transport adapter handoffs remain direct receive or app-owned until they add
-their own opt-in mode. Production worker and broker ownership guidance lives in
+durable-incoming-inbox ingestion mode for its opt-in receive worker. Azure
+Service Bus durable inbox ingestion parity remains pending; app-owned native
+loops can still ingest into the durable inbox explicitly. Production worker and
+broker ownership guidance lives in
 [../operations.md](../operations.md).

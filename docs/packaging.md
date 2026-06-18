@@ -102,9 +102,9 @@ Consumers migrating from v1 should:
   `Bondstone.Persistence.EntityFrameworkCore`;
 - replace old provider-neutral transport or Rebus package usage with an
   app-owned `IDurableEnvelopeDispatcher`,
-  `IDurableMessageEnvelopeSerializer`, and `IDurableEnvelopeReceiver`, or use
-  the thin RabbitMQ/Azure Service Bus adapter packages when the application
-  already owns native topology and retry policy;
+  `IDurableMessageEnvelopeSerializer`, and durable inbox ingestion boundary,
+  or use the thin RabbitMQ/Azure Service Bus adapter packages when the
+  application already owns native topology and retry policy;
 - preserve stable durable message identities where payload changes are
   compatible, and introduce new identities for breaking payload changes;
 - generate and review application EF migrations after package upgrades because
@@ -259,8 +259,8 @@ ships thin RabbitMQ and Azure Service Bus adapter packages for native-driver
 envelope plumbing. Applications still own native topology, provisioning,
 retry, dead-letter policy, and monitoring. Applications that use Rebus or
 another bus/runtime keep that integration app-owned: implement
-`IDurableEnvelopeDispatcher` for outgoing outbox records and call
-`IDurableEnvelopeReceiver` after mapping native deliveries into
+`IDurableEnvelopeDispatcher` for outgoing outbox records and ingest native
+deliveries into the durable inbox after mapping them into
 `DurableMessageEnvelope`. Reusable generic hosted worker composition belongs
 in `Bondstone.Hosting`; broker-specific receive workers live only in their
 adapter packages and are opt-in. When an app needs outbound routing across

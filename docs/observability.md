@@ -18,7 +18,7 @@ Bondstone currently emits activities from these `ActivitySource` names:
 
 Bondstone currently emits metrics from matching `Meter` names:
 
-- `Bondstone.Modules` for direct receive and operation metrics;
+- `Bondstone.Modules` for module receive idempotency and operation metrics;
 - `Bondstone.Persistence` for provider-neutral outbox dispatch metrics.
 
 ## Current Activities
@@ -120,13 +120,15 @@ Outbox metric attributes can include:
 
 `Bondstone.Modules` currently emits:
 
-- `bondstone.direct_receive.handled`: direct receive completed handler
-  execution and inbox handling;
-- `bondstone.direct_receive.already_processed`: direct receive found an
-  already processed inbox row and skipped handler execution idempotently;
-- `bondstone.direct_receive.already_received`: direct receive found an
-  already received but unprocessed inbox row and raised the ambiguous receive
-  error;
+- `bondstone.direct_receive.handled`: module receive completed handler
+  execution and receive idempotency handling. The instrument keeps its
+  transitional name until the diagnostics vocabulary is renamed.
+- `bondstone.direct_receive.already_processed`: module receive found an
+  already processed idempotency row and skipped handler execution
+  idempotently.
+- `bondstone.direct_receive.already_received`: module receive found an
+  already received but unprocessed idempotency row and raised the ambiguous
+  receive error.
 - `bondstone.operation.finalized`: explicit operation finalizer wrote a new
   terminal operation state;
 - `bondstone.operation.expiration.candidates`: operation expiration processing

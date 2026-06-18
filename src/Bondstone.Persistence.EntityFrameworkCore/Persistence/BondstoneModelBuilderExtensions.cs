@@ -12,7 +12,7 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Persistence;
 public static class BondstoneModelBuilderExtensions
 {
     /// <summary>
-    /// Applies Bondstone outbox, inbox, and operation-state mappings to the model.
+    /// Applies Bondstone outbox, inbox, incoming inbox, and operation-state mappings to the model.
     /// </summary>
     /// <param name="modelBuilder">The EF Core model builder.</param>
     /// <param name="schema">The optional database schema for Bondstone durable tables.</param>
@@ -25,6 +25,7 @@ public static class BondstoneModelBuilderExtensions
 
         modelBuilder.ApplyBondstoneOutbox(schema);
         modelBuilder.ApplyBondstoneInbox(schema);
+        modelBuilder.ApplyBondstoneIncomingInbox(schema);
         modelBuilder.ApplyBondstoneOperationState(schema);
 
         return modelBuilder;

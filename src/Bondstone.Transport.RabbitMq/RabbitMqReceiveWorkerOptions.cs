@@ -20,7 +20,7 @@ public sealed class RabbitMqReceiveWorkerOptions
     public RabbitMqReceiveWorkerOptions ReceiveCommand()
     {
         Binding = null;
-        _receiveMode = RabbitMqReceiveWorkerMode.DirectReceive;
+        _receiveMode = RabbitMqReceiveWorkerMode.DurableIncomingInboxIngestion;
         return this;
     }
 
@@ -31,7 +31,7 @@ public sealed class RabbitMqReceiveWorkerOptions
         Binding = new DurableEnvelopeReceiveBinding(
             subscriberModule,
             subscriberIdentity);
-        _receiveMode = RabbitMqReceiveWorkerMode.DirectReceive;
+        _receiveMode = RabbitMqReceiveWorkerMode.DurableIncomingInboxIngestion;
         return this;
     }
 

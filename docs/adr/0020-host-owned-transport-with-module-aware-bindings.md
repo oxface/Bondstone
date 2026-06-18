@@ -1,7 +1,7 @@
 # 0020 Host-Owned Transport With Module-Aware Bindings
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Pending
 Date: 2026-06-18
 
 ## Context
@@ -39,6 +39,11 @@ Module-aware bindings are deployment wiring, not module implementation
 metadata. The host or extracted service configures them because the host owns
 which transport endpoints are active in that process.
 
+Module-aware receive bindings belong to host transport registration. Module
+registrations declare commands, published events, subscribers, stable
+identities, and persistence boundaries. Module registrations do not declare
+broker endpoints or active native workers.
+
 For durable commands, a host should be able to state that a native queue/entity
 feeds the durable inbox for one command target module.
 
@@ -47,6 +52,10 @@ queue/subscription feeds the durable inbox for one event subscriber identity:
 event identity, subscriber module, and subscriber identity. Native broker
 fanout remains outside Bondstone.
 
+Bondstone must not add a provider-neutral subscription store for integration
+event fanout in the v2 MVP. Each durable event delivery is created by
+provider-native fanout and the host's explicit subscriber binding.
+
 Transport adapter packages may provide small receive-worker registration
 helpers for existing native queues/entities. Those helpers may derive durable
 receive identity and call the durable inbox ingestion boundary. They must not
@@ -54,8 +63,9 @@ declare exchanges, queues, topics, subscriptions, rules, bindings, retry
 policies, dead-letter policy, provisioning, provider-neutral topology
 validation, or subscription storage.
 
-Local transport may keep explicit local routing helpers for samples and tests,
-but must not be presented as production broker topology guidance.
+Local transport may keep explicit local routing helpers for samples, tests, and
+local development, but must not be presented as production broker topology
+guidance.
 
 ## Consequences
 
@@ -91,10 +101,11 @@ queues/subscriptions.
 
 ## Application Notes
 
-- Current contract: not binding until accepted. Current RabbitMQ helpers
-  already follow much of this shape for durable incoming inbox ingestion.
-- Stable docs: when accepted, apply to messaging, hosting, transport-local,
-  operations, setup, package-discovery, packaging, and samples docs.
+- Current contract: accepted for v2, pending implementation. Current RabbitMQ
+  helpers already follow much of this shape for durable incoming inbox
+  ingestion.
+- Stable docs: apply to messaging, hosting, transport-local, operations, setup,
+  package-discovery, packaging, and samples docs after implementation lands.
 - Agent guidance: no agent instruction change yet.
 - Application evidence: RabbitMQ receive workers can ingest command and event
   deliveries into durable incoming inbox boundaries; host-owned broker topology
@@ -105,5 +116,7 @@ queues/subscriptions.
 
 ## Verification
 
-No executable verification. This ADR records a proposed transport boundary
-clarification from the 2026-06-18 orchestration discussion.
+This ADR records the accepted transport boundary clarification from the
+2026-06-18 orchestration discussion. Application remains pending until
+implementation and stable docs are updated. Verification:
+`pnpm format:check`.

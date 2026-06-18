@@ -1,7 +1,7 @@
 # 0018 V2 Module Execution And Durable Inbox Reset
 
-Status: Proposed
-Application: Not Applicable
+Status: Accepted
+Application: Pending
 Date: 2026-06-18
 
 ## Context
@@ -39,11 +39,21 @@ Bondstone should expose three module interaction modes:
    It is not durable receive and does not make cross-module orchestration
    durable.
 2. Module query execution through a separate read pipeline. Queries are direct
-   boundary-respecting reads. They are not durable messages, do not write
-   inbox/outbox rows, and do not imply local projections.
+   boundary-respecting reads using a separate query handler contract. They are
+   synchronous read behavior, not durable messages. They must not write
+   durable inbox rows, outbox rows, operation state, or integration events, and
+   they do not imply local projections.
 3. Durable command and event execution through outbox, transport, durable
    inbox ingestion, and durable inbox processing. This is the durable
    cross-boundary path and is asynchronous by design.
+
+Direct cross-module command execution is allowed only through Bondstone's
+module command pipeline. It is immediate same-process work. It is not durable
+receive, is not durable orchestration, and is not atomic across source and
+target module persistence boundaries. Handlers that need restart-safe
+coordination must use durable commands or integration events and app-owned
+process state until a future saga or process-manager ADR accepts a native
+abstraction.
 
 Shared `.Contracts` projects remain the normal way for modules and hosts to
 share command, query, result, and integration-event contracts. They are not a
@@ -56,6 +66,11 @@ HTTP ingress should have two explicit shapes:
 - immediate command/query execution through Bondstone module pipelines;
 - durable command ingress that records work into the target durable inbox and
   returns operation tracking metadata.
+
+HTTP durable command ingress writes a validated command envelope directly into
+the target module durable inbox. It is accepted-work ingress, not a source
+module outbox send. An application may still model HTTP as a module command
+that sends durable work from that module, but that is application design.
 
 Bondstone may add small Minimal API or controller helpers for those shapes, but
 must not require code generation or own the HTTP application model.
@@ -81,9 +96,9 @@ broker topology ownership.
 
 ## Related Decisions
 
-- Would supersede or further narrow
+- Narrows
   [0017 Single Durable Inbox Incoming Ledger](0017-single-durable-inbox-incoming-ledger.md)
-  when accepted.
+  by making the durable inbox the only v2 durable receive ledger.
 - Builds on
   [0003 Module Boundaries Runtime And Domain Events](0003-module-boundaries-runtime-and-domain-events.md).
 - Relates to
@@ -93,20 +108,22 @@ broker topology ownership.
 
 ## Application Notes
 
-- Current contract: not binding until accepted. Current stable docs still
-  describe direct receive and durable incoming inbox as they exist today.
-- Stable docs: when accepted, apply to messaging, modules, hosting,
+- Current contract: accepted for v2, pending implementation. Current stable
+  docs still describe direct receive and durable incoming inbox as they exist
+  today.
+- Stable docs: apply to messaging, modules, hosting,
   persistence-core, persistence-ef-core, operations, setup, package discovery,
-  packaging, public API, samples, and testing docs.
-- Agent guidance: no agent instruction change yet. If accepted, root and
-  architecture guidance already require ADR review for this runtime shift.
+  packaging, public API, samples, and testing docs after implementation lands.
+- Agent guidance: no agent instruction change yet. Root and architecture
+  guidance already require ADR review for this runtime shift.
 - Application evidence: module command execution, durable inbox primitives,
   and RabbitMQ durable inbox ingestion already exist, but the unified v2 model
   is not yet applied.
-- Pending or deferred: implementation sweep, sample migration reset, docs
-  cleanup, public API cleanup, and final design report.
+- Pending or deferred: implementation sweep, sample migration reset, stable
+  docs cleanup, public API cleanup, and final design report application.
 
 ## Verification
 
-No executable verification. This ADR records a proposed design reset from the
-2026-06-18 orchestration discussion.
+This ADR records the accepted design reset from the 2026-06-18 orchestration
+discussion. Application remains pending until implementation and stable docs
+are updated. Verification: `pnpm format:check`.

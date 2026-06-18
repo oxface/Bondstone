@@ -9,7 +9,8 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.IncomingInbox;
 internal sealed class PostgreSqlDurableIncomingInboxClaimer<TDbContext>(
     TDbContext context,
     TimeProvider? timeProvider = null,
-    string? schema = null)
+    string? schema = null,
+    string? receiverModuleName = null)
     : IDurableIncomingInboxClaimer
     where TDbContext : DbContext
 {
@@ -40,6 +41,7 @@ internal sealed class PostgreSqlDurableIncomingInboxClaimer<TDbContext>(
 
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     private readonly string _tableName = PostgreSqlIncomingInboxTableIdentifier.BuildTableName(schema);
+    private readonly string? _receiverModuleName = NormalizeOptionalModuleName(receiverModuleName);
 
     public async ValueTask<IReadOnlyList<DurableIncomingInboxRecord>> ClaimAsync(
         string claimedBy,
@@ -81,16 +83,19 @@ internal sealed class PostgreSqlDurableIncomingInboxClaimer<TDbContext>(
                     {{HandlerIdentityColumn}},
                     {{IngestedAtUtcColumn}}
                 FROM {{_tableName}}
-                WHERE {{StatusColumn}} = @pending
-                OR (
-                    {{StatusColumn}} = @retryScheduled
-                    AND {{NextAttemptAtUtcColumn}} IS NOT NULL
-                    AND {{NextAttemptAtUtcColumn}} <= @nowUtc
-                )
-                OR (
-                    {{StatusColumn}} = @processing
-                    AND {{ClaimedUntilUtcColumn}} IS NOT NULL
-                    AND {{ClaimedUntilUtcColumn}} <= @nowUtc
+                WHERE (@receiverModuleName IS NULL OR {{ReceiverModuleColumn}} = @receiverModuleName)
+                AND (
+                    {{StatusColumn}} = @pending
+                    OR (
+                        {{StatusColumn}} = @retryScheduled
+                        AND {{NextAttemptAtUtcColumn}} IS NOT NULL
+                        AND {{NextAttemptAtUtcColumn}} <= @nowUtc
+                    )
+                    OR (
+                        {{StatusColumn}} = @processing
+                        AND {{ClaimedUntilUtcColumn}} IS NOT NULL
+                        AND {{ClaimedUntilUtcColumn}} <= @nowUtc
+                    )
                 )
                 ORDER BY
                     {{IngestedAtUtcColumn}},
@@ -133,6 +138,9 @@ internal sealed class PostgreSqlDurableIncomingInboxClaimer<TDbContext>(
                 new NpgsqlParameter("pending", pending),
                 new NpgsqlParameter("retryScheduled", retryScheduled),
                 new NpgsqlParameter("processing", processing),
+                new NpgsqlParameter(
+                    "receiverModuleName",
+                    (object?)_receiverModuleName ?? DBNull.Value),
                 new NpgsqlParameter("nowUtc", nowUtc),
                 new NpgsqlParameter("maxCount", maxCount),
                 new NpgsqlParameter("claimedBy", normalizedClaimedBy),
@@ -154,6 +162,13 @@ internal sealed class PostgreSqlDurableIncomingInboxClaimer<TDbContext>(
 
         throw new InvalidOperationException(
             $"DbContext '{context.GetType().FullName}' is missing the Bondstone EF Core incoming inbox mapping. Map the durable incoming inbox explicitly with ApplyBondstoneIncomingInbox().");
+    }
+
+    private static string? NormalizeOptionalModuleName(string? moduleName)
+    {
+        return string.IsNullOrWhiteSpace(moduleName)
+            ? null
+            : moduleName.Trim();
     }
 
     private static string NormalizeClaimedBy(string claimedBy)

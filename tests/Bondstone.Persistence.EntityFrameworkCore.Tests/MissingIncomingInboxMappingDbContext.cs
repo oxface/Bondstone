@@ -17,6 +17,8 @@ internal sealed class MissingIncomingInboxMappingDbContext(DbContextOptions<Miss
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyBondstonePersistence();
+        modelBuilder.ApplyBondstoneOutbox();
+        modelBuilder.ApplyBondstoneInbox();
+        modelBuilder.ApplyBondstoneOperationState();
     }
 }

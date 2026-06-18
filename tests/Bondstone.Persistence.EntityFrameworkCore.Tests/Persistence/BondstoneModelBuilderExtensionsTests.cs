@@ -114,11 +114,22 @@ public sealed class BondstoneModelBuilderExtensionsTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void ApplyBondstonePersistence_DoesNotConfigureIncomingInboxEntity()
+    public void ApplyBondstonePersistence_ConfiguresIncomingInboxEntity()
     {
-        IMutableModel model = BuildModel();
+        IMutableEntityType entityType = BuildModel()
+            .FindEntityType(typeof(IncomingInboxMessageEntity))
+            ?? throw new InvalidOperationException("Incoming inbox entity type was not configured.");
 
-        Assert.Null(model.FindEntityType(typeof(IncomingInboxMessageEntity)));
+        Assert.Equal("incoming_inbox_messages", entityType.GetTableName());
+        IMutableKey primaryKey = entityType.FindPrimaryKey()!;
+        Assert.Equal(IncomingInboxMessageEntityConfiguration.PrimaryKeyName, primaryKey.GetName());
+        Assert.Equal(
+            [
+                nameof(IncomingInboxMessageEntity.ReceiverModule),
+                nameof(IncomingInboxMessageEntity.MessageId),
+                nameof(IncomingInboxMessageEntity.HandlerIdentity),
+            ],
+            primaryKey.Properties.Select(static property => property.Name).ToArray());
     }
 
     [Fact]

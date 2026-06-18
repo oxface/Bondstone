@@ -47,9 +47,8 @@ renewal and outcome recording only update rows that are still `Processing`,
 still owned by the supplied claimant, and still inside the active claim lease.
 Normal stale ownership or race cases return false or an empty claim result.
 The provider does not register hosted incoming inbox workers, transport
-adapter handoff, direct receive behavior changes, operation failure inference,
-or cleanup mutation APIs. Hosted incoming processing lives in
-`Bondstone.Hosting`.
+adapter handoff, operation failure inference, or cleanup mutation APIs.
+Hosted incoming processing lives in `Bondstone.Hosting`.
 
 The PostgreSQL inbox registrar returns explicit registered, already-received,
 or already-processed results without using duplicate exceptions as the public
@@ -77,23 +76,27 @@ binds PostgreSQL durable components for that module's EF context. Root-level
 ...)` delegates to the same module-level setup for the named module. Those
 module bindings provide source-module outbox writing, target-module inbox
 handling, target-module operation-state persistence, transaction pipeline
-participation, per-module outbox dispatch, and read-only terminal outbox
-inspection and unprocessed inbox inspection. The app-facing dispatcher can
-aggregate dispatch results across configured local module outboxes while each
-underlying claim, lease, and dispatch-record update remains scoped to one
-module's PostgreSQL tables. The aggregate worker topology does not change
-PostgreSQL ownership: module dispatchers still perform provider-specific
-claim, lease renewal, and outcome recording for their module, while the
-aggregate dispatcher only chooses the sequential call order and shared batch
-budget.
+participation, per-module outbox dispatch, per-module incoming inbox
+processing, and read-only terminal outbox inspection and unprocessed inbox
+inspection. The app-facing outbox dispatcher can aggregate dispatch results
+across configured local module outboxes while each underlying claim, lease,
+and dispatch-record update remains scoped to one module's PostgreSQL tables.
+The app-facing incoming inbox dispatcher similarly aggregates module incoming
+inbox processors for the hosted incoming worker. The aggregate worker topology
+does not change PostgreSQL ownership: module dispatchers still perform
+provider-specific claim, lease renewal, and outcome recording for their
+module, while the aggregate dispatcher only chooses the sequential call order
+and shared batch budget.
 
 Command and receive execution use passive durable module runtime registrations
 for the module writer, inbox executor, operation-state store, outbox
-dispatcher, inbox inspection store, and outbox inspection store stored in
-`DurableModulePersistenceRegistrationRegistry`. Those registrations carry the
-module name and create EF-backed executable services only for the selected
-module inside the current DI scope, so resolving another module's runtime
-metadata does not construct this module's `DbContext`.
+dispatcher, incoming inbox dispatcher, inbox inspection store, and outbox
+inspection store. The command/outbox/inbox/operation registrations are stored
+in `DurableModulePersistenceRegistrationRegistry`; incoming inbox dispatcher
+registrations are stored in the matching incoming dispatcher registry. Those
+registrations carry the module name and create EF-backed executable services
+only for the selected module inside the current DI scope, so resolving another
+module's runtime metadata does not construct this module's `DbContext`.
 
 Application code should prefer this module-aware setup helper over directly
 registering provider-facing durable module runtime registrations.
@@ -121,6 +124,10 @@ PostgreSQL Testcontainers tests verify real database behavior, including:
   yet due, expired lease reclaim, and active lease exclusion;
 - incoming inbox lease renewal and processed, retry, and terminal-failure
   outcome recording for active claims and stale claimant rejection;
+- durable incoming inbox processing through module-owned PostgreSQL
+  persistence, including command handler execution, operation result
+  completion, outgoing outbox staging, duplicate ingestion, retry, and
+  terminal failure outcomes;
 - read-only terminal outbox inspection through the EF-backed inspection store;
 - outbox dispatcher composition using real PostgreSQL claim, lease renewal,
   and dispatch outcome recording with fake transport success and failure;

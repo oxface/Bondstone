@@ -358,6 +358,8 @@ public sealed class DurableCommandSenderTests
             _ => new NoOpOperationStateStore()));
         RegisterOutboxDispatcher(services, "sales");
         RegisterOutboxDispatcher(services, "billing");
+        RegisterIncomingInboxDispatcher(services, "sales");
+        RegisterIncomingInboxDispatcher(services, "billing");
 
         services.AddBondstone(bondstone =>
         {
@@ -416,6 +418,8 @@ public sealed class DurableCommandSenderTests
             _ => billingStore));
         RegisterOutboxDispatcher(services, "sales");
         RegisterOutboxDispatcher(services, "billing");
+        RegisterIncomingInboxDispatcher(services, "sales");
+        RegisterIncomingInboxDispatcher(services, "billing");
 
         services.AddBondstone(bondstone =>
         {
@@ -645,6 +649,16 @@ public sealed class DurableCommandSenderTests
                 _ => new NoOpOutboxDispatcher()));
     }
 
+    private static void RegisterIncomingInboxDispatcher(
+        IServiceCollection services,
+        string moduleName)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddIncomingInboxDispatcher(new DurableModuleIncomingInboxDispatcherRegistration(
+                moduleName,
+                _ => new NoOpIncomingInboxDispatcher()));
+    }
+
     private sealed class CapturingOperationStateStore : IDurableOperationStateStore
     {
         public DurableOperationState? State { get; set; }
@@ -741,6 +755,19 @@ public sealed class DurableCommandSenderTests
         {
             return new ValueTask<DurableOutboxDispatchResult>(
                 new DurableOutboxDispatchResult(0, 0, 0, 0, 0));
+        }
+    }
+
+    private sealed class NoOpIncomingInboxDispatcher : IDurableIncomingInboxDispatcher
+    {
+        public ValueTask<DurableIncomingInboxProcessingResult> ProcessAsync(
+            string claimedBy,
+            TimeSpan leaseDuration,
+            int maxCount = 100,
+            CancellationToken ct = default)
+        {
+            return new ValueTask<DurableIncomingInboxProcessingResult>(
+                new DurableIncomingInboxProcessingResult(0, 0, 0, 0, 0));
         }
     }
 

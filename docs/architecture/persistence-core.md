@@ -115,35 +115,41 @@ registration carries a module name plus a factory for the executable
 module, plus factories for the module's executable `IDurableOutboxDispatcher`
 when the provider supports local outbox dispatch and
 `IDurableOutboxInspectionStore` when the provider supports terminal-row
-inspection. Providers may also register one
-`DurableModuleIncomingInboxIngestionBoundaryRegistration` per module for the
-optional durable incoming inbox ingestion path. That boundary groups the
-module's `IDurableIncomingInboxIngestionStore` and
+inspection. Providers also register one
+`DurableModuleIncomingInboxIngestionBoundaryRegistration` per module for
+durable incoming inbox ingestion. That boundary groups the module's
+`IDurableIncomingInboxIngestionStore` and
 `IDurableIncomingInboxIngestionPersistenceScope` so ingestion writes and saves
-through the same receiver-module persistence boundary. Providers store these
-records in `DurableModulePersistenceRegistrationRegistry`; individual module
-runtime registrations are not service descriptors. Provider packages should
-use Bondstone's advanced service-collection helper to get or create that
-registry so the ownership rule stays consistent across packages. `Bondstone`
-builds module maps from the registry and invokes only the selected module's
-factory inside the current DI scope. This keeps module metadata lookup from
-constructing unrelated provider dependencies such as another module's
-`DbContext` or PostgreSQL session. Executable services use the ordinary role
-contracts returned by those factories. Provider factories should create
-lightweight wrappers around services resolved from the current DI scope and
-should not create owned disposable resources outside DI ownership.
+through the same receiver-module persistence boundary. Providers that support
+incoming row mutation may also register module incoming inbox dispatchers so
+the hosted incoming worker can aggregate processing across module-owned
+persistence boundaries. Providers store command, outbox, inbox, operation, and
+ingestion boundary records in `DurableModulePersistenceRegistrationRegistry`;
+individual module runtime registrations are not service descriptors. Provider
+packages should use Bondstone's advanced service-collection helpers to get or
+create the registries so ownership rules stay consistent across packages.
+`Bondstone` builds module maps from the registry and invokes only the selected
+module's factory inside the current DI scope. This keeps module metadata
+lookup from constructing unrelated provider dependencies such as another
+module's `DbContext` or PostgreSQL session. Executable services use the
+ordinary role contracts returned by those factories. Provider factories should
+create lightweight wrappers around services resolved from the current DI scope
+and should not create owned disposable resources outside DI ownership.
 
 Provider packages must register at most one runtime registration for each
 module command/receive durable role, at most one module outbox dispatcher
 registration for each local module outbox, at most one module inbox
 inspection-store registration for each module store, at most one module
 outbox inspection-store registration for each module store, and at most one
-module incoming inbox ingestion boundary for each module. The durable runtime
-registry rejects duplicate module outbox writer, inbox handler executor,
-inbox inspection-store, operation-state store, outbox dispatcher, outbox
-inspection-store, and incoming inbox ingestion boundary registrations when
-provider setup adds them; the runtime map keeps defensive duplicate validation
-when those services are resolved. Provider
+module incoming inbox ingestion boundary for each module. Providers that
+register module incoming inbox dispatchers must register at most one dispatcher
+per module. The durable runtime registry rejects duplicate module outbox
+writer, inbox handler executor, inbox inspection-store, operation-state store,
+outbox dispatcher, outbox inspection-store, and incoming inbox ingestion
+boundary registrations when provider setup adds them; the runtime map keeps
+defensive duplicate validation when those services are resolved. The incoming
+dispatcher registry rejects duplicate module incoming dispatcher registrations
+when provider setup adds them. Provider
 composition errors therefore fail with module-specific diagnostics. When a
 module declares
 persistence but the matching module-owned service is missing, runtime
@@ -188,7 +194,7 @@ runtime registrations only. It does not preserve or delegate to root-level
 operation reader registrations, and it does not use a root-level
 `IDurableOperationStateStore` as a read fallback.
 
-## Inbox
+## Receive Idempotency
 
 `DurableInboxMessageKey` identifies receive-side deduplication by stable
 message id, module name, and handler or subscriber identity. For commands, the
@@ -217,13 +223,12 @@ marker, operation state, and outgoing outbox rows together. Low-level/root
 composition must execute the inbox executor inside the caller's chosen
 transaction or save boundary and commit outside the executor.
 
-Transport adapters that compose the executor should acknowledge transport
-messages only after the executor returns a handled or already-processed result
-and the relevant commit boundary has succeeded. Already-received but
-unprocessed rows are not treated as handled. Module receive pipelines surface
-them through `DurableInboxAlreadyReceivedException`, and adapters should hand
-that failure back to provider-native retry/dead-letter policy rather than
-acknowledging the message as successfully processed.
+The durable inbox processing dispatcher composes the module receive pipelines,
+which in turn use this executor as an implementation-detail idempotency guard.
+Already-received but unprocessed rows are not treated as handled. Module
+receive pipelines surface them through `DurableInboxAlreadyReceivedException`,
+and the durable inbox dispatcher records retry or terminal failure for the
+incoming row rather than re-running the handler.
 
 Bondstone does not currently provide inbox leases, stale-row recovery hooks,
 maintenance workers, failed receive states, or provider-neutral inbox row
@@ -253,30 +258,32 @@ add a receive record, and mark it processed. Provider implementations own the
 unique constraint, transaction, savepoint, and concurrency behavior that make
 those operations reliable.
 
-## Future Optional Durable Inbox
+## Durable Inbox
 
-The optional durable inbox incoming ledger accepted by ADR
-[0017](../adr/0017-single-durable-inbox-incoming-ledger.md) is partially
-applied. ADR
+The durable inbox incoming ledger is the durable receive ledger for adapters
+that ingest durable deliveries before settlement. ADR
 [0012](../adr/0012-direct-receive-inbox-and-durable-receive-buffer.md)
-preserves the superseded separate receive-buffer decision trail. The accepted
+preserves the superseded separate receive-buffer decision trail. The current
 provider-neutral names use `DurableIncomingInbox*` and
-`IDurableIncomingInbox*` to distinguish this richer incoming ledger from the
-tiny direct-receive inbox. Provider-neutral EF Core ingestion and read-only
+`IDurableIncomingInbox*`. Provider-neutral EF Core ingestion and read-only
 inspection stores exist. Core provides a module-aware ingestion boundary
 resolver so transport ingestion can write through the receiver module's
 persistence boundary when module persistence is configured. PostgreSQL-specific
 claim, lease-renewal, and outcome-recording stores exist for the incoming
-ledger. Core also provides a
-host-callable `IDurableIncomingInboxDispatcher` that claims due rows and hands
-each row to the existing module receive pipelines. `Bondstone.Hosting`
-provides an opt-in hosted worker for that dispatcher. Transport adapter
-handoff into durable ingestion is not a provider-neutral runtime and remains
-adapter-owned or application-owned. RabbitMQ is the first thin adapter with an
-explicit receive-worker mode that ingests native deliveries into this ledger
-before native acknowledgement.
+ledger. Core also provides a host-callable
+`IDurableIncomingInboxDispatcher` that claims due rows and hands each row to
+the existing module receive pipelines. `Bondstone.Hosting` provides a hosted
+worker for that dispatcher. Transport adapter handoff into durable ingestion
+is adapter-owned or application-owned. RabbitMQ receive workers ingest native
+deliveries into this ledger before native acknowledgement.
 
-The target durable inbox is modeled as a single persisted incoming delivery
+Current module processing still writes the older `IDurableInboxStore`
+`inbox_messages` row as an implementation-detail idempotency marker inside the
+module receive pipeline. Durable receive status for operator-facing ingestion,
+claim, retry, processed, and terminal outcomes lives on the incoming inbox row.
+Removing the older marker from this processing path remains a v2 cleanup item.
+
+The durable inbox is modeled as a single persisted incoming delivery
 ledger. Its key is the durable receive binding:
 
 - commands: message id, target module, and stable handler identity;
@@ -307,21 +314,22 @@ the same style as outbox dispatch:
   stale-processing and terminal-failure queries with receiver-module and
   source-transport filters.
 
-The existing module receive pipeline remains the owner of target module
+The module receive pipeline remains the owner of target module
 handler execution. Handler state, successful command operation completion,
 outgoing outbox rows, and durable inbox processed state should commit in the
 target module transaction where possible.
 
-The first runtime processing slice records the incoming-ledger outcome after
+The current runtime processing slice records the incoming-ledger outcome after
 the module receive pipeline returns. That leaves a crash window: handler state,
-operation completion, outgoing outbox rows, and the tiny direct inbox processed
-marker can commit before the incoming ledger is marked processed. If a later
-retry sees the tiny direct inbox as already processed, the incoming dispatcher
-records the incoming row as processed and catches the ledger up. If the tiny
-direct inbox is already received but unprocessed, the module receive pipeline
-continues to raise `DurableInboxAlreadyReceivedException`; the incoming
-dispatcher treats that ambiguity as a processing failure and applies incoming
-inbox retry or terminal-failure policy.
+operation completion, outgoing outbox rows, and the implementation-detail
+idempotency marker can commit before the incoming ledger is marked processed.
+If a later retry sees the idempotency marker as already processed, the
+incoming dispatcher records the incoming row as processed and catches the
+ledger up. If the idempotency marker is already received but unprocessed, the
+module receive pipeline continues to raise
+`DurableInboxAlreadyReceivedException`; the incoming dispatcher treats that
+ambiguity as a processing failure and applies incoming inbox retry or
+terminal-failure policy.
 
 The hosted incoming inbox processing worker only schedules dispatcher calls.
 It does not add provider-neutral source-transport or receiver-module filters

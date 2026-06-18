@@ -134,9 +134,9 @@ Custom or app-owned broker integrations normally use:
   dispatch across more than one transport;
 - `IDurableMessageEnvelopeSerializer` from `Bondstone.Messaging` to write and
   read `DurableMessageEnvelope` payloads;
-- `IDurableEnvelopeReceiver` from `Bondstone.Messaging` to execute received
-  command envelopes or explicitly selected event subscribers through
-  Bondstone's inbox and module transaction boundary.
+- durable incoming inbox ingestion contracts from `Bondstone.Persistence` to
+  record received command envelopes or explicitly selected event subscribers
+  before native broker settlement.
 
 The application or transport library owns broker topology, subscriptions,
 native consumers, ack/nack/settlement, retry, dead-letter policy, prefetch,

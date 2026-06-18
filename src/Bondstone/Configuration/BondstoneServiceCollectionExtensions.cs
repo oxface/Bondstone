@@ -61,14 +61,6 @@ public static class BondstoneServiceCollectionExtensions
         services.TryAddSingleton<IDurableIncomingInboxFailurePolicy>(serviceProvider =>
             new DurableIncomingInboxFailurePolicy(
                 serviceProvider.GetRequiredService<DurableIncomingInboxProcessingOptions>()));
-        services.TryAddScoped<IDurableIncomingInboxDispatcher>(serviceProvider =>
-            new DurableIncomingInboxDispatcher(
-                serviceProvider.GetRequiredService<IDurableIncomingInboxClaimer>(),
-                serviceProvider.GetRequiredService<IModuleCommandReceivePipeline>(),
-                serviceProvider.GetRequiredService<IModuleEventReceivePipeline>(),
-                serviceProvider.GetRequiredService<IDurableIncomingInboxOutcomeRecorder>(),
-                serviceProvider.GetRequiredService<IDurableIncomingInboxFailurePolicy>(),
-                serviceProvider.GetService<TimeProvider>()));
         services.TryAddScoped<IDurableIncomingInboxIngestionBoundaryResolver>(
             serviceProvider =>
                 new DurableIncomingInboxIngestionBoundaryResolver(
@@ -142,6 +134,7 @@ public static class BondstoneServiceCollectionExtensions
             new DurableModulePersistenceConfigurationValidator(
                 persistenceRegistrationRegistry));
         configure(builder);
+        AddDefaultDurableIncomingInboxDispatcherIfConfigured(services);
         ConfigureDurableOperationReader(services);
         builder.Validate();
 
@@ -189,6 +182,28 @@ public static class BondstoneServiceCollectionExtensions
         return store is null || persistenceScope is null
             ? null
             : new DurableIncomingInboxIngestionBoundary(store, persistenceScope);
+    }
+
+    private static void AddDefaultDurableIncomingInboxDispatcherIfConfigured(
+        IServiceCollection services)
+    {
+        bool hasDispatcher = services.Any(static service =>
+            service.ServiceType == typeof(IDurableIncomingInboxDispatcher));
+        if (hasDispatcher)
+        {
+            return;
+        }
+
+        bool hasIncomingInboxProcessingStores = services.Any(static service =>
+                service.ServiceType == typeof(IDurableIncomingInboxClaimer))
+            && services.Any(static service =>
+                service.ServiceType == typeof(IDurableIncomingInboxOutcomeRecorder));
+        if (!hasIncomingInboxProcessingStores)
+        {
+            return;
+        }
+
+        services.TryAddScoped<IDurableIncomingInboxDispatcher, DurableIncomingInboxDefaultDispatcher>();
     }
 
     private static TImplementation GetOrAddOwnedSingleton<TService, TImplementation>(

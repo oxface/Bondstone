@@ -27,7 +27,7 @@ single durable inbox receive model, then enter feedback-focused maintenance.
 - [0016 Non-Throwing Operation Wait Ergonomics](../adr/0016-non-throwing-operation-wait-ergonomics.md)
 - [0017 Single Durable Inbox Incoming Ledger](../adr/0017-single-durable-inbox-incoming-ledger.md)
 
-Proposed v2 design reset ADRs:
+Accepted v2 design reset ADRs, with application pending:
 
 - [0018 V2 Module Execution And Durable Inbox Reset](../adr/0018-v2-module-execution-and-durable-inbox-reset.md)
 - [0019 Operation Observation Not Orchestration](../adr/0019-operation-observation-not-orchestration.md)
@@ -95,10 +95,10 @@ These items are the proposed v2 MVP scope before the first consumer project
 starts migration.
 
 1. Design reset review.
-   Review and accept, revise, or reject ADRs 0018-0020. Produce a single design
-   diagram/report that explains command execution, query execution, durable
-   command send, durable event fanout, HTTP durable ingress, operation
-   observation, and the durable inbox worker topology.
+   ADRs 0018-0020 are accepted and pending implementation. Use the design reset
+   report as the implementation handoff for command execution, query
+   execution, durable command send, durable event fanout, HTTP durable ingress,
+   operation observation, and the durable inbox worker topology.
 
 2. Durable inbox completion sweep.
    Make durable inbox the only durable receive ledger. Remove, collapse, or
@@ -265,7 +265,7 @@ Remaining after the operation visibility quick wins:
   worker options, inspection contracts, adapter handoff hooks, migrations,
   public API review, and tests to implementation work items.
 
-2026-06-18 design reset discussion captured:
+2026-06-18 design reset discussion captured and accepted:
 
 - Agreed that v2 can break compatibility and should optimize for a clean
   library model.
@@ -282,8 +282,9 @@ Remaining after the operation visibility quick wins:
 - Captured the guiding split: host-owned transport infrastructure,
   module-owned durable runtime semantics. This supports later module extraction
   without making module implementation code own broker topology.
-- Created proposed ADRs 0018-0020 as the design-reset review package before
-  large implementation chunks begin.
+- Accepted ADRs 0018-0020 as the design-reset package before large
+  implementation chunks begin. Application is pending until implementation and
+  stable docs are updated.
 
 2026-06-17 durable inbox implementation slice 1 applied:
 
@@ -336,7 +337,7 @@ Use bigger coherent chunks rather than repeated two-file design edits. The
 preferred rhythm is:
 
 1. design reset diagram/report for review;
-2. accept or revise ADRs 0018-0020;
+2. apply accepted ADRs 0018-0020;
 3. run subagents for durable inbox completion, module command/query pipelines,
    operation observation, transport/fanout ergonomics, worker operations, and
    docs/API/sample cleanup;
@@ -362,9 +363,11 @@ Do not start these until consumer evidence or a new ADR justifies them:
 
 ## ADR Gates
 
-Accept or revise ADRs 0018-0020 before implementation changes that remove
-direct receive semantics, introduce query pipelines, reposition operation
-waiting, or rename receive-worker topology concepts.
+ADRs 0018-0020 are accepted and pending. Apply them before implementation
+changes that remove direct receive semantics, introduce query pipelines,
+reposition operation waiting, or rename receive-worker topology concepts. If
+implementation needs to change those boundaries, amend or supersede the ADRs
+before broad code changes.
 
 Create or amend ADRs before implementation if the work chooses any of these
 directions:
@@ -419,4 +422,5 @@ additive non-throwing wait API from ADR 0016. Verification:
 
 On 2026-06-18, proposed ADRs 0018-0020 were created from the design reset
 discussion and this plan was updated to describe the current v2 MVP execution
-model. Verification: `pnpm format:check`.
+model. Later on 2026-06-18, ADRs 0018-0020 were tightened and accepted with
+application pending. Verification: `pnpm format:check`.

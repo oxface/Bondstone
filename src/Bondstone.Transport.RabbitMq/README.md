@@ -10,11 +10,12 @@ prefetch/concurrency strategy, or monitoring.
 Use it only when the host already owns RabbitMQ topology and wants small
 Bondstone envelope plumbing.
 
-The receive worker defaults to direct module receive. It can also be explicitly
-configured to ingest native deliveries into the optional durable incoming inbox
-ledger with `IngestCommandToDurableIncomingInbox()` or
-`IngestEventToDurableIncomingInbox(...)`. In that mode the worker commits the
-incoming inbox row before RabbitMQ acknowledgement; the separate
+The receive worker ingests native deliveries into the durable incoming inbox
+ledger with `ReceiveCommand()` or `ReceiveEvent(...)`. The explicit
+`IngestCommandToDurableIncomingInbox()` and
+`IngestEventToDurableIncomingInbox(...)` aliases are available when a host
+wants the method name to emphasize the ingestion boundary. The worker commits
+the incoming inbox row before RabbitMQ acknowledgement; the separate
 `Bondstone.Hosting` durable incoming inbox worker processes the row later.
 
 See:

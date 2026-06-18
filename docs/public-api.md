@@ -239,11 +239,11 @@ Durable incoming inbox provider-neutral contracts, 2026-06-18:
   failure, or stale outcomes through the incoming inbox store contracts.
 - The PostgreSQL provider supplies runtime stores for incoming inbox claim,
   lease renewal, outcome recording, and module-owned processing dispatch.
-  This slice does not add Service Bus adapter handoff parity, operation
-  failure inference, or cleanup mutation APIs. Processing outcome is recorded
-  after module receive returns, so a crash between the module receive commit
-  and incoming-ledger outcome recording relies on the existing receive
-  idempotency row during retry.
+  Bondstone does not provide Service Bus durable incoming inbox handoff in the
+  built-in Service Bus worker, operation failure inference, or cleanup
+  mutation APIs. Processing outcome is recorded after module receive returns,
+  so a crash between the module receive commit and incoming-ledger outcome
+  recording relies on the existing receive idempotency row during retry.
 
 Durable incoming inbox EF Core mapping, 2026-06-18:
 
@@ -266,9 +266,9 @@ Durable incoming inbox EF Core mapping, 2026-06-18:
   module persistence opt-ins register one boundary per module so ingestion
   uses the receiver module's `DbContext`.
 - PostgreSQL-specific incoming inbox mutation stores live in
-  `Bondstone.Persistence.EntityFrameworkCore.Postgres`. This slice does not
-  add Service Bus adapter handoff parity, operation failure inference, or
-  cleanup mutation APIs.
+  `Bondstone.Persistence.EntityFrameworkCore.Postgres`. Bondstone does not
+  provide Service Bus durable incoming inbox handoff in the built-in Service
+  Bus worker, operation failure inference, or cleanup mutation APIs.
 
 Durable incoming inbox worker, 2026-06-18:
 
@@ -281,11 +281,11 @@ Durable incoming inbox worker, 2026-06-18:
   batch size, polling interval, lease duration, failure delay, max attempts,
   and retry delays. The concrete worker and options validator remain internal
   DI implementation details.
-- This slice does not add provider-neutral transport ingestion workers,
+- Bondstone does not provide provider-neutral transport ingestion workers,
   selected-module or source-transport worker filters, operation failure
   inference, or cleanup mutation APIs.
 - `DurableModuleIncomingInboxDispatcherRegistration`,
-  `DurableModuleIncomingInboxDispatcherRegistrationRegistry`, and
+  `DurableModulePersistenceRegistrationRegistry`, and
   `DurableModuleIncomingInboxDispatcherAggregator` are advanced
   provider/runtime composition types hidden from normal IntelliSense. They let
   provider packages aggregate module-owned durable incoming inbox processors
@@ -360,7 +360,9 @@ Transport receive settlement cleanup, 2026-06-16:
 - `ServiceBusReceiveWorkerOptions.ProcessorOptions` remains public as the
   deliberate advanced native-driver escape hatch for the opt-in receive
   worker. `AutoCompleteMessages = true` is rejected during worker registration
-  because Bondstone requires manual completion after durable receive succeeds.
+  because Bondstone requires manual completion after the direct receive
+  pipeline succeeds. The built-in Service Bus receive worker uses the direct
+  receive pipeline and does not ingest into the durable incoming inbox.
 
 V2 public API cleanup continuation, 2026-06-16:
 

@@ -95,17 +95,18 @@ These items are the proposed v2 MVP scope before the first consumer project
 starts migration.
 
 1. Design reset review.
-   ADRs 0018-0020 are accepted and pending implementation. Use the design reset
-   report as the implementation handoff for command execution, query
-   execution, durable command send, durable event fanout, HTTP durable ingress,
-   operation observation, and the durable inbox worker topology.
+   Complete. ADRs 0018-0020 are accepted. Use the design reset report as the
+   implementation handoff for command execution, query execution, durable
+   command send, durable event fanout, HTTP durable ingress, operation
+   observation, and the durable inbox worker topology.
 
 2. Durable inbox completion sweep.
-   Make durable inbox the only durable receive ledger. Remove, collapse, or
-   hide old direct-receive inbox semantics. Complete the end-to-end proof:
-   transport delivery, durable inbox ingestion, hosted worker claim/lease,
-   module handler execution, outgoing outbox, operation finalization where
-   applicable, and processed/failure outcomes.
+   Complete for the v2 MVP durable-ingestion path. Durable incoming inbox is
+   the durable receive ledger for implemented durable receive adapters and
+   app-owned ingestion loops. RabbitMQ receive ingests into the durable inbox
+   before ack; the built-in Service Bus worker remains a direct receive
+   adapter. The smaller `inbox_messages` table remains an implementation-detail
+   receive idempotency marker during module processing.
 
 3. Module execution and query ergonomics.
    Clean up direct module command execution as the immediate command pipeline.
@@ -122,9 +123,9 @@ starts migration.
 5. Transport and fanout ergonomics.
    Keep transport infrastructure host-owned while durable runtime semantics
    stay module-owned. Improve receive-worker language and helpers around
-   module command queues and event subscriber bindings. Decide Service Bus
-   durable inbox ingestion parity. Keep event fanout on native
-   exchanges/topics/subscriptions.
+   module command queues and event subscriber bindings. Keep built-in Service
+   Bus receive direct unless a later ADR and consumer evidence justify durable
+   inbox handoff. Keep event fanout on native exchanges/topics/subscriptions.
 
 6. Worker operations and retention.
    Finish durable inbox lease-renewal policy or document processing limits.
@@ -161,6 +162,18 @@ starts migration.
     is introduced. Reset sample migrations immediately before v2 publication.
     Re-run public API review, package validation, full tests, docs review, and
     prepare the template-project migration handoff prompt.
+
+Updated order after durable inbox completion:
+
+1. Module execution and query ergonomics.
+2. Operation observation cleanup.
+3. Transport and fanout ergonomics.
+4. Worker operations and retention.
+5. Stable misconfiguration error codes.
+6. Route-aware multi-transport ergonomics.
+7. ApiCompat/package validation.
+8. Health/readiness guidance.
+9. Final v2 cleanup sweep.
 
 ## Easy Wins
 
@@ -326,6 +339,29 @@ Remaining after the operation visibility quick wins:
 - Kept direct receive as the current default/simple path until a later ADR
   changes the default.
 
+2026-06-18 durable inbox completion finalized:
+
+- Completed the durable inbox v2 MVP path around the single durable incoming
+  inbox ledger for implemented durable receive flows.
+- Confirmed the split: RabbitMQ receive worker performs durable inbox ingestion
+  before native ack; the built-in Service Bus receive worker remains a direct
+  receive adapter; apps that require Service Bus durable ingestion can own a
+  native receive loop and call the ingestion boundary explicitly.
+- Confirmed PostgreSQL module dispatchers are module-aware. Incoming inbox
+  claiming filters by receiver module, outbox dispatch claiming filters by
+  source module, and shared-table module isolation has integration coverage.
+- Kept the older `inbox_messages` row as an implementation-detail module
+  processing idempotency marker. Removing it is not required for v2 MVP and
+  would require a smaller internal receive execution path that treats the
+  claimed incoming ledger row as the idempotency boundary.
+- Stable docs were scrubbed so current docs describe current behavior rather
+  than future parity or slice language.
+- The focused design check accepted the current model as clean enough for the
+  next feature. The known tradeoff is the two-ledger internal processing detail:
+  `incoming_inbox_messages` is the durable receive ledger, while
+  `inbox_messages` still protects module handler idempotency after the incoming
+  worker claims a row.
+
 ## Execution Model
 
 This planning thread should stay the high-level orchestrator. Large
@@ -424,3 +460,10 @@ On 2026-06-18, proposed ADRs 0018-0020 were created from the design reset
 discussion and this plan was updated to describe the current v2 MVP execution
 model. Later on 2026-06-18, ADRs 0018-0020 were tightened and accepted with
 application pending. Verification: `pnpm format:check`.
+
+Later on 2026-06-18, the durable inbox completion slice was finalized. Focused
+verification:
+`dotnet test tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --filter "FullyQualifiedName~PostgreSqlOutboxDispatcherTests|FullyQualifiedName~PostgreSqlPersistenceTests"`.
+Stable-doc stale wording checks were run against architecture, operations,
+setup, package discovery, packaging, and public API docs. Broader verification:
+`pnpm backend:test`.

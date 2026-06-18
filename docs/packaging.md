@@ -25,9 +25,9 @@ For a consumer-facing capability and namespace matrix, see
 [package-discovery.md](package-discovery.md).
 
 `Bondstone.Transport.Local` is an explicit local queue adapter for samples,
-tests, and local development. It exercises outbox/inbox receive semantics
-through the provider-neutral receive pipelines, but it is not a production
-broker adapter or hidden fallback.
+tests, and local development. It exercises outbox dispatch and module receive
+idempotency semantics through the provider-neutral receive pipelines, but it
+is not a production broker adapter or hidden fallback.
 
 `Bondstone.Transport.RabbitMq` and `Bondstone.Transport.ServiceBus` are thin
 broker adapters. They provide native-driver envelope dispatchers and opt-in
@@ -204,21 +204,23 @@ Migration and operations notes:
   out durable table-shape changes so apps can schedule migrations before
   deployment.
 - Local transport is an explicit local queue adapter for samples, tests, and
-  local development. It exercises Bondstone outbox/inbox receive semantics,
-  but it is not production broker durability, topology management, retry,
-  dead-letter handling, or durable inbox ingestion.
-- Broker receive adapters and app-owned native receive loops should settle
-  native deliveries only after Bondstone receive succeeds. If Bondstone
-  receive fails, use the provider-native failure path rather than
-  acknowledging the message as handled.
+  local development. It exercises Bondstone outbox dispatch and module
+  receive idempotency semantics, but it is not production broker durability,
+  topology management, retry, dead-letter handling, or durable inbox
+  ingestion.
+- Durable broker receive adapters and app-owned native receive loops should
+  settle native deliveries only after durable incoming inbox ingestion
+  succeeds. If ingestion fails, use the provider-native failure path rather
+  than acknowledging the message as handled.
 - Current observability includes the activity sources, activities, tags, log
   event ids, result diagnostics, and inspection contracts documented in
   [observability.md](observability.md). Finalized metrics, a stable metric
   instrument vocabulary, and stable misconfiguration error codes are not v2
   behavior.
-- The durable incoming inbox processing worker is current opt-in behavior in
-  `Bondstone.Hosting`. Current default receive behavior is still the direct
-  receive inbox idempotency boundary documented in [operations.md](operations.md).
+- The durable incoming inbox is the current durable receive ledger. The hosted
+  incoming inbox processing worker is opt-in behavior in `Bondstone.Hosting`.
+  Module processing still writes the smaller receive idempotency marker as an
+  implementation detail, as documented in [operations.md](operations.md).
 
 NuGet registry follow-up after v2 publication:
 

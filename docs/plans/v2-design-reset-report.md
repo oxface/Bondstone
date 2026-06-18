@@ -318,6 +318,8 @@ The v2 MVP should explicitly exclude:
 
 ### 1. Durable Inbox Completion
 
+Status: complete for the v2 MVP durable-ingestion path as of 2026-06-18.
+
 - Make durable inbox the only v2 durable receive ledger target.
 - Collapse or remove the tiny direct receive inbox path from public product
   language.
@@ -415,8 +417,9 @@ development.
 
 ## Maintainer Review Checklist
 
-- Decide whether ADR 0020 should require Service Bus durable inbox ingestion
-  parity for v2 MVP or leave it as a scoped follow-up.
+- Treat Service Bus durable inbox handoff as outside the built-in Service Bus
+  worker for the v2 MVP. Apps can own native Service Bus receive loops and call
+  durable inbox ingestion explicitly.
 - Confirm that no default cleanup worker, code generation, broker topology DSL,
   or saga/process-manager work enters the v2 MVP implementation chunks.
 
@@ -451,18 +454,33 @@ Residual behavior:
   incoming ledger up through the idempotency marker's already-processed
   result.
 - Durable incoming inbox processing still depends on the older
-  `inbox_messages` table for module receive idempotency. Removing that marker
-  from this path requires a smaller internal execution path where the claimed
-  incoming inbox row is the receive idempotency boundary while preserving the
-  module EF transaction for handler state, operation state, domain events, and
-  outgoing outbox rows.
-- Azure Service Bus durable inbox ingestion parity remains a follow-up
-  decision/implementation item. Its existing receive worker still represents
-  the older direct receive adapter shape.
+  `inbox_messages` table for module receive idempotency. This is accepted for
+  v2 MVP as an implementation-detail marker. Removing it later requires a
+  smaller internal execution path where the claimed incoming inbox row is the
+  receive idempotency boundary while preserving the module EF transaction for
+  handler state, operation state, domain events, and outgoing outbox rows.
+- The built-in Azure Service Bus receive worker remains a direct receive
+  adapter. Durable inbox ingestion with Service Bus is app-owned through a
+  native receive loop and the durable inbox ingestion boundary.
 - Public `DurableIncomingInbox*` names remain the current provider/runtime
-  vocabulary for the v2 durable inbox ledger; a future naming cleanup can
-  decide whether aliases or renames are worth the churn before publication.
+  vocabulary for the v2 durable inbox ledger; no rename is required for the v2
+  MVP.
+
+Final design check:
+
+- The three-worker topology is accepted for durable receive: outbox dispatch,
+  transport receive/ingestion, and incoming inbox processing.
+- Host-owned transport and module-aware durable runtime behavior remain the
+  guiding split.
+- The durable inbox model is clean enough to build the next v2 features on top
+  of it. The known internal complexity is the temporary receive idempotency
+  marker used during module processing.
 
 ## Verification
 
 `pnpm format:check` passed on 2026-06-18.
+
+Durable inbox completion focused verification passed on 2026-06-18:
+`dotnet test tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests/Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.csproj --configuration Release --filter "FullyQualifiedName~PostgreSqlOutboxDispatcherTests|FullyQualifiedName~PostgreSqlPersistenceTests"`.
+
+Broader backend verification passed on 2026-06-18: `pnpm backend:test`.

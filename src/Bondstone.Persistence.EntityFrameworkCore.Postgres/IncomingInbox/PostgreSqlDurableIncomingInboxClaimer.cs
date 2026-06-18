@@ -3,6 +3,7 @@ using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.IncomingInbox;
 
@@ -138,9 +139,10 @@ internal sealed class PostgreSqlDurableIncomingInboxClaimer<TDbContext>(
                 new NpgsqlParameter("pending", pending),
                 new NpgsqlParameter("retryScheduled", retryScheduled),
                 new NpgsqlParameter("processing", processing),
-                new NpgsqlParameter(
-                    "receiverModuleName",
-                    (object?)_receiverModuleName ?? DBNull.Value),
+                new NpgsqlParameter("receiverModuleName", NpgsqlDbType.Text)
+                {
+                    Value = (object?)_receiverModuleName ?? DBNull.Value,
+                },
                 new NpgsqlParameter("nowUtc", nowUtc),
                 new NpgsqlParameter("maxCount", maxCount),
                 new NpgsqlParameter("claimedBy", normalizedClaimedBy),

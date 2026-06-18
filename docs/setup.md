@@ -56,12 +56,14 @@ publishing with `UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
 durable inbox before native settlement. Broker topology, consumers, retry, and
 dead-letter policy remain application-owned. The RabbitMQ receive worker
 settles native messages only after Bondstone durable incoming inbox ingestion
-succeeds. The Azure Service Bus receive worker still uses the direct receive
-pipeline; Service Bus durable inbox ingestion parity is pending. RabbitMQ
-failure requeue and Service Bus processor settings remain native driver knobs,
-not Bondstone retry policy. Lower-level persistence, receive, dispatcher, and
-local transport types remain available for advanced composition and tests, but
-they are not the quick-start path.
+succeeds. The Azure Service Bus receive worker remains a direct receive
+adapter and does not ingest into the durable inbox. Hosts that need durable
+inbox ingestion with Service Bus should own a native receive loop and call the
+ingestion boundary explicitly. RabbitMQ failure requeue and Service Bus
+processor settings remain native driver knobs, not Bondstone retry policy.
+Lower-level persistence, receive, dispatcher, and local transport types remain
+available for advanced composition and tests, but they are not the quick-start
+path.
 
 After composing a host, use the modular monolith sample as the adoption proof
 and [testing.md](testing.md) for verification entrypoints. Use
@@ -542,9 +544,10 @@ bondstone.UseServiceBusReceiveWorker(options =>
 The app still registers RabbitMQ `IChannel` or Azure `ServiceBusClient`, owns
 native entities and bindings, and chooses retry/dead-letter behavior. RabbitMQ
 receive workers perform durable incoming inbox ingestion before ack. The
-Service Bus receive worker remains direct receive until parity is implemented;
-apps that need durable incoming inbox ingestion with Service Bus can own a
-native loop and call the ingestion boundary explicitly. Rebus is not a
+Service Bus receive worker remains a direct receive adapter and does not
+ingest into the durable incoming inbox. Apps that need durable incoming inbox
+ingestion with Service Bus can own a native loop and call the ingestion
+boundary explicitly. Rebus is not a
 Bondstone package; use Rebus-owned routing and handlers around
 `IDurableEnvelopeDispatcher`, `IDurableMessageEnvelopeSerializer`, and durable
 inbox ingestion if an app chooses Rebus. Advanced multi-transport hosts can compose
@@ -902,15 +905,17 @@ await durableEventPublisher.PublishAsync(
 
 ## Receive Direction
 
-Durable receive uses the durable incoming inbox. Provider receive adapters
-parse their provider-native message body into the neutral durable envelope,
-resolve the command or subscriber binding, insert the durable inbox row,
-acknowledge only after ingestion commits, and let ingestion failures flow to
-provider-native retry and dead-letter policy. The hosted incoming inbox
-processing worker then claims due rows and calls module receive. This creates
-the three-worker topology used by durable receive: outbox dispatch, transport
-receive/ingestion, and incoming inbox processing. Cleanup and retention remain
-app-owned.
+Durable receive uses the durable incoming inbox. Durable receive adapters and
+app-owned native loops parse their provider-native message body into the
+neutral durable envelope, resolve the command or subscriber binding, insert
+the durable inbox row, acknowledge only after ingestion commits, and let
+ingestion failures flow to provider-native retry and dead-letter policy. The
+hosted incoming inbox processing worker then claims due rows and calls module
+receive. This creates the three-worker topology used by durable receive:
+outbox dispatch, transport receive/ingestion, and incoming inbox processing.
+Cleanup and retention remain app-owned. The built-in RabbitMQ receive worker
+follows this durable ingestion model; the built-in Azure Service Bus receive
+worker does not.
 
 If processing finds an implementation-detail idempotency row that was already
 received but not processed, Bondstone fails the module receive with

@@ -127,9 +127,12 @@ The thin Azure Service Bus receive worker completes the message after receive
 completes. Its exposed `ProcessorOptions` is an advanced native-driver escape
 hatch, but `AutoCompleteMessages` must remain `false` so Bondstone can
 complete messages only after the direct module receive pipeline succeeds.
-Service Bus durable inbox ingestion parity is not implemented in this slice;
-receive exceptions flow to the Service Bus processor error path and
-provider-native retry behavior.
+The built-in Service Bus worker does not ingest into the durable incoming
+inbox. Hosts that need durable incoming inbox ingestion with Service Bus
+should own a native Service Bus receive loop and call the durable incoming
+inbox ingestion boundary explicitly. Receive exceptions from the built-in
+worker flow to the Service Bus processor error path and provider-native retry
+behavior.
 
 If durable inbox ingestion commits but native settlement fails, broker
 redelivery should return `AlreadyIngested` and acknowledge without running the
@@ -380,7 +383,7 @@ with one shared batch budget. A failure from one module dispatcher stops the
 current aggregate batch and delays later modules until a later worker
 iteration. The current worker has no fairness guarantee and no selected-module
 scheduling option, so noisy-neighbor isolation requires app-owned deployment
-or a future Bondstone worker option.
+or scheduling outside the built-in aggregate worker.
 
 ### Repeated Incoming Inbox Worker Batch Failures
 

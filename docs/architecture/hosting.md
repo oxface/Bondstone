@@ -134,7 +134,8 @@ Provider SQL remains in provider packages. Transport-specific send, receive,
 ingestion, settlement, and envelope behavior remains in transport adapter
 packages. `Bondstone.Transport.RabbitMq` provides the first explicit
 durable-incoming-inbox ingestion mode for its opt-in receive worker. Azure
-Service Bus durable inbox ingestion parity remains pending; app-owned native
-loops can still ingest into the durable inbox explicitly. Production worker and
-broker ownership guidance lives in
+Service Bus receive remains direct receive in the built-in worker and does
+not ingest into the durable inbox. App-owned native Service Bus receive loops
+can still ingest into the durable inbox explicitly.
+Production worker and broker ownership guidance lives in
 [../operations.md](../operations.md).

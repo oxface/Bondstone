@@ -3,6 +3,7 @@ using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox;
 
@@ -102,9 +103,10 @@ internal sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
                 sql,
                 new NpgsqlParameter("pending", pending),
                 new NpgsqlParameter("processing", processing),
-                new NpgsqlParameter(
-                    "sourceModuleName",
-                    (object?)_sourceModuleName ?? DBNull.Value),
+                new NpgsqlParameter("sourceModuleName", NpgsqlDbType.Text)
+                {
+                    Value = (object?)_sourceModuleName ?? DBNull.Value,
+                },
                 new NpgsqlParameter("nowUtc", nowUtc),
                 new NpgsqlParameter("maxCount", maxCount),
                 new NpgsqlParameter("claimedBy", normalizedClaimedBy),

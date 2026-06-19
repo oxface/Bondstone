@@ -1,6 +1,7 @@
 using Bondstone.Configuration;
 using Bondstone.DomainEvents;
 using Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
+using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Messaging;
 using Bondstone.Modules;
@@ -411,6 +412,104 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
     }
 
     [Fact]
+    [Trait("Category", "Application")]
+    public async Task ModuleCommands_WhenEfBackedDurableModuleOptsIn_DoesNotStageOutboxForDomainEvents()
+    {
+        string databaseName = Guid.NewGuid().ToString("N");
+        var services = new ServiceCollection();
+        services.AddSingleton<DomainEventCapture>();
+        services.AddDbContext<DomainEventDurableTestDbContext>(options =>
+            UseInMemory(options, databaseName));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UseEntityFrameworkCorePersistence<DomainEventDurableTestDbContext>();
+                module.UseEntityFrameworkCoreDomainEventPersistence();
+                module.Commands.RegisterHandler<RaiseDomainEventCommand, DurableRaiseDomainEventCommandHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    new RaiseDomainEventCommand("A-100"));
+        }
+
+        using IServiceScope verificationScope = serviceProvider.CreateScope();
+        DomainEventDurableTestDbContext context =
+            verificationScope.ServiceProvider.GetRequiredService<DomainEventDurableTestDbContext>();
+
+        DomainEventRecordEntity record = await context.Set<DomainEventRecordEntity>().SingleAsync();
+
+        Assert.Equal("fulfillment", record.ModuleName);
+        Assert.Equal("fulfillment.inventory-reserved.v1", record.DomainEventName);
+        Assert.Contains("\"inventoryId\":\"A-100\"", record.Payload, StringComparison.Ordinal);
+        Assert.Empty(await context.Set<OutboxMessageEntity>().ToArrayAsync());
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ModuleCommands_WhenDomainEventIsExplicitlyPublishedAsIntegrationEvent_StagesSeparateOutboxEvent()
+    {
+        string databaseName = Guid.NewGuid().ToString("N");
+        var services = new ServiceCollection();
+        services.AddSingleton<DomainEventCapture>();
+        services.AddDbContext<DomainEventDurableTestDbContext>(options =>
+            UseInMemory(options, databaseName));
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UseEntityFrameworkCorePersistence<DomainEventDurableTestDbContext>();
+                module.UseEntityFrameworkCoreDomainEventPersistence();
+                module.Commands.RegisterHandler<
+                    PublishDomainEventAsIntegrationEventCommand,
+                    PublishDomainEventAsIntegrationEventCommandHandler>();
+                module.Events.RegisterPublishedEvent<InventoryReservedIntegrationEvent>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using (IServiceScope scope = serviceProvider.CreateScope())
+        {
+            await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "fulfillment",
+                    new PublishDomainEventAsIntegrationEventCommand("A-100"));
+        }
+
+        DomainEventCapture capture = serviceProvider.GetRequiredService<DomainEventCapture>();
+        Assert.NotNull(capture.Source);
+        Assert.Empty(capture.Source.PendingDomainEvents);
+        Assert.Equal(1, capture.Source.ClearCount);
+
+        using IServiceScope verificationScope = serviceProvider.CreateScope();
+        DomainEventDurableTestDbContext context =
+            verificationScope.ServiceProvider.GetRequiredService<DomainEventDurableTestDbContext>();
+
+        DomainEventRecordEntity record = await context.Set<DomainEventRecordEntity>().SingleAsync();
+        OutboxMessageEntity outbox = await context.Set<OutboxMessageEntity>().SingleAsync();
+
+        Assert.Equal("fulfillment.inventory-reserved.v1", record.DomainEventName);
+        Assert.Contains("\"inventoryId\":\"A-100\"", record.Payload, StringComparison.Ordinal);
+        Assert.Equal(MessageKind.Event, outbox.MessageKind);
+        Assert.Equal("fulfillment.inventory-reserved-public.v1", outbox.MessageTypeName);
+        Assert.Equal("fulfillment", outbox.SourceModule);
+        Assert.Null(outbox.TargetModule);
+        Assert.Contains("\"inventoryId\":\"A-100\"", outbox.Payload, StringComparison.Ordinal);
+    }
+
+    [Fact]
     [Trait("Category", "Unit")]
     public void ApplyBondstoneDomainEvents_ConfiguresOnlyDomainEventEntity()
     {
@@ -446,8 +545,13 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
 
     public sealed record RaiseUnnamedDomainEventCommand(string Id) : ICommand;
 
+    public sealed record PublishDomainEventAsIntegrationEventCommand(string Id) : ICommand;
+
     [IntegrationEventIdentity("fulfillment.domain-source.v1")]
     public sealed record DomainEventSourceIntegrationEvent(string Id) : IIntegrationEvent;
+
+    [IntegrationEventIdentity("fulfillment.inventory-reserved-public.v1")]
+    public sealed record InventoryReservedIntegrationEvent(string InventoryId) : IIntegrationEvent;
 
     public sealed class RaiseDomainEventCommandHandler(
         DomainEventTestDbContext context,
@@ -553,6 +657,47 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
             capture.Source = source;
             context.Aggregates.Add(source);
             return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed class DurableRaiseDomainEventCommandHandler(
+        DomainEventDurableTestDbContext context,
+        DomainEventCapture capture)
+        : ICommandHandler<RaiseDomainEventCommand>
+    {
+        public ValueTask HandleAsync(
+            RaiseDomainEventCommand command,
+            CancellationToken ct = default)
+        {
+            DomainEventAggregateEntity source = DomainEventAggregateEntity.Reserve(
+                command.Id,
+                () => capture.Calls.Add("clear"));
+            capture.Source = source;
+            context.Aggregates.Add(source);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed class PublishDomainEventAsIntegrationEventCommandHandler(
+        DomainEventDurableTestDbContext context,
+        DomainEventCapture capture,
+        IDurableEventPublisher eventPublisher)
+        : ICommandHandler<PublishDomainEventAsIntegrationEventCommand>
+    {
+        public async ValueTask HandleAsync(
+            PublishDomainEventAsIntegrationEventCommand command,
+            CancellationToken ct = default)
+        {
+            DomainEventAggregateEntity source = DomainEventAggregateEntity.Reserve(
+                command.Id,
+                () => capture.Calls.Add("clear"));
+            capture.Source = source;
+            context.Aggregates.Add(source);
+
+            await eventPublisher.PublishAsync(
+                new InventoryReservedIntegrationEvent(command.Id),
+                partitionKey: command.Id,
+                ct: ct);
         }
     }
 

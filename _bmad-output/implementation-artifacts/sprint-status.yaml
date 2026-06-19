@@ -1,5 +1,5 @@
 # generated: 2026-06-18T15:39:19+00:00
-# last_updated: 2026-06-19T18:13:35+00:00
+# last_updated: 2026-06-19T19:44:05+00:00
 # project: Bondstone
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-18T15:39:19+00:00
-last_updated: 2026-06-19T18:13:35+00:00
+last_updated: 2026-06-19T19:44:05+00:00
 project: Bondstone
 project_key: NOKEY
 tracking_system: file-system
@@ -70,7 +70,7 @@ development_status:
   5-1-product-boundary-and-extraction-guardrail: done
   5-2-module-registration-and-host-composition: done
   5-3-immediate-command-and-query-boundaries: done
-  5-4-durable-message-kind-and-domain-event-boundaries: backlog
+  5-4-durable-message-kind-and-domain-event-boundaries: done
   epic-5-retrospective: optional
   epic-6: backlog
   6-1-source-outbox-atomicity: backlog

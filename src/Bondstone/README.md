@@ -2,10 +2,11 @@
 
 Core abstractions for durable Bondstone module boundaries.
 
-This package owns module registration and execution contracts, durable command
-and integration event contracts, payload serialization, module-aware runtime
-composition over provider-neutral persistence and transport contracts, and the
-lightweight `AddBondstone` composition surface.
+This package owns module registration and execution contracts, immediate
+command and query contracts, durable command and integration event contracts,
+payload serialization, module-aware runtime composition over provider-neutral
+persistence and transport contracts, and the lightweight `AddBondstone`
+composition surface.
 
 ## Quick Path
 
@@ -15,9 +16,9 @@ transport packages as needed. Normal application setup should use
 [the setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md).
 
 Install this package in projects that declare Bondstone modules, commands,
-integration events, handlers, durable send/publish calls, or in-process module
-execution. Provider, hosting, and transport packages are installed separately
-only when the project calls their setup APIs.
+queries, integration events, handlers, durable send/publish calls, or
+in-process module execution. Provider, hosting, and transport packages are
+installed separately only when the project calls their setup APIs.
 
 See:
 

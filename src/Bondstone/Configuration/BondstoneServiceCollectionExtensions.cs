@@ -29,6 +29,10 @@ public static class BondstoneServiceCollectionExtensions
             GetOrAddOwnedSingleton<IModuleCommandRouteRegistry, ModuleCommandRouteRegistry>(
                 services,
                 "Module command registration");
+        ModuleQueryRouteRegistry queryRouteRegistry =
+            GetOrAddOwnedSingleton<IModuleQueryRouteRegistry, ModuleQueryRouteRegistry>(
+                services,
+                "Module query registration");
         ModulePublishedEventRegistry publishedEventRegistry =
             GetOrAddOwnedSingleton<IModulePublishedEventRegistry, ModulePublishedEventRegistry>(
                 services,
@@ -51,6 +55,7 @@ public static class BondstoneServiceCollectionExtensions
         services.AddBondstoneDurablePayloadSerialization();
 
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
+        services.TryAddScoped<IModuleQueryExecutor, ModuleQueryExecutor>();
         services.TryAddScoped<IModuleEventSubscriberExecutor, ModuleEventSubscriberExecutor>();
         services.TryAddScoped<IModuleCommandRuntime, ModuleCommandRuntime>();
         services.TryAddScoped<IModuleEventSubscriberRuntime, ModuleEventSubscriberRuntime>();
@@ -126,6 +131,7 @@ public static class BondstoneServiceCollectionExtensions
             services,
             messageTypeRegistry,
             commandRouteRegistry,
+            queryRouteRegistry,
             publishedEventRegistry,
             eventSubscriberRegistry,
             moduleRegistry,

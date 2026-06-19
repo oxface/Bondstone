@@ -11,6 +11,7 @@ public sealed class BondstoneBuilder
         IServiceCollection services,
         IMessageTypeRegistry messageTypeRegistry,
         ModuleCommandRouteRegistry commandRouteRegistry,
+        ModuleQueryRouteRegistry queryRouteRegistry,
         ModulePublishedEventRegistry publishedEventRegistry,
         ModuleEventSubscriberRegistry eventSubscriberRegistry,
         BondstoneModuleRegistry moduleRegistry,
@@ -22,6 +23,7 @@ public sealed class BondstoneBuilder
         Outbox = new BondstoneOutboxBuilder(services);
         _messageTypeRegistry = messageTypeRegistry;
         _commandRouteRegistry = commandRouteRegistry;
+        _queryRouteRegistry = queryRouteRegistry;
         _publishedEventRegistry = publishedEventRegistry;
         _eventSubscriberRegistry = eventSubscriberRegistry;
         _moduleRegistry = moduleRegistry;
@@ -35,6 +37,7 @@ public sealed class BondstoneBuilder
 
     private readonly IMessageTypeRegistry _messageTypeRegistry;
     private readonly ModuleCommandRouteRegistry _commandRouteRegistry;
+    private readonly ModuleQueryRouteRegistry _queryRouteRegistry;
     private readonly ModulePublishedEventRegistry _publishedEventRegistry;
     private readonly ModuleEventSubscriberRegistry _eventSubscriberRegistry;
     private readonly BondstoneModuleRegistry _moduleRegistry;
@@ -85,6 +88,7 @@ public sealed class BondstoneBuilder
             moduleName,
             _messageTypeRegistry,
             _commandRouteRegistry,
+            _queryRouteRegistry,
             _publishedEventRegistry,
             _eventSubscriberRegistry,
             _moduleRegistry,

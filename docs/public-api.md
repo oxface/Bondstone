@@ -205,6 +205,18 @@ Non-throwing operation wait, 2026-06-17:
   caller patience and does not write `Failed`, `Cancelled`, or any other
   operation state.
 
+Immediate query boundary, 2026-06-19:
+
+- `IQuery<TResult>`, `IQueryHandler<TQuery, TResult>`,
+  `IModuleQueryExecutor`, `IModuleQueryRouteRegistry`, `ModuleQueryRoute`,
+  and `BondstoneModuleQueryBuilder` are additive user application and
+  advanced composition contracts for immediate read-only module queries.
+- `BondstoneModuleBuilder.Queries` is an additive normal setup API. Query
+  routes are module-owned and do not register durable message identities.
+- Query execution deliberately does not set the command module execution
+  context, so durable send/publish APIs continue to require command or
+  subscriber execution context.
+
 Durable incoming inbox provider-neutral contracts, 2026-06-18:
 
 - `DurableIncomingInboxKey`, `DurableIncomingInboxRecord`,

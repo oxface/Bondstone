@@ -259,6 +259,7 @@ namespace Bondstone.Messaging
         System.Type ResolveClrType(string messageTypeName);
         bool TryResolveClrType(string messageTypeName, out System.Type? clrType);
     }
+    public interface IQuery<TResult> { }
     [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct, Inherited=false)]
     public sealed class IntegrationEventIdentityAttribute : System.Attribute
     {
@@ -304,6 +305,7 @@ namespace Bondstone.Modules
         public Bondstone.Modules.BondstoneModuleCommandBuilder Commands { get; }
         public Bondstone.Modules.BondstoneModuleEventBuilder Events { get; }
         public string Name { get; }
+        public Bondstone.Modules.BondstoneModuleQueryBuilder Queries { get; }
         public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
         public Bondstone.Modules.BondstoneModuleBuilder UseDurableMessaging() { }
         public Bondstone.Modules.BondstoneModuleBuilder UseOutboxPersistenceProvider(string providerName) { }
@@ -352,6 +354,16 @@ namespace Bondstone.Modules
         public Bondstone.Modules.ModuleEventSubscriberRegistration RegisterSubscriber<TEvent, THandler>(string messageTypeName, string subscriberIdentity)
             where TEvent : Bondstone.Messaging.IIntegrationEvent
             where THandler :  class, Bondstone.Modules.IIntegrationEventHandler<TEvent> { }
+    }
+    public sealed class BondstoneModuleQueryBuilder
+    {
+        public string ModuleName { get; }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleQueryRoute> RegisterFromAssembly(System.Reflection.Assembly assembly) { }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleQueryRoute> RegisterFromAssemblyContaining<TMarker>() { }
+        public Bondstone.Modules.ModuleQueryRoute RegisterHandler<TQuery, TResult, THandler>()
+            where TQuery : Bondstone.Messaging.IQuery<TResult>
+            where THandler :  class, Bondstone.Modules.IQueryHandler<TQuery, TResult> { }
     }
     public sealed class BondstoneModuleRegistration
     {
@@ -447,6 +459,16 @@ namespace Bondstone.Modules
     {
         System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModulePublishedEventRegistration> PublishedEvents { get; }
     }
+    public interface IModuleQueryExecutor
+    {
+        System.Threading.Tasks.ValueTask<TResult> ExecuteAsync<TResult>(string moduleName, Bondstone.Messaging.IQuery<TResult> query, System.Threading.CancellationToken ct = default);
+    }
+    public interface IModuleQueryRouteRegistry
+    {
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleQueryRoute> Routes { get; }
+        Bondstone.Modules.ModuleQueryRoute GetByQueryType(string moduleName, System.Type queryType);
+        bool TryGetByQueryType(string moduleName, System.Type queryType, out Bondstone.Modules.ModuleQueryRoute? route);
+    }
     public interface IModuleRuntimeExecutionContext
     {
         string ModuleName { get; }
@@ -460,6 +482,11 @@ namespace Bondstone.Modules
     public interface IModuleTransactionRunner
     {
         System.Threading.Tasks.ValueTask ExecuteAsync(Bondstone.Modules.IModuleRuntimeExecutionContext context, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> operation, System.Threading.CancellationToken ct = default);
+    }
+    public interface IQueryHandler<in TQuery, TResult>
+        where in TQuery : Bondstone.Messaging.IQuery<TResult>
+    {
+        System.Threading.Tasks.ValueTask<TResult> HandleAsync(TQuery query, System.Threading.CancellationToken ct = default);
     }
     public sealed class ModuleCommandExecutionResult : System.IEquatable<Bondstone.Modules.ModuleCommandExecutionResult>
     {
@@ -521,6 +548,13 @@ namespace Bondstone.Modules
         public string MessageTypeName { get; }
         public Bondstone.Messaging.MessageTypeRegistration MessageTypeRegistration { get; }
         public string ModuleName { get; }
+    }
+    public sealed class ModuleQueryRoute
+    {
+        public System.Type HandlerType { get; }
+        public string ModuleName { get; }
+        public System.Type QueryType { get; }
+        public System.Type ResultType { get; }
     }
 }
 namespace Bondstone.Persistence

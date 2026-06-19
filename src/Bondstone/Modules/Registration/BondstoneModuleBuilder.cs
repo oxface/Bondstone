@@ -13,6 +13,7 @@ public sealed class BondstoneModuleBuilder
         string name,
         IMessageTypeRegistry messageTypeRegistry,
         ModuleCommandRouteRegistry commandRouteRegistry,
+        ModuleQueryRouteRegistry queryRouteRegistry,
         ModulePublishedEventRegistry publishedEventRegistry,
         ModuleEventSubscriberRegistry eventSubscriberRegistry,
         BondstoneModuleRegistry moduleRegistry,
@@ -22,6 +23,7 @@ public sealed class BondstoneModuleBuilder
         ArgumentNullException.ThrowIfNull(outbox);
         ArgumentNullException.ThrowIfNull(messageTypeRegistry);
         ArgumentNullException.ThrowIfNull(commandRouteRegistry);
+        ArgumentNullException.ThrowIfNull(queryRouteRegistry);
         ArgumentNullException.ThrowIfNull(publishedEventRegistry);
         ArgumentNullException.ThrowIfNull(eventSubscriberRegistry);
         ArgumentNullException.ThrowIfNull(moduleRegistry);
@@ -38,6 +40,10 @@ public sealed class BondstoneModuleBuilder
             messageTypeRegistry,
             commandRouteRegistry,
             commandValidatorRegistry);
+        Queries = new BondstoneModuleQueryBuilder(
+            services,
+            Name,
+            queryRouteRegistry);
         Events = new BondstoneModuleEventBuilder(
             services,
             Name,
@@ -54,6 +60,8 @@ public sealed class BondstoneModuleBuilder
     public string Name { get; }
 
     public BondstoneModuleCommandBuilder Commands { get; }
+
+    public BondstoneModuleQueryBuilder Queries { get; }
 
     public BondstoneModuleEventBuilder Events { get; }
 

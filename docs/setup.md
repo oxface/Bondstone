@@ -6,8 +6,8 @@ This document shows the current host setup shape for Bondstone.
 
 Install the packages needed for the host:
 
-- `Bondstone` for core module, command, integration-event, domain-event, and
-  module execution contracts.
+- `Bondstone` for core module, command, query, integration-event,
+  domain-event, and module execution contracts.
 - `Bondstone.Hosting` when the host runs the durable outbox worker or the
   durable incoming inbox processing worker.
 - `Bondstone.Persistence` for provider-neutral durable envelopes, inbox,
@@ -32,8 +32,8 @@ Install the packages needed for the host:
 
 For a normal PostgreSQL-backed host, start with:
 
-- `Bondstone` for module registration, durable send/publish contracts, and
-  module receive pipelines;
+- `Bondstone` for module registration, immediate command/query execution,
+  durable send/publish contracts, and module receive pipelines;
 - `Bondstone.Hosting` for hosted durable workers;
 - `Bondstone.Persistence.EntityFrameworkCore` and
   `Bondstone.Persistence.EntityFrameworkCore.Postgres` for EF-backed module
@@ -102,9 +102,9 @@ Common namespaces for this path are:
 
 - `Bondstone.Configuration` for `AddBondstone` and `BondstoneBuilder`.
 - `Bondstone.Modules` for `IBondstoneModule`, `BondstoneModuleBuilder`,
-  command handlers, event handlers, and module registration.
-- `Bondstone.Messaging` for `ICommand`, `IDurableCommand`,
-  `IIntegrationEvent`, `DurableCommandIdentityAttribute`,
+  command handlers, query handlers, event handlers, and module registration.
+- `Bondstone.Messaging` for `ICommand`, `IQuery<TResult>`,
+  `IDurableCommand`, `IIntegrationEvent`, `DurableCommandIdentityAttribute`,
   `IntegrationEventIdentityAttribute`, `IDurableCommandSender`, and
   `IDurableEventPublisher`.
 - `Bondstone.DomainEvents` for optional `IDomainEvent` and
@@ -251,6 +251,7 @@ public sealed class FulfillmentBondstoneModule(string connectionString)
             schema: FulfillmentModule.ModuleName);
 
         module.Commands.RegisterFromAssemblyContaining<ReserveInventoryHandler>();
+        module.Queries.RegisterFromAssemblyContaining<GetInventoryAvailabilityHandler>();
         module.Events.RegisterPublishedEvent<InventoryReservedEvent>();
         module.Events.RegisterSubscriber<OrderPlacedEvent, RecordOrderPlacedHandler>(
             "fulfillment.order-placed-projection.v1");
@@ -259,12 +260,19 @@ public sealed class FulfillmentBondstoneModule(string connectionString)
 ```
 
 Assembly scanning registers concrete `ICommandHandler<TCommand>` and
-`ICommandHandler<TCommand, TResult>` implementations in the marker assembly.
-Use explicit registration when the module needs a visible handler identity or
-does not want assembly scanning:
+`ICommandHandler<TCommand, TResult>` implementations from
+`module.Commands`, and concrete `IQueryHandler<TQuery, TResult>`
+implementations from `module.Queries`, in the marker assembly. Use explicit
+command registration when the module needs a visible handler identity, or use
+explicit command/query registration when the module does not want assembly
+scanning:
 
 ```csharp
 module.Commands.RegisterHandler<ReserveInventoryCommand, ReserveInventoryHandler>();
+module.Queries.RegisterHandler<
+    GetInventoryAvailabilityQuery,
+    InventoryAvailability,
+    GetInventoryAvailabilityHandler>();
 ```
 
 Durable command contracts use stable message identity:
@@ -633,6 +641,61 @@ Keep command validation in `ICommandValidator<TCommand>`. Keep authorization,
 auditing, logging, metrics enrichment, and similar application concerns in
 ordinary handler code, DI decorators, endpoint filters, host-specific
 middleware, or the application framework chosen by the consumer app.
+
+## Immediate Module Queries
+
+Use module queries for immediate same-process reads that should respect module
+registration without durable command semantics. Query handlers return a typed
+result and do not receive Bondstone's command module execution context, so
+`IDurableCommandSender` and `IDurableEventPublisher` still reject durable
+send/publish attempts from query execution.
+
+```csharp
+public sealed record GetInventoryAvailabilityQuery(string Sku)
+    : IQuery<InventoryAvailability>;
+
+public sealed record InventoryAvailability(string Sku, int Available);
+
+public sealed class GetInventoryAvailabilityHandler(FulfillmentDbContext dbContext)
+    : IQueryHandler<GetInventoryAvailabilityQuery, InventoryAvailability>
+{
+    public async ValueTask<InventoryAvailability> HandleAsync(
+        GetInventoryAvailabilityQuery query,
+        CancellationToken ct = default)
+    {
+        int available = await dbContext.Inventory
+            .Where(item => item.Sku == query.Sku)
+            .SumAsync(item => item.Available, ct);
+
+        return new InventoryAvailability(query.Sku, available);
+    }
+}
+```
+
+Register queries on the owning module and execute them through
+`IModuleQueryExecutor`:
+
+```csharp
+module.Queries.RegisterHandler<
+    GetInventoryAvailabilityQuery,
+    InventoryAvailability,
+    GetInventoryAvailabilityHandler>();
+
+InventoryAvailability availability =
+    await moduleQueryExecutor.ExecuteAsync(
+        FulfillmentModule.ModuleName,
+        new GetInventoryAvailabilityQuery(sku),
+        ct);
+```
+
+Queries are read-only Bondstone boundaries. The query pipeline does not write
+durable inbox rows, outgoing outbox rows, operation state, domain-event
+records, or integration-event records, and query handlers do not receive the
+ambient command/subscriber module execution context that enables durable
+send/publish APIs. Keep query handlers from directly using low-level durable
+mutation services; use `IModuleCommandExecutor` for immediate state-changing
+module commands and `IDurableCommandSender` plus operation observation when
+work must survive restart or service extraction.
 
 ## Result-Returning Module Commands
 

@@ -1,5 +1,7 @@
 using Azure.Messaging.ServiceBus;
 using Bondstone.Messaging;
+using Bondstone.Modules;
+using Bondstone.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,7 +12,8 @@ internal sealed class ServiceBusReceiveWorker(
     ServiceBusClient client,
     IServiceScopeFactory scopeFactory,
     IEnumerable<ServiceBusReceiveWorkerRegistration> registrations,
-    ILogger<ServiceBusReceiveWorker> logger)
+    ILogger<ServiceBusReceiveWorker> logger,
+    TimeProvider? timeProvider = null)
     : BackgroundService
 {
     private readonly ServiceBusClient _client =
@@ -21,6 +24,7 @@ internal sealed class ServiceBusReceiveWorker(
         registrations?.ToArray() ?? throw new ArgumentNullException(nameof(registrations));
     private readonly ILogger<ServiceBusReceiveWorker> _logger =
         logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
@@ -84,16 +88,98 @@ internal sealed class ServiceBusReceiveWorker(
         ServiceBusReceiveWorkerRegistration registration)
     {
         await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
-        IDurableEnvelopeReceiver receiver =
-            scope.ServiceProvider.GetRequiredService<IDurableEnvelopeReceiver>();
-
-        await receiver.ReceiveAsync(
+        await IngestToDurableIncomingInboxAsync(
+            scope.ServiceProvider,
             args.Message.Body.ToMemory(),
-            registration.Binding,
+            registration,
             args.CancellationToken);
         await args.CompleteMessageAsync(
             args.Message,
             args.CancellationToken);
+    }
+
+    private async ValueTask IngestToDurableIncomingInboxAsync(
+        IServiceProvider serviceProvider,
+        ReadOnlyMemory<byte> body,
+        ServiceBusReceiveWorkerRegistration registration,
+        CancellationToken ct)
+    {
+        IDurableMessageEnvelopeSerializer serializer =
+            serviceProvider.GetRequiredService<IDurableMessageEnvelopeSerializer>();
+        DurableMessageEnvelope envelope = serializer.Deserialize(body);
+        DurableIncomingInboxRecord record = CreateIncomingInboxRecord(
+            serviceProvider,
+            envelope,
+            registration);
+
+        IDurableIncomingInboxIngestionBoundaryResolver boundaryResolver =
+            serviceProvider.GetRequiredService<IDurableIncomingInboxIngestionBoundaryResolver>();
+        DurableIncomingInboxIngestionBoundary boundary =
+            boundaryResolver.Resolve(record.ReceiverModule);
+
+        await boundary.IngestAndSaveAsync(record, ct);
+    }
+
+    private DurableIncomingInboxRecord CreateIncomingInboxRecord(
+        IServiceProvider serviceProvider,
+        DurableMessageEnvelope envelope,
+        ServiceBusReceiveWorkerRegistration registration)
+    {
+        DurableIncomingInboxKey key = envelope.MessageKind switch
+        {
+            MessageKind.Command => ResolveCommandKey(serviceProvider, envelope),
+            MessageKind.Event => ResolveEventKey(serviceProvider, envelope, registration),
+            _ => throw new NotSupportedException(
+                $"Azure Service Bus durable incoming inbox ingestion does not support message kind '{envelope.MessageKind}'."),
+        };
+
+        return new DurableIncomingInboxRecord(
+            key,
+            envelope,
+            _timeProvider.GetUtcNow(),
+            sourceTransportName: registration.SourceTransportName);
+    }
+
+    private static DurableIncomingInboxKey ResolveCommandKey(
+        IServiceProvider serviceProvider,
+        DurableMessageEnvelope envelope)
+    {
+        IModuleCommandRouteRegistry routeRegistry =
+            serviceProvider.GetRequiredService<IModuleCommandRouteRegistry>();
+        ModuleCommandRoute route = routeRegistry.GetByMessageTypeName(
+            envelope.TargetModule!,
+            envelope.MessageTypeName);
+        string handlerIdentity = route.HandlerIdentity
+            ?? throw new InvalidOperationException(
+                $"Durable command route for message type '{envelope.MessageTypeName}' does not have a handler identity.");
+
+        return DurableIncomingInboxKey.ForCommandHandler(
+            envelope.MessageId,
+            route.ModuleName,
+            handlerIdentity);
+    }
+
+    private static DurableIncomingInboxKey ResolveEventKey(
+        IServiceProvider serviceProvider,
+        DurableMessageEnvelope envelope,
+        ServiceBusReceiveWorkerRegistration registration)
+    {
+        DurableEnvelopeReceiveBinding binding = registration.Binding
+            ?? throw new ArgumentException(
+                "Azure Service Bus durable incoming inbox event ingestion requires subscriber module and subscriber identity binding.",
+                nameof(registration));
+
+        IModuleEventSubscriberRegistry subscriberRegistry =
+            serviceProvider.GetRequiredService<IModuleEventSubscriberRegistry>();
+        ModuleEventSubscriberRegistration subscriber = subscriberRegistry.GetSubscriber(
+            binding.SubscriberModule,
+            envelope.MessageTypeName,
+            binding.SubscriberIdentity);
+
+        return DurableIncomingInboxKey.ForEventSubscriber(
+            envelope.MessageId,
+            subscriber.ModuleName,
+            subscriber.SubscriberIdentity);
     }
 
     private Task ProcessErrorAsync(

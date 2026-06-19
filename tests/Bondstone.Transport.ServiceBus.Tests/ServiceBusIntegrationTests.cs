@@ -1,6 +1,7 @@
 using Azure.Messaging.ServiceBus;
 using Bondstone.Configuration;
 using Bondstone.Messaging;
+using Bondstone.Modules;
 using Bondstone.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -96,11 +97,11 @@ public sealed class ServiceBusIntegrationTests(ServiceBusFixture fixture)
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task ReceiveWorker_ConsumesServiceBusEnvelopeAndCallsBondstoneReceiver()
+    public async Task ReceiveWorker_ConsumesServiceBusEnvelopeAndIngestsDurableIncomingInboxRecord()
     {
         await using var client = new ServiceBusClient(fixture.ConnectionString);
-        var receiver = new CapturingEnvelopeReceiver();
-        ServiceProvider provider = BuildReceiveProvider(client, receiver);
+        var ingestionStore = new CapturingIncomingInboxIngestionStore();
+        ServiceProvider provider = BuildReceiveProvider(client, ingestionStore);
         await using (provider.ConfigureAwait(false))
         {
             IHostedService worker = provider
@@ -124,10 +125,12 @@ public sealed class ServiceBusIntegrationTests(ServiceBusFixture fixture)
                     },
                     CancellationToken.None);
 
-                CapturedEnvelope captured = await receiver.WaitAsync(
+                DurableIncomingInboxRecord captured = await ingestionStore.WaitAsync(
                     CancellationToken.None);
                 Assert.Equal(envelope.MessageId, captured.Envelope.MessageId);
-                Assert.Null(captured.Binding);
+                Assert.Equal("fulfillment", captured.ReceiverModule);
+                Assert.Equal("fulfillment.reserve-inventory.v1", captured.HandlerIdentity);
+                Assert.Equal($"servicebus:{QueueName}", captured.SourceTransportName);
             }
             finally
             {
@@ -138,11 +141,11 @@ public sealed class ServiceBusIntegrationTests(ServiceBusFixture fixture)
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task ReceiveWorker_ConsumesServiceBusEventEnvelopeWithBinding()
+    public async Task ReceiveWorker_ConsumesServiceBusEventEnvelopeWithBindingAndIngestsDurableIncomingInboxRecord()
     {
         await using var client = new ServiceBusClient(fixture.ConnectionString);
-        var receiver = new CapturingEnvelopeReceiver();
-        ServiceProvider provider = BuildReceiveProvider(client, receiver, receiveEvent: true);
+        var ingestionStore = new CapturingIncomingInboxIngestionStore();
+        ServiceProvider provider = BuildReceiveProvider(client, ingestionStore, receiveEvent: true);
         await using (provider.ConfigureAwait(false))
         {
             IHostedService worker = provider
@@ -166,14 +169,12 @@ public sealed class ServiceBusIntegrationTests(ServiceBusFixture fixture)
                     },
                     CancellationToken.None);
 
-                CapturedEnvelope captured = await receiver.WaitAsync(
+                DurableIncomingInboxRecord captured = await ingestionStore.WaitAsync(
                     CancellationToken.None);
                 Assert.Equal(envelope.MessageId, captured.Envelope.MessageId);
-                Assert.Equal(
-                    new DurableEnvelopeReceiveBinding(
-                        SubscriberModule,
-                        SubscriberIdentity),
-                    captured.Binding);
+                Assert.Equal(SubscriberModule, captured.ReceiverModule);
+                Assert.Equal(SubscriberIdentity, captured.HandlerIdentity);
+                Assert.Equal($"servicebus:{TopicName}/{SubscriptionName}", captured.SourceTransportName);
             }
             finally
             {
@@ -208,15 +209,30 @@ public sealed class ServiceBusIntegrationTests(ServiceBusFixture fixture)
 
     private static ServiceProvider BuildReceiveProvider(
         ServiceBusClient client,
-        CapturingEnvelopeReceiver receiver,
+        CapturingIncomingInboxIngestionStore ingestionStore,
         bool receiveEvent = false)
     {
         var services = new ServiceCollection();
         services.AddSingleton(client);
         services.AddLogging();
-        services.AddSingleton<IDurableEnvelopeReceiver>(receiver);
+        services.AddSingleton<IDurableIncomingInboxIngestionStore>(ingestionStore);
+        services.AddSingleton<IDurableIncomingInboxIngestionPersistenceScope>(
+            new CapturingIncomingInboxIngestionScope());
         services.AddBondstone(bondstone =>
         {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<ReserveInventoryCommand, ReserveInventoryHandler>();
+            });
+            bondstone.Module(SubscriberModule, module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Events.RegisterSubscriber<OrderPlacedEvent, OrderPlacedHandler>(
+                    SubscriberIdentity);
+            });
             bondstone.UseServiceBusReceiveWorker(options =>
             {
                 if (receiveEvent)
@@ -283,76 +299,23 @@ public sealed class ServiceBusIntegrationTests(ServiceBusFixture fixture)
             DateTimeOffset.UtcNow);
     }
 
-    private sealed class CapturingEnvelopeReceiver : IDurableEnvelopeReceiver
+    private sealed class CapturingIncomingInboxIngestionStore : IDurableIncomingInboxIngestionStore
     {
-        private readonly TaskCompletionSource<CapturedEnvelope> _received =
+        private readonly TaskCompletionSource<DurableIncomingInboxRecord> _received =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public ValueTask<DurableInboxHandleResult> ReceiveAsync(
-            DurableMessageEnvelope envelope,
-            DurableEnvelopeReceiveBinding? binding = null,
+        public ValueTask<DurableIncomingInboxIngestionResult> IngestAsync(
+            DurableIncomingInboxRecord record,
             CancellationToken ct = default)
         {
-            _received.TrySetResult(new CapturedEnvelope(envelope, binding));
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            DurableInboxMessageKey key = binding is null
-                ? DurableInboxMessageKey.ForCommandHandler(
-                    envelope.MessageId,
-                    envelope.TargetModule ?? "test",
-                    envelope.MessageTypeName)
-                : DurableInboxMessageKey.ForEventSubscriber(
-                    envelope.MessageId,
-                    binding.SubscriberModule,
-                    binding.SubscriberIdentity);
-            return new ValueTask<DurableInboxHandleResult>(
-                new DurableInboxHandleResult(
-                    DurableInboxHandleStatus.Handled,
-                    new DurableInboxRecord(
-                        key,
-                        now,
-                        now)));
+            _received.TrySetResult(record);
+            return ValueTask.FromResult(
+                new DurableIncomingInboxIngestionResult(
+                    DurableIncomingInboxIngestionStatus.Ingested,
+                    record));
         }
 
-        public ValueTask<DurableInboxHandleResult> ReceiveAsync(
-            ReadOnlyMemory<byte> utf8Json,
-            DurableEnvelopeReceiveBinding? binding = null,
-            CancellationToken ct = default)
-        {
-            var serializer = new SystemTextJsonDurableMessageEnvelopeSerializer();
-            return ReceiveAsync(serializer.Deserialize(utf8Json), binding, ct);
-        }
-
-        public ValueTask<DurableInboxHandleResult> ReceiveAsync(
-            string json,
-            DurableEnvelopeReceiveBinding? binding = null,
-            CancellationToken ct = default)
-        {
-            var serializer = new SystemTextJsonDurableMessageEnvelopeSerializer();
-            return ReceiveAsync(serializer.Deserialize(json), binding, ct);
-        }
-
-        public ValueTask<DurableInboxHandleResult> ReceiveCommandAsync(
-            DurableMessageEnvelope envelope,
-            CancellationToken ct = default)
-        {
-            return ReceiveAsync(envelope, binding: null, ct);
-        }
-
-        public ValueTask<DurableInboxHandleResult> ReceiveEventAsync(
-            DurableMessageEnvelope envelope,
-            string subscriberModule,
-            string subscriberIdentity,
-            CancellationToken ct = default)
-        {
-            return ReceiveAsync(
-                envelope,
-                new DurableEnvelopeReceiveBinding(
-                    subscriberModule,
-                    subscriberIdentity),
-                ct);
-        }
-
-        public async Task<CapturedEnvelope> WaitAsync(
+        public async Task<DurableIncomingInboxRecord> WaitAsync(
             CancellationToken ct)
         {
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
@@ -365,14 +328,53 @@ public sealed class ServiceBusIntegrationTests(ServiceBusFixture fixture)
 
             if (completed != _received.Task)
             {
-                throw new TimeoutException("Service Bus receive worker did not call Bondstone receiver.");
+                throw new TimeoutException("Service Bus receive worker did not ingest a durable incoming inbox record.");
             }
 
             return await _received.Task;
         }
     }
 
-    private sealed record CapturedEnvelope(
-        DurableMessageEnvelope Envelope,
-        DurableEnvelopeReceiveBinding? Binding);
+    private sealed class CapturingIncomingInboxIngestionScope
+        : IDurableIncomingInboxIngestionPersistenceScope
+    {
+        public async ValueTask<TResult> ExecuteAsync<TResult>(
+            Func<IDurableIncomingInboxIngestionPersistenceScope, CancellationToken, ValueTask<TResult>> operation,
+            CancellationToken ct = default)
+        {
+            return await operation(this, ct);
+        }
+
+        public ValueTask SaveChangesAsync(
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [DurableCommandIdentity("fulfillment.reserve-inventory.v1")]
+    private sealed record ReserveInventoryCommand(string OrderId) : IDurableCommand;
+
+    private sealed class ReserveInventoryHandler : ICommandHandler<ReserveInventoryCommand>
+    {
+        public ValueTask HandleAsync(
+            ReserveInventoryCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [IntegrationEventIdentity("ordering.order-placed.v1")]
+    private sealed record OrderPlacedEvent(string OrderId) : IIntegrationEvent;
+
+    private sealed class OrderPlacedHandler : IIntegrationEventHandler<OrderPlacedEvent>
+    {
+        public ValueTask HandleAsync(
+            OrderPlacedEvent integrationEvent,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
 }

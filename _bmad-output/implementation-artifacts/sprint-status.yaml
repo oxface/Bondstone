@@ -1,5 +1,5 @@
 # generated: 2026-06-18T15:39:19+00:00
-# last_updated: 2026-06-19T21:18:38+00:00
+# last_updated: 2026-06-19T21:51:59+00:00
 # project: Bondstone
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-18T15:39:19+00:00
-last_updated: 2026-06-19T21:18:38+00:00
+last_updated: 2026-06-19T21:51:59+00:00
 project: Bondstone
 project_key: NOKEY
 tracking_system: file-system
@@ -74,7 +74,7 @@ development_status:
   epic-5-retrospective: optional
   epic-6: in-progress
   6-1-source-outbox-atomicity: done
-  6-2-durable-receive-transaction-boundary: backlog
+  6-2-durable-receive-transaction-boundary: review
   6-3-ef-postgresql-production-persistence-and-migrations: backlog
   epic-6-retrospective: optional
   epic-7: backlog

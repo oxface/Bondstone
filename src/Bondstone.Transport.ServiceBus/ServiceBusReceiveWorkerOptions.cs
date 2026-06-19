@@ -53,7 +53,10 @@ public sealed class ServiceBusReceiveWorkerOptions
             TopicName,
             SubscriptionName,
             Binding,
-            CloneManualCompletionProcessorOptions(ProcessorOptions));
+            CloneManualCompletionProcessorOptions(ProcessorOptions),
+            isQueue
+                ? $"servicebus:{QueueName!.Trim()}"
+                : $"servicebus:{TopicName!.Trim()}/{SubscriptionName!.Trim()}");
     }
 
     internal static ServiceBusProcessorOptions CloneManualCompletionProcessorOptions(

@@ -8,4 +8,5 @@ internal sealed record ServiceBusReceiveWorkerRegistration(
     string? TopicName,
     string? SubscriptionName,
     DurableEnvelopeReceiveBinding? Binding,
-    ServiceBusProcessorOptions ProcessorOptions);
+    ServiceBusProcessorOptions ProcessorOptions,
+    string SourceTransportName);

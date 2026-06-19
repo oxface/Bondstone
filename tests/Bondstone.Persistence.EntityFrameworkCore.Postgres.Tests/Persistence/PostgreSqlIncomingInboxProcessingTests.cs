@@ -1,7 +1,9 @@
 using Bondstone.Configuration;
+using Bondstone.DomainEvents;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
@@ -72,6 +74,13 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
         Assert.Contains("A-100", operation.ResultPayload, StringComparison.Ordinal);
         Assert.Equal("fulfillment", operation.ModuleName);
         Assert.Equal("fulfillment.reserve-inventory.v1", operation.HandlerIdentity);
+
+        DomainEventAggregateEntity aggregate = await context.DomainEventAggregates.SingleAsync();
+        Assert.Equal("A-100", aggregate.Id);
+        DomainEventRecordEntity domainEvent = await context.Set<DomainEventRecordEntity>().SingleAsync();
+        Assert.Equal("fulfillment", domainEvent.ModuleName);
+        Assert.Equal("fulfillment.inventory-reserved.domain.v1", domainEvent.DomainEventName);
+        Assert.Contains("\"inventoryId\":\"A-100\"", domainEvent.Payload, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -144,9 +153,11 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
                 maxAttempts: 2,
                 retryDelays: [TimeSpan.FromMinutes(1)]));
         await ResetDatabaseAsync(provider);
+        Guid operationId = Guid.Parse("5ee45ffc-edfc-4627-85ec-612f4a0c739e");
         DurableIncomingInboxRecord record = CreateCommandRecord(
             Guid.Parse("ac995e64-329d-46f4-a3ce-d2e782f531e5"),
-            new FailInventoryCommand("A-300"));
+            new FailInventoryCommand("A-300"),
+            durableOperationId: operationId);
 
         await IngestAsync(provider, record);
         DurableIncomingInboxProcessingResult processingResult = await ProcessAsync(provider);
@@ -164,9 +175,13 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
         Assert.Equal(DurableIncomingInboxStatus.RetryScheduled, incoming.Status);
         Assert.Equal(1, incoming.AttemptCount);
         Assert.Equal(UtcNow.AddMinutes(1), incoming.NextAttemptAtUtc);
+        Assert.Equal(UtcNow, incoming.FailedAtUtc);
         Assert.Contains("boom:A-300", incoming.FailureReason, StringComparison.Ordinal);
         Assert.Empty(await context.Set<InboxMessageEntity>().ToListAsync());
         Assert.Empty(await context.HandledMessages.ToListAsync());
+        Assert.Empty(await context.Set<OutboxMessageEntity>().ToListAsync());
+        Assert.Empty(await context.Set<OperationStateEntity>().ToListAsync());
+        Assert.Empty(await context.Set<DomainEventRecordEntity>().ToListAsync());
     }
 
     [Fact]
@@ -196,8 +211,63 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
         Assert.Equal(DurableIncomingInboxStatus.TerminalFailed, incoming.Status);
         Assert.Equal(1, incoming.AttemptCount);
         Assert.Null(incoming.NextAttemptAtUtc);
+        Assert.Equal(UtcNow, incoming.FailedAtUtc);
         Assert.Contains("boom:A-400", incoming.FailureReason, StringComparison.Ordinal);
         Assert.Empty(await context.Set<OperationStateEntity>().ToListAsync());
+
+        IDurableIncomingInboxInspectionStore inspectionStore =
+            CreateIncomingInspectionStore(verificationScope.ServiceProvider);
+        DurableIncomingInboxRecord terminal = Assert.Single(
+            await inspectionStore.FindTerminalFailedAsync(
+                failedAtOrBeforeUtc: UtcNow,
+                receiverModule: "fulfillment",
+                sourceTransportName: "rabbitmq:fulfillment.commands"));
+        Assert.Equal(DurableIncomingInboxStatus.TerminalFailed, terminal.State.Status);
+        Assert.Equal("fulfillment", terminal.ReceiverModule);
+        Assert.Equal("fulfillment.fail-inventory.v1", terminal.HandlerIdentity);
+        Assert.Equal(MessageKind.Command, terminal.Envelope.MessageKind);
+        Assert.Equal("fulfillment.fail-inventory.v1", terminal.Envelope.MessageTypeName);
+        Assert.Equal("rabbitmq:fulfillment.commands", terminal.SourceTransportName);
+        Assert.Contains("boom:A-400", terminal.State.FailureReason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task IncomingInboxInspectionStore_WhenProcessingClaimIsStale_ReturnsStaleEvidence()
+    {
+        await using ServiceProvider provider = CreateProvider();
+        await ResetDatabaseAsync(provider);
+        DurableIncomingInboxRecord staleRecord = CreateCommandRecord(
+            Guid.Parse("51b09b9d-fd2e-4713-afb7-a4598e0700ba"),
+            new ReserveInventoryCommand("A-500"),
+            state: new DurableIncomingInboxState(
+                DurableIncomingInboxStatus.Processing,
+                attemptCount: 1,
+                claimedBy: "stale-worker",
+                claimedUntilUtc: UtcNow.AddMinutes(-5)));
+
+        await using AsyncServiceScope seedScope = provider.CreateAsyncScope();
+        IncomingInboxProcessingTestDbContext seedContext =
+            seedScope.ServiceProvider.GetRequiredService<IncomingInboxProcessingTestDbContext>();
+        seedContext.Set<IncomingInboxMessageEntity>().Add(
+            IncomingInboxMessageEntity.FromRecord(staleRecord));
+        await seedContext.SaveChangesAsync();
+
+        await using AsyncServiceScope verificationScope = provider.CreateAsyncScope();
+        IDurableIncomingInboxInspectionStore inspectionStore =
+            CreateIncomingInspectionStore(verificationScope.ServiceProvider);
+
+        DurableIncomingInboxRecord stale = Assert.Single(
+            await inspectionStore.FindStaleProcessingAsync(
+                UtcNow,
+                receiverModule: "fulfillment",
+                sourceTransportName: "rabbitmq:fulfillment.commands"));
+
+        Assert.Equal(DurableIncomingInboxStatus.Processing, stale.State.Status);
+        Assert.Equal("stale-worker", stale.State.ClaimedBy);
+        Assert.Equal(UtcNow.AddMinutes(-5), stale.State.ClaimedUntilUtc);
+        Assert.Equal("fulfillment", stale.ReceiverModule);
+        Assert.Equal("fulfillment.reserve-inventory.v1", stale.HandlerIdentity);
     }
 
     private ServiceProvider CreateProvider(
@@ -217,6 +287,7 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
                 module.UseDurableMessaging();
                 module.UsePostgreSqlPersistence<IncomingInboxProcessingTestDbContext>(
                     $"{fixture.ConnectionString};Pooling=false");
+                module.UseEntityFrameworkCoreDomainEventPersistence();
                 module.Commands.RegisterHandler<
                     ReserveInventoryCommand,
                     ReserveInventoryResult,
@@ -246,6 +317,7 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
                 module.UseDurableMessaging();
                 module.UsePostgreSqlPersistence<IncomingInboxProcessingTestDbContext>(
                     $"{fixture.ConnectionString};Pooling=false");
+                module.UseEntityFrameworkCoreDomainEventPersistence();
                 module.Commands.RegisterHandler<
                     ReserveInventoryCommand,
                     ReserveInventoryResult,
@@ -324,10 +396,18 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
             maxCount: 10);
     }
 
+    private static IDurableIncomingInboxInspectionStore CreateIncomingInspectionStore(
+        IServiceProvider serviceProvider)
+    {
+        return new EntityFrameworkCoreDurableIncomingInboxInspectionStore<IncomingInboxProcessingTestDbContext>(
+            serviceProvider.GetRequiredService<IncomingInboxProcessingTestDbContext>());
+    }
+
     private static DurableIncomingInboxRecord CreateCommandRecord<TCommand>(
         Guid messageId,
         TCommand command,
-        Guid? durableOperationId = null)
+        Guid? durableOperationId = null,
+        DurableIncomingInboxState? state = null)
         where TCommand : IDurableCommand
     {
         string messageTypeName = typeof(TCommand) == typeof(ReserveInventoryCommand)
@@ -353,6 +433,7 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
             key,
             envelope,
             UtcNow.AddSeconds(-30),
+            state,
             sourceTransportName: "rabbitmq:fulfillment.commands");
     }
 
@@ -399,6 +480,8 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
             CancellationToken ct = default)
         {
             context.HandledMessages.Add(new HandledMessageEntity($"reserve:{command.OrderId}"));
+            context.DomainEventAggregates.Add(
+                DomainEventAggregateEntity.Reserve(command.OrderId));
             await publisher.PublishAsync(
                 new InventoryReservedEvent(command.OrderId),
                 ct: ct);
@@ -409,14 +492,19 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
     [DurableCommandIdentity("fulfillment.fail-inventory.v1")]
     private sealed record FailInventoryCommand(string OrderId) : IDurableCommand;
 
-    private sealed class FailInventoryHandler(IncomingInboxProcessingTestDbContext context)
+    private sealed class FailInventoryHandler(
+        IncomingInboxProcessingTestDbContext context,
+        IDurableEventPublisher publisher)
         : ICommandHandler<FailInventoryCommand>
     {
-        public ValueTask HandleAsync(
+        public async ValueTask HandleAsync(
             FailInventoryCommand command,
             CancellationToken ct = default)
         {
             context.HandledMessages.Add(new HandledMessageEntity($"fail:{command.OrderId}"));
+            await publisher.PublishAsync(
+                new InventoryReservedEvent(command.OrderId),
+                ct: ct);
             throw new InvalidOperationException($"boom:{command.OrderId}");
         }
     }
@@ -439,23 +527,65 @@ public sealed class PostgreSqlIncomingInboxProcessingTests(PostgreSqlFixture fix
     [IntegrationEventIdentity("fulfillment.inventory-reserved.v1")]
     private sealed record InventoryReservedEvent(string OrderId) : IIntegrationEvent;
 
+    [DomainEventIdentity("fulfillment.inventory-reserved.domain.v1")]
+    private sealed record InventoryReservedDomainEvent(string InventoryId) : IDomainEvent;
+
     private sealed class IncomingInboxProcessingTestDbContext(
         DbContextOptions<IncomingInboxProcessingTestDbContext> options)
         : DbContext(options)
     {
         public DbSet<HandledMessageEntity> HandledMessages => Set<HandledMessageEntity>();
 
+        public DbSet<DomainEventAggregateEntity> DomainEventAggregates =>
+            Set<DomainEventAggregateEntity>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyBondstonePersistence();
+            modelBuilder.ApplyBondstoneDomainEvents();
             modelBuilder.Entity<HandledMessageEntity>(
                 entity => entity.HasKey(record => record.Id));
+            modelBuilder.Entity<DomainEventAggregateEntity>(
+                entity =>
+                {
+                    entity.HasKey(record => record.Id);
+                    entity.Ignore(record => record.PendingDomainEvents);
+                    entity.Ignore(record => record.ClearCount);
+                });
         }
     }
 
     private sealed class HandledMessageEntity(string id)
     {
         public string Id { get; set; } = id;
+    }
+
+    private sealed class DomainEventAggregateEntity : IDomainEventSource
+    {
+        private readonly List<IDomainEvent> _pendingDomainEvents = [];
+
+        public string Id { get; set; } = string.Empty;
+
+        public int ClearCount { get; private set; }
+
+        public IReadOnlyCollection<IDomainEvent> PendingDomainEvents => _pendingDomainEvents;
+
+        public static DomainEventAggregateEntity Reserve(
+            string inventoryId)
+        {
+            var source = new DomainEventAggregateEntity
+            {
+                Id = inventoryId,
+            };
+            source._pendingDomainEvents.Add(new InventoryReservedDomainEvent(inventoryId));
+            return source;
+        }
+
+        public void ClearPendingDomainEvents()
+        {
+            ClearCount++;
+            _pendingDomainEvents.Clear();
+        }
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider

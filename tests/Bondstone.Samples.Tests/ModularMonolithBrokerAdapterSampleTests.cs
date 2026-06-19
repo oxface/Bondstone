@@ -194,6 +194,7 @@ public sealed class ModularMonolithBrokerAdapterSampleTests(
         BondstoneBuilder bondstone)
     {
         bondstone.UseServiceBusDispatcher(ConfigureServiceBusDispatcher);
+        bondstone.UseDurableIncomingInboxWorker();
         bondstone.UseServiceBusReceiveWorker(options =>
         {
             options.TopicName = ServiceBusIntegrationEventsTopic;
@@ -208,6 +209,7 @@ public sealed class ModularMonolithBrokerAdapterSampleTests(
         BondstoneBuilder bondstone)
     {
         bondstone.UseServiceBusDispatcher(ConfigureServiceBusDispatcher);
+        bondstone.UseDurableIncomingInboxWorker();
         bondstone.UseServiceBusReceiveWorker(options =>
         {
             options.QueueName = ServiceBusFulfillmentCommandsQueue;

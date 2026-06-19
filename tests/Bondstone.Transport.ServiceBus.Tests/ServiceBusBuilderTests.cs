@@ -78,6 +78,25 @@ public sealed class ServiceBusBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void UseServiceBusReceiveWorker_WhenReceiveAndDeleteModeIsEnabled_Throws()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+                bondstone.UseServiceBusReceiveWorker(static options =>
+                {
+                    options.QueueName = "fulfillment.commands";
+                    options.ProcessorOptions.ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete;
+                    options.ReceiveCommand();
+                })));
+
+        Assert.Contains("ReceiveMode", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("PeekLock", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void UseServiceBusReceiveWorker_WhenOptionsAreMutatedAfterRegistration_StoresProcessorOptionsCopy()
     {
         var services = new ServiceCollection();

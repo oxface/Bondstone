@@ -4,7 +4,7 @@ baseline_commit: 23bda7f
 
 # Story 6.2: Durable Receive Transaction Boundary
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -68,6 +68,11 @@ so that ingestion, retry, terminal failure, stale state, and processed state are
   - [x] Run `pnpm backend:test` after runtime code changes.
   - [x] Run `pnpm backend:pack` and review public API baselines only if public/protected package surface changes.
   - [x] Run `pnpm check` as the final broad gate when code, public API, package metadata, samples, or broad docs change.
+
+### Review Findings
+
+- [x] [Review][Patch] Reject Service Bus `ReceiveAndDelete` receive mode before worker registration [src/Bondstone.Transport.ServiceBus/ServiceBusReceiveWorkerOptions.cs:67]
+- [x] [Review][Patch] Register durable incoming inbox workers for Service Bus broker-adapter sample hosts [tests/Bondstone.Samples.Tests/ModularMonolithBrokerAdapterSampleTests.cs:193]
 
 ## Dev Notes
 

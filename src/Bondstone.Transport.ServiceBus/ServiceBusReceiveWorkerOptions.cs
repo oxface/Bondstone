@@ -81,6 +81,12 @@ public sealed class ServiceBusReceiveWorkerOptions
                 "Service Bus receive worker requires ProcessorOptions.AutoCompleteMessages to be false so Bondstone can complete messages after durable receive succeeds.");
         }
 
+        if (clone.ReceiveMode == ServiceBusReceiveMode.ReceiveAndDelete)
+        {
+            throw new InvalidOperationException(
+                "Service Bus receive worker requires ProcessorOptions.ReceiveMode to be PeekLock so Bondstone can durably ingest messages before native settlement.");
+        }
+
         return clone;
     }
 }

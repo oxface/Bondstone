@@ -134,6 +134,38 @@ public sealed class BondstoneBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void RegisterMessagesFromAssemblyContaining_WhenRemoteContractsAreRegistered_RegistersIdentitiesOnly()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstone(builder =>
+        {
+            builder.RegisterMessagesFromAssemblyContaining<BondstoneBuilderTests>();
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IMessageTypeRegistry messageTypeRegistry =
+            serviceProvider.GetRequiredService<IMessageTypeRegistry>();
+        IModuleCommandRouteRegistry routeRegistry =
+            serviceProvider.GetRequiredService<IModuleCommandRouteRegistry>();
+        IModuleEventSubscriberRegistry subscriberRegistry =
+            serviceProvider.GetRequiredService<IModuleEventSubscriberRegistry>();
+        IBondstoneModuleRegistry moduleRegistry =
+            serviceProvider.GetRequiredService<IBondstoneModuleRegistry>();
+
+        Assert.Equal(
+            "sales.test.remote-command.v1",
+            messageTypeRegistry.GetMessageTypeName<TestRemoteCommand>());
+        Assert.Equal(
+            "sales.test.event.v1",
+            messageTypeRegistry.GetMessageTypeName<TestEvent>());
+        Assert.Empty(routeRegistry.Routes);
+        Assert.Empty(subscriberRegistry.Subscribers);
+        Assert.Empty(moduleRegistry.Modules);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void AddBondstone_WhenDefaultMessageRegistryWasRegisteredByType_NormalizesToInstance()
     {
         var services = new ServiceCollection();

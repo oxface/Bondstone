@@ -36,7 +36,8 @@ public sealed class BondstoneModuleEventBuilder
     public MessageTypeRegistration RegisterPublishedEvent<TEvent>()
         where TEvent : IIntegrationEvent
     {
-        MessageTypeRegistration registration = _messageTypeRegistry.Register<TEvent>();
+        MessageTypeRegistration registration =
+            RegisterMessageType<TEvent>("published event message identity");
         _publishedEventRegistry.Register(
             ModulePublishedEventRegistration.Create<TEvent>(
                 ModuleName,
@@ -48,7 +49,10 @@ public sealed class BondstoneModuleEventBuilder
         string messageTypeName)
         where TEvent : IIntegrationEvent
     {
-        MessageTypeRegistration registration = _messageTypeRegistry.Register<TEvent>(messageTypeName);
+        MessageTypeRegistration registration =
+            RegisterMessageType<TEvent>(
+                messageTypeName,
+                "published event message identity");
         _publishedEventRegistry.Register(
             ModulePublishedEventRegistration.Create<TEvent>(
                 ModuleName,
@@ -61,7 +65,8 @@ public sealed class BondstoneModuleEventBuilder
         where TEvent : IIntegrationEvent
         where THandler : class, IIntegrationEventHandler<TEvent>
     {
-        MessageTypeRegistration registration = _messageTypeRegistry.Register<TEvent>();
+        MessageTypeRegistration registration =
+            RegisterMessageType<TEvent>("event subscriber message identity");
         return RegisterSubscriber<TEvent, THandler>(
             registration,
             subscriberIdentity);
@@ -73,7 +78,10 @@ public sealed class BondstoneModuleEventBuilder
         where TEvent : IIntegrationEvent
         where THandler : class, IIntegrationEventHandler<TEvent>
     {
-        MessageTypeRegistration registration = _messageTypeRegistry.Register<TEvent>(messageTypeName);
+        MessageTypeRegistration registration =
+            RegisterMessageType<TEvent>(
+                messageTypeName,
+                "event subscriber message identity");
         return RegisterSubscriber<TEvent, THandler>(
             registration,
             subscriberIdentity);
@@ -94,5 +102,38 @@ public sealed class BondstoneModuleEventBuilder
                 subscriberIdentity);
 
         return _eventSubscriberRegistry.Register(subscriber);
+    }
+
+    private MessageTypeRegistration RegisterMessageType<TEvent>(
+        string registrationDescription)
+        where TEvent : IIntegrationEvent
+    {
+        try
+        {
+            return _messageTypeRegistry.Register<TEvent>();
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new InvalidOperationException(
+                $"Module '{ModuleName}' could not register {registrationDescription} for event type '{typeof(TEvent).FullName}': {exception.Message}",
+                exception);
+        }
+    }
+
+    private MessageTypeRegistration RegisterMessageType<TEvent>(
+        string messageTypeName,
+        string registrationDescription)
+        where TEvent : IIntegrationEvent
+    {
+        try
+        {
+            return _messageTypeRegistry.Register<TEvent>(messageTypeName);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new InvalidOperationException(
+                $"Module '{ModuleName}' could not register {registrationDescription} '{messageTypeName.Trim()}' for event type '{typeof(TEvent).FullName}': {exception.Message}",
+                exception);
+        }
     }
 }

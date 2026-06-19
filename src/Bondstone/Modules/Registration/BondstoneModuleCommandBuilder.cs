@@ -41,7 +41,7 @@ public sealed class BondstoneModuleCommandBuilder
         where THandler : class, ICommandHandler<TCommand>
     {
         MessageTypeRegistration? registration = typeof(IDurableCommand).IsAssignableFrom(typeof(TCommand))
-            ? _messageTypeRegistry.Register<TCommand>()
+            ? RegisterDurableCommandMessageType(typeof(TCommand))
             : null;
 
         return RegisterHandler<TCommand, THandler>(
@@ -55,7 +55,8 @@ public sealed class BondstoneModuleCommandBuilder
         where TCommand : IDurableCommand
         where THandler : class, ICommandHandler<TCommand>
     {
-        MessageTypeRegistration registration = _messageTypeRegistry.Register<TCommand>(messageTypeName);
+        MessageTypeRegistration registration =
+            RegisterDurableCommandMessageType(typeof(TCommand), messageTypeName);
         return RegisterHandler<TCommand, THandler>(
             registration,
             handlerIdentity ?? registration.MessageTypeName);
@@ -67,7 +68,7 @@ public sealed class BondstoneModuleCommandBuilder
         where THandler : class, ICommandHandler<TCommand, TResult>
     {
         MessageTypeRegistration? registration = typeof(IDurableCommand).IsAssignableFrom(typeof(TCommand))
-            ? _messageTypeRegistry.Register<TCommand>()
+            ? RegisterDurableCommandMessageType(typeof(TCommand))
             : null;
 
         return RegisterHandler<TCommand, TResult, THandler>(
@@ -81,7 +82,8 @@ public sealed class BondstoneModuleCommandBuilder
         where TCommand : IDurableCommand, ICommand<TResult>
         where THandler : class, ICommandHandler<TCommand, TResult>
     {
-        MessageTypeRegistration registration = _messageTypeRegistry.Register<TCommand>(messageTypeName);
+        MessageTypeRegistration registration =
+            RegisterDurableCommandMessageType(typeof(TCommand), messageTypeName);
         return RegisterHandler<TCommand, TResult, THandler>(
             registration,
             handlerIdentity ?? registration.MessageTypeName);
@@ -177,7 +179,7 @@ public sealed class BondstoneModuleCommandBuilder
     {
         Type commandType = handlerInterface.GetGenericArguments()[0];
         MessageTypeRegistration? registration = typeof(IDurableCommand).IsAssignableFrom(commandType)
-            ? _messageTypeRegistry.Register(commandType)
+            ? RegisterDurableCommandMessageType(commandType)
             : null;
         Services.TryAddScoped(handlerType);
 
@@ -196,7 +198,7 @@ public sealed class BondstoneModuleCommandBuilder
         Type commandType = genericArguments[0];
         Type resultType = genericArguments[1];
         MessageTypeRegistration? registration = typeof(IDurableCommand).IsAssignableFrom(commandType)
-            ? _messageTypeRegistry.Register(commandType)
+            ? RegisterDurableCommandMessageType(commandType)
             : null;
         Services.TryAddScoped(handlerType);
 
@@ -258,5 +260,35 @@ public sealed class BondstoneModuleCommandBuilder
                 && type.GetGenericTypeDefinition() == openGenericType)
             .Distinct()
             .ToArray();
+    }
+
+    private MessageTypeRegistration RegisterDurableCommandMessageType(Type commandType)
+    {
+        try
+        {
+            return _messageTypeRegistry.Register(commandType);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new InvalidOperationException(
+                $"Module '{ModuleName}' could not register durable command message identity from command metadata for command type '{commandType.FullName}': {exception.Message}",
+                exception);
+        }
+    }
+
+    private MessageTypeRegistration RegisterDurableCommandMessageType(
+        Type commandType,
+        string messageTypeName)
+    {
+        try
+        {
+            return _messageTypeRegistry.Register(commandType, messageTypeName);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new InvalidOperationException(
+                $"Module '{ModuleName}' could not register durable command message identity '{messageTypeName.Trim()}' for command type '{commandType.FullName}': {exception.Message}",
+                exception);
+        }
     }
 }

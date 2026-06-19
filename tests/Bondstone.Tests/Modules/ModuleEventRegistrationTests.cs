@@ -42,6 +42,28 @@ public sealed class ModuleEventRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void RegisterPublishedEvent_WhenEventIdentityConflicts_IncludesModuleAndIdentityInDiagnostic()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module(" sales ", module =>
+                {
+                    module.Events.RegisterPublishedEvent<CustomerRegisteredEvent>();
+                    module.Events.RegisterPublishedEvent<OrderSubmittedEvent>(
+                        "sales.customer.registered.v1");
+                });
+            }));
+
+        Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("published event message identity", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales.customer.registered.v1", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void RegisterSubscriber_WhenCalled_RecordsStableSubscriberMetadata()
     {
         var services = new ServiceCollection();
@@ -124,17 +146,20 @@ public sealed class ModuleEventRegistrationTests
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
-            bondstone.Module("fulfillment", module =>
-            {
-                ConfigureDurableMessaging(module);
-                module.Events.RegisterSubscriber<CustomerRegisteredEvent, CustomerRegisteredHandler>(
-                    "fulfillment.customer-cache.v1");
-                module.Events.RegisterSubscriber<CustomerRegisteredEvent, AlternateCustomerRegisteredHandler>(
+                bondstone.Module("fulfillment", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.Events.RegisterSubscriber<CustomerRegisteredEvent, CustomerRegisteredHandler>(
+                        "fulfillment.customer-cache.v1");
+                    module.Events.RegisterSubscriber<CustomerRegisteredEvent, AlternateCustomerRegisteredHandler>(
                         "fulfillment.customer-cache.v1");
                 });
             }));
 
         Assert.Contains("already has an event subscriber", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Module 'fulfillment'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment.customer-cache.v1", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales.customer.registered.v1", exception.Message, StringComparison.Ordinal);
     }
 
     private static void ConfigureDurableMessaging(BondstoneModuleBuilder module)

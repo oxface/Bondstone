@@ -80,6 +80,50 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void RegisterHandler_WhenDurableIdentityConflicts_IncludesModuleAndIdentityInDiagnostic()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module(" sales ", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.Commands.RegisterHandler<ShipOrderCommand, ShipOrderHandler>(
+                        "sales.order.ship.v2");
+                    module.Commands.RegisterHandler<ShipOrderCommand, AlternateShipOrderHandler>(
+                        "sales.order.ship.v3");
+                });
+            }));
+
+        Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("durable command message identity", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales.order.ship.v2", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void RegisterHandler_WithNullExplicitDurableMessageTypeName_ThrowsArgumentException()
+    {
+        var services = new ServiceCollection();
+
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.Commands.RegisterHandler<ShipOrderCommand, ShipOrderHandler>(
+                        messageTypeName: null!);
+                });
+            }));
+
+        Assert.Equal("messageTypeName", exception.ParamName);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void RegisterHandler_WhenCommandRouteAlreadyExists_Throws()
     {
         var services = new ServiceCollection();
@@ -95,6 +139,8 @@ public sealed class ModuleCommandRegistrationTests
             }));
 
         Assert.Contains("already has a command route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(typeof(CreateDraftOrderCommand).FullName!, exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -666,6 +712,16 @@ public sealed class ModuleCommandRegistrationTests
     public sealed record ShipOrderCommand(string OrderId) : IDurableCommand;
 
     public sealed class ShipOrderHandler : ICommandHandler<ShipOrderCommand>
+    {
+        public ValueTask HandleAsync(
+            ShipOrderCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public abstract class AlternateShipOrderHandler : ICommandHandler<ShipOrderCommand>
     {
         public ValueTask HandleAsync(
             ShipOrderCommand command,

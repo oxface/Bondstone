@@ -435,6 +435,15 @@ Documentation-only cleanup should at least run formatting/reference checks
 where available. Runtime changes should run targeted tests first, then the
 broader package script appropriate to the changed surface.
 
+Runtime implementation reviews must name how messaging, persistence, hosting,
+transport, or package API changes preserve Bondstone's durable
+module-boundary model. Review notes should call out service-extraction
+continuity for stable message identities, handler patterns, stable handler
+identities, inbox/outbox semantics, operation observation, module-owned
+durability, and host-owned broker topology. They must not imply that
+Bondstone has become a generic bus, workflow engine, code generator, SaaS
+framework, application platform, or broker runtime owner.
+
 ## Explicit Deferred Work
 
 - Native saga/process-manager support.

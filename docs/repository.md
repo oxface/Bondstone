@@ -58,6 +58,16 @@ Do not keep long-lived transitional plans under `docs/`. Once a plan is
 accepted or implemented, move durable requirements, architecture, and sequence
 into BMAD artifacts and remaining work into GitHub Issues or Projects.
 
+Runtime implementation stories that change messaging, persistence, hosting,
+transport, or package APIs must record review evidence for the product
+boundary they preserve. The evidence should explain how the change keeps
+durable module boundaries, service-extraction contracts, and handler patterns
+intact, keeps module durability module-owned, and leaves broker topology,
+provisioning, credentials, native retry, dead-letter policy,
+prefetch/concurrency, and monitoring host-owned. Do not describe runtime work
+as making Bondstone a generic bus, workflow engine, code generator, SaaS
+framework, application platform, or broker runtime owner.
+
 ## Tooling
 
 Use root `package.json`, pnpm, Husky, commitlint, Prettier, and lightweight

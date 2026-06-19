@@ -102,6 +102,37 @@ public sealed class AddBondstoneCompositionTests
             serviceProvider.GetRequiredService<CommandCallLog>().Calls);
     }
 
+    [Fact]
+    [Trait("Category", "Application")]
+    public void AddBondstone_WithModuleOwnedExtension_ComposesHostOwnedInputs()
+    {
+        const string connectionString = "Host=localhost;Database=bondstone-composition";
+        var services = new ServiceCollection();
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.AddInventoryModule(connectionString);
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider(
+            new ServiceProviderOptions
+            {
+                ValidateOnBuild = true,
+                ValidateScopes = true,
+            });
+        IBondstoneModuleRegistry moduleRegistry =
+            serviceProvider.GetRequiredService<IBondstoneModuleRegistry>();
+
+        BondstoneModuleRegistration module = moduleRegistry.GetModule("inventory");
+
+        Assert.True(module.UsesPersistence);
+        Assert.Equal("composition test persistence", module.PersistenceProviderName);
+        Assert.Equal(typeof(InventoryDbContext), module.PersistenceContextType);
+        Assert.Equal(
+            connectionString,
+            serviceProvider.GetRequiredService<InventoryModuleOptions>().ConnectionString);
+    }
+
     private static DurableMessageEnvelope CreateEnvelope()
     {
         return new DurableMessageEnvelope(
@@ -183,3 +214,33 @@ public sealed class AddBondstoneCompositionTests
         }
     }
 }
+
+internal static class InventoryModuleRegistration
+{
+    public static BondstoneBuilder AddInventoryModule(
+        this BondstoneBuilder bondstone,
+        string connectionString)
+    {
+        ArgumentNullException.ThrowIfNull(bondstone);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+        return bondstone.AddModule(new InventoryBondstoneModule(connectionString));
+    }
+}
+
+internal sealed class InventoryBondstoneModule(string connectionString) : IBondstoneModule
+{
+    public string Name => "inventory";
+
+    public void Configure(BondstoneModuleBuilder module)
+    {
+        ArgumentNullException.ThrowIfNull(module);
+
+        module.Services.AddSingleton(new InventoryModuleOptions(connectionString));
+        module.UsePersistence("composition test persistence", typeof(InventoryDbContext));
+    }
+}
+
+internal sealed record InventoryModuleOptions(string ConnectionString);
+
+internal sealed class InventoryDbContext;

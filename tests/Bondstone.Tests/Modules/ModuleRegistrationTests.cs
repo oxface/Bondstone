@@ -157,6 +157,8 @@ public sealed class ModuleRegistrationTests
             }));
 
         Assert.Contains("already uses persistence provider", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Module 'billing'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("EntityFrameworkCore", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -179,6 +181,8 @@ public sealed class ModuleRegistrationTests
             }));
 
         Assert.Contains("already uses persistence context", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Module 'billing'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(typeof(BillingPersistenceContext).FullName!, exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

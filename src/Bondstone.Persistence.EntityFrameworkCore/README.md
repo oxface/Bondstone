@@ -14,8 +14,10 @@ the provider module helper shown in
 [the setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md).
 
 Install this package in projects that define EF Core `DbContext` mappings for
-Bondstone durable outbox, inbox, and operation state, or that compose
-provider-neutral EF Core module persistence.
+Bondstone durable outbox, direct receive inbox, durable incoming inbox, and
+operation state, or that compose provider-neutral EF Core module persistence.
+Bondstone provides mappings; applications own EF migrations, migration
+history, schema deployment, rollout, and rollback planning.
 
 See:
 

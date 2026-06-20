@@ -123,16 +123,15 @@ are nacked according to `RequeueOnFailure`; the worker does not run handlers,
 complete operation state, stage outgoing outbox rows, or mutate incoming inbox
 processing outcomes.
 
-The thin Azure Service Bus receive worker completes the message after receive
-completes. Its exposed `ProcessorOptions` is an advanced native-driver escape
-hatch, but `AutoCompleteMessages` must remain `false` so Bondstone can
-complete messages only after the direct module receive pipeline succeeds.
-The built-in Service Bus worker does not ingest into the durable incoming
-inbox. Hosts that need durable incoming inbox ingestion with Service Bus
-should own a native Service Bus receive loop and call the durable incoming
-inbox ingestion boundary explicitly. Receive exceptions from the built-in
-worker flow to the Service Bus processor error path and provider-native retry
-behavior.
+The thin Azure Service Bus receive worker completes the message only after
+Bondstone durable incoming inbox ingestion succeeds. Its exposed
+`ProcessorOptions` is an advanced native-driver escape hatch, but
+`AutoCompleteMessages` must remain `false` and `ReceiveMode` must remain
+`PeekLock` so Bondstone can complete messages after durable ingestion rather
+than before it. The worker does not run handlers, complete operation state,
+stage outgoing outbox rows, or mutate incoming inbox processing outcomes.
+Receive exceptions from the built-in worker flow to the Service Bus processor
+error path and provider-native retry behavior.
 
 If durable inbox ingestion commits but native settlement fails, broker
 redelivery should return `AlreadyIngested` and acknowledge without running the
@@ -432,12 +431,15 @@ terminal status, and user-visible reason match product policy.
 
 ## EF Migrations And Upgrades
 
+EF Core plus PostgreSQL is the supported production durable persistence path
+for Bondstone durable tables.
+
 EF-backed Bondstone tables live in the application's `DbContext` model through
 `ApplyBondstonePersistence(...)` or the granular mapping helpers. Optional
 domain event records use `ApplyBondstoneDomainEvents(...)`. The application
 owns EF migration generation and application for every module `DbContext` that
-maps those tables. Bondstone does not run migrations for the app and does not
-ship app-specific migrations.
+maps those tables. Bondstone does not run migrations for the app, does not
+ship package-owned migrations, and does not provide automatic schema rollout.
 
 During package upgrades, review release notes and EF mapping docs for table
 shape changes. Generate and review migrations in the app repository, including

@@ -16,8 +16,9 @@ Install the packages needed for the host:
 - `Bondstone.Persistence.EntityFrameworkCore` for EF Core durable persistence
   mappings, module transaction behavior, and optional EF-backed domain event
   persistence.
-- `Bondstone.Persistence.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
-  classification and provider registration.
+- `Bondstone.Persistence.EntityFrameworkCore.Postgres` for the supported
+  EF/PostgreSQL production durable persistence path, duplicate
+  classification, and provider registration.
 - `Bondstone.Transport.Local` when a sample, test, or local development host
   explicitly wants in-process queue routing through the durable receive
   pipelines.
@@ -55,12 +56,11 @@ publishing with `UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
 `IDurableMessageEnvelopeSerializer`, and ingest inbound deliveries into the
 durable inbox before native settlement. Broker topology, consumers, retry, and
 dead-letter policy remain application-owned. The RabbitMQ receive worker
-settles native messages only after Bondstone durable incoming inbox ingestion
-succeeds. The Azure Service Bus receive worker remains a direct receive
-adapter and does not ingest into the durable inbox. Hosts that need durable
-inbox ingestion with Service Bus should own a native receive loop and call the
-ingestion boundary explicitly. RabbitMQ failure requeue and Service Bus
-processor settings remain native driver knobs, not Bondstone retry policy.
+acknowledges native messages only after Bondstone durable incoming inbox
+ingestion succeeds. The Azure Service Bus receive worker completes native
+messages only after Bondstone durable incoming inbox ingestion succeeds.
+RabbitMQ failure requeue and Service Bus processor settings remain native
+driver knobs, not Bondstone retry policy.
 Lower-level persistence, receive, dispatcher, and local transport types remain
 available for advanced composition and tests, but they are not the quick-start
 path.
@@ -111,8 +111,8 @@ Common namespaces for this path are:
   `IDomainEventSource`.
 - `Bondstone.Persistence.EntityFrameworkCore.Persistence` for
   `ApplyBondstonePersistence`, `ApplyBondstoneOutbox`,
-  `ApplyBondstoneInbox`, `ApplyBondstoneOperationState`, and
-  `UseEntityFrameworkCorePersistence`, and optional
+  `ApplyBondstoneInbox`, `ApplyBondstoneIncomingInbox`,
+  `ApplyBondstoneOperationState`, and `UseEntityFrameworkCorePersistence`, and optional
   `UseEntityFrameworkCoreDomainEventPersistence` and
   `ApplyBondstoneDomainEvents`.
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence` for
@@ -399,12 +399,14 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
 }
 ```
 
-`ApplyBondstonePersistence(...)` maps the durable outbox, inbox, and operation
-state tables. `ApplyBondstoneDomainEvents(...)` is separate because domain
-events are optional module-local records, not transport messages or outgoing
-outbox records. Use the granular `ApplyBondstoneOutbox(...)`,
-`ApplyBondstoneInbox(...)`, and `ApplyBondstoneOperationState(...)` helpers
-only when a `DbContext` intentionally maps a smaller durable surface.
+`ApplyBondstonePersistence(...)` maps the durable outbox, direct receive
+idempotency inbox, durable incoming inbox, and operation-state tables.
+`ApplyBondstoneDomainEvents(...)` is separate because domain events are
+optional module-local records, not transport messages or outgoing outbox
+records. Use the granular `ApplyBondstoneOutbox(...)`,
+`ApplyBondstoneInbox(...)`, `ApplyBondstoneIncomingInbox(...)`, and
+`ApplyBondstoneOperationState(...)` helpers only when a `DbContext`
+intentionally maps a smaller durable surface.
 
 Hosts and migrators have different responsibilities:
 
@@ -549,10 +551,8 @@ bondstone.UseServiceBusReceiveWorker(options =>
 The app still registers RabbitMQ `IChannel` or Azure `ServiceBusClient`, owns
 native entities and bindings, and chooses retry/dead-letter behavior. RabbitMQ
 receive workers perform durable incoming inbox ingestion before ack. The
-Service Bus receive worker remains a direct receive adapter and does not
-ingest into the durable incoming inbox. Apps that need durable incoming inbox
-ingestion with Service Bus can own a native loop and call the ingestion
-boundary explicitly. Rebus is not a
+Service Bus receive worker performs durable incoming inbox ingestion before
+message completion. Rebus is not a
 Bondstone package; use Rebus-owned routing and handlers around
 `IDurableEnvelopeDispatcher`, `IDurableMessageEnvelopeSerializer`, and durable
 inbox ingestion if an app chooses Rebus. Advanced multi-transport hosts can compose
@@ -623,7 +623,8 @@ public sealed class FulfillmentBondstoneModule(string connectionString)
 
 EF-backed module `DbContext` models must map the durable tables they use with
 `ApplyBondstonePersistence()` or the granular `ApplyBondstoneOutbox()`,
-`ApplyBondstoneInbox()`, and `ApplyBondstoneOperationState()` helpers.
+`ApplyBondstoneInbox()`, `ApplyBondstoneIncomingInbox()`, and
+`ApplyBondstoneOperationState()` helpers.
 
 Provider-specific module helpers are the preferred setup path because they
 record module persistence metadata and register the module-owned runtime
@@ -974,8 +975,8 @@ hosted incoming inbox processing worker then claims due rows and calls module
 receive. This creates the three-worker topology used by durable receive:
 outbox dispatch, transport receive/ingestion, and incoming inbox processing.
 Cleanup and retention remain app-owned. The built-in RabbitMQ receive worker
-follows this durable ingestion model; the built-in Azure Service Bus receive
-worker does not.
+and built-in Azure Service Bus receive worker follow this durable ingestion
+model.
 
 If processing finds an implementation-detail idempotency row that was already
 received but not processed, Bondstone fails the module receive with

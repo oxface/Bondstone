@@ -251,10 +251,9 @@ Durable incoming inbox provider-neutral contracts, 2026-06-18:
   failure, or stale outcomes through the incoming inbox store contracts.
 - The PostgreSQL provider supplies runtime stores for incoming inbox claim,
   lease renewal, outcome recording, and module-owned processing dispatch.
-  Bondstone does not provide Service Bus durable incoming inbox handoff in the
-  built-in Service Bus worker, operation failure inference, or cleanup
-  mutation APIs. Processing outcome is recorded after module receive returns,
-  so a crash between the module receive commit and incoming-ledger outcome
+  Bondstone does not provide operation failure inference or cleanup mutation
+  APIs. Processing outcome is recorded after module receive returns, so a
+  crash between the module receive commit and incoming-ledger outcome
   recording relies on the existing receive idempotency row during retry.
 
 Durable incoming inbox EF Core mapping, 2026-06-18:
@@ -279,8 +278,7 @@ Durable incoming inbox EF Core mapping, 2026-06-18:
   uses the receiver module's `DbContext`.
 - PostgreSQL-specific incoming inbox mutation stores live in
   `Bondstone.Persistence.EntityFrameworkCore.Postgres`. Bondstone does not
-  provide Service Bus durable incoming inbox handoff in the built-in Service
-  Bus worker, operation failure inference, or cleanup mutation APIs.
+  provide operation failure inference or cleanup mutation APIs.
 
 Durable incoming inbox worker, 2026-06-18:
 
@@ -325,6 +323,21 @@ RabbitMQ durable incoming inbox ingestion handoff, 2026-06-18:
 - The ingestion mode does not execute handlers, complete operation state,
   stage outgoing outbox rows, or replace the `Bondstone.Hosting` incoming
   inbox processing worker.
+
+Azure Service Bus durable incoming inbox ingestion handoff, 2026-06-19:
+
+- `ServiceBusReceiveWorkerOptions.ReceiveCommand()` and `ReceiveEvent(...)`
+  select durable incoming inbox ingestion for queue or subscription receive
+  workers.
+- The worker rejects `AutoCompleteMessages = true` and `ReceiveAndDelete`
+  mode so native completion happens only after durable incoming inbox
+  ingestion succeeds.
+- The worker resolves the receiver module's durable incoming inbox ingestion
+  boundary, persists the incoming ledger row, and completes the native message
+  only after that persistence boundary succeeds.
+- The ingestion mode does not execute handlers, complete operation state,
+  stage outgoing outbox rows, mutate incoming inbox processing outcomes, or
+  replace the `Bondstone.Hosting` incoming inbox processing worker.
 
 Public API curation, 2026-06-16:
 
@@ -372,9 +385,8 @@ Transport receive settlement cleanup, 2026-06-16:
 - `ServiceBusReceiveWorkerOptions.ProcessorOptions` remains public as the
   deliberate advanced native-driver escape hatch for the opt-in receive
   worker. `AutoCompleteMessages = true` is rejected during worker registration
-  because Bondstone requires manual completion after the direct receive
-  pipeline succeeds. The built-in Service Bus receive worker uses the direct
-  receive pipeline and does not ingest into the durable incoming inbox.
+  because Bondstone requires manual completion after durable incoming inbox
+  ingestion succeeds. `ReceiveAndDelete` mode is rejected for the same reason.
 
 V2 public API cleanup continuation, 2026-06-16:
 

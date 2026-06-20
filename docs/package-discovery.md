@@ -151,8 +151,8 @@ The built-in RabbitMQ receive worker consumes with manual acknowledgement and
 uses `RequeueOnFailure` only as the native nack requeue flag. The built-in
 Azure Service Bus receive worker exposes native `ServiceBusProcessorOptions`
 for advanced driver configuration, but requires `AutoCompleteMessages = false`
-so Bondstone completes messages only after the direct receive pipeline
-succeeds. It does not ingest into the durable incoming inbox.
+and `PeekLock` receive mode so Bondstone completes messages only after
+durable incoming inbox ingestion succeeds.
 
 Rebus remains app-owned guidance rather than a Bondstone package because Rebus
 already owns bus routing, handlers, subscriptions, retries, error queues,
@@ -168,10 +168,11 @@ using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 
 Common APIs include:
 
-- `modelBuilder.ApplyBondstonePersistence(schema)` for outbox, inbox, and
-  operation-state mappings;
+- `modelBuilder.ApplyBondstonePersistence(schema)` for outbox, direct receive
+  inbox, durable incoming inbox, and operation-state mappings;
 - `modelBuilder.ApplyBondstoneOutbox(schema)`;
 - `modelBuilder.ApplyBondstoneInbox(schema)`;
+- `modelBuilder.ApplyBondstoneIncomingInbox(schema)`;
 - `modelBuilder.ApplyBondstoneOperationState(schema)`;
 - `module.UseEntityFrameworkCorePersistence<TDbContext>()` for
   provider-neutral EF module transactions and root EF durable stores;
@@ -204,7 +205,9 @@ Common APIs include:
 
 The direct non-EF `Bondstone.Persistence.Postgres` package was removed after
 MVP. EF Core plus `Bondstone.Persistence.EntityFrameworkCore.Postgres` is the
-supported PostgreSQL persistence path.
+supported PostgreSQL production durable persistence path. Bondstone packages
+provide EF mappings and PostgreSQL provider helpers; applications generate,
+review, and apply their own EF migrations and own schema rollout.
 
 ## Hosting Workers
 

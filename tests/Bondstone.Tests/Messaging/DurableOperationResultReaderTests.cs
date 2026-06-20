@@ -426,6 +426,7 @@ public sealed class DurableOperationResultReaderTests
         Assert.Contains(durableOperationId.ToString(), exception.Message);
         Assert.Contains("fulfillment", exception.Message);
         Assert.True(store.ReadCount >= 1);
+        Assert.Equal(0, store.SaveCount);
     }
 
     [Fact]
@@ -568,6 +569,7 @@ public sealed class DurableOperationResultReaderTests
         Assert.Equal(DurableOperationResultState.Running, waitResult.Result.State);
         Assert.False(waitResult.Result.IsTerminal);
         Assert.True(store.ReadCount >= 2);
+        Assert.Equal(0, store.SaveCount);
     }
 
     [Fact]
@@ -748,6 +750,8 @@ public sealed class DurableOperationResultReaderTests
 
         public int ReadCount { get; private set; }
 
+        public int SaveCount { get; private set; }
+
         public ValueTask<DurableOperationState?> GetStateAsync(
             Guid durableOperationId,
             CancellationToken ct = default)
@@ -760,7 +764,8 @@ public sealed class DurableOperationResultReaderTests
             DurableOperationState state,
             CancellationToken ct = default)
         {
-            throw new NotSupportedException();
+            SaveCount++;
+            return ValueTask.CompletedTask;
         }
     }
 
@@ -774,6 +779,8 @@ public sealed class DurableOperationResultReaderTests
         public string ModuleName { get; } = moduleName;
 
         public int ReadCount { get; private set; }
+
+        public int SaveCount { get; private set; }
 
         public ValueTask<DurableOperationState?> GetStateAsync(
             Guid durableOperationId,
@@ -792,7 +799,8 @@ public sealed class DurableOperationResultReaderTests
             DurableOperationState state,
             CancellationToken ct = default)
         {
-            throw new NotSupportedException();
+            SaveCount++;
+            return ValueTask.CompletedTask;
         }
     }
 }

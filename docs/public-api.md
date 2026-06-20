@@ -233,7 +233,11 @@ Durable incoming inbox provider-neutral contracts, 2026-06-18:
   `IDurableIncomingInboxInspectionStore` are provider/runtime contracts for
   ingestion, claim, lease renewal, outcome recording, and inspection of the
   incoming ledger. Inspection supports broad status reads plus stale
-  processing claim and terminal receive-failure queries for operations.
+  processing claim and terminal receive-failure queries for operations. This
+  provider/runtime inspection contract is the current read-only durable receive
+  evidence surface; no separate app-facing incoming inbox inspector is added in
+  this release because the existing contract is public, registered by EF Core
+  persistence, filterable, and non-mutating.
 - `DurableIncomingInboxIngestionBoundary` and
   `IDurableIncomingInboxIngestionBoundaryResolver` are additive
   provider/runtime contracts for resolving the ingestion store and commit

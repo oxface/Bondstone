@@ -10,6 +10,13 @@ credentials, or monitoring.
 Use it only when the host already owns Azure Service Bus topology and wants
 small Bondstone envelope plumbing.
 
+The receive worker ingests native deliveries into the durable incoming inbox
+ledger with `ReceiveCommand()` or `ReceiveEvent(...)`. It requires manual
+completion by keeping `AutoCompleteMessages = false` and `ReceiveMode =
+PeekLock`, commits the incoming inbox row before Azure Service Bus message
+completion, and leaves the separate `Bondstone.Hosting` durable incoming inbox
+worker to process the row later.
+
 See:
 
 - [Setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md)

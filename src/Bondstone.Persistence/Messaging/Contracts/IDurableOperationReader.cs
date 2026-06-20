@@ -4,8 +4,9 @@ namespace Bondstone.Messaging;
 /// Reads durable operation state persisted by module-owned operation stores.
 /// </summary>
 /// <remarks>
-/// Operation state is the caller-visible workflow/result read model. It is not
-/// the outbox ledger, inbox ledger, broker retry state, or dead-letter state.
+/// Operation state is the caller-visible accepted-work/result read model. It
+/// is not the outbox ledger, inbox ledger, broker retry state, or dead-letter
+/// state.
 /// Applications should write explicit terminal outcomes through the operation
 /// finalizer API when policy decides an operation is failed or cancelled.
 /// </remarks>

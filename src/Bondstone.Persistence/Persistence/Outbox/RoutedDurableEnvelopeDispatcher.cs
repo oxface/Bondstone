@@ -28,7 +28,7 @@ public sealed class RoutedDurableEnvelopeDispatcher(
         if (matches.Length == 0)
         {
             throw new InvalidOperationException(
-                $"No durable envelope dispatch route can send {DescribeRecord(record)}.");
+                $"No durable envelope dispatch route can send {DescribeRecord(record)}. Configure routing so exactly one adapter owns this durable message.");
         }
 
         string routeNames = string.Join(

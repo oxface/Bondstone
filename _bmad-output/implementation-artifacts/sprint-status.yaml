@@ -1,5 +1,5 @@
 # generated: 2026-06-18T15:39:19+00:00
-# last_updated: 2026-06-20T00:00:00+00:00
+# last_updated: 2026-06-20T21:13:50+00:00
 # project: Bondstone
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-18T15:39:19+00:00
-last_updated: 2026-06-20T00:00:00+00:00
+last_updated: 2026-06-20T21:13:50+00:00
 project: Bondstone
 project_key: NOKEY
 tracking_system: file-system
@@ -72,14 +72,14 @@ development_status:
   5-3-immediate-command-and-query-boundaries: done
   5-4-durable-message-kind-and-domain-event-boundaries: done
   epic-5-retrospective: optional
-  epic-6: in-progress
+  epic-6: done
   6-1-source-outbox-atomicity: done
   6-2-durable-receive-transaction-boundary: done
   6-3-ef-postgresql-production-persistence-and-migrations: done
-  epic-6-retrospective: optional
-  epic-7: backlog
-  7-1-thin-transport-and-fanout-ergonomics: backlog
-  7-2-operation-observation-cleanup: backlog
+  epic-6-retrospective: done
+  epic-7: in-progress
+  7-1-thin-transport-and-fanout-ergonomics: done
+  7-2-operation-observation-cleanup: review
   7-3-app-owned-worker-operations-and-retention: backlog
   7-4-opentelemetry-diagnostics-and-stable-setup-codes: backlog
   epic-7-retrospective: optional

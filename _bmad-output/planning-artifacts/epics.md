@@ -736,6 +736,12 @@ Rollback:
 Goal: Keep broker ownership host-owned while exposing Bondstone-owned durable
 evidence and low-cardinality diagnostics.
 
+Epic 7 is runtime-first. Each story starts with an implementation inventory,
+but it may close as documentation-only only when the story records evidence
+that current code and tests already satisfy the acceptance criteria. Otherwise
+the story must add or adjust runtime code, tests, or public inspection
+surfaces that make the durable evidence observable.
+
 ### Story 7.1: Thin Transport And Fanout Ergonomics
 
 Covers: FR5.4, FR7.1, FR7.2, FR7.3, FR7.4, FR7.5, FR3.4
@@ -795,11 +801,21 @@ Acceptance Criteria:
 - Given terminal outbox, receive, operation, or worker failures occur, when
   operators inspect state, then evidence is discoverable through documented
   surfaces.
+- Given accepted durable work completes, fails, or remains pending, when
+  operation APIs are exercised in tests, then status reads, typed result reads,
+  and timeout behavior are proven at the API boundary rather than only
+  described in docs.
+- Given inventory finds that terminal outbox, receive, operation, or worker
+  evidence is only available through ad hoc persistence queries, when the story
+  closes, then it either adds an explicit non-orchestrating observation surface
+  or records why the existing public API is sufficient.
 
 Verification:
 
 - Tests and docs cover accepted metadata, status reads, typed result reads,
   short waits, timeout behavior, and operation troubleshooting.
+- The story includes runtime/test changes unless the inventory records that
+  current APIs and tests already cover every operation-observation criterion.
 
 Rollback:
 
@@ -824,11 +840,20 @@ Acceptance Criteria:
   expiration backlog exist, then inspection recipes describe the evidence.
 - Given helper APIs are added, when reviewed, then they are explicit and opt in
   rather than automatic destructive defaults.
+- Given inspection recipes depend on durable evidence, when feasible, then
+  tests exercise the evidence source or helper API so the story does not close
+  on prose alone.
+- Given a cleanup, replay, purge, stale-row, or DLQ action would be destructive
+  or provider-owned, when no helper is added, then the story records that as a
+  deliberate non-feature and leaves only non-destructive inspection support.
 
 Verification:
 
 - Operations docs and tests, where applicable, cover inspection without adding
   default cleanup workers.
+- The story includes at least one non-documentation verification artifact for
+  worker/evidence inspection, or records why the existing tests already prove
+  the required inspection behavior.
 
 Rollback:
 
@@ -856,11 +881,21 @@ Acceptance Criteria:
   durable identities, missing receive binding, and ambiguous dispatch routes.
 - Given stable codes are added, when compatibility is reviewed, then the code
   representation and migration promise are documented.
+- Given common setup failures are already thrown today, when this story is
+  implemented, then representative failures emit stable code values through a
+  source-compatible exception or validation surface instead of relying only on
+  message text.
+- Given diagnostics are added or changed, when tests inspect emitted data, then
+  they assert stable low-cardinality names and dimensions without matching
+  volatile ids, payloads, or exception text.
 
 Verification:
 
 - Unit or application tests cover code emission and low-cardinality diagnostic
   dimensions without asserting volatile payload values.
+- This story is not documentation-only unless inventory proves stable setup
+  codes and diagnostics already exist with test coverage for the listed common
+  failures.
 
 Rollback:
 

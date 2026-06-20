@@ -168,7 +168,10 @@ be read; diagnostics fall back to operation id and requested result type.
 Bondstone exposes read-only operational inspection through:
 
 - `IDurableOutboxInspector` for terminal outbox failures;
-- `IDurableInboxInspector` for unprocessed inbox rows.
+- `IDurableInboxInspector` for unprocessed direct inbox rows;
+- `IDurableIncomingInboxInspectionStore` for durable incoming inbox status,
+  stale processing claim, and terminal receive-failure evidence at the
+  provider/runtime boundary.
 
 Startup and runtime validation errors intentionally name missing durable
 composition pieces, such as missing module persistence, missing mappings,

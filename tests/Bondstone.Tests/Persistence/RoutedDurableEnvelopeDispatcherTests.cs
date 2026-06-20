@@ -40,6 +40,22 @@ public sealed class RoutedDurableEnvelopeDispatcherTests
         Assert.Contains("AlternateRoute", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task DispatchAsync_WhenNoRoutesMatch_ThrowsActionableRouteError()
+    {
+        var dispatcher = new RoutedDurableEnvelopeDispatcher(
+            [new CapturingRoute("PrimaryRoute", canSend: false)]);
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await dispatcher.DispatchAsync(CreateRecord()));
+
+        Assert.Contains("No durable envelope dispatch route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment.order.reserve.v1", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Configure routing so exactly one adapter owns this durable message.", exception.Message, StringComparison.Ordinal);
+    }
+
     private static DurableOutboxRecord CreateRecord()
     {
         var envelope = new DurableMessageEnvelope(

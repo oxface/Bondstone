@@ -105,6 +105,13 @@ automatic operation failure. Applications that want a user-visible terminal
 operation outcome inspect the terminal durable inbox row and explicitly
 finalize the operation through application policy.
 
+EF-backed hosts can inspect the durable incoming inbox ledger through the
+read-only `IDurableIncomingInboxInspectionStore`. That provider/runtime surface
+supports status reads, stale processing claim reads, and terminal receive
+failure reads filtered by receiver module and source transport. It reports
+receive evidence only; it does not replay, reset, purge, move broker messages,
+or write operation state.
+
 ## Broker Settlement
 
 Broker receive adapters should settle native deliveries only after durable
@@ -201,9 +208,9 @@ can be used to observe the target module's operation state.
 
 Use `IDurableOperationResultReader.GetResultAsync<TResult>()` to read the
 current operation state once. Use
-`IDurableOperationResultReader.TryWaitForResultAsync<TResult>()` when an API or
-workflow wants a timeout-bounded wait that returns a value even when the caller
-stops waiting. The returned `DurableOperationWaitResult<TResult>` separates
+`IDurableOperationResultReader.TryWaitForResultAsync<TResult>()` when a caller
+wants a timeout-bounded wait that returns a value even when the caller stops
+waiting. The returned `DurableOperationWaitResult<TResult>` separates
 `CompletedWithinTimeout` from the latest observed durable operation result.
 Use `WaitForResultAsync<TResult>()` only when exception-based timeout handling
 is acceptable; if its timeout expires before the operation reaches a terminal
@@ -230,12 +237,12 @@ provider-specific policy has made that terminal user-visible outcome explicit.
 When an operation remains `Pending` longer than expected, inspect the ledgers
 that Bondstone owns before marking the operation `Failed` or `Cancelled`.
 Pending means "no terminal operation state has been observed"; it does not
-identify which part of the workflow is blocked.
+identify which part of the accepted work path is blocked.
 
 Start with the send result. Prefer passing `DurableCommandSendResult.Operation`
 to result readers because it carries the source and target module names. If
 only the operation id is available, record or reconstruct the expected source
-and target modules from the application workflow before investigating.
+and target modules from the application flow before investigating.
 
 Inspect the source module outbox for the operation's outgoing command. Today
 the app-facing `IDurableOutboxInspector` reads terminal failures rather than
@@ -395,9 +402,10 @@ module persistence is failing before per-row retry or terminal state can be
 recorded.
 
 Applications should monitor the log event by worker id and rate-limit window.
-Correlate it with incoming inbox table state, module receive idempotency
-metrics, handler logs, and provider-native transport health. Cleanup, replay,
-purge, archival, and terminal-row remediation remain application-owned unless a later
+Correlate it with `IDurableIncomingInboxInspectionStore` status, stale
+processing, and terminal-failure reads; module receive idempotency metrics;
+handler logs; and provider-native transport health. Cleanup, replay, purge,
+archival, and terminal-row remediation remain application-owned unless a later
 Bondstone cleanup worker or mutation API is explicitly implemented.
 
 ### Operation Expiration Backlog

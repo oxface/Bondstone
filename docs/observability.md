@@ -17,7 +17,8 @@ Bondstone currently emits activities from these `ActivitySource` names:
 
 Bondstone currently emits metrics from matching `Meter` names:
 
-- `Bondstone.Modules` for module receive idempotency and operation metrics;
+- `Bondstone.Modules` for module receive idempotency, operation, and durable
+  incoming inbox processing metrics;
 - `Bondstone.Persistence` for provider-neutral outbox dispatch metrics.
 
 ## Current Activities
@@ -33,7 +34,11 @@ Bondstone currently emits metrics from matching `Meter` names:
 - `bondstone.module_event.receive`, `Consumer`: event envelope receive through
   a module subscriber route;
 - `bondstone.operation.finalize`, `Internal`: explicit operation finalization
-  through application-owned policy.
+  through application-owned policy;
+- `bondstone.incoming_inbox.process`, `Internal`: one durable incoming inbox
+  processing batch;
+- `bondstone.incoming_inbox.process.message`, `Internal`: one claimed durable
+  incoming inbox row handed to a module command or event receive pipeline.
 
 `Bondstone.Persistence` currently emits:
 
@@ -86,10 +91,35 @@ Outbox message dispatch activities can also emit durable message tags:
 - `bondstone.source_module`;
 - `bondstone.target_module`.
 
+Incoming inbox processing activities can emit:
+
+- `bondstone.incoming_inbox.claimed_by`;
+- `bondstone.incoming_inbox.max_count`;
+- `bondstone.incoming_inbox.claimed_count`;
+- `bondstone.incoming_inbox.processed_count`;
+- `bondstone.incoming_inbox.retry_scheduled_count`;
+- `bondstone.incoming_inbox.terminal_failed_count`;
+- `bondstone.incoming_inbox.stale_count`.
+
+Incoming inbox message activities can also emit durable message tags plus
+receive-context tags:
+
+- `bondstone.message_id`;
+- `bondstone.message_kind`;
+- `bondstone.message_type`;
+- `bondstone.source_module`;
+- `bondstone.target_module`, when present;
+- `bondstone.module`, meaning the receiver module;
+- `bondstone.handler_identity`;
+- `bondstone.source_transport`.
+
 Activity status is set to `Error` when the instrumented Bondstone boundary
 throws. Outbox message dispatch failures that are recorded for retry or
 terminal failure set the message-dispatch activity to `Error`; the batch
 activity records the resulting retry, terminal failure, or stale counts.
+Incoming inbox message failures that are recorded for retry or terminal
+failure set the message-processing activity to `Error`; the batch activity
+records the resulting retry, terminal failure, or stale counts.
 
 Tags whose source values are absent, such as event `target_module` or
 operation ids on untracked messages, may be absent from the emitted activity.
@@ -111,11 +141,32 @@ payload data, broker delivery count, or native destination name.
 - `bondstone.outbox.stale`: claimed outbox records whose lease or outcome
   update was no longer owned by the dispatcher.
 
+`Bondstone.Modules` currently emits:
+
+- `bondstone.incoming_inbox.claimed`: durable incoming inbox rows claimed for
+  processing;
+- `bondstone.incoming_inbox.processed`: durable incoming inbox rows recorded
+  as processed;
+- `bondstone.incoming_inbox.retry_scheduled`: durable incoming inbox rows
+  recorded for retry;
+- `bondstone.incoming_inbox.terminal_failed`: durable incoming inbox rows
+  recorded as terminal receive failures;
+- `bondstone.incoming_inbox.stale`: durable incoming inbox rows whose claim
+  lease or outcome update was no longer owned by the worker.
+
 Outbox metric attributes can include:
 
 - `bondstone.message_kind`;
 - `bondstone.source_module`;
 - `bondstone.target_module`, when present.
+
+Incoming inbox metric attributes can include:
+
+- `bondstone.message_kind`;
+- `bondstone.source_module`;
+- `bondstone.module`, meaning the receiver module;
+- `bondstone.target_module`, when present;
+- `bondstone.source_transport`, when present.
 
 `Bondstone.Modules` currently emits:
 
@@ -207,13 +258,11 @@ Bondstone does not publish stable misconfiguration error codes. Startup and
 runtime exception messages are intentionally clear, but they are not a
 machine-readable error-code vocabulary.
 
-Bondstone does not currently emit finalized durable inbox worker metrics. The
-existing incoming inbox dispatcher emits activities and provisional
-diagnostics for Bondstone-owned durable inbox transitions such as rows
-claimed, processed, retry scheduled, terminal receive failed, and stale claim
-or outcome updates. Future finalized metrics should use low-cardinality
-attributes such as module, message kind, source module, target module when
-present, status, and controlled transport diagnostic names.
+Bondstone does not provide a provider-neutral worker health status, cleanup
+status, or backlog readiness decision. The incoming inbox processing metrics
+describe Bondstone-owned durable inbox transitions only; applications still
+own thresholds, readiness policy, worker placement, cleanup, replay, and
+operator response.
 
 Bondstone does not provide provider-neutral topology diagnostics, broker retry
 diagnostics, dead-letter diagnostics, subscription storage diagnostics, or

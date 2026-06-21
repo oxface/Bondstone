@@ -1,5 +1,5 @@
 # generated: 2026-06-18T15:39:19+00:00
-# last_updated: 2026-06-20T21:13:50+00:00
+# last_updated: 2026-06-21T16:09:29+00:00
 # project: Bondstone
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-18T15:39:19+00:00
-last_updated: 2026-06-20T21:13:50+00:00
+last_updated: 2026-06-21T16:09:29+00:00
 project: Bondstone
 project_key: NOKEY
 tracking_system: file-system
@@ -80,7 +80,7 @@ development_status:
   epic-7: in-progress
   7-1-thin-transport-and-fanout-ergonomics: done
   7-2-operation-observation-cleanup: review
-  7-3-app-owned-worker-operations-and-retention: backlog
+  7-3-app-owned-worker-operations-and-retention: done
   7-4-opentelemetry-diagnostics-and-stable-setup-codes: backlog
   epic-7-retrospective: optional
   epic-8: backlog

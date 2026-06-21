@@ -408,6 +408,65 @@ handler logs; and provider-native transport health. Cleanup, replay, purge,
 archival, and terminal-row remediation remain application-owned unless a later
 Bondstone cleanup worker or mutation API is explicitly implemented.
 
+### Terminal Durable Incoming Inbox Failures
+
+Use `IDurableIncomingInboxInspectionStore` to inspect durable receive rows
+that reached `TerminalFailed` after the incoming inbox worker exhausted the
+configured processing policy:
+
+```csharp
+IReadOnlyList<DurableIncomingInboxRecord> terminalReceives =
+    await incomingInboxInspectionStore.FindTerminalFailedAsync(
+        maxCount: 50,
+        failedAtOrBeforeUtc: DateTimeOffset.UtcNow.AddMinutes(-5),
+        receiverModule: FulfillmentModule.ModuleName,
+        sourceTransportName: "rabbitmq:fulfillment.commands",
+        ct);
+```
+
+Terminal receive failure is durable operational evidence. It does not prove
+that the business operation should be marked `Failed`, and it does not imply a
+broker dead-letter event because provider-native settlement already happened
+when the delivery was durably ingested. Inspect the incoming row, direct inbox
+state, handler logs, operation state, outbox rows, and business side effects
+before finalizing an operation, replaying work, mutating rows, purging data, or
+moving broker messages.
+
+Pair terminal receive inspection with the
+`bondstone.incoming_inbox.terminal_failed` metric to alert on newly terminal
+durable receive rows. Keep broker delivery counts, dead-letter movement,
+provider retry exhaustion, and queue or subscription topology in native broker
+monitoring or application runbooks.
+
+### Stale Durable Incoming Inbox Processing Claims
+
+Use `IDurableIncomingInboxInspectionStore` to inspect processing rows whose
+claim lease has expired:
+
+```csharp
+IReadOnlyList<DurableIncomingInboxRecord> staleClaims =
+    await incomingInboxInspectionStore.FindStaleProcessingAsync(
+        claimedUntilAtOrBeforeUtc: DateTimeOffset.UtcNow.AddMinutes(-5),
+        maxCount: 50,
+        receiverModule: FulfillmentModule.ModuleName,
+        sourceTransportName: "rabbitmq:fulfillment.commands",
+        ct);
+```
+
+A stale processing claim means a worker claimed a durable incoming row but did
+not record a processed, retry, terminal failure, or stale outcome before the
+lease expired. That evidence should alert operators when the count exceeds the
+application's tolerance, especially if incoming inbox worker failure logs or
+handler logs show the same time window. The built-in worker does not clean up
+or reset stale claims by default; another processing pass may claim eligible
+rows according to the provider's claim rules, while destructive recovery and
+business compensation remain application-owned.
+
+Use the `bondstone.incoming_inbox.stale` metric for stale outcome updates and
+inspection reads for the durable row details. Do not use stale-claim detection
+as an automatic trigger to delete rows, move broker messages, or infer
+operation failure.
+
 ### Operation Expiration Backlog
 
 Applications that expose durable operation results should define an expiry

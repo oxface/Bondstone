@@ -323,6 +323,27 @@ Stable setup codes, 2026-06-21:
   messages may improve, new codes may be added, and existing code names
   require compatibility review before rename or removal.
 
+Story 8.1 validation, 2026-06-21:
+
+- The packable project set, public API test assembly list, and checked-in
+  baseline files all cover the same eight active packages:
+  `Bondstone`, `Bondstone.Hosting`, `Bondstone.Persistence`,
+  `Bondstone.Persistence.EntityFrameworkCore`,
+  `Bondstone.Persistence.EntityFrameworkCore.Postgres`,
+  `Bondstone.Transport.Local`, `Bondstone.Transport.RabbitMq`, and
+  `Bondstone.Transport.ServiceBus`.
+- Production package references still follow the dependency direction in
+  [packaging.md](packaging.md). `InternalsVisibleTo` declarations under
+  `src/**/Properties/AssemblyInfo.cs` target only package test assemblies or
+  composition tests, not production package collaboration.
+- The package-by-package classification below has been reconciled with the
+  current baselines for query APIs, setup-code diagnostics, durable incoming
+  inbox contracts, incoming inbox hosting, and EF incoming inbox mapping
+  surfaces.
+- No public/protected API shape changed in this validation slice, so no
+  baseline refresh, replacement contract, migration note, or release-note entry
+  is required here.
+
 RabbitMQ durable incoming inbox ingestion handoff, 2026-06-18:
 
 - `RabbitMqReceiveWorkerOptions.ReceiveCommand()` and `ReceiveEvent(...)`
@@ -497,6 +518,7 @@ Normal setup API:
 - `BondstoneModuleBuilder`
 - `BondstoneModuleCommandBuilder`
 - `BondstoneModuleEventBuilder`
+- `BondstoneModuleQueryBuilder`
 - `BondstoneDurablePayloadServiceCollectionExtensions`
 
 Extraction setup API:
@@ -510,10 +532,12 @@ User application contract:
 - `IMessage`
 - `ICommand`
 - `ICommand<TResult>`
+- `IQuery<TResult>`
 - `IDurableCommand`
 - `IIntegrationEvent`
 - `ICommandHandler<TCommand>`
 - `ICommandHandler<TCommand, TResult>`
+- `IQueryHandler<TQuery, TResult>`
 - `IIntegrationEventHandler<TEvent>`
 - `ICommandValidator<TCommand>`
 - `IDomainEvent`
@@ -539,6 +563,7 @@ User application contract:
 - `DurableEventPublishStatus`
 - `DurableOperationResult<TResult>`
 - `DurableOperationResultDeserializationFailure`
+- `DurableOperationWaitResult<TResult>`
 - `DurableOperationExpirationResult`
 - `DurableOperationFinalizationResult`
 - `DurableOperationResultState`
@@ -560,6 +585,8 @@ Advanced composition API:
 - `IModuleEventReceivePipeline`
 - `IBondstoneModuleRegistry`
 - `IModuleCommandRouteRegistry`
+- `IModuleQueryExecutor`
+- `IModuleQueryRouteRegistry`
 - `IModulePublishedEventRegistry`
 - `IModuleEventSubscriberRegistry`
 - `BondstoneConfigurationValidationContext`
@@ -572,6 +599,7 @@ Provider/runtime contract:
 - `ModuleCommandRoute`
 - `ModulePublishedEventRegistration`
 - `ModuleEventSubscriberRegistration`
+- `ModuleQueryRoute`
 - `ModuleCommandReceiveContext`
 - `ModuleEventSubscriberReceiveContext`
 - `ModuleExecutionContext`
@@ -601,6 +629,19 @@ User application contract:
 - `DurableInboxRecord`
 - `DurableInboxRegistrationResult`
 - `DurableInboxRegistrationStatus`
+- `DurableIncomingInboxFailureDecision`
+- `DurableIncomingInboxFailureDecisionKind`
+- `DurableIncomingInboxIngestionResult`
+- `DurableIncomingInboxIngestionStatus`
+- `DurableIncomingInboxKey`
+- `DurableIncomingInboxProcessingResult`
+- `DurableIncomingInboxRecord`
+- `DurableIncomingInboxState`
+- `DurableIncomingInboxStatus`
+- `BondstoneSetupArgumentException`
+- `BondstoneSetupCodes`
+- `BondstoneSetupException`
+- `IBondstoneSetupException`
 - `DurableOutboxDispatchResult`
 - `DurableOutboxDispatchState`
 - `DurableOutboxFailureDecision`
@@ -618,6 +659,11 @@ Advanced composition API:
 - `DurableInboxHandlerExecutor`
 - `DurableOutboxDispatcher`
 - `DurableOutboxFailurePolicy`
+- `DurableIncomingInboxDispatcher`
+- `DurableIncomingInboxFailurePolicy`
+- `DurableIncomingInboxProcessingOptions`
+- `IDurableIncomingInboxDispatcher`
+- `IDurableIncomingInboxFailurePolicy`
 - `RoutedDurableEnvelopeDispatcher`
 
 Provider/runtime contract:
@@ -633,10 +679,20 @@ Provider/runtime contract:
 - `IDurableOutboxDispatchRecorder`
 - `IDurableOutboxInspectionStore`
 - `IDurableInboxInspectionStore`
+- `IDurableIncomingInboxClaimer`
+- `IDurableIncomingInboxIngestionBoundaryResolver`
+- `IDurableIncomingInboxIngestionPersistenceScope`
+- `IDurableIncomingInboxIngestionStore`
+- `IDurableIncomingInboxInspectionStore`
+- `IDurableIncomingInboxLeaseRenewer`
+- `IDurableIncomingInboxOutcomeRecorder`
+- `DurableIncomingInboxIngestionBoundary`
 - `DurableModulePersistenceRegistrationRegistry`
 - `DurableModuleOutboxWriterRegistration`
 - `DurableModuleInboxHandlerExecutorRegistration`
 - `DurableModuleInboxInspectionStoreRegistration`
+- `DurableModuleIncomingInboxDispatcherRegistration`
+- `DurableModuleIncomingInboxIngestionBoundaryRegistration`
 - `DurableModuleOperationStateStoreRegistration`
 - `DurableModuleOutboxDispatcherRegistration`
 - `DurableModuleOutboxInspectionStoreRegistration`
@@ -644,6 +700,7 @@ Provider/runtime contract:
 Provider/runtime concrete API:
 
 - `DurableModuleOutboxDispatchAggregator`
+- `DurableModuleIncomingInboxDispatcherAggregator`
 
 ## Bondstone.Persistence.EntityFrameworkCore
 
@@ -669,6 +726,9 @@ Provider/runtime contract:
 - `InboxMessageEntity`
 - `InboxMessageEntityConfiguration`
 - `InboxMessageEntityConfiguration.Columns`
+- `IncomingInboxMessageEntity`
+- `IncomingInboxMessageEntityConfiguration`
+- `IncomingInboxMessageEntityConfiguration.Columns`
 - `OperationStateEntity`
 - `OperationStateEntityConfiguration`
 - `DomainEventRecordEntity`
@@ -678,6 +738,8 @@ Provider/runtime contract:
 Provider/runtime concrete API:
 
 - `EntityFrameworkCoreDurableInboxInspectionStore<TDbContext>`
+- `EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbContext>`
+- `EntityFrameworkCoreDurableIncomingInboxInspectionStore<TDbContext>`
 - `EntityFrameworkCoreDurableOutboxWriter<TDbContext>`
 - `EntityFrameworkCoreModuleDurableOutboxWriter<TDbContext>`
 - `EntityFrameworkCoreDurableInboxStore<TDbContext>`
@@ -708,11 +770,14 @@ Provider implementation details hidden from public API:
 Normal setup API:
 
 - `BondstoneHostingBuilderExtensions`
+- `BondstoneIncomingInboxHostingBuilderExtensions`
+- `DurableIncomingInboxWorkerOptions`
 - `DurableOutboxWorkerOptions`
 
 Advanced composition API:
 
 - `BondstoneHostingServiceCollectionExtensions`
+- `BondstoneIncomingInboxHostingServiceCollectionExtensions`
 
 ## Bondstone.Transport.Local
 

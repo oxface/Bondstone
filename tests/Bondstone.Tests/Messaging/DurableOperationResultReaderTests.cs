@@ -406,7 +406,7 @@ public sealed class DurableOperationResultReaderTests
     public async Task WaitForResultAsync_WhenOperationDoesNotReachTerminalState_ThrowsTimeoutException()
     {
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
-        var store = new SequencedModuleOperationStateStore(
+        var store = SequencedModuleOperationStateStore.AllowingSaveCount(
             "fulfillment",
             new DurableOperationState(
                 durableOperationId,
@@ -544,7 +544,7 @@ public sealed class DurableOperationResultReaderTests
     public async Task TryWaitForResultAsync_WhenOperationDoesNotReachTerminalState_ReturnsLatestResultWithoutThrowing()
     {
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
-        var store = new SequencedModuleOperationStateStore(
+        var store = SequencedModuleOperationStateStore.AllowingSaveCount(
             "fulfillment",
             new DurableOperationState(
                 durableOperationId,
@@ -764,23 +764,43 @@ public sealed class DurableOperationResultReaderTests
             DurableOperationState state,
             CancellationToken ct = default)
         {
-            SaveCount++;
-            return ValueTask.CompletedTask;
+            throw new NotSupportedException(
+                "Operation result reader tests should not write operation state.");
         }
     }
 
-    private sealed class SequencedModuleOperationStateStore(
-        string moduleName,
-        params DurableOperationState[] states)
-        : IModuleOperationStateStore
+    private sealed class SequencedModuleOperationStateStore : IModuleOperationStateStore
     {
-        private readonly Queue<DurableOperationState> _states = new(states);
+        private readonly bool _allowSaveCount;
+        private readonly Queue<DurableOperationState> _states;
 
-        public string ModuleName { get; } = moduleName;
+        public SequencedModuleOperationStateStore(
+            string moduleName,
+            params DurableOperationState[] states)
+            : this(moduleName, allowSaveCount: false, states)
+        {
+        }
+
+        private SequencedModuleOperationStateStore(
+            string moduleName,
+            bool allowSaveCount,
+            params DurableOperationState[] states)
+        {
+            ModuleName = moduleName;
+            _allowSaveCount = allowSaveCount;
+            _states = new Queue<DurableOperationState>(states);
+        }
+
+        public string ModuleName { get; }
 
         public int ReadCount { get; private set; }
 
         public int SaveCount { get; private set; }
+
+        public static SequencedModuleOperationStateStore AllowingSaveCount(
+            string moduleName,
+            params DurableOperationState[] states) =>
+            new(moduleName, allowSaveCount: true, states);
 
         public ValueTask<DurableOperationState?> GetStateAsync(
             Guid durableOperationId,
@@ -799,6 +819,12 @@ public sealed class DurableOperationResultReaderTests
             DurableOperationState state,
             CancellationToken ct = default)
         {
+            if (!_allowSaveCount)
+            {
+                throw new NotSupportedException(
+                    "Operation result reader tests should not write operation state.");
+            }
+
             SaveCount++;
             return ValueTask.CompletedTask;
         }

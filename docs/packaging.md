@@ -274,6 +274,10 @@ Core command, messaging, and module execution abstractions stay in
 `Bondstone`. Provider-neutral durable persistence contracts are in
 `Bondstone.Persistence`; there is no active provider-neutral transport
 diagnostics package; module-local domain event contracts are in `Bondstone`.
+Provider-neutral setup-code diagnostics live in `Bondstone.Persistence` for
+now because both core composition and provider-neutral persistence surfaces
+emit the same coded setup exception contract, and `Bondstone` may depend on
+that neutral contract package.
 EF Core domain event collection and persistence belongs in
 `Bondstone.Persistence.EntityFrameworkCore`. Changing that package split
 requires BMAD PRD/architecture review.

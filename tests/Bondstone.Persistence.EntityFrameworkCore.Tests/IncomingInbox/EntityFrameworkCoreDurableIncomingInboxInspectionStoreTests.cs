@@ -1,4 +1,5 @@
 using Bondstone.Messaging;
+using Bondstone.Diagnostics;
 using Bondstone.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Xunit;
@@ -220,9 +221,12 @@ public sealed class EntityFrameworkCoreDurableIncomingInboxInspectionStoreTests
         var store =
             new EntityFrameworkCoreDurableIncomingInboxInspectionStore<MissingIncomingInboxMappingDbContext>(context);
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await store.FindAsync());
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("missing the Bondstone EF Core incoming inbox mapping", exception.Message);
         Assert.Contains("ApplyBondstoneIncomingInbox()", exception.Message);
     }

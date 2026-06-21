@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
@@ -115,8 +116,33 @@ public sealed class DurableEnvelopeReceiverTests
         IDurableEnvelopeReceiver receiver =
             scope.ServiceProvider.GetRequiredService<IDurableEnvelopeReceiver>();
 
-        await Assert.ThrowsAsync<ArgumentException>(
+        ArgumentException exception = await Assert.ThrowsAnyAsync<ArgumentException>(
             async () => await receiver.ReceiveAsync(CreateEventEnvelope()));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingReceiveBinding,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ReceiveAsync_WhenEnvelopeIsEventWithBlankBinding_ThrowsSetupCode()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider(
+            new RecordingCommandReceivePipeline(),
+            new RecordingEventReceivePipeline());
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IDurableEnvelopeReceiver receiver =
+            scope.ServiceProvider.GetRequiredService<IDurableEnvelopeReceiver>();
+
+        ArgumentException exception = await Assert.ThrowsAnyAsync<ArgumentException>(
+            async () => await receiver.ReceiveAsync(
+                CreateEventEnvelope(),
+                new DurableEnvelopeReceiveBinding(" ", "billing.order-placed.v1")));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingReceiveBinding,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
     }
 
     [Fact]

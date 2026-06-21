@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
@@ -109,10 +110,48 @@ public sealed class LocalDurableEnvelopeDispatcherTests
         IDurableEnvelopeDispatcher dispatcher =
             serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>();
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await dispatcher.DispatchAsync(CreateRecord()));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingDispatcher,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("No durable envelope dispatch route", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task DispatchAsync_WhenLocalCommandRouteHasNoQueueBinding_ThrowsSetupCode()
+    {
+        var route = new LocalDurableEnvelopeDispatchRoute(
+            CreateEmptyTopology(),
+            new ThrowingDurableEnvelopeReceiver());
+
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            async () => await route.DispatchAsync(CreateRecord()));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingReceiveBinding,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task DispatchAsync_WhenLocalEventRouteHasNoSubscriberBinding_ThrowsSetupCode()
+    {
+        var route = new LocalDurableEnvelopeDispatchRoute(
+            CreateEmptyTopology(),
+            new ThrowingDurableEnvelopeReceiver());
+
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            async () => await route.DispatchAsync(CreateRecord(
+                MessageKind.Event,
+                targetModule: null,
+                messageTypeName: "sales.order.submitted.v1")));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingReceiveBinding,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
     }
 
     [Fact]
@@ -192,6 +231,16 @@ public sealed class LocalDurableEnvelopeDispatcherTests
                 DateTimeOffset.Parse("2026-06-09T12:00:03+00:00")));
     }
 
+    private static LocalTransportTopology CreateEmptyTopology()
+    {
+        return new LocalTransportTopology(
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            new Dictionary<string, LocalQueueRegistration>(StringComparer.Ordinal),
+            moduleQueueNameConvention: null,
+            eventQueueNameConvention: null);
+    }
+
     private sealed class RecordingCommandReceivePipeline : IModuleCommandReceivePipeline
     {
         public DurableMessageEnvelope? Envelope { get; private set; }
@@ -240,6 +289,49 @@ public sealed class LocalDurableEnvelopeDispatcherTests
         DurableMessageEnvelope Envelope,
         string SubscriberModule,
         string SubscriberIdentity);
+
+    private sealed class ThrowingDurableEnvelopeReceiver : IDurableEnvelopeReceiver
+    {
+        public ValueTask<DurableInboxHandleResult> ReceiveAsync(
+            DurableMessageEnvelope envelope,
+            DurableEnvelopeReceiveBinding? binding = null,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public ValueTask<DurableInboxHandleResult> ReceiveAsync(
+            ReadOnlyMemory<byte> utf8Json,
+            DurableEnvelopeReceiveBinding? binding = null,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public ValueTask<DurableInboxHandleResult> ReceiveAsync(
+            string json,
+            DurableEnvelopeReceiveBinding? binding = null,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public ValueTask<DurableInboxHandleResult> ReceiveCommandAsync(
+            DurableMessageEnvelope envelope,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public ValueTask<DurableInboxHandleResult> ReceiveEventAsync(
+            DurableMessageEnvelope envelope,
+            string subscriberModule,
+            string subscriberIdentity,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
 
     [DurableCommandIdentity("fulfillment.test.command.v1")]
     private sealed record TestCommand : IDurableCommand;

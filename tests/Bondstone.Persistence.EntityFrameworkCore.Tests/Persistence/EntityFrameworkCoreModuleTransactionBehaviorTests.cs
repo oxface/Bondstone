@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
@@ -123,13 +124,16 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
         await using ServiceProvider serviceProvider = services.BuildServiceProvider();
         using IServiceScope scope = serviceProvider.CreateScope();
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await scope.ServiceProvider
                 .GetRequiredService<IModuleCommandExecutor>()
                 .ExecuteAsync(
                     "fulfillment",
                     new StoreHandledCommand("A-100")));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("missing required Bondstone EF Core mappings: outbox", exception.Message, StringComparison.Ordinal);
         Assert.Contains("ApplyBondstoneOutbox()", exception.Message, StringComparison.Ordinal);
     }
@@ -159,13 +163,16 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
         await using ServiceProvider serviceProvider = services.BuildServiceProvider();
         using IServiceScope scope = serviceProvider.CreateScope();
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await scope.ServiceProvider
                 .GetRequiredService<IModuleCommandExecutor>()
                 .ExecuteAsync(
                     "fulfillment",
                     new StoreHandledCommand("A-100")));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("missing required Bondstone EF Core mappings: inbox", exception.Message, StringComparison.Ordinal);
         Assert.Contains("ApplyBondstoneInbox()", exception.Message, StringComparison.Ordinal);
     }

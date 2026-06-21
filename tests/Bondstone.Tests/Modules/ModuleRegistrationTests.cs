@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Modules;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -143,7 +144,7 @@ public sealed class ModuleRegistrationTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("billing", module =>
@@ -156,6 +157,9 @@ public sealed class ModuleRegistrationTests
                 });
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("already uses persistence provider", exception.Message, StringComparison.Ordinal);
         Assert.Contains("Module 'billing'", exception.Message, StringComparison.Ordinal);
         Assert.Contains("EntityFrameworkCore", exception.Message, StringComparison.Ordinal);
@@ -167,7 +171,7 @@ public sealed class ModuleRegistrationTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("billing", module =>
@@ -180,6 +184,9 @@ public sealed class ModuleRegistrationTests
                 });
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("already uses persistence context", exception.Message, StringComparison.Ordinal);
         Assert.Contains("Module 'billing'", exception.Message, StringComparison.Ordinal);
         Assert.Contains(typeof(BillingPersistenceContext).FullName!, exception.Message, StringComparison.Ordinal);

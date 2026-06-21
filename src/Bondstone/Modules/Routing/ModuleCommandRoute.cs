@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Bondstone.Utility;
@@ -22,7 +23,8 @@ public sealed class ModuleCommandRoute
 
         if (!typeof(ICommand).IsAssignableFrom(commandType))
         {
-            throw new ArgumentException(
+            throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
                 $"Command type '{commandType.FullName}' must implement {nameof(ICommand)}.",
                 nameof(commandType));
         }
@@ -31,21 +33,21 @@ public sealed class ModuleCommandRoute
         {
             if (messageTypeRegistration.Kind != MessageKind.Command)
             {
-                throw new ArgumentException(
+                throw new BondstoneSetupArgumentException(
+                    BondstoneSetupCodes.InvalidDurableIdentity,
                     $"Message type '{messageTypeRegistration.MessageTypeName}' is registered as '{messageTypeRegistration.Kind}', not '{MessageKind.Command}'.",
                     nameof(messageTypeRegistration));
             }
 
             if (messageTypeRegistration.ClrType != commandType)
             {
-                throw new ArgumentException(
+                throw new BondstoneSetupArgumentException(
+                    BondstoneSetupCodes.InvalidDurableIdentity,
                     $"Message type '{messageTypeRegistration.MessageTypeName}' is registered for '{messageTypeRegistration.ClrType.FullName}', not '{commandType.FullName}'.",
                     nameof(messageTypeRegistration));
             }
 
-            handlerIdentity = handlerIdentity.NormalizeRequired(
-                nameof(handlerIdentity),
-                "Handler identity");
+            handlerIdentity = NormalizeHandlerIdentity(handlerIdentity);
         }
 
         ModuleName = moduleName.NormalizeRequired(nameof(moduleName), "Module name");
@@ -55,6 +57,16 @@ public sealed class ModuleCommandRoute
         HandlerType = handlerType;
         ResultType = resultType;
         _invoke = invoke;
+    }
+
+    private static string NormalizeHandlerIdentity(string? handlerIdentity)
+    {
+        return string.IsNullOrWhiteSpace(handlerIdentity)
+            ? throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
+                "Handler identity is required.",
+                nameof(handlerIdentity))
+            : handlerIdentity.Trim();
     }
 
     private readonly ModuleCommandRouteInvoker _invoke;

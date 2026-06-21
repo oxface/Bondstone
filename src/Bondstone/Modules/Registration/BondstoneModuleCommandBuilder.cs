@@ -1,4 +1,5 @@
 using System.Reflection;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Utility;
 using Microsoft.Extensions.DependencyInjection;
@@ -270,9 +271,9 @@ public sealed class BondstoneModuleCommandBuilder
         }
         catch (InvalidOperationException exception)
         {
-            throw new InvalidOperationException(
-                $"Module '{ModuleName}' could not register durable command message identity from command metadata for command type '{commandType.FullName}': {exception.Message}",
-                exception);
+            throw CreateSetupException(
+                exception,
+                $"Module '{ModuleName}' could not register durable command message identity from command metadata for command type '{commandType.FullName}': {exception.Message}");
         }
     }
 
@@ -286,9 +287,18 @@ public sealed class BondstoneModuleCommandBuilder
         }
         catch (InvalidOperationException exception)
         {
-            throw new InvalidOperationException(
-                $"Module '{ModuleName}' could not register durable command message identity '{messageTypeName.Trim()}' for command type '{commandType.FullName}': {exception.Message}",
-                exception);
+            throw CreateSetupException(
+                exception,
+                $"Module '{ModuleName}' could not register durable command message identity '{messageTypeName.Trim()}' for command type '{commandType.FullName}': {exception.Message}");
         }
+    }
+
+    private static InvalidOperationException CreateSetupException(
+        InvalidOperationException exception,
+        string message)
+    {
+        return exception is IBondstoneSetupException setupException
+            ? new BondstoneSetupException(setupException.SetupCode, message, exception)
+            : new InvalidOperationException(message, exception);
     }
 }

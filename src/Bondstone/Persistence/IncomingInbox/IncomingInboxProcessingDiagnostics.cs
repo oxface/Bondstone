@@ -30,11 +30,8 @@ internal static class IncomingInboxProcessingDiagnostics
 
     public static class Tags
     {
-        public const string ClaimedBy = "bondstone.incoming_inbox.claimed_by";
         public const string ClaimedCount = "bondstone.incoming_inbox.claimed_count";
-        public const string HandlerIdentity = "bondstone.handler_identity";
         public const string MaxCount = "bondstone.incoming_inbox.max_count";
-        public const string MessageId = "bondstone.message_id";
         public const string MessageKind = "bondstone.message_kind";
         public const string MessageType = "bondstone.message_type";
         public const string ProcessedCount = "bondstone.incoming_inbox.processed_count";
@@ -52,13 +49,11 @@ internal static class IncomingInboxProcessingDiagnostics
         DurableIncomingInboxRecord record)
     {
         DurableMessageEnvelope envelope = record.Envelope;
-        activity.SetTag(Tags.MessageId, envelope.MessageId.ToString("D"));
         activity.SetTag(Tags.MessageKind, envelope.MessageKind.ToString());
         activity.SetTag(Tags.MessageType, envelope.MessageTypeName);
         activity.SetTag(Tags.SourceModule, envelope.SourceModule);
         activity.SetTag(Tags.TargetModule, envelope.TargetModule);
         activity.SetTag(Tags.ReceiverModule, record.ReceiverModule);
-        activity.SetTag(Tags.HandlerIdentity, record.HandlerIdentity);
         activity.SetTag(Tags.SourceTransport, record.SourceTransportName);
     }
 

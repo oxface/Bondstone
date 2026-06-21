@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.DomainEvents;
 using Bondstone.Messaging;
 using Xunit;
@@ -51,9 +52,12 @@ public sealed class DomainEventContractTests
     {
         var registry = new MessageTypeRegistry();
 
-        ArgumentException exception = Assert.Throws<ArgumentException>(
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
             () => registry.Register(typeof(InventoryReservedDomainEvent), "inventory.reserved.v1"));
 
+        Assert.Equal(
+            BondstoneSetupCodes.InvalidDurableIdentity,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Equal("clrType", exception.ParamName);
     }
 

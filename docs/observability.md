@@ -57,25 +57,19 @@ explicit `MessageTraceContext`.
 
 Durable message activities can emit:
 
-- `bondstone.message_id`;
 - `bondstone.message_kind`;
 - `bondstone.message_type`;
 - `bondstone.source_module`;
 - `bondstone.target_module`;
-- `bondstone.partition_key`;
-- `bondstone.operation_id`;
-- `bondstone.handler_identity`, receive activities only.
 
 Operation finalization activities can emit:
 
 - `bondstone.module`;
-- `bondstone.operation_id`;
 - `bondstone.operation_status`;
 - `bondstone.operation_finalized`.
 
 Outbox dispatch activities can emit:
 
-- `bondstone.outbox.claimed_by`;
 - `bondstone.outbox.max_count`;
 - `bondstone.outbox.claimed_count`;
 - `bondstone.outbox.dispatched_count`;
@@ -85,7 +79,6 @@ Outbox dispatch activities can emit:
 
 Outbox message dispatch activities can also emit durable message tags:
 
-- `bondstone.message_id`;
 - `bondstone.message_kind`;
 - `bondstone.message_type`;
 - `bondstone.source_module`;
@@ -93,7 +86,6 @@ Outbox message dispatch activities can also emit durable message tags:
 
 Incoming inbox processing activities can emit:
 
-- `bondstone.incoming_inbox.claimed_by`;
 - `bondstone.incoming_inbox.max_count`;
 - `bondstone.incoming_inbox.claimed_count`;
 - `bondstone.incoming_inbox.processed_count`;
@@ -104,13 +96,11 @@ Incoming inbox processing activities can emit:
 Incoming inbox message activities can also emit durable message tags plus
 receive-context tags:
 
-- `bondstone.message_id`;
 - `bondstone.message_kind`;
 - `bondstone.message_type`;
 - `bondstone.source_module`;
 - `bondstone.target_module`, when present;
 - `bondstone.module`, meaning the receiver module;
-- `bondstone.handler_identity`;
 - `bondstone.source_transport`.
 
 Activity status is set to `Error` when the instrumented Bondstone boundary
@@ -225,11 +215,28 @@ Bondstone exposes read-only operational inspection through:
   provider/runtime boundary.
 
 Startup and runtime validation errors intentionally name missing durable
-composition pieces, such as missing module persistence, missing mappings,
-missing dispatchers, duplicate module durable registrations, invalid durable
-identity attributes, missing receive bindings, and missing or ambiguous
-dispatch routes. These messages are diagnostic surfaces, but they are not a
-stable error-code vocabulary.
+composition pieces, such as missing module persistence, missing outbox
+persistence, missing mappings, missing dispatchers, duplicate module durable
+registrations, invalid durable identity attributes, missing receive bindings,
+and missing or ambiguous dispatch routes. Representative Bondstone-owned setup
+failures expose stable setup code values through coded exception surfaces that
+still derive from the same broad exception bases (`InvalidOperationException`
+or `ArgumentException`) used by the previous setup errors.
+
+Current setup code constants live in `Bondstone.Diagnostics.BondstoneSetupCodes`:
+
+- `bondstone.setup.missing_module_persistence`;
+- `bondstone.setup.missing_ef_mapping`;
+- `bondstone.setup.missing_outbox_persistence`;
+- `bondstone.setup.missing_dispatcher`;
+- `bondstone.setup.duplicate_durable_registration`;
+- `bondstone.setup.invalid_durable_identity`;
+- `bondstone.setup.missing_receive_binding`;
+- `bondstone.setup.ambiguous_dispatch_route`.
+
+Setup codes are intended to be stable for automation. Exception messages may
+improve over time, new codes may be added, and existing code names require
+compatibility review before rename or removal.
 
 ## Current Logs
 
@@ -253,10 +260,6 @@ infrastructure health remain provider-native or application-owned
 diagnostics.
 
 ## Not Current Behavior
-
-Bondstone does not publish stable misconfiguration error codes. Startup and
-runtime exception messages are intentionally clear, but they are not a
-machine-readable error-code vocabulary.
 
 Bondstone does not provide a provider-neutral worker health status, cleanup
 status, or backlog readiness decision. The incoming inbox processing metrics

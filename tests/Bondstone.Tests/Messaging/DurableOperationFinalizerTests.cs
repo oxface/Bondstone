@@ -69,9 +69,9 @@ public sealed class DurableOperationFinalizerTests
             candidate => candidate.OperationName == "bondstone.operation.finalize");
         Assert.Equal(ActivityKind.Internal, activity.Kind);
         Assert.Equal("fulfillment", ActivityTestHelper.GetTag(activity, "bondstone.module"));
-        Assert.Equal(durableOperationId.ToString("D"), ActivityTestHelper.GetTag(activity, "bondstone.operation_id"));
         Assert.Equal("Failed", ActivityTestHelper.GetTag(activity, "bondstone.operation_status"));
         Assert.Equal(true, ActivityTestHelper.GetTag(activity, "bondstone.operation_finalized"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.operation_id"));
     }
 
     [Fact]

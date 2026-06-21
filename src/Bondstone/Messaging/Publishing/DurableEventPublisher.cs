@@ -80,13 +80,6 @@ internal sealed class DurableEventPublisher(
             activity?.SetTag(
                 BondstoneMessagingDiagnostics.Tags.MessageKind,
                 MessageKind.Event.ToString());
-            activity?.SetTag(
-                BondstoneMessagingDiagnostics.Tags.OperationId,
-                durableOperationId?.ToString("D"));
-            activity?.SetTag(
-                BondstoneMessagingDiagnostics.Tags.PartitionKey,
-                partitionKey);
-
             string payload = _payloadSerializer.Serialize(integrationEvent);
             MessageTraceContext? capturedTraceContext =
                 traceContext ?? MessageTraceContext.CaptureCurrent();
@@ -108,9 +101,6 @@ internal sealed class DurableEventPublisher(
                 executionContext.ModuleName);
 
             await outboxWriter.WriteAsync(envelope, ct);
-            activity?.SetTag(
-                BondstoneMessagingDiagnostics.Tags.MessageId,
-                envelope.MessageId.ToString("D"));
 
             return new DurableEventPublishResult(
                 messageId,

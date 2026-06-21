@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Persistence;
@@ -162,7 +163,8 @@ internal sealed class PostgreSqlDurableIncomingInboxClaimer<TDbContext>(
             return;
         }
 
-        throw new InvalidOperationException(
+        throw new BondstoneSetupException(
+            BondstoneSetupCodes.MissingEfMapping,
             $"DbContext '{context.GetType().FullName}' is missing the Bondstone EF Core incoming inbox mapping. Map the durable incoming inbox explicitly with ApplyBondstoneIncomingInbox().");
     }
 

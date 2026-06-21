@@ -49,10 +49,6 @@ internal static class ModuleReceiveTelemetry
         }
 
         BondstoneMessagingDiagnostics.SetEnvelopeTags(activity, envelope);
-        activity.SetTag(
-            BondstoneMessagingDiagnostics.Tags.HandlerIdentity,
-            handlerIdentity);
-
         return activity;
     }
 }

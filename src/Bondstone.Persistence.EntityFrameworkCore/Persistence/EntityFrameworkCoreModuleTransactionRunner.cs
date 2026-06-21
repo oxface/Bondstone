@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Bondstone.Diagnostics;
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Modules;
@@ -126,7 +127,8 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
         }
 
         string joinedMappings = string.Join(", ", missingMappings);
-        throw new InvalidOperationException(
+        throw new BondstoneSetupException(
+            BondstoneSetupCodes.MissingEfMapping,
             $"Module '{module.Name}' uses durable messaging with Entity Framework Core persistence context "
             + $"'{dbContext.GetType().FullName}', but the DbContext model is missing required Bondstone EF Core mappings: "
             + $"{joinedMappings}. Map the required durable messaging tables with ApplyBondstoneOutbox() "

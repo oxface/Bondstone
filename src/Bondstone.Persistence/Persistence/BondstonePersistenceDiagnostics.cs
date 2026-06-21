@@ -29,11 +29,9 @@ internal static class BondstonePersistenceDiagnostics
 
     public static class Tags
     {
-        public const string ClaimedBy = "bondstone.outbox.claimed_by";
         public const string ClaimedCount = "bondstone.outbox.claimed_count";
         public const string DispatchedCount = "bondstone.outbox.dispatched_count";
         public const string MaxCount = "bondstone.outbox.max_count";
-        public const string MessageId = "bondstone.message_id";
         public const string MessageKind = "bondstone.message_kind";
         public const string MessageType = "bondstone.message_type";
         public const string RetryScheduledCount = "bondstone.outbox.retry_scheduled_count";
@@ -48,7 +46,6 @@ internal static class BondstonePersistenceDiagnostics
         DurableOutboxRecord record)
     {
         DurableMessageEnvelope envelope = record.Envelope;
-        activity.SetTag(Tags.MessageId, envelope.MessageId.ToString("D"));
         activity.SetTag(Tags.MessageKind, envelope.MessageKind.ToString());
         activity.SetTag(Tags.MessageType, envelope.MessageTypeName);
         activity.SetTag(Tags.SourceModule, envelope.SourceModule);

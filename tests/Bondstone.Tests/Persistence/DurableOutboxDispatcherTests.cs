@@ -59,23 +59,26 @@ public sealed class DurableOutboxDispatcherTests
             activities,
             activity => activity.OperationName == "bondstone.outbox.dispatch");
         Assert.Equal(ActivityKind.Internal, batchActivity.Kind);
-        Assert.Equal("dispatcher-1", ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.claimed_by"));
         Assert.Equal(10, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.max_count"));
         Assert.Equal(2, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.claimed_count"));
         Assert.Equal(2, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.dispatched_count"));
         Assert.Equal(0, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.retry_scheduled_count"));
         Assert.Equal(0, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.terminal_failed_count"));
         Assert.Equal(0, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.stale_count"));
+        Assert.Null(ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.claimed_by"));
 
-        Activity firstMessageActivity = Assert.Single(
-            activities,
-            activity => activity.OperationName == "bondstone.outbox.dispatch.message"
-                && ActivityTestHelper.GetTag(activity, "bondstone.message_id")?.Equals(
-                    first.Envelope.MessageId.ToString("D")) == true);
-        Assert.Equal("Command", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.message_kind"));
-        Assert.Equal("sales.customer.register.v1", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.message_type"));
-        Assert.Equal("sales", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.source_module"));
-        Assert.Equal("billing", ActivityTestHelper.GetTag(firstMessageActivity, "bondstone.target_module"));
+        Activity[] messageActivities = activities
+            .Where(activity => activity.OperationName == "bondstone.outbox.dispatch.message")
+            .ToArray();
+        Assert.Equal(2, messageActivities.Length);
+        Assert.All(messageActivities, messageActivity =>
+        {
+            Assert.Equal("Command", ActivityTestHelper.GetTag(messageActivity, "bondstone.message_kind"));
+            Assert.Equal("sales.customer.register.v1", ActivityTestHelper.GetTag(messageActivity, "bondstone.message_type"));
+            Assert.Equal("sales", ActivityTestHelper.GetTag(messageActivity, "bondstone.source_module"));
+            Assert.Equal("billing", ActivityTestHelper.GetTag(messageActivity, "bondstone.target_module"));
+            Assert.Null(ActivityTestHelper.GetTag(messageActivity, "bondstone.message_id"));
+        });
     }
 
     [Fact]

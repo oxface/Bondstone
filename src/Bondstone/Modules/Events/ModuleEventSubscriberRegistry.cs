@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Utility;
 
 namespace Bondstone.Modules;
@@ -81,7 +82,8 @@ internal sealed class ModuleEventSubscriberRegistry : IModuleEventSubscriberRegi
                 if (existingSubscriber.EventType != subscriber.EventType
                     || existingSubscriber.HandlerType != subscriber.HandlerType)
                 {
-                    throw new InvalidOperationException(
+                    throw new BondstoneSetupException(
+                        BondstoneSetupCodes.DuplicateDurableRegistration,
                         $"Module '{subscriber.ModuleName}' already has an event subscriber '{subscriber.SubscriberIdentity}' for message type '{subscriber.MessageTypeName}'.");
                 }
 

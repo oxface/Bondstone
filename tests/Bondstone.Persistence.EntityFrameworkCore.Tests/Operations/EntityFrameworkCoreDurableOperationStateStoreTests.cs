@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Messaging;
 using Microsoft.EntityFrameworkCore;
@@ -143,9 +144,12 @@ public sealed class EntityFrameworkCoreDurableOperationStateStoreTests
             DurableOperationStatus.Pending,
             DateTimeOffset.Parse("2026-06-04T00:00:00+00:00"));
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await store.SaveAsync(state));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("operation-state mapping", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ApplyBondstoneOperationState()", exception.Message, StringComparison.Ordinal);
     }

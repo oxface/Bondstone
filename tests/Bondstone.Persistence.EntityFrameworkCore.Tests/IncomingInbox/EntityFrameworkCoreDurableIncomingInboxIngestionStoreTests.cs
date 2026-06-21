@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
@@ -82,7 +83,7 @@ public sealed class EntityFrameworkCoreDurableIncomingInboxIngestionStoreTests
                 failedAtUtc: DateTimeOffset.Parse("2026-06-17T00:04:00+00:00"),
                 failureReason: "receive failed"));
 
-        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(
+        ArgumentException exception = await Assert.ThrowsAnyAsync<ArgumentException>(
             async () => await store.IngestAsync(record));
 
         Assert.Equal("record", exception.ParamName);
@@ -96,9 +97,12 @@ public sealed class EntityFrameworkCoreDurableIncomingInboxIngestionStoreTests
         var store = new EntityFrameworkCoreDurableIncomingInboxIngestionStore<MissingIncomingInboxMappingDbContext>(
             context);
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await store.IngestAsync(CreateRecord()));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("missing the Bondstone EF Core incoming inbox mapping", exception.Message);
         Assert.Contains("ApplyBondstoneIncomingInbox()", exception.Message);
     }

@@ -305,6 +305,24 @@ Durable incoming inbox worker, 2026-06-18:
   provider packages aggregate module-owned durable incoming inbox processors
   behind the app-facing `IDurableIncomingInboxDispatcher`.
 
+Stable setup codes, 2026-06-21:
+
+- `Bondstone.Diagnostics.BondstoneSetupCodes` is an additive user application
+  contract for stable setup-code string constants covering common
+  Bondstone-owned misconfiguration failures. The contract currently lives in
+  `Bondstone.Persistence` as provider-neutral runtime diagnostics because both
+  core composition and provider-neutral persistence surfaces emit setup-code
+  exceptions, and `Bondstone` may depend on that neutral contract package.
+- `IBondstoneSetupException` is an additive diagnostic contract implemented by
+  coded setup exceptions through the `SetupCode` property.
+- `BondstoneSetupException` and `BondstoneSetupArgumentException` are additive
+  exception types that derive from `InvalidOperationException` and
+  `ArgumentException` respectively, preserving broad catch behavior while
+  exposing machine-readable setup codes.
+- Setup code names are intended to be stable for automation. Human-readable
+  messages may improve, new codes may be added, and existing code names
+  require compatibility review before rename or removal.
+
 RabbitMQ durable incoming inbox ingestion handoff, 2026-06-18:
 
 - `RabbitMqReceiveWorkerOptions.ReceiveCommand()` and `ReceiveEvent(...)`

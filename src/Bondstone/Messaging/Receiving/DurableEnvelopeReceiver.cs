@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Modules;
 using Bondstone.Persistence;
 
@@ -27,14 +28,11 @@ internal sealed class DurableEnvelopeReceiver(
         {
             MessageKind.Command => await ReceiveCommandAsync(envelope, ct),
             MessageKind.Event => binding is null
-                ? throw new ArgumentException(
+                ? throw new BondstoneSetupArgumentException(
+                    BondstoneSetupCodes.MissingReceiveBinding,
                     "Event receive requires subscriber module and subscriber identity binding.",
                     nameof(binding))
-                : await ReceiveEventAsync(
-                    envelope,
-                    binding.SubscriberModule,
-                    binding.SubscriberIdentity,
-                    ct),
+                : await ReceiveEventAsync(envelope, binding, ct),
             _ => throw new NotSupportedException(
                 $"Envelope receive does not support message kind '{envelope.MessageKind}'."),
         };
@@ -87,10 +85,48 @@ internal sealed class DurableEnvelopeReceiver(
                 $"Event receive supports event envelopes only. Envelope '{envelope.MessageId}' is '{envelope.MessageKind}'.");
         }
 
+        DurableEnvelopeReceiveBinding binding = NormalizeReceiveBinding(
+            subscriberModule,
+            subscriberIdentity);
+
         return await _eventReceivePipeline.HandleOnceAsync(
             envelope,
-            subscriberModule,
-            subscriberIdentity,
+            binding.SubscriberModule,
+            binding.SubscriberIdentity,
             ct);
+    }
+
+    private ValueTask<DurableInboxHandleResult> ReceiveEventAsync(
+        DurableMessageEnvelope envelope,
+        DurableEnvelopeReceiveBinding binding,
+        CancellationToken ct)
+    {
+        DurableEnvelopeReceiveBinding normalizedBinding = NormalizeReceiveBinding(
+            binding.SubscriberModule,
+            binding.SubscriberIdentity);
+
+        return ReceiveEventAsync(
+            envelope,
+            normalizedBinding.SubscriberModule,
+            normalizedBinding.SubscriberIdentity,
+            ct);
+    }
+
+    private static DurableEnvelopeReceiveBinding NormalizeReceiveBinding(
+        string? subscriberModule,
+        string? subscriberIdentity)
+    {
+        if (string.IsNullOrWhiteSpace(subscriberModule)
+            || string.IsNullOrWhiteSpace(subscriberIdentity))
+        {
+            throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.MissingReceiveBinding,
+                "Event receive requires subscriber module and subscriber identity binding.",
+                nameof(DurableEnvelopeReceiveBinding));
+        }
+
+        return new DurableEnvelopeReceiveBinding(
+            subscriberModule.Trim(),
+            subscriberIdentity.Trim());
     }
 }

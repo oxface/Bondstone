@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.DomainEvents;
 using Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
@@ -275,13 +276,16 @@ public sealed class EntityFrameworkCoreDomainEventPersistenceTests
         await using ServiceProvider serviceProvider = services.BuildServiceProvider();
         using IServiceScope scope = serviceProvider.CreateScope();
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await scope.ServiceProvider
                 .GetRequiredService<IModuleCommandExecutor>()
                 .ExecuteAsync(
                     "fulfillment",
                     new RaiseDomainEventCommand("A-100")));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("ApplyBondstoneDomainEvents()", exception.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("ApplyBondstonePersistence()", exception.Message, StringComparison.Ordinal);
     }

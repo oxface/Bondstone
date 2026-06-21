@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,7 +85,7 @@ public sealed class ModuleCommandRegistrationTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module(" sales ", module =>
@@ -97,6 +98,9 @@ public sealed class ModuleCommandRegistrationTests
                 });
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
         Assert.Contains("durable command message identity", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales.order.ship.v2", exception.Message, StringComparison.Ordinal);
@@ -108,7 +112,7 @@ public sealed class ModuleCommandRegistrationTests
     {
         var services = new ServiceCollection();
 
-        ArgumentException exception = Assert.Throws<ArgumentException>(
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("sales", module =>
@@ -124,11 +128,35 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void RegisterHandler_WithBlankHandlerIdentity_ThrowsSetupCode()
+    {
+        var services = new ServiceCollection();
+
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.Commands.RegisterHandler<ShipOrderCommand, ShipOrderHandler>(
+                        "sales.order.ship.v2",
+                        handlerIdentity: " ");
+                });
+            }));
+
+        Assert.Equal(
+            BondstoneSetupCodes.InvalidDurableIdentity,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Equal("handlerIdentity", exception.ParamName);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void RegisterHandler_WhenCommandRouteAlreadyExists_Throws()
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("sales", module =>
@@ -138,6 +166,9 @@ public sealed class ModuleCommandRegistrationTests
                 });
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("already has a command route", exception.Message, StringComparison.Ordinal);
         Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
         Assert.Contains(typeof(CreateDraftOrderCommand).FullName!, exception.Message, StringComparison.Ordinal);
@@ -358,7 +389,7 @@ public sealed class ModuleCommandRegistrationTests
         await using ServiceProvider serviceProvider = services.BuildServiceProvider();
         using IServiceScope scope = serviceProvider.CreateScope();
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await scope.ServiceProvider
                 .GetRequiredService<IModuleCommandExecutor>()
                 .ExecuteAsync(

@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 
@@ -61,7 +62,8 @@ internal sealed class LocalDurableEnvelopeDispatchRoute(
     {
         if (!_topology.TryGetCommandBinding(envelope, out _))
         {
-            throw new InvalidOperationException(
+            throw new BondstoneSetupException(
+                BondstoneSetupCodes.MissingReceiveBinding,
                 $"Local transport has no queue binding for command '{envelope.MessageTypeName}' targeting module '{envelope.TargetModule}'.");
         }
 
@@ -76,7 +78,8 @@ internal sealed class LocalDurableEnvelopeDispatchRoute(
             _topology.GetEventSubscriptions(envelope);
         if (subscriptions.Count == 0)
         {
-            throw new InvalidOperationException(
+            throw new BondstoneSetupException(
+                BondstoneSetupCodes.MissingReceiveBinding,
                 $"Local transport has no subscriber queue binding for event '{envelope.MessageTypeName}'.");
         }
 

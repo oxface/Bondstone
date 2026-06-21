@@ -1,6 +1,7 @@
 using System.Reflection;
 using Azure.Messaging.ServiceBus;
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
@@ -230,6 +231,90 @@ public sealed class ServiceBusReceiveWorkerTests
         Assert.Equal("billing", record.Key.ReceiverModule);
         Assert.Equal("billing.order-placed-projection.v1", record.Key.HandlerIdentity);
         Assert.Equal(1, args.CompleteCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ProcessMessageAsync_WhenDurableIncomingInboxEventIngestionHasNoBinding_ThrowsSetupCode()
+    {
+        var store = new RecordingIncomingInboxIngestionStore();
+        await using ServiceProvider provider = BuildIngestionProvider(
+            store,
+            new RecordingIncomingInboxIngestionScope(),
+            bondstone => bondstone.Module("billing", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+            }));
+        var worker = new ServiceBusReceiveWorker(
+            CreateClient(),
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            [],
+            new RecordingLogger<ServiceBusReceiveWorker>());
+        var args = new RecordingProcessMessageEventArgs(
+            CreateReceivedMessage(CreateEnvelopeBody(CreateEventEnvelope())));
+        var registration = new ServiceBusReceiveWorkerRegistration(
+            QueueName: null,
+            TopicName: "orders",
+            SubscriptionName: "billing",
+            Binding: null,
+            new ServiceBusProcessorOptions(),
+            "servicebus:orders/billing");
+
+        ArgumentException exception = await Assert.ThrowsAnyAsync<ArgumentException>(
+            async () => await InvokeProcessMessageAsync(
+                worker,
+                args,
+                registration));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingReceiveBinding,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Equal(0, args.CompleteCount);
+        Assert.Empty(store.Records);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ProcessMessageAsync_WhenDurableIncomingInboxEventIngestionBindingHasNoSubscriber_ThrowsSetupCode()
+    {
+        var store = new RecordingIncomingInboxIngestionStore();
+        await using ServiceProvider provider = BuildIngestionProvider(
+            store,
+            new RecordingIncomingInboxIngestionScope(),
+            bondstone => bondstone.Module("billing", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+            }));
+        var worker = new ServiceBusReceiveWorker(
+            CreateClient(),
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            [],
+            new RecordingLogger<ServiceBusReceiveWorker>());
+        var args = new RecordingProcessMessageEventArgs(
+            CreateReceivedMessage(CreateEnvelopeBody(CreateEventEnvelope())));
+        var registration = new ServiceBusReceiveWorkerRegistration(
+            QueueName: null,
+            TopicName: "orders",
+            SubscriptionName: "billing",
+            new DurableEnvelopeReceiveBinding(
+                "billing",
+                "billing.order-placed-projection.v1"),
+            new ServiceBusProcessorOptions(),
+            "servicebus:orders/billing");
+
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            async () => await InvokeProcessMessageAsync(
+                worker,
+                args,
+                registration));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingReceiveBinding,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Equal(0, args.CompleteCount);
+        Assert.Empty(store.Records);
     }
 
     private static ServiceProvider BuildProvider(

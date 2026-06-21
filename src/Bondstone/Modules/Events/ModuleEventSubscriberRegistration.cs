@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Utility;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,21 +22,24 @@ public sealed class ModuleEventSubscriberRegistration
 
         if (!typeof(IIntegrationEvent).IsAssignableFrom(eventType))
         {
-            throw new ArgumentException(
+            throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
                 $"Event type '{eventType.FullName}' must implement {nameof(IIntegrationEvent)}.",
                 nameof(eventType));
         }
 
         if (messageTypeRegistration.Kind != MessageKind.Event)
         {
-            throw new ArgumentException(
+            throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
                 $"Message type '{messageTypeRegistration.MessageTypeName}' is registered as '{messageTypeRegistration.Kind}', not '{MessageKind.Event}'.",
                 nameof(messageTypeRegistration));
         }
 
         if (messageTypeRegistration.ClrType != eventType)
         {
-            throw new ArgumentException(
+            throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
                 $"Message type '{messageTypeRegistration.MessageTypeName}' is registered for '{messageTypeRegistration.ClrType.FullName}', not '{eventType.FullName}'.",
                 nameof(messageTypeRegistration));
         }
@@ -43,11 +47,19 @@ public sealed class ModuleEventSubscriberRegistration
         ModuleName = moduleName.NormalizeRequired(nameof(moduleName), "Module name");
         EventType = eventType;
         MessageTypeRegistration = messageTypeRegistration;
-        SubscriberIdentity = subscriberIdentity.NormalizeRequired(
-            nameof(subscriberIdentity),
-            "Subscriber identity");
+        SubscriberIdentity = NormalizeSubscriberIdentity(subscriberIdentity);
         HandlerType = handlerType;
         _execute = execute;
+    }
+
+    private static string NormalizeSubscriberIdentity(string? subscriberIdentity)
+    {
+        return string.IsNullOrWhiteSpace(subscriberIdentity)
+            ? throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
+                "Subscriber identity is required.",
+                nameof(subscriberIdentity))
+            : subscriberIdentity.Trim();
     }
 
     private readonly ModuleEventSubscriberInvoker _execute;

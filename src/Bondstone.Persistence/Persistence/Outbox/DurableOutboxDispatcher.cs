@@ -41,7 +41,6 @@ public sealed class DurableOutboxDispatcher(
         using Activity? activity = BondstonePersistenceDiagnostics.ActivitySource.StartActivity(
             BondstonePersistenceDiagnostics.OutboxDispatchActivityName,
             ActivityKind.Internal);
-        activity?.SetTag(BondstonePersistenceDiagnostics.Tags.ClaimedBy, normalizedClaimedBy);
         activity?.SetTag(BondstonePersistenceDiagnostics.Tags.MaxCount, maxCount);
 
         try

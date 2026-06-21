@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Xunit;
@@ -32,9 +33,12 @@ public sealed class RoutedDurableEnvelopeDispatcherTests
                 new CapturingRoute("AlternateRoute", canSend: true),
             ]);
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await dispatcher.DispatchAsync(CreateRecord()));
 
+        Assert.Equal(
+            BondstoneSetupCodes.AmbiguousDispatchRoute,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("Multiple durable envelope dispatch routes", exception.Message, StringComparison.Ordinal);
         Assert.Contains("PrimaryRoute", exception.Message, StringComparison.Ordinal);
         Assert.Contains("AlternateRoute", exception.Message, StringComparison.Ordinal);
@@ -47,7 +51,7 @@ public sealed class RoutedDurableEnvelopeDispatcherTests
         var dispatcher = new RoutedDurableEnvelopeDispatcher(
             [new CapturingRoute("PrimaryRoute", canSend: false)]);
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await dispatcher.DispatchAsync(CreateRecord()));
 
         Assert.Contains("No durable envelope dispatch route", exception.Message, StringComparison.Ordinal);

@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
@@ -9,6 +10,66 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.Persistence;
 
 public sealed partial class PostgreSqlPersistenceTests
 {
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task IncomingInboxClaimer_WhenMappingIsMissing_ThrowsSetupCode()
+    {
+        await using PostgreSqlMissingIncomingInboxMappingDbContext context =
+            CreateIncomingInboxContextWithoutMapping();
+        var claimer =
+            new PostgreSqlDurableIncomingInboxClaimer<PostgreSqlMissingIncomingInboxMappingDbContext>(
+                context);
+
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            async () => await claimer.ClaimAsync("worker-1", TimeSpan.FromMinutes(5)));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task IncomingInboxLeaseRenewer_WhenMappingIsMissing_ThrowsSetupCode()
+    {
+        await using PostgreSqlMissingIncomingInboxMappingDbContext context =
+            CreateIncomingInboxContextWithoutMapping();
+        var renewer =
+            new PostgreSqlDurableIncomingInboxLeaseRenewer<PostgreSqlMissingIncomingInboxMappingDbContext>(
+                context);
+
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            async () => await renewer.RenewAsync(
+                CreateIncomingInboxKey(),
+                "worker-1",
+                TimeSpan.FromMinutes(5)));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task IncomingInboxOutcomeRecorder_WhenMappingIsMissing_ThrowsSetupCode()
+    {
+        await using PostgreSqlMissingIncomingInboxMappingDbContext context =
+            CreateIncomingInboxContextWithoutMapping();
+        var recorder =
+            new PostgreSqlDurableIncomingInboxOutcomeRecorder<PostgreSqlMissingIncomingInboxMappingDbContext>(
+                context);
+
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            async () => await recorder.MarkProcessedAsync(
+                CreateIncomingInboxKey(),
+                "worker-1",
+                DateTimeOffset.Parse("2026-06-17T00:05:00+00:00")));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+    }
+
     [Fact]
     [Trait("Category", "Integration")]
     public async Task IncomingInboxClaimer_WhenPendingRowsExist_ClaimsInDeterministicOrder()
@@ -416,6 +477,15 @@ public sealed partial class PostgreSqlPersistenceTests
         return new PostgreSqlIncomingInboxTestDbContext(options);
     }
 
+    private PostgreSqlMissingIncomingInboxMappingDbContext CreateIncomingInboxContextWithoutMapping()
+    {
+        var options = new DbContextOptionsBuilder<PostgreSqlMissingIncomingInboxMappingDbContext>()
+            .UseNpgsql(_fixture.ConnectionString)
+            .Options;
+
+        return new PostgreSqlMissingIncomingInboxMappingDbContext(options);
+    }
+
     private async Task WriteIncomingInboxRecordsAsync(
         params DurableIncomingInboxRecord[] records)
     {
@@ -497,4 +567,16 @@ public sealed partial class PostgreSqlPersistenceTests
             state,
             "rabbitmq:orders");
     }
+
+    private static DurableIncomingInboxKey CreateIncomingInboxKey()
+    {
+        return DurableIncomingInboxKey.ForCommandHandler(
+            Guid.Parse("aaaaaaaa-1111-1111-1111-111111111111"),
+            "fulfillment",
+            "fulfillment.receive.v1");
+    }
+
+    private sealed class PostgreSqlMissingIncomingInboxMappingDbContext(
+        DbContextOptions<PostgreSqlMissingIncomingInboxMappingDbContext> options)
+        : DbContext(options);
 }

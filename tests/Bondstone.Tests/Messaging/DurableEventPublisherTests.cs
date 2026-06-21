@@ -83,16 +83,17 @@ public sealed class DurableEventPublisherTests
                 "sales",
                 new SubmitOrderCommand("order-123"));
 
-        DurableMessageEnvelope envelope = Assert.Single(outboxWriter.Envelopes);
+        Assert.Single(outboxWriter.Envelopes);
         Activity activity = Assert.Single(
             activities,
             candidate => candidate.OperationName == "bondstone.event.publish");
         Assert.Equal(ActivityKind.Producer, activity.Kind);
-        Assert.Equal(envelope.MessageId.ToString("D"), ActivityTestHelper.GetTag(activity, "bondstone.message_id"));
         Assert.Equal("Event", ActivityTestHelper.GetTag(activity, "bondstone.message_kind"));
         Assert.Equal("sales.order.submitted.v1", ActivityTestHelper.GetTag(activity, "bondstone.message_type"));
         Assert.Equal("sales", ActivityTestHelper.GetTag(activity, "bondstone.source_module"));
-        Assert.Equal("order-123", ActivityTestHelper.GetTag(activity, "bondstone.partition_key"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.message_id"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.operation_id"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.partition_key"));
     }
 
     [Fact]

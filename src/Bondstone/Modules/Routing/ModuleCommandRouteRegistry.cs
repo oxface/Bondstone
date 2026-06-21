@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Utility;
 
 namespace Bondstone.Modules;
@@ -94,7 +95,8 @@ internal sealed class ModuleCommandRouteRegistry : IModuleCommandRouteRegistry
                             ? $" Existing durable command message identity: '{existingRoute.MessageTypeName ?? "(none)"}'; attempted durable command message identity: '{route.MessageTypeName ?? "(none)"}'."
                             : string.Empty;
 
-                    throw new InvalidOperationException(
+                    throw new BondstoneSetupException(
+                        BondstoneSetupCodes.DuplicateDurableRegistration,
                         $"Module '{route.ModuleName}' already has a command route for '{route.CommandType.FullName}'.{durableIdentityDetail}");
                 }
 
@@ -107,7 +109,8 @@ internal sealed class ModuleCommandRouteRegistry : IModuleCommandRouteRegistry
 
                 if (_routesByMessageTypeName.TryGetValue(messageKey, out ModuleCommandRoute? existingMessageRoute))
                 {
-                    throw new InvalidOperationException(
+                    throw new BondstoneSetupException(
+                        BondstoneSetupCodes.DuplicateDurableRegistration,
                         $"Module '{route.ModuleName}' already has a durable command route for durable command message identity '{route.MessageTypeName}' handled by '{existingMessageRoute.HandlerType.FullName}'.");
                 }
 

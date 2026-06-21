@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,7 +47,7 @@ public sealed class ModuleEventRegistrationTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module(" sales ", module =>
@@ -57,6 +58,9 @@ public sealed class ModuleEventRegistrationTests
                 });
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
         Assert.Contains("published event message identity", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales.customer.registered.v1", exception.Message, StringComparison.Ordinal);
@@ -125,7 +129,7 @@ public sealed class ModuleEventRegistrationTests
     {
         var services = new ServiceCollection();
 
-        ArgumentException exception = Assert.Throws<ArgumentException>(
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("fulfillment", module =>
@@ -134,6 +138,9 @@ public sealed class ModuleEventRegistrationTests
                 });
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.InvalidDurableIdentity,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Equal("subscriberIdentity", exception.ParamName);
     }
 
@@ -143,7 +150,7 @@ public sealed class ModuleEventRegistrationTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("fulfillment", module =>
@@ -156,6 +163,9 @@ public sealed class ModuleEventRegistrationTests
                 });
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("already has an event subscriber", exception.Message, StringComparison.Ordinal);
         Assert.Contains("Module 'fulfillment'", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment.customer-cache.v1", exception.Message, StringComparison.Ordinal);

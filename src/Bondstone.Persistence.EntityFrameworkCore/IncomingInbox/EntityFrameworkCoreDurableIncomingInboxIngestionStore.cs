@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -55,7 +56,8 @@ public sealed class EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbCon
             return;
         }
 
-        throw new InvalidOperationException(
+        throw new BondstoneSetupException(
+            BondstoneSetupCodes.MissingEfMapping,
             $"DbContext '{context.GetType().FullName}' is missing the Bondstone EF Core incoming inbox mapping. Map the durable incoming inbox explicitly with ApplyBondstoneIncomingInbox().");
     }
 }

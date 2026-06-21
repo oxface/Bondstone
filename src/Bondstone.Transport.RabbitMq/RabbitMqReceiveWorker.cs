@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
@@ -188,20 +189,50 @@ internal sealed class RabbitMqReceiveWorker(
         RabbitMqReceiveWorkerRegistration registration)
     {
         DurableEnvelopeReceiveBinding binding = registration.Binding
-            ?? throw new ArgumentException(
+            ?? throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.MissingReceiveBinding,
                 "RabbitMQ durable incoming inbox event ingestion requires subscriber module and subscriber identity binding.",
                 nameof(registration));
+        binding = NormalizeReceiveBinding(binding);
 
         IModuleEventSubscriberRegistry subscriberRegistry =
             serviceProvider.GetRequiredService<IModuleEventSubscriberRegistry>();
-        ModuleEventSubscriberRegistration subscriber = subscriberRegistry.GetSubscriber(
-            binding.SubscriberModule,
-            envelope.MessageTypeName,
-            binding.SubscriberIdentity);
+        ModuleEventSubscriberRegistration subscriber;
+        try
+        {
+            subscriber = subscriberRegistry.GetSubscriber(
+                binding.SubscriberModule,
+                envelope.MessageTypeName,
+                binding.SubscriberIdentity);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new BondstoneSetupException(
+                BondstoneSetupCodes.MissingReceiveBinding,
+                exception.Message,
+                exception);
+        }
 
         return DurableIncomingInboxKey.ForEventSubscriber(
             envelope.MessageId,
             subscriber.ModuleName,
             subscriber.SubscriberIdentity);
+    }
+
+    private static DurableEnvelopeReceiveBinding NormalizeReceiveBinding(
+        DurableEnvelopeReceiveBinding binding)
+    {
+        if (string.IsNullOrWhiteSpace(binding.SubscriberModule)
+            || string.IsNullOrWhiteSpace(binding.SubscriberIdentity))
+        {
+            throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.MissingReceiveBinding,
+                "RabbitMQ durable incoming inbox event ingestion requires subscriber module and subscriber identity binding.",
+                nameof(binding));
+        }
+
+        return new DurableEnvelopeReceiveBinding(
+            binding.SubscriberModule.Trim(),
+            binding.SubscriberIdentity.Trim());
     }
 }

@@ -83,17 +83,18 @@ public sealed class DurableCommandSenderTests
                 "sales",
                 new SubmitOrderCommand("order-123"));
 
-        DurableMessageEnvelope envelope = Assert.Single(outboxWriter.Envelopes);
+        Assert.Single(outboxWriter.Envelopes);
         Activity activity = Assert.Single(
             activities,
             candidate => candidate.OperationName == "bondstone.command.send");
         Assert.Equal(ActivityKind.Producer, activity.Kind);
-        Assert.Equal(envelope.MessageId.ToString("D"), ActivityTestHelper.GetTag(activity, "bondstone.message_id"));
         Assert.Equal("Command", ActivityTestHelper.GetTag(activity, "bondstone.message_kind"));
         Assert.Equal("sales.order.reserve.v1", ActivityTestHelper.GetTag(activity, "bondstone.message_type"));
         Assert.Equal("sales", ActivityTestHelper.GetTag(activity, "bondstone.source_module"));
         Assert.Equal("fulfillment", ActivityTestHelper.GetTag(activity, "bondstone.target_module"));
-        Assert.Equal("order-123", ActivityTestHelper.GetTag(activity, "bondstone.partition_key"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.message_id"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.operation_id"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.partition_key"));
     }
 
     [Fact]

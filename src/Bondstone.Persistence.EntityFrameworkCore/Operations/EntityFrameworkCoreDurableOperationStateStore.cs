@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -75,7 +76,8 @@ public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext>(
             return;
         }
 
-        throw new InvalidOperationException(
+        throw new BondstoneSetupException(
+            BondstoneSetupCodes.MissingEfMapping,
             $"DbContext '{context.GetType().FullName}' is missing the Bondstone EF Core operation-state mapping. Map operation state with ApplyBondstoneOperationState(), or use ApplyBondstonePersistence().");
     }
 

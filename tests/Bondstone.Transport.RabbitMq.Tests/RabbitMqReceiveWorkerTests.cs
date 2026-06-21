@@ -1,5 +1,6 @@
 using System.Reflection;
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
@@ -356,6 +357,96 @@ public sealed class RabbitMqReceiveWorkerTests
         Assert.Equal("billing", record.Key.ReceiverModule);
         Assert.Equal("billing.order-placed-projection.v1", record.Key.HandlerIdentity);
         Assert.Empty(provider.GetRequiredService<HandlerCallLog>().Calls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ReceiveAsync_WhenDurableIncomingInboxEventIngestionHasNoBinding_NacksWithSetupCode()
+    {
+        IChannel channel = RecordingChannelProxy.Create(out RecordingChannelProxy recorder);
+        var store = new RecordingIncomingInboxIngestionStore();
+        await using ServiceProvider provider = BuildIngestionProvider(
+            store,
+            new RecordingIncomingInboxIngestionScope(),
+            bondstone => bondstone.Module("billing", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+            }));
+        var logger = new RecordingLogger<RabbitMqReceiveWorker>();
+        var worker = new RabbitMqReceiveWorker(
+            channel,
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            [],
+            logger);
+        var registration = new RabbitMqReceiveWorkerRegistration(
+            "billing.order-placed",
+            Binding: null,
+            RequeueOnFailure: false,
+            ConsumerTag: null,
+            RabbitMqReceiveWorkerMode.DurableIncomingInboxIngestion,
+            "rabbitmq:billing.order-placed");
+
+        await InvokeReceiveAsync(
+            worker,
+            CreateDelivery(
+                deliveryTag: 105,
+                CreateEnvelopeBody(CreateEventEnvelope())),
+            registration);
+
+        Settlement settlement = Assert.Single(recorder.Settlements);
+        Assert.Equal("nack", settlement.Kind);
+        Assert.Equal(
+            BondstoneSetupCodes.MissingReceiveBinding,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(
+                Assert.Single(logger.Entries).Exception!).SetupCode);
+        Assert.Empty(store.Records);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task ReceiveAsync_WhenDurableIncomingInboxEventIngestionBindingHasNoSubscriber_NacksWithSetupCode()
+    {
+        IChannel channel = RecordingChannelProxy.Create(out RecordingChannelProxy recorder);
+        var store = new RecordingIncomingInboxIngestionStore();
+        await using ServiceProvider provider = BuildIngestionProvider(
+            store,
+            new RecordingIncomingInboxIngestionScope(),
+            bondstone => bondstone.Module("billing", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+            }));
+        var logger = new RecordingLogger<RabbitMqReceiveWorker>();
+        var worker = new RabbitMqReceiveWorker(
+            channel,
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            [],
+            logger);
+        var registration = new RabbitMqReceiveWorkerRegistration(
+            "billing.order-placed",
+            new DurableEnvelopeReceiveBinding(
+                "billing",
+                "billing.order-placed-projection.v1"),
+            RequeueOnFailure: false,
+            ConsumerTag: null,
+            RabbitMqReceiveWorkerMode.DurableIncomingInboxIngestion,
+            "rabbitmq:billing.order-placed");
+
+        await InvokeReceiveAsync(
+            worker,
+            CreateDelivery(
+                deliveryTag: 106,
+                CreateEnvelopeBody(CreateEventEnvelope())),
+            registration);
+
+        Settlement settlement = Assert.Single(recorder.Settlements);
+        Assert.Equal("nack", settlement.Kind);
+        Assert.Equal(
+            BondstoneSetupCodes.MissingReceiveBinding,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(
+                Assert.Single(logger.Entries).Exception!).SetupCode);
+        Assert.Empty(store.Records);
     }
 
     [Fact]

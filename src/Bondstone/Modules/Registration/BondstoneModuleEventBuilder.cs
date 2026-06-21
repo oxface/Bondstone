@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -114,9 +115,9 @@ public sealed class BondstoneModuleEventBuilder
         }
         catch (InvalidOperationException exception)
         {
-            throw new InvalidOperationException(
-                $"Module '{ModuleName}' could not register {registrationDescription} for event type '{typeof(TEvent).FullName}': {exception.Message}",
-                exception);
+            throw CreateSetupException(
+                exception,
+                $"Module '{ModuleName}' could not register {registrationDescription} for event type '{typeof(TEvent).FullName}': {exception.Message}");
         }
     }
 
@@ -131,9 +132,18 @@ public sealed class BondstoneModuleEventBuilder
         }
         catch (InvalidOperationException exception)
         {
-            throw new InvalidOperationException(
-                $"Module '{ModuleName}' could not register {registrationDescription} '{messageTypeName.Trim()}' for event type '{typeof(TEvent).FullName}': {exception.Message}",
-                exception);
+            throw CreateSetupException(
+                exception,
+                $"Module '{ModuleName}' could not register {registrationDescription} '{messageTypeName.Trim()}' for event type '{typeof(TEvent).FullName}': {exception.Message}");
         }
+    }
+
+    private static InvalidOperationException CreateSetupException(
+        InvalidOperationException exception,
+        string message)
+    {
+        return exception is IBondstoneSetupException setupException
+            ? new BondstoneSetupException(setupException.SetupCode, message, exception)
+            : new InvalidOperationException(message, exception);
     }
 }

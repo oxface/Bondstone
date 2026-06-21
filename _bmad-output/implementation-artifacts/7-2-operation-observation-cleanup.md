@@ -4,7 +4,7 @@ baseline_commit: e85574a
 
 # Story 7.2: Operation Observation Cleanup
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -57,6 +57,10 @@ so that waits/results are not confused with orchestration.
   - [x] Run `pnpm backend:test` after runtime, test, or public docs changes.
   - [x] Run `pnpm backend:pack` and review public API baseline diffs if public/protected APIs change.
   - [x] Run `pnpm check` as the final broad gate when code, public API, package metadata, samples, or broad docs change.
+
+### Review Findings
+
+- [x] [Review][Patch] Preserve no-write test guard for all operation result read paths [tests/Bondstone.Tests/Messaging/DurableOperationResultReaderTests.cs:763]
 
 ## Dev Notes
 

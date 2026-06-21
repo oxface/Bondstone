@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
@@ -31,18 +32,37 @@ public sealed class BondstoneBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void AddBondstone_WhenDispatcherIsConfiguredWithoutPersistence_Throws()
+    public void AddBondstone_WhenDispatcherIsConfiguredWithoutPersistence_ThrowsSetupCode()
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(builder =>
             {
                 builder.Outbox.MarkTransport("test transport");
                 builder.Outbox.MarkDispatcher("test dispatcher");
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingOutboxPersistence,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("persistence provider", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenDurableMessagingModuleHasNoPersistence_ThrowsSetupCode()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
+            () => services.AddBondstone(builder =>
+                builder.Module("sales", module => module.UseDurableMessaging())));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingModulePersistence,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Contains("does not declare persistence", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -51,13 +71,16 @@ public sealed class BondstoneBuilderTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(builder =>
             {
                 builder.Outbox.MarkPersistenceProvider("test persistence");
                 builder.Outbox.MarkDispatcher("test dispatcher");
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingDispatcher,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("envelope dispatcher", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -194,7 +217,7 @@ public sealed class BondstoneBuilderTests
         var services = new ServiceCollection();
         services.AddSingleton<IBondstoneModuleRegistry, ConsumerModuleRegistry>();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(_ => { }));
 
         Assert.Contains(
@@ -210,7 +233,7 @@ public sealed class BondstoneBuilderTests
         var services = new ServiceCollection();
         services.AddSingleton<IModuleExecutionContextAccessor, ConsumerModuleExecutionContextAccessor>();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(_ => { }));
 
         Assert.Contains(
@@ -225,7 +248,7 @@ public sealed class BondstoneBuilderTests
     {
         var services = new ServiceCollection();
 
-        ArgumentException exception = Assert.Throws<ArgumentException>(
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
             () => services.AddBondstone(builder =>
                 builder.Outbox.MarkPersistenceProvider(" ")));
 
@@ -265,7 +288,7 @@ public sealed class BondstoneBuilderTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("sales", module =>
@@ -284,7 +307,7 @@ public sealed class BondstoneBuilderTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("sales", module =>
@@ -304,7 +327,7 @@ public sealed class BondstoneBuilderTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("fulfillment", module =>
@@ -330,7 +353,7 @@ public sealed class BondstoneBuilderTests
                 "sales",
                 _ => new CapturingOutboxWriter()));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("sales", module =>
@@ -356,7 +379,7 @@ public sealed class BondstoneBuilderTests
                 "unknown",
                 _ => new NoOpOutboxDispatcher()));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(_ => { }));
 
         Assert.Contains("unknown module", exception.Message, StringComparison.OrdinalIgnoreCase);

@@ -53,7 +53,6 @@ public sealed class DurableIncomingInboxDispatcher(
         using Activity? activity = IncomingInboxProcessingDiagnostics.ActivitySource.StartActivity(
             IncomingInboxProcessingDiagnostics.ProcessActivityName,
             ActivityKind.Internal);
-        activity?.SetTag(IncomingInboxProcessingDiagnostics.Tags.ClaimedBy, normalizedClaimedBy);
         activity?.SetTag(IncomingInboxProcessingDiagnostics.Tags.MaxCount, maxCount);
 
         try

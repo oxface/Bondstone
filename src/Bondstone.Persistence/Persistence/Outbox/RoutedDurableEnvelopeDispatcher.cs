@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Utility;
 
 namespace Bondstone.Persistence;
@@ -27,7 +28,8 @@ public sealed class RoutedDurableEnvelopeDispatcher(
 
         if (matches.Length == 0)
         {
-            throw new InvalidOperationException(
+            throw new BondstoneSetupException(
+                BondstoneSetupCodes.MissingDispatcher,
                 $"No durable envelope dispatch route can send {DescribeRecord(record)}. Configure routing so exactly one adapter owns this durable message.");
         }
 
@@ -36,7 +38,8 @@ public sealed class RoutedDurableEnvelopeDispatcher(
             matches.Select(static route => route.TransportName)
                 .OrderBy(static routeName => routeName, StringComparer.Ordinal));
 
-        throw new InvalidOperationException(
+        throw new BondstoneSetupException(
+            BondstoneSetupCodes.AmbiguousDispatchRoute,
             $"Multiple durable envelope dispatch routes can send {DescribeRecord(record)}: '{routeNames}'. Configure routing so exactly one adapter owns this durable message.");
     }
 

@@ -96,13 +96,6 @@ internal sealed class DurableCommandSender(
             activity?.SetTag(
                 BondstoneMessagingDiagnostics.Tags.MessageKind,
                 MessageKind.Command.ToString());
-            activity?.SetTag(
-                BondstoneMessagingDiagnostics.Tags.OperationId,
-                durableOperationId?.ToString("D"));
-            activity?.SetTag(
-                BondstoneMessagingDiagnostics.Tags.PartitionKey,
-                partitionKey);
-
             string sourceModule = executionContext.ModuleName;
             IDurableOutboxWriter outboxWriter = _outboxWriterResolver.Resolve(sourceModule);
             IDurableOperationStateStore? operationStateStore = null;
@@ -114,9 +107,6 @@ internal sealed class DurableCommandSender(
             }
 
             await outboxWriter.WriteAsync(envelope, ct);
-            activity?.SetTag(
-                BondstoneMessagingDiagnostics.Tags.MessageId,
-                envelope.MessageId.ToString("D"));
 
             if (durableOperationId is Guid operationIdToTrack)
             {

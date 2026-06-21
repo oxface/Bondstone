@@ -68,10 +68,6 @@ internal sealed class DurableOperationFinalizer(
         activity?.SetTag(
             BondstoneMessagingDiagnostics.Tags.Module,
             normalizedModuleName);
-        activity?.SetTag(
-            BondstoneMessagingDiagnostics.Tags.OperationId,
-            durableOperationId.ToString("D"));
-
         try
         {
             IDurableOperationStateStore store = ResolveStore(

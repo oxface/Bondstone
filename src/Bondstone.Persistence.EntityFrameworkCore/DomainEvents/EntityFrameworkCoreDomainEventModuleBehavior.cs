@@ -1,6 +1,7 @@
 using Bondstone.Modules;
 using Bondstone.Messaging;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
+using Bondstone.Diagnostics;
 using Bondstone.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -80,7 +81,8 @@ internal sealed class EntityFrameworkCoreDomainEventModulePostHandlerAction(
             return;
         }
 
-        throw new InvalidOperationException(
+        throw new BondstoneSetupException(
+            BondstoneSetupCodes.MissingEfMapping,
             $"Module '{module.Name}' uses Entity Framework Core domain event persistence with context "
             + $"'{dbContext.GetType().FullName}', but the DbContext model is missing the Bondstone EF Core "
             + "domain event mapping. Map domain events explicitly with ApplyBondstoneDomainEvents().");

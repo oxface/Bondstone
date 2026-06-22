@@ -13,6 +13,8 @@ and lean agent guardrails are owned by BMAD artifacts:
 
 - [github-workflow.md](github-workflow.md) records GitHub issue, project,
   status, label, and issue-body conventions.
+- [consumer-trial-handoff.md](consumer-trial-handoff.md) records the first
+  consumer migration trial route and tracking handoff.
 - [observability.md](observability.md) records current diagnostic surfaces.
 - [operations.md](operations.md) records production operations, lifecycle,
   retention, receive, migration, and ownership guidance.
@@ -58,6 +60,9 @@ folder.
 - `observability.md` owns current diagnostic surfaces.
 - `github-workflow.md` owns GitHub issue, project, label, and completion
   comment conventions.
+- `consumer-trial-handoff.md` owns the first-consumer trial route and links to
+  the stable setup, package, operations, testing, sample, BMAD, and GitHub
+  tracking authorities.
 - `public-api.md` owns current package public API classification notes.
 - `repository.md` owns repository layout, local tooling, CI, and C#
   conventions.

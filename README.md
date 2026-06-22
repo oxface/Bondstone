@@ -31,6 +31,9 @@ Start with [docs/setup.md](docs/setup.md) for the normal host setup path. It
 shows how to compose modules, PostgreSQL persistence, a direct transport
 adapter, and the hosted outbox worker through `AddBondstone`.
 
+Use [docs/consumer-trial-handoff.md](docs/consumer-trial-handoff.md) for the
+first consumer migration trial route and follow-up tracking.
+
 Use the package READMEs under [src/](src/) as quick package-purpose guides.
 Use the BMAD architecture artifact when you need the durable behavior contract
 behind a package.
@@ -42,6 +45,8 @@ behind a package.
 - [docs/setup.md](docs/setup.md) is the primary user-facing setup example.
 - [docs/package-discovery.md](docs/package-discovery.md) maps capabilities to
   packages and namespaces.
+- [docs/consumer-trial-handoff.md](docs/consumer-trial-handoff.md) links the
+  first trial path, readiness evidence, and follow-up tracking.
 - [docs/packaging.md](docs/packaging.md) records package and release policy.
 - [docs/operations.md](docs/operations.md) records production operations
   guidance.

@@ -4,7 +4,7 @@ baseline_commit: 4b07a5c
 
 # Story 8.1: Public API And Package Collaboration Validation
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

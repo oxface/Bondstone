@@ -1,5 +1,5 @@
 # generated: 2026-06-18T15:39:19+00:00
-# last_updated: 2026-06-21T20:52:14+00:00
+# last_updated: 2026-06-22T13:55:31+00:00
 # project: Bondstone
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-18T15:39:19+00:00
-last_updated: 2026-06-21T20:52:14+00:00
+last_updated: 2026-06-22T13:55:31+00:00
 project: Bondstone
 project_key: NOKEY
 tracking_system: file-system
@@ -84,7 +84,7 @@ development_status:
   7-4-opentelemetry-diagnostics-and-stable-setup-codes: done
   epic-7-retrospective: optional
   epic-8: in-progress
-  8-1-public-api-and-package-collaboration-validation: review
+  8-1-public-api-and-package-collaboration-validation: done
   8-2-package-policy-and-discovery-documentation: backlog
   8-3-documentation-reference-sweep: backlog
   8-4-verification-gate: backlog

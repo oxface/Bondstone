@@ -4,6 +4,8 @@ This folder contains Bondstone package projects.
 
 Package IDs, dependency direction, target framework, and release policy are
 documented in [../docs/packaging.md](../docs/packaging.md).
+Package and namespace discovery by capability is documented in
+[../docs/package-discovery.md](../docs/package-discovery.md).
 
 Start with [../docs/setup.md](../docs/setup.md) for normal host composition.
 Use the package READMEs below to choose the package set for a module,

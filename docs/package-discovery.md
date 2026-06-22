@@ -8,6 +8,10 @@ policy, including v2 replacement/migration guidance, see
 [packaging.md](packaging.md). For production operations and observability, see
 [operations.md](operations.md) and [observability.md](observability.md).
 
+This is the central "which package and namespace do I use?" reference.
+Package IDs listed as removed or non-current appear here only as migration
+notes, not as current install guidance.
+
 ## Capability Matrix
 
 | Capability                                                                                                                                                  | Package ID                                           | Common namespaces                                                                               | Notes                                                                                                                                                                                                                   |
@@ -311,7 +315,9 @@ records, not outbox records.
 ## Related Docs
 
 - [setup.md](setup.md) is the canonical golden-path setup example.
-- [packaging.md](packaging.md) owns package IDs and dependency direction.
+- [packaging.md](packaging.md) owns package IDs, target framework, dependency
+  direction, versioning, publishing, package artifacts, and migration/release
+  policy.
 - [operations.md](operations.md) describes production receive, outbox, inbox,
   operation-state, migration, retention, and app-owned recovery guidance.
 - [observability.md](observability.md) describes current diagnostics and the

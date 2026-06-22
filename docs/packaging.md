@@ -1,7 +1,10 @@
 # Packaging
 
-This document records the current Bondstone package boundary and target
-framework direction.
+This document is the central consumer-facing package policy reference for
+Bondstone. It owns the active package IDs, target framework, dependency
+direction, package artifacts, versioning, publishing, and migration/release
+coordination rules. Package READMEs and scoped indexes should link here
+instead of restating broad package policy.
 
 ## Target Framework
 
@@ -113,6 +116,13 @@ Consumers migrating from v1 should:
 Release notes for replacement releases must call out removed package IDs,
 removed or renamed public APIs, durable table-shape changes, and any migration
 steps consumers must perform in their own applications.
+
+When package IDs, target framework, dependency direction, versioning, or
+publishing policy change, update this document together with
+[package-discovery.md](package-discovery.md), setup guidance where the normal
+install path changes, and release or migration notes for affected consumers.
+Do not move replacement or registry guidance into package READMEs; those files
+should stay package-purpose pages that link back to this policy.
 
 ## V2 Release Checklist
 
@@ -350,13 +360,13 @@ build and pack behavior that depends on project-local properties may live in
 `Directory.Build.targets`. Project-specific descriptions, dependencies, and
 package assets belong in the package project file.
 
-Package artifacts should include symbols, the project-local package README,
-and XML API documentation. Package README links that reference repository docs,
-source paths, or tests should use absolute GitHub URLs so they work from NuGet
-and package-manager UI surfaces. XML API documentation should cover normal
-consumer-facing setup and contract APIs first; comprehensive comments for every
-public advanced-composition or exposed implementation type remain incremental
-cleanup.
+Package artifacts should include symbols, `.snupkg` symbol packages, the
+project-local package README, and XML API documentation. Package README links
+that reference repository docs, source paths, or tests should use absolute
+GitHub URLs so they work from NuGet and package-manager UI surfaces. XML API
+documentation should cover normal consumer-facing setup and contract APIs
+first; comprehensive comments for every public advanced-composition or exposed
+implementation type remain incremental cleanup.
 
 `pnpm backend:pack` runs package artifact tests after packing and asserts that
 each current packable package includes a matching XML documentation file beside

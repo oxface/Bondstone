@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace Bondstone.Hosting.Outbox;
 
-public sealed class DurableOutboxWorker(
+internal sealed class DurableOutboxWorker(
     IServiceScopeFactory serviceScopeFactory,
     IOptions<DurableOutboxWorkerOptions> options,
     ILogger<DurableOutboxWorker> logger)
@@ -46,6 +46,7 @@ public sealed class DurableOutboxWorker(
             catch (Exception exception)
             {
                 logger.LogError(
+                    DurableOutboxWorkerLogEvents.DispatchBatchFailed,
                     exception,
                     "Durable outbox worker {WorkerId} failed while dispatching a batch.",
                     _options.WorkerId);

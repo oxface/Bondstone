@@ -1,7 +1,11 @@
+using Bondstone.Configuration;
+using Bondstone.Modules;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox;
+using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Tests.Persistence;
@@ -21,7 +25,7 @@ public sealed partial class PostgreSqlPersistenceTests
             (firstMessageId, DateTimeOffset.Parse("2026-06-04T00:00:01+00:00")),
             (secondMessageId, DateTimeOffset.Parse("2026-06-04T00:00:02+00:00")));
 
-        RecordingTransport transport = new();
+        RecordingEnvelopeDispatcher transport = new();
         await using PostgreSqlTestDbContext context = CreateContext();
         DurableOutboxDispatcher dispatcher = CreateOutboxDispatcher(
             context,
@@ -55,6 +59,64 @@ public sealed partial class PostgreSqlPersistenceTests
 
     [Fact]
     [Trait("Category", "Integration")]
+    public async Task ModuleOutboxDispatcher_WhenModulesShareTable_ClaimsOnlyItsSourceModuleRows()
+    {
+        await ResetDatabaseAsync();
+        Guid fulfillmentMessageId = Guid.Parse("0345d63b-c115-4fe5-8caf-b2a4a7a48603");
+        Guid billingMessageId = Guid.Parse("0b4b5a93-4366-4b40-8d3d-c8a31aef0f54");
+        DateTimeOffset dispatcherTimeUtc = DateTimeOffset.Parse("2026-06-18T13:00:00+00:00");
+
+        await WriteOutboxMessageAsync(
+            CreateEnvelope(
+                fulfillmentMessageId,
+                sourceModule: "fulfillment",
+                targetModule: "shipping"),
+            DateTimeOffset.Parse("2026-06-18T12:00:01+00:00"));
+        await WriteOutboxMessageAsync(
+            CreateEnvelope(
+                billingMessageId,
+                sourceModule: "billing",
+                targetModule: "shipping"),
+            DateTimeOffset.Parse("2026-06-18T12:00:02+00:00"));
+
+        RecordingEnvelopeDispatcher transport = new();
+        await using ServiceProvider provider = CreateSharedOutboxModuleProvider(
+            transport,
+            new FixedTimeProvider(dispatcherTimeUtc));
+
+        DurableOutboxDispatchResult result = await DispatchModuleOutboxAsync(
+            provider,
+            "fulfillment",
+            claimedBy: "fulfillment-dispatcher");
+
+        Assert.Equal(1, result.ClaimedCount);
+        Assert.Equal(1, result.DispatchedCount);
+        Assert.Equal([fulfillmentMessageId], transport.MessageIds);
+        Assert.Equal(["fulfillment"], transport.SourceModules);
+
+        await using PostgreSqlTestDbContext verificationContext = CreateContext();
+        List<OutboxMessageEntity> entities = await verificationContext
+            .Set<OutboxMessageEntity>()
+            .OrderBy(entity => entity.StoredAtUtc)
+            .ToListAsync();
+
+        Assert.Collection(
+            entities,
+            entity => AssertDispatched(entity, fulfillmentMessageId, dispatcherTimeUtc),
+            entity =>
+            {
+                Assert.Equal(billingMessageId, entity.MessageId);
+                Assert.Equal("billing", entity.SourceModule);
+                Assert.Equal(DurableOutboxStatus.Pending, entity.Status);
+                Assert.Equal(0, entity.AttemptCount);
+                Assert.Null(entity.ClaimedBy);
+                Assert.Null(entity.ClaimedUntilUtc);
+                Assert.Null(entity.DispatchedAtUtc);
+            });
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
     public async Task OutboxDispatcher_WhenTransportFailsBeforeMaxAttempts_SchedulesRetry()
     {
         await ResetDatabaseAsync();
@@ -67,7 +129,7 @@ public sealed partial class PostgreSqlPersistenceTests
         await using PostgreSqlTestDbContext context = CreateContext();
         DurableOutboxDispatcher dispatcher = CreateOutboxDispatcher(
             context,
-            new ThrowingTransport(new InvalidOperationException("transport unavailable")),
+            new ThrowingEnvelopeDispatcher(new InvalidOperationException("transport unavailable")),
             new FixedTimeProvider(dispatcherTimeUtc),
             new DurableOutboxFailurePolicy(
                 maxAttempts: 3,
@@ -112,7 +174,7 @@ public sealed partial class PostgreSqlPersistenceTests
         await using PostgreSqlTestDbContext context = CreateContext();
         DurableOutboxDispatcher dispatcher = CreateOutboxDispatcher(
             context,
-            new ThrowingTransport(new InvalidOperationException("poison message")),
+            new ThrowingEnvelopeDispatcher(new InvalidOperationException("poison message")),
             new FixedTimeProvider(dispatcherTimeUtc),
             new DurableOutboxFailurePolicy(maxAttempts: 1));
 
@@ -143,17 +205,71 @@ public sealed partial class PostgreSqlPersistenceTests
 
     private static DurableOutboxDispatcher CreateOutboxDispatcher(
         PostgreSqlTestDbContext context,
-        IDurableOutboxTransport transport,
+        IDurableEnvelopeDispatcher dispatcher,
         TimeProvider timeProvider,
         IDurableOutboxFailurePolicy? failurePolicy = null)
     {
         return new DurableOutboxDispatcher(
             new PostgreSqlDurableOutboxClaimer<PostgreSqlTestDbContext>(context, timeProvider),
             new PostgreSqlDurableOutboxLeaseRenewer<PostgreSqlTestDbContext>(context, timeProvider),
-            transport,
+            dispatcher,
             failurePolicy ?? new DurableOutboxFailurePolicy(),
             new PostgreSqlDurableOutboxDispatchRecorder<PostgreSqlTestDbContext>(context),
             timeProvider);
+    }
+
+    private ServiceProvider CreateSharedOutboxModuleProvider(
+        IDurableEnvelopeDispatcher envelopeDispatcher,
+        TimeProvider timeProvider)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(timeProvider);
+        services.AddSingleton(envelopeDispatcher);
+        services.AddSingleton<IDurableOutboxFailurePolicy>(
+            new DurableOutboxFailurePolicy());
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePostgreSqlPersistence<PostgreSqlTestDbContext>(
+                    $"{_fixture.ConnectionString};Pooling=false");
+            });
+
+            bondstone.Module("billing", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePostgreSqlPersistence<PostgreSqlTestDbContext>(
+                    $"{_fixture.ConnectionString};Pooling=false");
+            });
+        });
+
+        return services.BuildServiceProvider(
+            new ServiceProviderOptions
+            {
+                ValidateOnBuild = true,
+                ValidateScopes = true,
+            });
+    }
+
+    private static async Task<DurableOutboxDispatchResult> DispatchModuleOutboxAsync(
+        IServiceProvider provider,
+        string moduleName,
+        string claimedBy)
+    {
+        await using AsyncServiceScope scope = provider.CreateAsyncScope();
+        DurableModulePersistenceRegistrationRegistry registry = scope.ServiceProvider
+            .GetRequiredService<DurableModulePersistenceRegistrationRegistry>();
+        DurableModuleOutboxDispatcherRegistration registration = Assert.Single(
+            registry.OutboxDispatcherRegistrations,
+            candidate => candidate.ModuleName == moduleName);
+        IDurableOutboxDispatcher dispatcher = registration.CreateDispatcher(scope.ServiceProvider);
+
+        return await dispatcher.DispatchAsync(
+            claimedBy,
+            TimeSpan.FromMinutes(5),
+            maxCount: 10);
     }
 
     private static void AssertDispatched(
@@ -172,24 +288,28 @@ public sealed partial class PostgreSqlPersistenceTests
         Assert.Null(entity.ClaimedUntilUtc);
     }
 
-    private sealed class RecordingTransport : IDurableOutboxTransport
+    private sealed class RecordingEnvelopeDispatcher : IDurableEnvelopeDispatcher
     {
         private readonly List<Guid> _messageIds = [];
+        private readonly List<string> _sourceModules = [];
 
         public IReadOnlyList<Guid> MessageIds => _messageIds;
 
-        public ValueTask SendAsync(
+        public IReadOnlyList<string> SourceModules => _sourceModules;
+
+        public ValueTask DispatchAsync(
             DurableOutboxRecord record,
             CancellationToken ct = default)
         {
             _messageIds.Add(record.Envelope.MessageId);
+            _sourceModules.Add(record.Envelope.SourceModule);
             return ValueTask.CompletedTask;
         }
     }
 
-    private sealed class ThrowingTransport(Exception exception) : IDurableOutboxTransport
+    private sealed class ThrowingEnvelopeDispatcher(Exception exception) : IDurableEnvelopeDispatcher
     {
-        public ValueTask SendAsync(
+        public ValueTask DispatchAsync(
             DurableOutboxRecord record,
             CancellationToken ct = default)
         {

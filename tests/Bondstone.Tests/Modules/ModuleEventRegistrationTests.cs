@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,31 @@ public sealed class ModuleEventRegistrationTests
         Assert.Equal("sales", publishedEvent.ModuleName);
         Assert.Equal(typeof(CustomerRegisteredEvent), publishedEvent.EventType);
         Assert.Same(registration, publishedEvent.MessageTypeRegistration);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void RegisterPublishedEvent_WhenEventIdentityConflicts_IncludesModuleAndIdentityInDiagnostic()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module(" sales ", module =>
+                {
+                    module.Events.RegisterPublishedEvent<CustomerRegisteredEvent>();
+                    module.Events.RegisterPublishedEvent<OrderSubmittedEvent>(
+                        "sales.customer.registered.v1");
+                });
+            }));
+
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("published event message identity", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales.customer.registered.v1", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -103,7 +129,7 @@ public sealed class ModuleEventRegistrationTests
     {
         var services = new ServiceCollection();
 
-        ArgumentException exception = Assert.Throws<ArgumentException>(
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("fulfillment", module =>
@@ -112,6 +138,9 @@ public sealed class ModuleEventRegistrationTests
                 });
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.InvalidDurableIdentity,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Equal("subscriberIdentity", exception.ParamName);
     }
 
@@ -121,20 +150,26 @@ public sealed class ModuleEventRegistrationTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
-            bondstone.Module("fulfillment", module =>
-            {
-                ConfigureDurableMessaging(module);
-                module.Events.RegisterSubscriber<CustomerRegisteredEvent, CustomerRegisteredHandler>(
-                    "fulfillment.customer-cache.v1");
-                module.Events.RegisterSubscriber<CustomerRegisteredEvent, AlternateCustomerRegisteredHandler>(
+                bondstone.Module("fulfillment", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.Events.RegisterSubscriber<CustomerRegisteredEvent, CustomerRegisteredHandler>(
+                        "fulfillment.customer-cache.v1");
+                    module.Events.RegisterSubscriber<CustomerRegisteredEvent, AlternateCustomerRegisteredHandler>(
                         "fulfillment.customer-cache.v1");
                 });
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("already has an event subscriber", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Module 'fulfillment'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment.customer-cache.v1", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales.customer.registered.v1", exception.Message, StringComparison.Ordinal);
     }
 
     private static void ConfigureDurableMessaging(BondstoneModuleBuilder module)

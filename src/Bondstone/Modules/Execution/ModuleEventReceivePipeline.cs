@@ -11,7 +11,6 @@ internal sealed class ModuleEventReceivePipeline(
     IDurablePayloadSerializer? payloadSerializer = null)
     : IModuleEventReceivePipeline
 {
-    private const string ActivityName = "bondstone.module_event.receive";
     private readonly IMessageTypeRegistry _messageTypeRegistry =
         messageTypeRegistry ?? throw new ArgumentNullException(nameof(messageTypeRegistry));
     private readonly IModuleEventSubscriberExecutor _moduleEventSubscriberExecutor =
@@ -40,7 +39,7 @@ internal sealed class ModuleEventReceivePipeline(
             _timeProvider.GetUtcNow());
 
         using Activity? activity = ModuleReceiveTelemetry.StartReceiveActivity(
-            ActivityName,
+            BondstoneMessagingDiagnostics.ModuleEventReceiveActivityName,
             envelope,
             subscriberIdentity);
 
@@ -70,7 +69,25 @@ internal sealed class ModuleEventReceivePipeline(
 
         if (result.Status == DurableInboxHandleStatus.AlreadyReceived)
         {
-            throw new DurableInboxAlreadyReceivedException(result);
+            var exception = new DurableInboxAlreadyReceivedException(result);
+            activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+            BondstoneMessagingDiagnostics.RecordDirectReceiveAlreadyReceived(
+                envelope,
+                subscriberModule);
+            throw exception;
+        }
+
+        if (result.Status == DurableInboxHandleStatus.AlreadyProcessed)
+        {
+            BondstoneMessagingDiagnostics.RecordDirectReceiveAlreadyProcessed(
+                envelope,
+                subscriberModule);
+        }
+        else
+        {
+            BondstoneMessagingDiagnostics.RecordDirectReceiveHandled(
+                envelope,
+                subscriberModule);
         }
 
         return result;

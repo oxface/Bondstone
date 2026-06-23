@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Microsoft.Extensions.DependencyInjection;
@@ -80,11 +81,82 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void RegisterHandler_WhenDurableIdentityConflicts_IncludesModuleAndIdentityInDiagnostic()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module(" sales ", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.Commands.RegisterHandler<ShipOrderCommand, ShipOrderHandler>(
+                        "sales.order.ship.v2");
+                    module.Commands.RegisterHandler<ShipOrderCommand, AlternateShipOrderHandler>(
+                        "sales.order.ship.v3");
+                });
+            }));
+
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("durable command message identity", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales.order.ship.v2", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void RegisterHandler_WithNullExplicitDurableMessageTypeName_ThrowsArgumentException()
+    {
+        var services = new ServiceCollection();
+
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.Commands.RegisterHandler<ShipOrderCommand, ShipOrderHandler>(
+                        messageTypeName: null!);
+                });
+            }));
+
+        Assert.Equal("messageTypeName", exception.ParamName);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void RegisterHandler_WithBlankHandlerIdentity_ThrowsSetupCode()
+    {
+        var services = new ServiceCollection();
+
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("sales", module =>
+                {
+                    ConfigureDurableMessaging(module);
+                    module.Commands.RegisterHandler<ShipOrderCommand, ShipOrderHandler>(
+                        "sales.order.ship.v2",
+                        handlerIdentity: " ");
+                });
+            }));
+
+        Assert.Equal(
+            BondstoneSetupCodes.InvalidDurableIdentity,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Equal("handlerIdentity", exception.ParamName);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void RegisterHandler_WhenCommandRouteAlreadyExists_Throws()
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("sales", module =>
@@ -94,7 +166,12 @@ public sealed class ModuleCommandRegistrationTests
                 });
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("already has a command route", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(typeof(CreateDraftOrderCommand).FullName!, exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -255,37 +332,21 @@ public sealed class ModuleCommandRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task ModuleCommands_WhenRuntimeAndApplicationBehaviorsAreRegistered_RunsRuntimeByOrderFirst()
+    public async Task ModuleCommands_WhenHandlerExecutesSameModuleCommand_AllowsNestedLocalExecution()
     {
         var services = new ServiceCollection();
         services.AddSingleton<CommandCallLog>();
-        services.AddScoped<
-            IModuleCommandPipelineBehavior<PipelineOrderCommand>,
-            CommandApplicationBehavior>();
 
         services.AddBondstone(bondstone =>
         {
             bondstone.Module("sales", module =>
             {
-                module.AddCommandPipelineContribution(
-                    new ModuleCommandPipelineContribution(
-                        "test.command.system-late",
-                        ModulePipelineStepKind.System,
-                        150,
-                        typeof(LateCommandSystemBehavior)));
-                module.AddCommandPipelineContribution(
-                    new ModuleCommandPipelineContribution(
-                        "test.command.system-early",
-                        ModulePipelineStepKind.System,
-                        125,
-                        typeof(EarlyCommandSystemBehavior)));
-                module.AddCommandPipelineContribution(
-                    new ModuleCommandPipelineContribution(
-                        "test.command.capability",
-                        ModulePipelineStepKind.Capability,
-                        140,
-                        typeof(CommandCapabilityBehavior)));
-                module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
+                module.Commands.RegisterHandler<
+                    SameModuleOuterCommand,
+                    SameModuleOuterHandler>();
+                module.Commands.RegisterHandler<
+                    SameModuleInnerCommand,
+                    SameModuleInnerHandler>();
             });
         });
 
@@ -296,251 +357,55 @@ public sealed class ModuleCommandRegistrationTests
             .GetRequiredService<IModuleCommandExecutor>()
             .ExecuteAsync(
                 "sales",
-                new PipelineOrderCommand("order-123"));
+                new SameModuleOuterCommand("order-123"));
 
         Assert.Equal(
-            [
-                "system-early:before",
-                "capability:before",
-                "system-late:before",
-                "application:before:sales",
-                "handle:order-123",
-                "application:after:sales",
-                "system-late:after",
-                "capability:after",
-                "system-early:after",
-            ],
+            ["outer-before:order-123", "inner:order-123", "outer-after:order-123"],
             serviceProvider.GetRequiredService<CommandCallLog>().Calls);
     }
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task ModuleCommands_WhenRuntimeContributionDoesNotApply_DoesNotCreateBehavior()
+    public async Task ModuleCommands_WhenHandlerExecutesDifferentModuleCommand_Throws()
     {
         var services = new ServiceCollection();
         services.AddSingleton<CommandCallLog>();
 
         services.AddBondstone(bondstone =>
         {
+            bondstone.Module("sales", module =>
+            {
+                module.Commands.RegisterHandler<
+                    CrossModuleOuterCommand,
+                    CrossModuleOuterHandler>();
+            });
             bondstone.Module("fulfillment", module =>
             {
-                module.AddCommandPipelineContribution(
-                    new ModuleCommandPipelineContribution(
-                        "test.command.non-selected",
-                        ModulePipelineStepKind.System,
-                        10,
-                        null,
-                        (_, _) => throw new InvalidOperationException(
-                            "Should not create non-selected behavior.")));
-            });
-
-            bondstone.Module("sales", module =>
-            {
-                module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
+                ConfigureDurableMessaging(module);
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
             });
         });
 
         await using ServiceProvider serviceProvider = services.BuildServiceProvider();
         using IServiceScope scope = serviceProvider.CreateScope();
 
-        await scope.ServiceProvider
-            .GetRequiredService<IModuleCommandExecutor>()
-            .ExecuteAsync(
-                "sales",
-                new PipelineOrderCommand("order-123"));
-
-        Assert.Equal(
-            ["handle:order-123"],
-            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void ModuleCommands_WhenRuntimeContributionsHaveSameOrder_ThrowsClearError()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<CommandCallLog>();
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => services.AddBondstone(bondstone =>
-            {
-                bondstone.Module("sales", module =>
-                {
-                    module.AddCommandPipelineContribution(
-                        new ModuleCommandPipelineContribution(
-                            "test.command.duplicate-a",
-                            ModulePipelineStepKind.System,
-                            777,
-                            typeof(EarlyCommandSystemBehavior)));
-                    module.AddCommandPipelineContribution(
-                        new ModuleCommandPipelineContribution(
-                            "test.command.duplicate-b",
-                            ModulePipelineStepKind.Capability,
-                            777,
-                            typeof(LateCommandSystemBehavior)));
-                    module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
-                });
-            }));
-
-        Assert.Contains("same order", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("test.command.duplicate-a", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("test.command.duplicate-b", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void ModuleCommands_WhenRuntimeContributionsHaveSameName_ThrowsClearError()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<CommandCallLog>();
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => services.AddBondstone(bondstone =>
-            {
-                bondstone.Module("sales", module =>
-                {
-                    module.AddCommandPipelineContribution(
-                        new ModuleCommandPipelineContribution(
-                            "Bondstone.Command.ExecutionContext",
-                            ModulePipelineStepKind.Capability,
-                            999,
-                            typeof(EarlyCommandSystemBehavior)));
-                    module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
-                });
-            }));
-
-        Assert.Contains("same name", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("Bondstone.Command.ExecutionContext", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void ModuleCommands_WhenRuntimeContributionsHaveSameNameAndOrderButDifferentBehavior_ThrowsClearError()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<CommandCallLog>();
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => services.AddBondstone(bondstone =>
-            {
-                bondstone.Module("sales", module =>
-                {
-                    module.AddCommandPipelineContribution(
-                        new ModuleCommandPipelineContribution(
-                            "test.command.same-slot",
-                            ModulePipelineStepKind.System,
-                            777,
-                            typeof(EarlyCommandSystemBehavior)));
-                    module.AddCommandPipelineContribution(
-                        new ModuleCommandPipelineContribution(
-                            "test.command.same-slot",
-                            ModulePipelineStepKind.System,
-                            777,
-                            typeof(LateCommandSystemBehavior)));
-                    module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
-                });
-            }));
-
-        Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("test.command.same-slot", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task ModuleCommands_WhenSameFactoryRuntimeContributionIsRegisteredTwice_DeduplicatesContribution()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<CommandCallLog>();
-
-        services.AddBondstone(bondstone =>
-        {
-            bondstone.Module("sales", module =>
-            {
-                module.AddCommandPipelineContribution(
-                    new ModuleCommandPipelineContribution(
-                        "test.command.factory",
-                        ModulePipelineStepKind.System,
-                        777,
-                        null,
-                        CreateEarlyCommandBehavior));
-                module.AddCommandPipelineContribution(
-                    new ModuleCommandPipelineContribution(
-                        "test.command.factory",
-                        ModulePipelineStepKind.System,
-                        777,
-                        null,
-                        CreateEarlyCommandBehavior));
-                module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
-            });
-        });
-
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        using IServiceScope scope = serviceProvider.CreateScope();
-
-        await scope.ServiceProvider
-            .GetRequiredService<IModuleCommandExecutor>()
-            .ExecuteAsync(
-                "sales",
-                new PipelineOrderCommand("order-123"));
-
-        Assert.Equal(
-            [
-                "system-early:before",
-                "handle:order-123",
-                "system-early:after",
-            ],
-            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void ModuleCommands_WhenFactoryRuntimeContributionsHaveSameSlotButDifferentFactories_ThrowsClearError()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<CommandCallLog>();
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => services.AddBondstone(bondstone =>
-            {
-                bondstone.Module("sales", module =>
-                {
-                    module.AddCommandPipelineContribution(
-                        new ModuleCommandPipelineContribution(
-                            "test.command.factory",
-                            ModulePipelineStepKind.System,
-                            777,
-                            null,
-                            CreateEarlyCommandBehavior));
-                    module.AddCommandPipelineContribution(
-                        new ModuleCommandPipelineContribution(
-                            "test.command.factory",
-                            ModulePipelineStepKind.System,
-                            777,
-                            null,
-                            CreateLateCommandBehavior));
-                    module.Commands.RegisterHandler<PipelineOrderCommand, PipelineOrderHandler>();
-                });
-            }));
-
-        Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("test.command.factory", exception.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void ModuleCommandPipelineContribution_WhenBehaviorTypeIsInvalid_Throws()
-    {
-        ArgumentException exception = Assert.Throws<ArgumentException>(
-            () => new ModuleCommandPipelineContribution(
-                "test.command.invalid",
-                ModulePipelineStepKind.System,
-                999,
-                typeof(string)));
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
+            async () => await scope.ServiceProvider
+                .GetRequiredService<IModuleCommandExecutor>()
+                .ExecuteAsync(
+                    "sales",
+                    new CrossModuleOuterCommand("order-123")));
 
         Assert.Contains(
-            nameof(IModuleCommandPipelineBehavior<PipelineOrderCommand>),
+            "Local module command execution cannot cross module boundaries",
             exception.Message,
             StringComparison.Ordinal);
+        Assert.Contains("Module 'sales'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("module 'fulfillment'", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Send a durable command", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(
+            ["cross-before:order-123"],
+            serviceProvider.GetRequiredService<CommandCallLog>().Calls);
     }
 
     [Fact]
@@ -638,22 +503,6 @@ public sealed class ModuleCommandRegistrationTests
     {
         module.UseDurableMessaging();
         module.UsePersistence("test persistence");
-    }
-
-    private static object CreateEarlyCommandBehavior(
-        IServiceProvider serviceProvider,
-        Type commandType)
-    {
-        return ActivatorUtilities.CreateInstance<EarlyCommandSystemBehavior>(
-            serviceProvider);
-    }
-
-    private static object CreateLateCommandBehavior(
-        IServiceProvider serviceProvider,
-        Type commandType)
-    {
-        return ActivatorUtilities.CreateInstance<LateCommandSystemBehavior>(
-            serviceProvider);
     }
 
     public sealed class CommandCallLog
@@ -826,79 +675,57 @@ public sealed class ModuleCommandRegistrationTests
         }
     }
 
-    public sealed record PipelineOrderCommand(string OrderId) : ICommand;
+    public sealed record SameModuleOuterCommand(string OrderId) : ICommand;
 
-    public sealed class EarlyCommandSystemBehavior(CommandCallLog log)
-        : IModuleCommandPipelineBehavior<PipelineOrderCommand>
+    public sealed class SameModuleOuterHandler(
+        IModuleCommandExecutor executor,
+        CommandCallLog log)
+        : ICommandHandler<SameModuleOuterCommand>
     {
         public async ValueTask HandleAsync(
-            PipelineOrderCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
+            SameModuleOuterCommand command,
             CancellationToken ct = default)
         {
-            log.Calls.Add("system-early:before");
-            await next(ct);
-            log.Calls.Add("system-early:after");
+            log.Calls.Add($"outer-before:{command.OrderId}");
+            await executor.ExecuteAsync(
+                "sales",
+                new SameModuleInnerCommand(command.OrderId),
+                ct);
+            log.Calls.Add($"outer-after:{command.OrderId}");
         }
     }
 
-    public sealed class LateCommandSystemBehavior(CommandCallLog log)
-        : IModuleCommandPipelineBehavior<PipelineOrderCommand>
-    {
-        public async ValueTask HandleAsync(
-            PipelineOrderCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
-            CancellationToken ct = default)
-        {
-            log.Calls.Add("system-late:before");
-            await next(ct);
-            log.Calls.Add("system-late:after");
-        }
-    }
+    public sealed record SameModuleInnerCommand(string OrderId) : ICommand;
 
-    public sealed class CommandCapabilityBehavior(CommandCallLog log)
-        : IModuleCommandPipelineBehavior<PipelineOrderCommand>
-    {
-        public async ValueTask HandleAsync(
-            PipelineOrderCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
-            CancellationToken ct = default)
-        {
-            log.Calls.Add("capability:before");
-            await next(ct);
-            log.Calls.Add("capability:after");
-        }
-    }
-
-    public sealed class CommandApplicationBehavior(
-        CommandCallLog log,
-        IModuleExecutionContextAccessor executionContextAccessor)
-        : IModuleCommandPipelineBehavior<PipelineOrderCommand>
-    {
-        public async ValueTask HandleAsync(
-            PipelineOrderCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
-            CancellationToken ct = default)
-        {
-            log.Calls.Add($"application:before:{executionContextAccessor.Current?.ModuleName}");
-            await next(ct);
-            log.Calls.Add($"application:after:{executionContextAccessor.Current?.ModuleName}");
-        }
-    }
-
-    public sealed class PipelineOrderHandler(CommandCallLog log)
-        : ICommandHandler<PipelineOrderCommand>
+    public sealed class SameModuleInnerHandler(CommandCallLog log)
+        : ICommandHandler<SameModuleInnerCommand>
     {
         public ValueTask HandleAsync(
-            PipelineOrderCommand command,
+            SameModuleInnerCommand command,
             CancellationToken ct = default)
         {
-            log.Calls.Add($"handle:{command.OrderId}");
+            log.Calls.Add($"inner:{command.OrderId}");
             return ValueTask.CompletedTask;
+        }
+    }
+
+    public sealed record CrossModuleOuterCommand(string OrderId) : ICommand;
+
+    public sealed class CrossModuleOuterHandler(
+        IModuleCommandExecutor executor,
+        CommandCallLog log)
+        : ICommandHandler<CrossModuleOuterCommand>
+    {
+        public async ValueTask HandleAsync(
+            CrossModuleOuterCommand command,
+            CancellationToken ct = default)
+        {
+            log.Calls.Add($"cross-before:{command.OrderId}");
+            await executor.ExecuteAsync(
+                "fulfillment",
+                new ReserveOrderCommand(command.OrderId),
+                ct);
+            log.Calls.Add($"cross-after:{command.OrderId}");
         }
     }
 
@@ -916,6 +743,16 @@ public sealed class ModuleCommandRegistrationTests
     public sealed record ShipOrderCommand(string OrderId) : IDurableCommand;
 
     public sealed class ShipOrderHandler : ICommandHandler<ShipOrderCommand>
+    {
+        public ValueTask HandleAsync(
+            ShipOrderCommand command,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    public abstract class AlternateShipOrderHandler : ICommandHandler<ShipOrderCommand>
     {
         public ValueTask HandleAsync(
             ShipOrderCommand command,

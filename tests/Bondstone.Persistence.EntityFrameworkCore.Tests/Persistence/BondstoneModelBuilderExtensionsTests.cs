@@ -2,6 +2,7 @@ using Bondstone.Persistence.EntityFrameworkCore.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
@@ -113,6 +114,26 @@ public sealed class BondstoneModelBuilderExtensionsTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void ApplyBondstonePersistence_ConfiguresIncomingInboxEntity()
+    {
+        IMutableEntityType entityType = BuildModel()
+            .FindEntityType(typeof(IncomingInboxMessageEntity))
+            ?? throw new InvalidOperationException("Incoming inbox entity type was not configured.");
+
+        Assert.Equal("incoming_inbox_messages", entityType.GetTableName());
+        IMutableKey primaryKey = entityType.FindPrimaryKey()!;
+        Assert.Equal(IncomingInboxMessageEntityConfiguration.PrimaryKeyName, primaryKey.GetName());
+        Assert.Equal(
+            [
+                nameof(IncomingInboxMessageEntity.ReceiverModule),
+                nameof(IncomingInboxMessageEntity.MessageId),
+                nameof(IncomingInboxMessageEntity.HandlerIdentity),
+            ],
+            primaryKey.Properties.Select(static property => property.Name).ToArray());
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void ApplyBondstoneOutbox_ConfiguresOnlyOutboxEntity()
     {
         IMutableModel model = BuildModel(static modelBuilder =>
@@ -160,6 +181,83 @@ public sealed class BondstoneModelBuilderExtensionsTests
         Assert.Equal("operation_states", entityType.GetTableName());
         Assert.Null(model.FindEntityType(typeof(OutboxMessageEntity)));
         Assert.Null(model.FindEntityType(typeof(InboxMessageEntity)));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ApplyBondstoneIncomingInbox_ConfiguresOnlyIncomingInboxEntity()
+    {
+        IMutableModel model = BuildModel(static modelBuilder =>
+            modelBuilder.ApplyBondstoneIncomingInbox("bondstone"));
+
+        IMutableEntityType entityType = model
+            .FindEntityType(typeof(IncomingInboxMessageEntity))
+            ?? throw new InvalidOperationException("Incoming inbox entity type was not configured.");
+
+        Assert.Equal("bondstone", entityType.GetSchema());
+        Assert.Equal(IncomingInboxMessageEntityConfiguration.TableName, entityType.GetTableName());
+        Assert.Null(model.FindEntityType(typeof(OutboxMessageEntity)));
+        Assert.Null(model.FindEntityType(typeof(InboxMessageEntity)));
+        Assert.Null(model.FindEntityType(typeof(OperationStateEntity)));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ApplyBondstoneIncomingInbox_ConfiguresReceiveIdentityAndClaimIndexes()
+    {
+        IMutableEntityType entityType = BuildModel(static modelBuilder =>
+                modelBuilder.ApplyBondstoneIncomingInbox("bondstone"))
+            .FindEntityType(typeof(IncomingInboxMessageEntity))
+            ?? throw new InvalidOperationException("Incoming inbox entity type was not configured.");
+
+        IMutableKey primaryKey = entityType.FindPrimaryKey()!;
+        Assert.Equal(IncomingInboxMessageEntityConfiguration.PrimaryKeyName, primaryKey.GetName());
+        Assert.Equal(
+            [
+                nameof(IncomingInboxMessageEntity.ReceiverModule),
+                nameof(IncomingInboxMessageEntity.MessageId),
+                nameof(IncomingInboxMessageEntity.HandlerIdentity),
+            ],
+            primaryKey.Properties.Select(static property => property.Name).ToArray());
+        Assert.Equal(
+            IncomingInboxMessageEntityConfiguration.MessageTypeNameMaxLength,
+            entityType.FindProperty(nameof(IncomingInboxMessageEntity.MessageTypeName))!.GetMaxLength());
+        Assert.Equal(
+            IncomingInboxMessageEntityConfiguration.ModuleNameMaxLength,
+            entityType.FindProperty(nameof(IncomingInboxMessageEntity.ReceiverModule))!.GetMaxLength());
+        Assert.Equal(
+            IncomingInboxMessageEntityConfiguration.HandlerIdentityMaxLength,
+            entityType.FindProperty(nameof(IncomingInboxMessageEntity.HandlerIdentity))!.GetMaxLength());
+        Assert.Equal(
+            IncomingInboxMessageEntityConfiguration.SourceTransportNameMaxLength,
+            entityType.FindProperty(nameof(IncomingInboxMessageEntity.SourceTransportName))!.GetMaxLength());
+        Assert.Equal(
+            IncomingInboxMessageEntityConfiguration.ClaimedByMaxLength,
+            entityType.FindProperty(nameof(IncomingInboxMessageEntity.ClaimedBy))!.GetMaxLength());
+        Assert.Contains(
+            entityType.GetIndexes(),
+            index => index.Properties.Select(static property => property.Name).SequenceEqual(
+            [
+                nameof(IncomingInboxMessageEntity.Status),
+                nameof(IncomingInboxMessageEntity.NextAttemptAtUtc),
+                nameof(IncomingInboxMessageEntity.IngestedAtUtc),
+            ]));
+        Assert.Contains(
+            entityType.GetIndexes(),
+            index => index.Properties.Select(static property => property.Name).SequenceEqual(
+            [
+                nameof(IncomingInboxMessageEntity.Status),
+                nameof(IncomingInboxMessageEntity.ClaimedUntilUtc),
+            ]));
+        Assert.Contains(
+            entityType.GetIndexes(),
+            index => index.Properties.Select(static property => property.Name).SequenceEqual(
+            [
+                nameof(IncomingInboxMessageEntity.ReceiverModule),
+                nameof(IncomingInboxMessageEntity.Status),
+                nameof(IncomingInboxMessageEntity.NextAttemptAtUtc),
+                nameof(IncomingInboxMessageEntity.IngestedAtUtc),
+            ]));
     }
 
     private static IMutableModel BuildModel()

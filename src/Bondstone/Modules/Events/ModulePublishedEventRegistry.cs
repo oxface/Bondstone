@@ -1,3 +1,5 @@
+using Bondstone.Diagnostics;
+
 namespace Bondstone.Modules;
 
 internal sealed class ModulePublishedEventRegistry : IModulePublishedEventRegistry
@@ -30,7 +32,8 @@ internal sealed class ModulePublishedEventRegistry : IModulePublishedEventRegist
             {
                 if (existing.EventType != publishedEvent.EventType)
                 {
-                    throw new InvalidOperationException(
+                    throw new BondstoneSetupException(
+                        BondstoneSetupCodes.DuplicateDurableRegistration,
                         $"Module '{publishedEvent.ModuleName}' already has a published event registration for message type '{publishedEvent.MessageTypeName}'.");
                 }
 

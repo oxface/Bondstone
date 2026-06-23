@@ -9,9 +9,9 @@ public sealed class PlaceOrderHandler(
     OrderingDbContext dbContext,
     IDurableCommandSender commandSender,
     IDurableEventPublisher eventPublisher)
-    : ICommandHandler<PlaceOrderCommand>
+    : ICommandHandler<PlaceOrderCommand, PlaceOrderResult>
 {
-    public async ValueTask HandleAsync(
+    public async ValueTask<PlaceOrderResult> HandleAsync(
         PlaceOrderCommand command,
         CancellationToken ct = default)
     {
@@ -22,7 +22,7 @@ public sealed class PlaceOrderHandler(
             Quantity = command.Quantity,
         });
 
-        await commandSender.SendAsync(
+        DurableCommandSendResult reservationSend = await commandSender.SendAsync(
             new ReserveInventoryCommand(
                 command.OrderId,
                 command.Sku,
@@ -40,5 +40,11 @@ public sealed class PlaceOrderHandler(
             partitionKey: command.OrderId.ToString("D"),
             durableOperationId: command.DurableOperationId,
             ct: ct);
+
+        return new PlaceOrderResult(
+            command.OrderId,
+            reservationSend.Operation
+            ?? throw new InvalidOperationException(
+                "Reservation command send did not return a durable operation handle."));
     }
 }

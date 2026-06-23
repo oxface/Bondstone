@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Bondstone.Diagnostics;
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Modules;
@@ -11,6 +12,7 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Persistence;
 internal sealed class EntityFrameworkCoreModuleTransactionRunner(
     IServiceProvider serviceProvider,
     EntityFrameworkCoreModuleRuntimeRegistry moduleRuntimeRegistry)
+    : IModuleTransactionRunner
 {
     private static readonly ConcurrentDictionary<Type, ObjectFactory> ScopeFactories = new();
     private static readonly object[] EmptyArguments = [];
@@ -21,7 +23,7 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
         moduleRuntimeRegistry ?? throw new ArgumentNullException(nameof(moduleRuntimeRegistry));
 
     public async ValueTask ExecuteAsync(
-        IModulePipelineExecutionContext context,
+        IModuleRuntimeExecutionContext context,
         Func<CancellationToken, ValueTask> next,
         CancellationToken ct)
     {
@@ -44,34 +46,40 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
 
         IEntityFrameworkCorePersistenceScope persistenceScope = CreatePersistenceScope(dbContextType);
 
-        var transactionFeature = new EntityFrameworkCoreModuleTransactionFeature(
-            observesCommit: !transactionAlreadyActive);
-        using IDisposable transactionFeatureScope = context.Features.Push<IModuleTransactionFeature>(
-            transactionFeature);
+        IDisposable? observedTransactionScope = transactionAlreadyActive
+            ? null
+            : context.ObserveTransactionOutcome();
 
         try
         {
-            await persistenceScope.ExecuteAsync(
-                async (scope, scopeCt) =>
-                {
-                    await next(scopeCt);
-                    await scope.SaveChangesAsync(scopeCt);
-                },
-                ct);
-        }
-        catch
-        {
-            if (!transactionAlreadyActive)
+            try
             {
-                await transactionFeature.RolledBackAsync(ct);
+                await persistenceScope.ExecuteAsync(
+                    async (scope, scopeCt) =>
+                    {
+                        await next(scopeCt);
+                        await scope.SaveChangesAsync(scopeCt);
+                    },
+                    ct);
+            }
+            catch
+            {
+                if (!transactionAlreadyActive)
+                {
+                    await context.NotifyTransactionRolledBackAsync(ct);
+                }
+
+                throw;
             }
 
-            throw;
+            if (!transactionAlreadyActive)
+            {
+                await context.NotifyTransactionCommittedAsync(ct);
+            }
         }
-
-        if (!transactionAlreadyActive)
+        finally
         {
-            await transactionFeature.CommittedAsync(ct);
+            observedTransactionScope?.Dispose();
         }
     }
 
@@ -119,7 +127,8 @@ internal sealed class EntityFrameworkCoreModuleTransactionRunner(
         }
 
         string joinedMappings = string.Join(", ", missingMappings);
-        throw new InvalidOperationException(
+        throw new BondstoneSetupException(
+            BondstoneSetupCodes.MissingEfMapping,
             $"Module '{module.Name}' uses durable messaging with Entity Framework Core persistence context "
             + $"'{dbContext.GetType().FullName}', but the DbContext model is missing required Bondstone EF Core mappings: "
             + $"{joinedMappings}. Map the required durable messaging tables with ApplyBondstoneOutbox() "

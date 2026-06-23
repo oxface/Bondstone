@@ -1,8 +1,9 @@
 # Consumer Trial Handoff
 
-This page is the first-consumer trial route for Bondstone. It links to the
-owning docs and SpecKit constitution/specs instead of restating the full setup,
-package, operation, and verification guidance.
+This page is the first-consumer trial route for Bondstone. The first consumers
+include our own applications. This handoff links to the owning docs and SpecKit
+constitution/specs instead of restating the full setup, package, operation, and
+verification guidance.
 
 ## Start Here
 
@@ -25,6 +26,40 @@ development. It is not production broker durability or a hidden fallback.
 RabbitMQ and Azure Service Bus adapters are thin native-driver envelope
 adapters; the host owns topology, provisioning, retry, dead-letter policy,
 prefetch, credentials, deployment, and native monitoring.
+
+## Evaluation Posture
+
+Treat the first consumer integration as a decision trial, not proof that
+Bondstone must be kept. The goal is to discover whether Bondstone makes our
+module boundaries easier to own than using a broader messaging/runtime
+framework directly.
+
+Bondstone is worth continuing when the trial shows that:
+
+- module-owned `DbContext` types and schemas stay explicit and boring;
+- stable message, handler, subscriber, and operation identities reduce
+  application ambiguity;
+- local modular-monolith behavior and later service extraction use the same
+  durable contracts;
+- fixes and missing docs remain small enough for a solo maintainer to carry;
+- Bondstone boundary code lets the application stay focused on product work.
+
+Open a switch review when the trial creates sustained tension, especially when:
+
+- the application starts needing runtime features Bondstone intentionally does
+  not own, such as broker topology, replay tooling, dead-letter operations,
+  scheduling, sagas, richer worker health, or broad transport policy;
+- diagnosing Bondstone takes longer than expressing the workflow in a mature
+  framework;
+- the integration needs many warnings, adapter layers, or special cases to feel
+  safe;
+- maintaining Bondstone begins to crowd out the product application work it was
+  meant to protect.
+
+Wolverine is the default alternative to reconsider during a switch review
+because it has a mature .NET messaging/runtime model and explicit modular
+monolith guidance. Do not wrap Wolverine to look like Bondstone unless a real
+trial finding proves that the extra boundary pays for its maintenance cost.
 
 ## Choose Packages
 
@@ -80,12 +115,13 @@ preserves:
 
 ## Know What Remains
 
-Use GitHub Issues and Projects to confirm implementation readiness and
-remaining backlog. SpecKit feature artifacts under `../specs/` may provide
-change-scoped implementation deltas when present.
+Use GitHub Issues and Projects to confirm implementation readiness, remaining
+backlog, and switch-review evidence. SpecKit feature artifacts under `../specs/`
+may provide change-scoped implementation deltas when present.
 
 The first real-project migration trial is tracked in GitHub issue
 [#34](https://github.com/oxface/Bondstone/issues/34). Create separate GitHub
 Issues for distinct trial findings using the formats in
-[github-workflow.md](github-workflow.md); do not use repository docs as the
-trial backlog.
+[github-workflow.md](github-workflow.md). Mark findings that challenge
+Bondstone's product boundary with `architecture-review-required`; do not use
+repository docs as the trial backlog.

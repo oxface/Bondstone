@@ -6,7 +6,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Bondstone.Persistence\Bondstone.Persistence.csproj" />
-    <ProjectReference Include="..\Bondstone.Transport\Bondstone.Transport.csproj" />
   </ItemGroup>
 
   <ItemGroup>

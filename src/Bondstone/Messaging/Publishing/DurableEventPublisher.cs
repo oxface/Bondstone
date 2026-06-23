@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Bondstone.Modules;
 using Bondstone.Persistence;
 
@@ -54,41 +55,62 @@ internal sealed class DurableEventPublisher(
             ?? throw new InvalidOperationException(
                 "Durable event publishing requires a current module execution context.");
 
-        Guid messageId = Guid.NewGuid();
-        string messageTypeName = _messageTypeRegistry.GetMessageTypeName<TEvent>();
-        if (!_publishedEventRegistry.PublishedEvents.Any(publishedEvent =>
-                publishedEvent.ModuleName == executionContext.ModuleName
-                && publishedEvent.MessageTypeName == messageTypeName))
+        using Activity? activity = BondstoneMessagingDiagnostics.ActivitySource.StartActivity(
+            BondstoneMessagingDiagnostics.EventPublishActivityName,
+            ActivityKind.Producer);
+
+        try
         {
-            throw new InvalidOperationException(
-                $"Module '{executionContext.ModuleName}' has not registered published event '{messageTypeName}'. Call RegisterPublishedEvent for the publishing module before using {nameof(IDurableEventPublisher)}.");
+            Guid messageId = Guid.NewGuid();
+            string messageTypeName = _messageTypeRegistry.GetMessageTypeName<TEvent>();
+            if (!_publishedEventRegistry.PublishedEvents.Any(publishedEvent =>
+                    publishedEvent.ModuleName == executionContext.ModuleName
+                    && publishedEvent.MessageTypeName == messageTypeName))
+            {
+                throw new InvalidOperationException(
+                    $"Module '{executionContext.ModuleName}' has not registered published event '{messageTypeName}'. Call RegisterPublishedEvent for the publishing module before using {nameof(IDurableEventPublisher)}.");
+            }
+
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.SourceModule,
+                executionContext.ModuleName);
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.MessageType,
+                messageTypeName);
+            activity?.SetTag(
+                BondstoneMessagingDiagnostics.Tags.MessageKind,
+                MessageKind.Event.ToString());
+            string payload = _payloadSerializer.Serialize(integrationEvent);
+            MessageTraceContext? capturedTraceContext =
+                traceContext ?? MessageTraceContext.CaptureCurrent();
+
+            var envelope = new DurableMessageEnvelope(
+                messageId,
+                MessageKind.Event,
+                messageTypeName,
+                executionContext.ModuleName,
+                targetModule: null,
+                payload,
+                _timeProvider.GetUtcNow(),
+                durableOperationId,
+                capturedTraceContext,
+                causationId,
+                partitionKey);
+
+            IDurableOutboxWriter outboxWriter = _outboxWriterResolver.Resolve(
+                executionContext.ModuleName);
+
+            await outboxWriter.WriteAsync(envelope, ct);
+
+            return new DurableEventPublishResult(
+                messageId,
+                durableOperationId,
+                DurableEventPublishStatus.Accepted);
         }
-
-        string payload = _payloadSerializer.Serialize(integrationEvent);
-        MessageTraceContext? capturedTraceContext =
-            traceContext ?? MessageTraceContext.CaptureCurrent();
-
-        var envelope = new DurableMessageEnvelope(
-            messageId,
-            MessageKind.Event,
-            messageTypeName,
-            executionContext.ModuleName,
-            targetModule: null,
-            payload,
-            _timeProvider.GetUtcNow(),
-            durableOperationId,
-            capturedTraceContext,
-            causationId,
-            partitionKey);
-
-        IDurableOutboxWriter outboxWriter = _outboxWriterResolver.Resolve(
-            executionContext.ModuleName);
-
-        await outboxWriter.WriteAsync(envelope, ct);
-
-        return new DurableEventPublishResult(
-            messageId,
-            durableOperationId,
-            DurableEventPublishStatus.Accepted);
+        catch (Exception exception)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+            throw;
+        }
     }
 }

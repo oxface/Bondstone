@@ -15,15 +15,22 @@ internal sealed class ModuleExecutionContextAccessor : IModuleExecutionContextAc
         return scope;
     }
 
+    internal IDisposable PushNoContext()
+    {
+        var scope = new Scope(this, context: null, _current.Value);
+        _current.Value = scope;
+        return scope;
+    }
+
     private sealed class Scope(
         ModuleExecutionContextAccessor accessor,
-        ModuleExecutionContext context,
+        ModuleExecutionContext? context,
         Scope? previous)
         : IDisposable
     {
         private bool _disposed;
 
-        public ModuleExecutionContext Context { get; } = context;
+        public ModuleExecutionContext? Context { get; } = context;
 
         public void Dispose()
         {
@@ -37,4 +44,3 @@ internal sealed class ModuleExecutionContextAccessor : IModuleExecutionContextAc
         }
     }
 }
-

@@ -1,5 +1,56 @@
+namespace Bondstone.Persistence.EntityFrameworkCore.DomainEvents
+{
+    public sealed class DomainEventRecordEntity
+    {
+        public System.DateTimeOffset CapturedAtUtc { get; }
+        public System.Guid? CausationId { get; }
+        public System.Guid DomainEventId { get; }
+        public string DomainEventName { get; }
+        public string ModuleName { get; }
+        public System.DateTimeOffset OccurredAtUtc { get; }
+        public string Payload { get; }
+        public string? PayloadMetadata { get; }
+        public string PayloadTypeName { get; }
+        public string? TraceBaggage { get; }
+        public string? TraceParent { get; }
+        public string? TraceState { get; }
+    }
+    public sealed class DomainEventRecordEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Persistence.EntityFrameworkCore.DomainEvents.DomainEventRecordEntity>
+    {
+        public const int DomainEventNameMaxLength = 256;
+        public const int ModuleNameMaxLength = 128;
+        public const int PayloadTypeNameMaxLength = 1024;
+        public const string PrimaryKeyName = "PK_domain_event_records";
+        public const string TableName = "domain_event_records";
+        public const int TraceParentMaxLength = 128;
+        public const int TraceStateMaxLength = 512;
+        public DomainEventRecordEntityConfiguration(string? schema = null) { }
+        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Persistence.EntityFrameworkCore.DomainEvents.DomainEventRecordEntity> builder) { }
+        public static class Columns
+        {
+            public const string CapturedAtUtc = "CapturedAtUtc";
+            public const string CausationId = "CausationId";
+            public const string DomainEventId = "DomainEventId";
+            public const string DomainEventName = "DomainEventName";
+            public const string ModuleName = "ModuleName";
+            public const string OccurredAtUtc = "OccurredAtUtc";
+            public const string Payload = "Payload";
+            public const string PayloadMetadata = "PayloadMetadata";
+            public const string PayloadTypeName = "PayloadTypeName";
+            public const string TraceBaggage = "TraceBaggage";
+            public const string TraceParent = "TraceParent";
+            public const string TraceState = "TraceState";
+        }
+    }
+}
 namespace Bondstone.Persistence.EntityFrameworkCore.Inbox
 {
+    public sealed class EntityFrameworkCoreDurableInboxInspectionStore<TDbContext> : Bondstone.Persistence.IDurableInboxInspectionStore
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreDurableInboxInspectionStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableInboxRecord>> FindUnprocessedAsync(int maxCount = 100, System.DateTimeOffset? receivedAtOrBeforeUtc = default, string? moduleName = null, System.Threading.CancellationToken ct = default) { }
+    }
     public sealed class EntityFrameworkCoreDurableInboxStore<TDbContext> : Bondstone.Persistence.IDurableInboxStore
         where TDbContext : Microsoft.EntityFrameworkCore.DbContext
     {
@@ -37,20 +88,117 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Inbox
         }
     }
 }
+namespace Bondstone.Persistence.EntityFrameworkCore.IncomingInbox
+{
+    public sealed class EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbContext> : Bondstone.Persistence.IDurableIncomingInboxIngestionStore
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreDurableIncomingInboxIngestionStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxIngestionResult> IngestAsync(Bondstone.Persistence.DurableIncomingInboxRecord record, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class EntityFrameworkCoreDurableIncomingInboxInspectionStore<TDbContext> : Bondstone.Persistence.IDurableIncomingInboxInspectionStore
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreDurableIncomingInboxInspectionStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindAsync(Bondstone.Persistence.DurableIncomingInboxStatus? status = default, int maxCount = 100, System.DateTimeOffset? ingestedAtOrBeforeUtc = default, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindStaleProcessingAsync(System.DateTimeOffset claimedUntilAtOrBeforeUtc, int maxCount = 100, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindTerminalFailedAsync(int maxCount = 100, System.DateTimeOffset? failedAtOrBeforeUtc = default, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class IncomingInboxMessageEntity
+    {
+        public int AttemptCount { get; }
+        public System.Guid? CausationId { get; }
+        public string? ClaimedBy { get; }
+        public System.DateTimeOffset? ClaimedUntilUtc { get; }
+        public System.DateTimeOffset CreatedAtUtc { get; }
+        public System.Guid? DurableOperationId { get; }
+        public System.DateTimeOffset? FailedAtUtc { get; }
+        public string? FailureReason { get; }
+        public string HandlerIdentity { get; }
+        public System.DateTimeOffset IngestedAtUtc { get; }
+        public System.Guid MessageId { get; }
+        public Bondstone.Messaging.MessageKind MessageKind { get; }
+        public string MessageTypeName { get; }
+        public string? Metadata { get; }
+        public System.DateTimeOffset? NextAttemptAtUtc { get; }
+        public string? PartitionKey { get; }
+        public string Payload { get; }
+        public System.DateTimeOffset? ProcessedAtUtc { get; }
+        public string ReceiverModule { get; }
+        public string SourceModule { get; }
+        public string? SourceTransportName { get; }
+        public Bondstone.Persistence.DurableIncomingInboxStatus Status { get; }
+        public string? TargetModule { get; }
+        public string? TraceBaggage { get; }
+        public string? TraceParent { get; }
+        public string? TraceState { get; }
+        public Bondstone.Persistence.DurableIncomingInboxRecord ToRecord() { }
+        public static Bondstone.Persistence.EntityFrameworkCore.IncomingInbox.IncomingInboxMessageEntity FromRecord(Bondstone.Persistence.DurableIncomingInboxRecord record) { }
+    }
+    public sealed class IncomingInboxMessageEntityConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Bondstone.Persistence.EntityFrameworkCore.IncomingInbox.IncomingInboxMessageEntity>
+    {
+        public const int ClaimedByMaxLength = 256;
+        public const int FailureReasonMaxLength = 2048;
+        public const int HandlerIdentityMaxLength = 512;
+        public const int MessageKindMaxLength = 32;
+        public const int MessageTypeNameMaxLength = 256;
+        public const int ModuleNameMaxLength = 128;
+        public const int PartitionKeyMaxLength = 512;
+        public const string PrimaryKeyName = "PK_incoming_inbox_messages";
+        public const int SourceTransportNameMaxLength = 256;
+        public const int StatusMaxLength = 32;
+        public const string TableName = "incoming_inbox_messages";
+        public const int TraceParentMaxLength = 128;
+        public const int TraceStateMaxLength = 512;
+        public IncomingInboxMessageEntityConfiguration(string? schema = null) { }
+        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<Bondstone.Persistence.EntityFrameworkCore.IncomingInbox.IncomingInboxMessageEntity> builder) { }
+        public static class Columns
+        {
+            public const string AttemptCount = "AttemptCount";
+            public const string CausationId = "CausationId";
+            public const string ClaimedBy = "ClaimedBy";
+            public const string ClaimedUntilUtc = "ClaimedUntilUtc";
+            public const string CreatedAtUtc = "CreatedAtUtc";
+            public const string DurableOperationId = "DurableOperationId";
+            public const string FailedAtUtc = "FailedAtUtc";
+            public const string FailureReason = "FailureReason";
+            public const string HandlerIdentity = "HandlerIdentity";
+            public const string IngestedAtUtc = "IngestedAtUtc";
+            public const string MessageId = "MessageId";
+            public const string MessageKind = "MessageKind";
+            public const string MessageTypeName = "MessageTypeName";
+            public const string Metadata = "Metadata";
+            public const string NextAttemptAtUtc = "NextAttemptAtUtc";
+            public const string PartitionKey = "PartitionKey";
+            public const string Payload = "Payload";
+            public const string ProcessedAtUtc = "ProcessedAtUtc";
+            public const string ReceiverModule = "ReceiverModule";
+            public const string SourceModule = "SourceModule";
+            public const string SourceTransportName = "SourceTransportName";
+            public const string Status = "Status";
+            public const string TargetModule = "TargetModule";
+            public const string TraceBaggage = "TraceBaggage";
+            public const string TraceParent = "TraceParent";
+            public const string TraceState = "TraceState";
+        }
+    }
+}
 namespace Bondstone.Persistence.EntityFrameworkCore.Operations
 {
-    public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
+    public sealed class EntityFrameworkCoreDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationExpirationStore, Bondstone.Persistence.IDurableOperationStateStore
         where TDbContext : Microsoft.EntityFrameworkCore.DbContext
     {
         public EntityFrameworkCoreDurableOperationStateStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Messaging.DurableOperationState>> FindExpirationCandidatesAsync(System.DateTimeOffset expiresBeforeUtc, int maxCount, System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default) { }
     }
-    public sealed class EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationStateStore
+    public sealed class EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext> : Bondstone.Messaging.IDurableOperationReader, Bondstone.Persistence.IDurableOperationExpirationStore, Bondstone.Persistence.IDurableOperationStateStore
         where TDbContext : Microsoft.EntityFrameworkCore.DbContext
     {
         public EntityFrameworkCoreModuleDurableOperationStateStore(string moduleName, TDbContext context) { }
         public string ModuleName { get; }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Messaging.DurableOperationState>> FindExpirationCandidatesAsync(System.DateTimeOffset expiresBeforeUtc, int maxCount, System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.ValueTask SaveAsync(Bondstone.Messaging.DurableOperationState state, System.Threading.CancellationToken ct = default) { }
     }
@@ -80,6 +228,12 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Operations
 }
 namespace Bondstone.Persistence.EntityFrameworkCore.Outbox
 {
+    public sealed class EntityFrameworkCoreDurableOutboxInspectionStore<TDbContext> : Bondstone.Persistence.IDurableOutboxInspectionStore
+        where TDbContext : Microsoft.EntityFrameworkCore.DbContext
+    {
+        public EntityFrameworkCoreDurableOutboxInspectionStore(TDbContext context) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableOutboxRecord>> FindTerminalFailedAsync(int maxCount = 100, System.DateTimeOffset? failedAtOrBeforeUtc = default, string? sourceModuleName = null, System.Threading.CancellationToken ct = default) { }
+    }
     public sealed class EntityFrameworkCoreDurableOutboxWriter<TDbContext> : Bondstone.Persistence.IDurableOutboxWriter
         where TDbContext : Microsoft.EntityFrameworkCore.DbContext
     {
@@ -165,6 +319,14 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Outbox
 }
 namespace Bondstone.Persistence.EntityFrameworkCore.Persistence
 {
+    public static class BondstoneDomainEventModelBuilderExtensions
+    {
+        public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneDomainEvents(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
+    }
+    public static class BondstoneEntityFrameworkCoreDomainEventModuleBuilderExtensions
+    {
+        public static Bondstone.Modules.BondstoneModuleBuilder UseEntityFrameworkCoreDomainEventPersistence(this Bondstone.Modules.BondstoneModuleBuilder module) { }
+    }
     public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
     {
         public static Bondstone.Modules.BondstoneModuleBuilder UseEntityFrameworkCoreModulePersistence<TDbContext>(this Bondstone.Modules.BondstoneModuleBuilder module)
@@ -180,6 +342,7 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Persistence
     public static class BondstoneModelBuilderExtensions
     {
         public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneInbox(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
+        public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneIncomingInbox(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
         public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneOperationState(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
         public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstoneOutbox(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }
         public static Microsoft.EntityFrameworkCore.ModelBuilder ApplyBondstonePersistence(this Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, string? schema = null) { }

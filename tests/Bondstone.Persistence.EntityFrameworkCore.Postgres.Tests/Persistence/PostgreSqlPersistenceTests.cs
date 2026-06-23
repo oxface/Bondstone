@@ -82,6 +82,19 @@ public sealed partial class PostgreSqlPersistenceTests : IClassFixture<PostgreSq
         await context.SaveChangesAsync();
     }
 
+    private async Task WriteOutboxMessageAsync(
+        DurableMessageEnvelope envelope,
+        DateTimeOffset storedAtUtc)
+    {
+        await using PostgreSqlTestDbContext context = CreateContext();
+        var writer = new EntityFrameworkCoreDurableOutboxWriter<PostgreSqlTestDbContext>(
+            context,
+            new FixedTimeProvider(storedAtUtc));
+
+        await writer.WriteAsync(envelope);
+        await context.SaveChangesAsync();
+    }
+
     private async Task MarkOutboxMessageProcessingAsync(
         Guid messageId,
         string claimedBy,
@@ -129,14 +142,17 @@ public sealed partial class PostgreSqlPersistenceTests : IClassFixture<PostgreSq
             claimedUntilUtc ?? DateTimeOffset.Parse("2026-06-04T00:05:00+00:00"));
     }
 
-    private static DurableMessageEnvelope CreateEnvelope(Guid? messageId = null)
+    private static DurableMessageEnvelope CreateEnvelope(
+        Guid? messageId = null,
+        string sourceModule = "sales",
+        string targetModule = "fulfillment")
     {
         return new DurableMessageEnvelope(
             messageId ?? Guid.Parse("48cb19e0-3689-4ec7-b629-8f8e19916d43"),
             MessageKind.Command,
             "orders.submit.v1",
-            "sales",
-            "fulfillment",
+            sourceModule,
+            targetModule,
             """{"orderId":"A-100"}""",
             DateTimeOffset.Parse("2026-06-04T00:00:00+00:00"),
             durableOperationId: Guid.Parse("a0e7c46f-2699-40ec-888a-267b9323a164"),

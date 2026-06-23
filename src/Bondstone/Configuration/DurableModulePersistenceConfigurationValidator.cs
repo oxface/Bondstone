@@ -19,15 +19,30 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
             _persistenceRegistrationRegistry.OutboxWriterRegistrations.ToArray();
         DurableModuleInboxHandlerExecutorRegistration[] inboxExecutors =
             _persistenceRegistrationRegistry.InboxHandlerExecutorRegistrations.ToArray();
+        DurableModuleInboxInspectionStoreRegistration[] inboxInspectionStores =
+            _persistenceRegistrationRegistry.InboxInspectionStoreRegistrations.ToArray();
+        DurableModuleIncomingInboxIngestionBoundaryRegistration[] incomingInboxIngestionBoundaries =
+            _persistenceRegistrationRegistry.IncomingInboxIngestionBoundaryRegistrations.ToArray();
+        DurableModuleIncomingInboxDispatcherRegistration[] incomingInboxDispatchers =
+            _persistenceRegistrationRegistry.IncomingInboxDispatcherRegistrations.ToArray();
         DurableModuleOperationStateStoreRegistration[] operationStateStores =
             _persistenceRegistrationRegistry.OperationStateStoreRegistrations.ToArray();
         DurableModuleOutboxDispatcherRegistration[] outboxDispatchers =
             _persistenceRegistrationRegistry.OutboxDispatcherRegistrations.ToArray();
+        DurableModuleOutboxInspectionStoreRegistration[] outboxInspectionStores =
+            _persistenceRegistrationRegistry.OutboxInspectionStoreRegistrations.ToArray();
 
-        if (outboxWriters.Length == 0
-            && inboxExecutors.Length == 0
-            && operationStateStores.Length == 0
-            && outboxDispatchers.Length == 0)
+        bool hasDurableModuleRoleRegistrations =
+            outboxWriters.Length > 0
+            || inboxExecutors.Length > 0
+            || inboxInspectionStores.Length > 0
+            || incomingInboxDispatchers.Length > 0
+            || operationStateStores.Length > 0
+            || outboxDispatchers.Length > 0
+            || outboxInspectionStores.Length > 0;
+
+        if (!hasDurableModuleRoleRegistrations
+            && incomingInboxIngestionBoundaries.Length == 0)
         {
             return;
         }
@@ -36,13 +51,26 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
             context,
             outboxWriters.Select(static registration => registration.ModuleName)
                 .Concat(inboxExecutors.Select(static registration => registration.ModuleName))
+                .Concat(inboxInspectionStores.Select(static registration => registration.ModuleName))
+                .Concat(incomingInboxIngestionBoundaries.Select(static registration =>
+                    registration.ModuleName))
+                .Concat(incomingInboxDispatchers.Select(static registration => registration.ModuleName))
                 .Concat(operationStateStores.Select(static registration => registration.ModuleName))
-                .Concat(outboxDispatchers.Select(static registration => registration.ModuleName)));
+                .Concat(outboxDispatchers.Select(static registration => registration.ModuleName))
+                .Concat(outboxInspectionStores.Select(static registration => registration.ModuleName)));
+
+        if (!hasDurableModuleRoleRegistrations)
+        {
+            return;
+        }
 
         HashSet<string> modulesWithOutboxWriter = outboxWriters
             .Select(static registration => registration.ModuleName)
             .ToHashSet(StringComparer.Ordinal);
         HashSet<string> modulesWithInboxExecutor = inboxExecutors
+            .Select(static registration => registration.ModuleName)
+            .ToHashSet(StringComparer.Ordinal);
+        HashSet<string> modulesWithIncomingInboxDispatcher = incomingInboxDispatchers
             .Select(static registration => registration.ModuleName)
             .ToHashSet(StringComparer.Ordinal);
         HashSet<string> modulesWithOperationStateStore = operationStateStores
@@ -65,6 +93,11 @@ internal sealed class DurableModulePersistenceConfigurationValidator(
             if (!modulesWithInboxExecutor.Contains(module.Name))
             {
                 missingRoles.Add("inbox handler executor");
+            }
+
+            if (!modulesWithIncomingInboxDispatcher.Contains(module.Name))
+            {
+                missingRoles.Add("incoming inbox dispatcher");
             }
 
             if (!modulesWithOperationStateStore.Contains(module.Name))

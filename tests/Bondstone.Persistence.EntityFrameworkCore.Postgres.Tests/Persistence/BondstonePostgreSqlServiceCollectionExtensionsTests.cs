@@ -58,6 +58,9 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         AssertContainsScopedFactory<IDurableOutboxClaimer>(services);
         AssertContainsScopedFactory<IDurableOutboxLeaseRenewer>(services);
         AssertContainsScopedFactory<IDurableOutboxDispatchRecorder>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxClaimer>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxLeaseRenewer>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxOutcomeRecorder>(services);
         AssertContainsScoped<IDurableInboxStore>(services);
         AssertContainsScoped<IDurableOperationStateStore>(services);
     }
@@ -81,6 +84,9 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         AssertContainsScopedFactory<IDurableOutboxClaimer>(services);
         AssertContainsScopedFactory<IDurableOutboxLeaseRenewer>(services);
         AssertContainsScopedFactory<IDurableOutboxDispatchRecorder>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxClaimer>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxLeaseRenewer>(services);
+        AssertContainsScopedFactory<IDurableIncomingInboxOutcomeRecorder>(services);
     }
 
     [Fact]
@@ -108,7 +114,7 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
 
         Assert.True(persistenceWasMarked);
         AssertContainsModulePersistenceRegistrations(services, "fulfillment");
-        AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
+        AssertContainsTransientOutboxDispatcher<DurableModuleOutboxDispatchAggregator>(services);
 
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         BondstoneModuleRegistration module = serviceProvider
@@ -142,7 +148,9 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
 
         Assert.True(persistenceWasMarked);
         AssertContainsModulePersistenceRegistrations(services, "fulfillment");
-        AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
+        AssertContainsTransientOutboxDispatcher<DurableModuleOutboxDispatchAggregator>(services);
+        AssertContainsTransientIncomingInboxDispatcher<
+            DurableModuleIncomingInboxDispatcherAggregator>(services);
         Assert.False(
             services.Any(static descriptor => descriptor.ServiceType == typeof(IDurableOutboxWriter)),
             "Module-only PostgreSQL EF setup should not register a root IDurableOutboxWriter service.");
@@ -178,7 +186,31 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
             static descriptor =>
                 descriptor.ServiceType == typeof(IDurableOutboxDispatcher)
                 && descriptor.ImplementationType == typeof(DurableOutboxDispatcher));
-        AssertContainsTransient<DurableModuleOutboxDispatchAggregator>(services);
+        AssertContainsTransientOutboxDispatcher<DurableModuleOutboxDispatchAggregator>(services);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstonePostgreSqlModulePersistence_WhenCustomIncomingInboxDispatcherFactoryAlreadyRegistered_PreservesCustomDispatcher()
+    {
+        var services = new ServiceCollection();
+        services.AddTransient<IDurableIncomingInboxDispatcher>(_ => new CustomIncomingInboxDispatcher());
+
+        services.AddBondstonePostgreSqlModulePersistence<PostgreSqlTestDbContext>(
+            "fulfillment",
+            schema: "fulfillment");
+
+        Assert.Contains(
+            services,
+            static descriptor =>
+                descriptor.ServiceType == typeof(IDurableIncomingInboxDispatcher)
+                && descriptor.ImplementationFactory is not null
+                && descriptor.Lifetime == ServiceLifetime.Transient);
+        Assert.DoesNotContain(
+            services,
+            static descriptor =>
+                descriptor.ServiceType == typeof(IDurableIncomingInboxDispatcher)
+                && descriptor.ImplementationType == typeof(DurableModuleIncomingInboxDispatcherAggregator));
     }
 
     [Fact]
@@ -225,6 +257,9 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         registry.AddOutboxDispatcher(new DurableModuleOutboxDispatcherRegistration(
             "fulfillment",
             _ => new CustomDispatcher()));
+        registry.AddIncomingInboxDispatcher(new DurableModuleIncomingInboxDispatcherRegistration(
+            "fulfillment",
+            _ => new CustomIncomingInboxDispatcher()));
         services.AddBondstone(builder =>
         {
             builder.Module("billing", module =>
@@ -299,15 +334,29 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
         Assert.Contains(
             registry.OutboxDispatcherRegistrations,
             registration => registration.ModuleName == moduleName);
+        Assert.Contains(
+            registry.IncomingInboxDispatcherRegistrations,
+            registration => registration.ModuleName == moduleName);
     }
 
-    private static void AssertContainsTransient<TImplementation>(
+    private static void AssertContainsTransientOutboxDispatcher<TImplementation>(
         IServiceCollection services)
     {
         Assert.Contains(
             services,
             descriptor =>
                 descriptor.ServiceType == typeof(IDurableOutboxDispatcher)
+                && descriptor.ImplementationType == typeof(TImplementation)
+                && descriptor.Lifetime == ServiceLifetime.Transient);
+    }
+
+    private static void AssertContainsTransientIncomingInboxDispatcher<TImplementation>(
+        IServiceCollection services)
+    {
+        Assert.Contains(
+            services,
+            descriptor =>
+                descriptor.ServiceType == typeof(IDurableIncomingInboxDispatcher)
                 && descriptor.ImplementationType == typeof(TImplementation)
                 && descriptor.Lifetime == ServiceLifetime.Transient);
     }
@@ -393,6 +442,18 @@ public sealed class BondstonePostgreSqlServiceCollectionExtensionsTests
             CancellationToken ct = default)
         {
             return ValueTask.FromResult(new DurableOutboxDispatchResult(0, 0, 0, 0, 0));
+        }
+    }
+
+    private sealed class CustomIncomingInboxDispatcher : IDurableIncomingInboxDispatcher
+    {
+        public ValueTask<DurableIncomingInboxProcessingResult> ProcessAsync(
+            string claimedBy,
+            TimeSpan leaseDuration,
+            int maxCount = 100,
+            CancellationToken ct = default)
+        {
+            return ValueTask.FromResult(new DurableIncomingInboxProcessingResult(0, 0, 0, 0, 0));
         }
     }
 }

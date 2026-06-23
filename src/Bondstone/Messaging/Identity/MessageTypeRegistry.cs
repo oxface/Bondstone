@@ -1,4 +1,5 @@
 using System.Reflection;
+using Bondstone.Diagnostics;
 using Bondstone.Utility;
 
 namespace Bondstone.Messaging;
@@ -121,12 +122,13 @@ public sealed class MessageTypeRegistry : IMessageTypeRegistry
     {
         if (!typeof(IMessage).IsAssignableFrom(clrType))
         {
-            throw new ArgumentException(
+            throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
                 $"Type '{clrType.FullName}' must implement {nameof(IMessage)}.",
                 nameof(clrType));
         }
 
-        string normalizedTypeName = messageTypeName.NormalizeRequired(nameof(messageTypeName), "Message type name");
+        string normalizedTypeName = NormalizeMessageTypeName(messageTypeName);
         var registration = new MessageTypeRegistration(clrType, normalizedTypeName, kind);
 
         lock (_sync)
@@ -135,7 +137,8 @@ public sealed class MessageTypeRegistry : IMessageTypeRegistry
             {
                 if (existingRegistration != registration)
                 {
-                    throw new InvalidOperationException(
+                    throw new BondstoneSetupException(
+                        BondstoneSetupCodes.DuplicateDurableRegistration,
                         $"Type '{clrType.FullName}' is already registered as '{existingRegistration.MessageTypeName}'.");
                 }
 
@@ -146,7 +149,8 @@ public sealed class MessageTypeRegistry : IMessageTypeRegistry
                 normalizedTypeName,
                 out MessageTypeRegistration? existingTypeNameRegistration))
             {
-                throw new InvalidOperationException(
+                throw new BondstoneSetupException(
+                    BondstoneSetupCodes.DuplicateDurableRegistration,
                     $"Message type '{normalizedTypeName}' is already registered for '{existingTypeNameRegistration.ClrType.FullName}'.");
             }
 
@@ -154,6 +158,16 @@ public sealed class MessageTypeRegistry : IMessageTypeRegistry
             _registrationsByMessageTypeName.Add(normalizedTypeName, registration);
             return registration;
         }
+    }
+
+    private static string NormalizeMessageTypeName(string? messageTypeName)
+    {
+        return string.IsNullOrWhiteSpace(messageTypeName)
+            ? throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
+                "Message type name is required.",
+                nameof(messageTypeName))
+            : messageTypeName.Trim();
     }
 
     private static MessageKind GetMessageKind(Type clrType)
@@ -165,10 +179,12 @@ public sealed class MessageTypeRegistry : IMessageTypeRegistry
         {
             (true, false) => MessageKind.Command,
             (false, true) => MessageKind.Event,
-            (true, true) => throw new ArgumentException(
+            (true, true) => throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
                 $"Message type '{clrType.FullName}' must not implement both {nameof(IDurableCommand)} and {nameof(IIntegrationEvent)}.",
                 nameof(clrType)),
-            _ => throw new ArgumentException(
+            _ => throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
                 $"Type '{clrType.FullName}' must implement {nameof(IDurableCommand)} or {nameof(IIntegrationEvent)}.",
                 nameof(clrType)),
         };

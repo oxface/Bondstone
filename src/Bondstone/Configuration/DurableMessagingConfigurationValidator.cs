@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Modules;
 
 namespace Bondstone.Configuration;
@@ -10,7 +11,8 @@ internal sealed class DurableMessagingConfigurationValidator
         foreach (BondstoneModuleRegistration module in context.ModulesByName.Values
             .Where(static module => module.UsesDurableMessaging && !module.UsesPersistence))
         {
-            throw new InvalidOperationException(
+            throw new BondstoneSetupException(
+                BondstoneSetupCodes.MissingModulePersistence,
                 $"Module '{module.Name}' uses durable messaging but does not declare persistence. Configure module persistence with UsePersistence or a provider-specific persistence opt-in such as UseEntityFrameworkCorePersistence<TDbContext>().");
         }
 

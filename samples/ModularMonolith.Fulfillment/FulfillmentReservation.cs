@@ -1,4 +1,4 @@
-using Bondstone.Capabilities.DomainEvents;
+using Bondstone.DomainEvents;
 
 namespace Bondstone.Samples.ModularMonolith.Fulfillment;
 

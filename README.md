@@ -1,11 +1,24 @@
 # Bondstone
 
 Bondstone is a .NET library for durable module boundaries, durable command
-sending, EF Core backed inbox/outbox persistence, and transport adapters.
+sending, EF Core backed inbox/outbox persistence, operation observation, and
+transport adapters.
 
-Stable docs describe the current package, architecture, setup, repository,
-sample, and verification contracts. ADRs preserve the decision trail. GitHub
-Issues and GitHub Projects track backlog work.
+Bondstone uses the SpecKit constitution and feature artifacts for governance
+and change-scoped implementation intent. Durable architecture, project profile,
+consumer-facing package docs, and operations docs live under `docs/`.
+
+## SpecKit Planning
+
+- [Constitution](.specify/memory/constitution.md) owns governance and
+  non-negotiable implementation principles.
+- [Bondstone architecture](docs/architecture.md) owns internal runtime
+  architecture, package-boundary rules, durable behavior, and documentation
+  ownership.
+- [Bondstone project profile](.specify/memory/project-profile.md) records the
+  brownfield scan used to seed SpecKit.
+- Feature-local specs under `specs/` own change-scoped implementation intent
+  when present.
 
 ## Packages
 
@@ -18,18 +31,29 @@ Start with [docs/setup.md](docs/setup.md) for the normal host setup path. It
 shows how to compose modules, PostgreSQL persistence, a direct transport
 adapter, and the hosted outbox worker through `AddBondstone`.
 
+Use [docs/consumer-trial-handoff.md](docs/consumer-trial-handoff.md) for the
+first consumer migration trial route and follow-up tracking.
+
 Use the package READMEs under [src/](src/) as quick package-purpose guides.
-Use architecture docs when you need the durable behavior contract behind a
-package.
+Use the Bondstone architecture when you need the durable behavior contract
+behind a package.
 
 ## Repository Map
 
-- [docs/README.md](docs/README.md) is the durable documentation index.
-- [docs/adr/README.md](docs/adr/README.md) explains the ADR workflow.
-- [docs/architecture/README.md](docs/architecture/README.md) records runtime
-  positioning.
-- [docs/setup.md](docs/setup.md) is the single user-facing setup example.
+- [docs/README.md](docs/README.md) indexes consumer-facing and repository
+  operation docs.
+- [.specify/memory/project-profile.md](.specify/memory/project-profile.md)
+  records brownfield project facts used by SpecKit workflows.
+- [docs/setup.md](docs/setup.md) is the primary user-facing setup example.
+- [docs/package-discovery.md](docs/package-discovery.md) maps capabilities to
+  packages and namespaces.
+- [docs/consumer-trial-handoff.md](docs/consumer-trial-handoff.md) links the
+  first trial path, readiness evidence, and follow-up tracking.
 - [docs/packaging.md](docs/packaging.md) records package and release policy.
+- [docs/operations.md](docs/operations.md) records production operations
+  guidance.
+- [docs/observability.md](docs/observability.md) records diagnostic surfaces.
+- [docs/public-api.md](docs/public-api.md) records public API classification.
 - [docs/repository.md](docs/repository.md) records repository layout and
   tooling.
 - [docs/samples.md](docs/samples.md) records sample direction.
@@ -37,6 +61,9 @@ package.
 - [src/](src/) contains package projects.
 - [tests/](tests/) contains package and integration-boundary test projects.
 - [samples/](samples/) is reserved for sample applications.
+- [.specify/](.specify/) contains the source-controlled SpecKit constitution,
+  extension choices, and local routing indexes. Installed SpecKit templates,
+  scripts, and extension payloads are local tooling.
 
 ## Verification
 
@@ -70,6 +97,6 @@ Required repository setup:
 Bondstone is built gradually as a durable module-boundary library. Do not
 bulk-copy implementation code from the historical template repository or
 preserve compatibility with it as a design constraint. Current implementation
-work should follow the stable docs, check ADR requirements before broad
-technical decisions, and keep package boundaries, public API shape, tests, and
-docs aligned.
+work should follow the SpecKit constitution, Bondstone architecture, feature
+artifacts, and stable docs while keeping package boundaries, public API shape,
+tests, and consumer docs aligned.

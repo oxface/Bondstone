@@ -4,13 +4,16 @@ namespace Bondstone.Modules;
 
 internal sealed class ModuleCommandExecutor(
     IServiceProvider serviceProvider,
-    IModuleCommandRouteRegistry routeRegistry)
+    IModuleCommandRouteRegistry routeRegistry,
+    IModuleExecutionContextAccessor executionContextAccessor)
     : IModuleCommandExecutor
 {
     private readonly IServiceProvider _serviceProvider =
         serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     private readonly IModuleCommandRouteRegistry _routeRegistry =
         routeRegistry ?? throw new ArgumentNullException(nameof(routeRegistry));
+    private readonly IModuleExecutionContextAccessor _executionContextAccessor =
+        executionContextAccessor ?? throw new ArgumentNullException(nameof(executionContextAccessor));
 
     public async ValueTask<ModuleCommandExecutionResult> ExecuteAsync<TCommand>(
         string moduleName,
@@ -110,6 +113,10 @@ internal sealed class ModuleCommandExecutor(
         ModuleCommandRoute route = _routeRegistry.GetByCommandType(
             moduleName,
             typeof(TCommand));
+        ValidateLocalExecutionBoundary(
+            route,
+            command.GetType(),
+            receiveContext);
 
         ModuleCommandRouteExecutionResult result = await route.InvokeAsync(
             _serviceProvider,
@@ -138,6 +145,10 @@ internal sealed class ModuleCommandExecutor(
         ModuleCommandRoute route = _routeRegistry.GetByCommandType(
             moduleName,
             command.GetType());
+        ValidateLocalExecutionBoundary(
+            route,
+            command.GetType(),
+            receiveContext);
 
         ModuleCommandRouteExecutionResult result = await route.InvokeAsync(
             _serviceProvider,
@@ -159,6 +170,10 @@ internal sealed class ModuleCommandExecutor(
         ModuleCommandRoute route = _routeRegistry.GetByCommandType(
             moduleName,
             command.GetType());
+        ValidateLocalExecutionBoundary(
+            route,
+            command.GetType(),
+            receiveContext);
 
         if (route.ResultType != typeof(TResult))
         {
@@ -175,5 +190,26 @@ internal sealed class ModuleCommandExecutor(
         return new ModuleCommandExecutionResult<TResult>(
             (TResult)result.Result!,
             result.ReceiveInboxResult);
+    }
+
+    private void ValidateLocalExecutionBoundary(
+        ModuleCommandRoute route,
+        Type commandType,
+        ModuleCommandReceiveContext? receiveContext)
+    {
+        if (receiveContext is not null)
+        {
+            return;
+        }
+
+        ModuleExecutionContext? currentContext = _executionContextAccessor.Current;
+        if (currentContext is null
+            || StringComparer.Ordinal.Equals(currentContext.ModuleName, route.ModuleName))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Local module command execution cannot cross module boundaries. Module '{currentContext.ModuleName}' is currently executing and cannot execute command '{commandType.FullName}' in module '{route.ModuleName}'. Send a durable command or publish an integration event instead.");
     }
 }

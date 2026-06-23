@@ -25,7 +25,7 @@
     "backend:test:fast": "dotnet test Bondstone.slnx --configuration Release --no-build --filter \"Category=Unit|Category=Application\"",
     "backend:test:integration": "dotnet test Bondstone.slnx --configuration Release --no-build --filter \"Category=Integration\"",
     "backend:test:all": "dotnet test Bondstone.slnx --configuration Release --no-build",
-    "backend:pack": "dotnet pack Bondstone.slnx --configuration Release --no-build --output artifacts/packages",
+    "backend:pack": "node -e \"require('node:fs').rmSync('artifacts/packages',{recursive:true,force:true})\" && dotnet pack Bondstone.slnx --configuration Release --no-build --output artifacts/packages && dotnet test tests/Bondstone.Package.Tests/Bondstone.Package.Tests.csproj --configuration Release --no-restore --filter \"Category=Package\"",
     "check": "pnpm format:check && pnpm backend:restore && pnpm backend:build && pnpm backend:test && pnpm backend:pack",
     "verify": "pnpm check"
   },

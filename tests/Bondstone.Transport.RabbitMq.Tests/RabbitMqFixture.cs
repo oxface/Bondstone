@@ -5,8 +5,9 @@ namespace Bondstone.Transport.RabbitMq.Tests;
 
 public sealed class RabbitMqFixture : IAsyncLifetime
 {
-    private readonly RabbitMqContainer _container = new RabbitMqBuilder("rabbitmq:4.1-management-alpine")
-        .Build();
+    private readonly RabbitMqContainer _container =
+        new RabbitMqBuilder("rabbitmq:4.1-alpine")
+            .Build();
 
     public string ConnectionString => _container.GetConnectionString();
 

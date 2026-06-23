@@ -1,6 +1,7 @@
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
+using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Persistence;
@@ -11,7 +12,7 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Persistence;
 public static class BondstoneModelBuilderExtensions
 {
     /// <summary>
-    /// Applies Bondstone outbox, inbox, and operation-state mappings to the model.
+    /// Applies Bondstone outbox, inbox, incoming inbox, and operation-state mappings to the model.
     /// </summary>
     /// <param name="modelBuilder">The EF Core model builder.</param>
     /// <param name="schema">The optional database schema for Bondstone durable tables.</param>
@@ -24,6 +25,7 @@ public static class BondstoneModelBuilderExtensions
 
         modelBuilder.ApplyBondstoneOutbox(schema);
         modelBuilder.ApplyBondstoneInbox(schema);
+        modelBuilder.ApplyBondstoneIncomingInbox(schema);
         modelBuilder.ApplyBondstoneOperationState(schema);
 
         return modelBuilder;
@@ -80,4 +82,20 @@ public static class BondstoneModelBuilderExtensions
         return modelBuilder;
     }
 
+    /// <summary>
+    /// Applies the optional Bondstone durable incoming inbox mapping to the model.
+    /// </summary>
+    /// <param name="modelBuilder">The EF Core model builder.</param>
+    /// <param name="schema">The optional database schema for the incoming inbox table.</param>
+    /// <returns>The same model builder for chained EF Core configuration.</returns>
+    public static ModelBuilder ApplyBondstoneIncomingInbox(
+        this ModelBuilder modelBuilder,
+        string? schema = null)
+    {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+
+        modelBuilder.ApplyConfiguration(new IncomingInboxMessageEntityConfiguration(schema));
+
+        return modelBuilder;
+    }
 }

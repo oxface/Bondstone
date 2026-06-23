@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -36,7 +37,8 @@ public sealed class BondstoneModuleEventBuilder
     public MessageTypeRegistration RegisterPublishedEvent<TEvent>()
         where TEvent : IIntegrationEvent
     {
-        MessageTypeRegistration registration = _messageTypeRegistry.Register<TEvent>();
+        MessageTypeRegistration registration =
+            RegisterMessageType<TEvent>("published event message identity");
         _publishedEventRegistry.Register(
             ModulePublishedEventRegistration.Create<TEvent>(
                 ModuleName,
@@ -48,7 +50,10 @@ public sealed class BondstoneModuleEventBuilder
         string messageTypeName)
         where TEvent : IIntegrationEvent
     {
-        MessageTypeRegistration registration = _messageTypeRegistry.Register<TEvent>(messageTypeName);
+        MessageTypeRegistration registration =
+            RegisterMessageType<TEvent>(
+                messageTypeName,
+                "published event message identity");
         _publishedEventRegistry.Register(
             ModulePublishedEventRegistration.Create<TEvent>(
                 ModuleName,
@@ -61,7 +66,8 @@ public sealed class BondstoneModuleEventBuilder
         where TEvent : IIntegrationEvent
         where THandler : class, IIntegrationEventHandler<TEvent>
     {
-        MessageTypeRegistration registration = _messageTypeRegistry.Register<TEvent>();
+        MessageTypeRegistration registration =
+            RegisterMessageType<TEvent>("event subscriber message identity");
         return RegisterSubscriber<TEvent, THandler>(
             registration,
             subscriberIdentity);
@@ -73,7 +79,10 @@ public sealed class BondstoneModuleEventBuilder
         where TEvent : IIntegrationEvent
         where THandler : class, IIntegrationEventHandler<TEvent>
     {
-        MessageTypeRegistration registration = _messageTypeRegistry.Register<TEvent>(messageTypeName);
+        MessageTypeRegistration registration =
+            RegisterMessageType<TEvent>(
+                messageTypeName,
+                "event subscriber message identity");
         return RegisterSubscriber<TEvent, THandler>(
             registration,
             subscriberIdentity);
@@ -94,5 +103,47 @@ public sealed class BondstoneModuleEventBuilder
                 subscriberIdentity);
 
         return _eventSubscriberRegistry.Register(subscriber);
+    }
+
+    private MessageTypeRegistration RegisterMessageType<TEvent>(
+        string registrationDescription)
+        where TEvent : IIntegrationEvent
+    {
+        try
+        {
+            return _messageTypeRegistry.Register<TEvent>();
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw CreateSetupException(
+                exception,
+                $"Module '{ModuleName}' could not register {registrationDescription} for event type '{typeof(TEvent).FullName}': {exception.Message}");
+        }
+    }
+
+    private MessageTypeRegistration RegisterMessageType<TEvent>(
+        string messageTypeName,
+        string registrationDescription)
+        where TEvent : IIntegrationEvent
+    {
+        try
+        {
+            return _messageTypeRegistry.Register<TEvent>(messageTypeName);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw CreateSetupException(
+                exception,
+                $"Module '{ModuleName}' could not register {registrationDescription} '{messageTypeName.Trim()}' for event type '{typeof(TEvent).FullName}': {exception.Message}");
+        }
+    }
+
+    private static InvalidOperationException CreateSetupException(
+        InvalidOperationException exception,
+        string message)
+    {
+        return exception is IBondstoneSetupException setupException
+            ? new BondstoneSetupException(setupException.SetupCode, message, exception)
+            : new InvalidOperationException(message, exception);
     }
 }

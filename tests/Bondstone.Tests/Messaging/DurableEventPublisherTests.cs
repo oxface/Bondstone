@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
+using Bondstone.Tests;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -47,6 +49,51 @@ public sealed class DurableEventPublisherTests
         Assert.Equal("""{"orderId":"order-123"}""", envelope.Payload);
         Assert.Equal("order-123", envelope.PartitionKey);
         Assert.Equal(DateTimeOffset.Parse("2026-06-07T12:00:00+00:00"), envelope.CreatedAtUtc);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task PublishAsync_WhenCalledInsideModuleCommand_EmitsEventPublishActivity()
+    {
+        var outboxWriter = new CapturingOutboxWriter();
+        var activities = new List<Activity>();
+        using ActivityListener listener = ActivityTestHelper.CreateActivityListener(
+            "Bondstone.Modules",
+            activities);
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableOutboxWriter>(outboxWriter);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Events.RegisterPublishedEvent<OrderSubmittedEvent>();
+                module.Commands.RegisterHandler<SubmitOrderCommand, SubmitOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new SubmitOrderCommand("order-123"));
+
+        Assert.Single(outboxWriter.Envelopes);
+        Activity activity = Assert.Single(
+            activities,
+            candidate => candidate.OperationName == "bondstone.event.publish");
+        Assert.Equal(ActivityKind.Producer, activity.Kind);
+        Assert.Equal("Event", ActivityTestHelper.GetTag(activity, "bondstone.message_kind"));
+        Assert.Equal("sales.order.submitted.v1", ActivityTestHelper.GetTag(activity, "bondstone.message_type"));
+        Assert.Equal("sales", ActivityTestHelper.GetTag(activity, "bondstone.source_module"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.message_id"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.operation_id"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.partition_key"));
     }
 
     [Fact]

@@ -1,7 +1,7 @@
 namespace Bondstone.Modules;
 
 /// <summary>
-/// Defines a Bondstone module that owns command, event, persistence, and capability registration.
+/// Defines a Bondstone module that owns command, event, and persistence registration.
 /// </summary>
 public interface IBondstoneModule
 {

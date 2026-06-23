@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 
 namespace Bondstone.Hosting.Outbox;
 
-public sealed class DurableOutboxWorkerOptionsValidator
+internal sealed class DurableOutboxWorkerOptionsValidator
     : IValidateOptions<DurableOutboxWorkerOptions>
 {
     public ValidateOptionsResult Validate(

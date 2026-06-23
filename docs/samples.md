@@ -27,7 +27,7 @@ Samples should demonstrate:
 - module-owned persistence;
 - durable message identity and registration;
 - inbox/outbox behavior;
-- provider and transport adapter integration;
+- provider integration and explicit local transport behavior;
 - eventual service extraction shape.
 
 ## Modular Monolith Sample
@@ -36,12 +36,11 @@ The current `samples/ModularMonolith` project is an adoption-proof minimal API
 sample. It composes `ordering`, `fulfillment`, and `billing` modules through
 module-owned `IBondstoneModule` registration objects.
 
-Ordering and fulfillment use separate module-owned EF Core `DbContext` types
-and PostgreSQL schemas. Billing uses `Bondstone.Persistence.Postgres` with its
-own schema. Ordering publishes `OrderPlacedEvent` and sends a durable
+Ordering, fulfillment, and billing use separate module-owned EF Core
+`DbContext` types and PostgreSQL schemas. Ordering publishes `OrderPlacedEvent` and sends a durable
 result-returning command to fulfillment. Fulfillment handles the command,
 records state, persists a module-local domain event record through the EF
-domain-event capability, publishes `InventoryReservedEvent`, and stores the
+domain-event persistence opt-in, publishes `InventoryReservedEvent`, and stores the
 reservation result in durable operation state. Ordering and billing subscribe
 to integration events and record projections/invoices through their own module
 persistence boundaries.
@@ -52,35 +51,32 @@ event subscriber bindings for integration events. The local adapter dispatches
 claimed outbox records into the provider-neutral
 `IModuleCommandReceivePipeline` and `IModuleEventReceivePipeline`. This keeps
 the sample proving outbox claiming, outbox dispatch recording, inbox handling,
-command/event execution, module transactions, mixed persistence, operation
+command/event execution, module transactions, EF/PostgreSQL persistence, operation
 state, and result payload persistence without presenting local transport as
 production broker guidance.
 
 The sample does not check in generated migrations. Its smoke-test database
-preparation uses `EnsureCreated` for EF-backed modules and explicit SQL for
-the non-EF billing schema. Consumer applications should create normal
-module-owned migrations from the EF `DbContext` types so application tables,
-Bondstone durable tables from `ApplyBondstonePersistence(...)`, and optional
-domain-event tables from `ApplyBondstoneDomainEvents(...)` are included in the
-module migration history.
+preparation uses EF-generated create scripts for module schemas. Consumer
+applications should create normal module-owned migrations from the EF
+`DbContext` types so application tables, Bondstone durable tables from
+`ApplyBondstonePersistence(...)`, and optional domain-event tables from
+`ApplyBondstoneDomainEvents(...)` are included in the module migration
+history.
 
-The focused smoke test lives in
+The focused smoke tests live in
 [`tests/Bondstone.Samples.Tests`](../tests/Bondstone.Samples.Tests) and is an
-`Integration` test because it uses Testcontainers PostgreSQL. It proves
+`Integration` suite because they use Testcontainers PostgreSQL. They prove
 durable command delivery, processed inbox idempotency, persisted operation
-result reading, dispatched outbox evidence, and the integration-event loop.
+result reading, dispatched outbox evidence, the integration-event loop, and a
+bounded service-split proof where ordering and fulfillment run in separate
+service providers over the same PostgreSQL instance.
 Default fast verification remains `Unit` and `Application` only; run sample
 smoke coverage with the repository integration test entrypoint.
 
-The sample is supplemented with one preferred direct provider path:
-`AddModularMonolithSampleWithRabbitMq(...)`. The RabbitMQ path is covered by
-an explicit Testcontainers RabbitMQ sample smoke test. Do not turn the first
-sample into a broker matrix.
-
 ## Service-Split Readiness
 
-The current service-split proof is documentation over the existing modular
-monolith sample, not a separate sample application. The bounded extraction
+The current service-split proof is a tested split of the existing modular
+monolith sample, not a second product application. The bounded extraction
 story is:
 
 - keep `ordering`, `fulfillment`, and `billing` as module-owned assemblies
@@ -89,11 +85,24 @@ story is:
   extraction pressure;
 - treat `fulfillment` as the documented extraction candidate because it already
   handles a durable command and publishes an integration event;
-- use the RabbitMQ path as the preferred direct-provider proof when a broker
-  boundary is needed;
+- register remote outgoing contracts with `BondstoneBuilder.RegisterMessage<T>()`
+  so the source service can serialize commands without referencing target
+  implementation assemblies;
+- use app-owned broker code around `IDurableEnvelopeDispatcher`,
+  `IDurableMessageEnvelopeSerializer`, and durable inbox ingestion when a
+  broker boundary is needed;
+- observe durable operation results from the target service because the target
+  module owns the completed result state;
 - keep broker provisioning, deployment, authentication, and product UI outside
   the sample.
 
-The repository does not include a second sample host. The current sample is
-the bounded service-split proof; it is not a broker/provider matrix or product
-application.
+The integration proof includes both a test-owned in-memory broker bridge and
+thin-adapter broker proofs for RabbitMQ and Azure Service Bus. The broker
+adapter tests run ordering and fulfillment in separate service providers,
+dispatch durable envelopes through the real adapter packages, receive commands
+and events through broker-backed workers, and observe the durable command
+result from the target fulfillment module. They still do not make the sample
+own broker topology as product behavior; the tests create the minimal topology
+needed for verification. Each sample host still uses one outbound dispatcher.
+Outbound multi-transport samples should demonstrate an explicit aggregate
+dispatcher rather than implicit adapter stacking.

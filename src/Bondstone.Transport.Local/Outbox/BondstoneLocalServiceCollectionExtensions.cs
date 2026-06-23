@@ -6,7 +6,7 @@ namespace Bondstone.Transport.Local.Outbox;
 
 internal static class BondstoneLocalServiceCollectionExtensions
 {
-    internal static IServiceCollection AddBondstoneLocalOutboxTransport(
+    internal static IServiceCollection AddBondstoneLocalEnvelopeDispatcher(
         this IServiceCollection services,
         LocalTransportTopology topology)
     {
@@ -14,8 +14,8 @@ internal static class BondstoneLocalServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(topology);
 
         services.AddSingleton(topology);
-        services.AddTransient<IDurableOutboxTransportRoute, LocalDurableOutboxTransportRoute>();
-        services.TryAddTransient<IDurableOutboxTransport, RoutedDurableOutboxTransport>();
+        services.AddTransient<IDurableEnvelopeDispatchRoute, LocalDurableEnvelopeDispatchRoute>();
+        services.TryAddTransient<IDurableEnvelopeDispatcher, RoutedDurableEnvelopeDispatcher>();
 
         return services;
     }

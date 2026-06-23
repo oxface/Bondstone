@@ -1,5 +1,5 @@
 using Bondstone.Configuration;
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.DomainEvents;
+using Bondstone.Persistence.EntityFrameworkCore.DomainEvents;
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
@@ -7,22 +7,18 @@ using Bondstone.Hosting.Outbox;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
-using Bondstone.Persistence.Postgres.Persistence;
 using Bondstone.Samples.ModularMonolith.Billing;
 using Bondstone.Samples.ModularMonolith.Fulfillment;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;
 using Bondstone.Samples.ModularMonolith.Ordering;
 using Bondstone.Samples.ModularMonolith.Ordering.Contracts;
 using Bondstone.Transport.Local.Outbox;
-using Bondstone.Transport.RabbitMq.Outbox;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Npgsql;
-using RabbitMQ.Client;
 
 namespace Bondstone.Samples.ModularMonolith;
 
@@ -38,7 +34,10 @@ public static class ModularMonolithApplication
         services.AddLogging();
         AddModularMonolithSampleCore(
             services,
-            connectionString,
+            bondstone => bondstone
+                .AddOrderingModule(connectionString)
+                .AddFulfillmentModule(connectionString)
+                .AddBillingModule(connectionString),
             bondstone => bondstone.UseLocalTransport(local =>
             {
                 local.UseModuleQueueConvention();
@@ -67,69 +66,61 @@ public static class ModularMonolithApplication
         return services;
     }
 
-    public static IServiceCollection AddModularMonolithSampleWithRabbitMq(
+    public static IServiceCollection AddModularMonolithOrderingServiceSample(
         this IServiceCollection services,
         string connectionString,
-        IConnection connection)
+        Action<BondstoneBuilder> configureTransport)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
-        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(configureTransport);
 
         services.AddLogging();
-        services.AddBondstoneRabbitMqConnection(connection);
         AddModularMonolithSampleCore(
             services,
-            connectionString,
-            bondstone => bondstone.UseRabbitMqTransport(rabbitMq =>
+            bondstone =>
             {
-                rabbitMq.UseCommandExchange("bondstone.commands");
-                rabbitMq.RouteModule(FulfillmentModule.ModuleName)
-                    .ToRoutingKey("fulfillment.commands");
-                rabbitMq.ReceiveQueue("fulfillment.commands")
-                    .AcceptModule(FulfillmentModule.ModuleName);
+                bondstone.AddOrderingModule(connectionString);
+                bondstone.RegisterMessage<ReserveInventoryCommand>();
+            },
+            configureTransport,
+            "modular-monolith-ordering-sample");
 
-                rabbitMq.RouteEvent(OrderingIntegrationEvents.OrderPlaced)
-                    .ToQueue("ordering.order-placed");
-                rabbitMq.ReceiveQueue("ordering.order-placed")
-                    .SubscribeEvent(
-                        OrderingIntegrationEvents.OrderPlaced,
-                        FulfillmentModule.ModuleName,
-                        "fulfillment.order-placed-projection.v1")
-                    .SubscribeEvent(
-                        OrderingIntegrationEvents.OrderPlaced,
-                        BillingModule.ModuleName,
-                        "billing.order-invoice-projection.v1");
+        return services;
+    }
 
-                rabbitMq.RouteEvent(FulfillmentIntegrationEvents.InventoryReserved)
-                    .ToQueue("fulfillment.inventory-reserved");
-                rabbitMq.ReceiveQueue("fulfillment.inventory-reserved")
-                    .SubscribeEvent(
-                        FulfillmentIntegrationEvents.InventoryReserved,
-                        OrderingModule.ModuleName,
-                        "ordering.inventory-reserved-projection.v1");
+    public static IServiceCollection AddModularMonolithFulfillmentServiceSample(
+        this IServiceCollection services,
+        string connectionString,
+        Action<BondstoneBuilder> configureTransport)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        ArgumentNullException.ThrowIfNull(configureTransport);
 
-                rabbitMq.UseReceiveWorker();
-            }));
+        services.AddLogging();
+        AddModularMonolithSampleCore(
+            services,
+            bondstone => bondstone.AddFulfillmentModule(connectionString),
+            configureTransport,
+            "modular-monolith-fulfillment-sample");
 
         return services;
     }
 
     private static void AddModularMonolithSampleCore(
         IServiceCollection services,
-        string connectionString,
-        Action<BondstoneBuilder> configureTransport)
+        Action<BondstoneBuilder> configureModules,
+        Action<BondstoneBuilder> configureTransport,
+        string workerId = "modular-monolith-sample")
     {
         services.AddBondstone(bondstone =>
         {
-            bondstone
-                .AddOrderingModule(connectionString)
-                .AddFulfillmentModule(connectionString)
-                .AddBillingModule(connectionString);
+            configureModules(bondstone);
             configureTransport(bondstone);
             bondstone.Outbox.UseWorker(options =>
             {
-                options.WorkerId = "modular-monolith-sample";
+                options.WorkerId = workerId;
                 options.BatchSize = 10;
                 options.PollingInterval = TimeSpan.FromMilliseconds(25);
             });
@@ -154,18 +145,21 @@ public static class ModularMonolithApplication
                 Guid orderId = Guid.NewGuid();
                 Guid durableOperationId = Guid.NewGuid();
 
-                await executor.ExecuteAsync(
-                    OrderingModule.ModuleName,
-                    new PlaceOrderCommand(
-                        orderId,
-                        order.Sku,
-                        order.Quantity,
-                        durableOperationId),
-                    ct);
+                ModuleCommandExecutionResult<PlaceOrderResult> result =
+                    await executor.ExecuteResultAsync<PlaceOrderResult>(
+                        OrderingModule.ModuleName,
+                        new PlaceOrderCommand(
+                            orderId,
+                            order.Sku,
+                            order.Quantity,
+                            durableOperationId),
+                        ct);
 
                 return Results.Accepted(
                     $"/orders/{orderId}?operationId={durableOperationId}",
-                    new PlaceOrderResponse(orderId, durableOperationId));
+                    new PlaceOrderResponse(
+                        orderId,
+                        result.Result.ReservationOperation));
             });
 
         endpoints.MapGet(
@@ -176,10 +170,14 @@ public static class ModularMonolithApplication
                 IServiceProvider serviceProvider,
                 CancellationToken ct) =>
             {
+                var operation = new DurableOperationHandle(
+                    operationId,
+                    OrderingModule.ModuleName,
+                    FulfillmentModule.ModuleName);
                 OrderStatusResult result =
                     await serviceProvider.ReadOrderStatusAsync(
                         orderId,
-                        operationId,
+                        operation,
                         ct);
 
                 return Results.Ok(result);
@@ -200,6 +198,8 @@ public static class ModularMonolithApplication
             scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
         FulfillmentDbContext fulfillmentContext =
             scope.ServiceProvider.GetRequiredService<FulfillmentDbContext>();
+        BillingDbContext billingContext =
+            scope.ServiceProvider.GetRequiredService<BillingDbContext>();
 
         if (resetDatabase)
         {
@@ -210,32 +210,37 @@ public static class ModularMonolithApplication
         await fulfillmentContext.Database.ExecuteSqlRawAsync(
             fulfillmentContext.Database.GenerateCreateScript(),
             ct);
-        await serviceProvider.EnsureBillingDatabaseAsync(ct);
+        await billingContext.Database.ExecuteSqlRawAsync(
+            billingContext.Database.GenerateCreateScript(),
+            ct);
     }
 
     public static async Task<OrderStatusResult> ReadOrderStatusAsync(
         this IServiceProvider serviceProvider,
         Guid orderId,
-        Guid durableOperationId,
+        DurableOperationHandle operation,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
+        ArgumentNullException.ThrowIfNull(operation);
 
         await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
         OrderingDbContext orderingContext =
             scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
         FulfillmentDbContext fulfillmentContext =
             scope.ServiceProvider.GetRequiredService<FulfillmentDbContext>();
+        BillingDbContext billingContext =
+            scope.ServiceProvider.GetRequiredService<BillingDbContext>();
         IDurableOperationReader operationReader =
             scope.ServiceProvider.GetRequiredService<IDurableOperationReader>();
         IDurableOperationResultReader operationResultReader =
             scope.ServiceProvider.GetRequiredService<IDurableOperationResultReader>();
 
         DurableOperationState? operationState =
-            await operationReader.GetStateAsync(durableOperationId, ct);
+            await operationReader.GetStateAsync(operation, ct);
         DurableOperationResult<ReserveInventoryResult> operationResult =
             await operationResultReader.GetResultAsync<ReserveInventoryResult>(
-                durableOperationId,
+                operation,
                 ct);
         int processedInboxCount =
             await fulfillmentContext
@@ -244,7 +249,9 @@ public static class ModularMonolithApplication
             + await orderingContext
                 .Set<InboxMessageEntity>()
                 .CountAsync(entity => entity.ProcessedAtUtc != null, ct)
-            + await serviceProvider.CountBillingProcessedInboxAsync(ct);
+            + await billingContext
+                .Set<InboxMessageEntity>()
+                .CountAsync(entity => entity.ProcessedAtUtc != null, ct);
         int dispatchedOutboxCount =
             await orderingContext
                 .Set<OutboxMessageEntity>()
@@ -266,12 +273,12 @@ public static class ModularMonolithApplication
 
         return new OrderStatusResult(
             orderId,
-            durableOperationId,
+            operation,
             await orderingContext.Orders.CountAsync(ct),
             await fulfillmentContext.Reservations.CountAsync(ct),
             await fulfillmentContext.OrderEvents.CountAsync(ct),
             await orderingContext.InventoryReservations.CountAsync(ct),
-            await serviceProvider.CountBillingInvoicesAsync(ct),
+            await billingContext.Invoices.CountAsync(ct),
             processedInboxCount,
             dispatchedOutboxCount,
             fulfillmentDomainEventRecordCount,
@@ -279,71 +286,6 @@ public static class ModularMonolithApplication
             operationResult.State,
             operationResult.Result?.ReservationId,
             operationState?.Status);
-    }
-
-    private static async Task EnsureBillingDatabaseAsync(
-        this IServiceProvider serviceProvider,
-        CancellationToken ct)
-    {
-        await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
-        NpgsqlDataSource dataSource =
-            scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
-
-        await PostgresSchema.EnsureDurableMessagingTablesAsync(
-            dataSource,
-            BillingModule.ModuleName,
-            ct);
-        await using NpgsqlConnection connection =
-            await dataSource.OpenConnectionAsync(ct);
-        await using NpgsqlCommand command = connection.CreateCommand();
-        command.CommandText =
-            """
-            CREATE TABLE IF NOT EXISTS billing.invoices (
-                "Id" uuid NOT NULL,
-                "OrderId" uuid NOT NULL,
-                "Sku" text NOT NULL,
-                "Quantity" integer NOT NULL,
-                CONSTRAINT "PK_billing_invoices" PRIMARY KEY ("Id")
-            )
-            """;
-        await command.ExecuteNonQueryAsync(ct);
-    }
-
-    private static async Task<int> CountBillingInvoicesAsync(
-        this IServiceProvider serviceProvider,
-        CancellationToken ct)
-    {
-        await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
-        NpgsqlDataSource dataSource =
-            scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
-        await using NpgsqlConnection connection =
-            await dataSource.OpenConnectionAsync(ct);
-        await using NpgsqlCommand command = connection.CreateCommand();
-        command.CommandText = """SELECT COUNT(*) FROM billing.invoices""";
-        object? result = await command.ExecuteScalarAsync(ct);
-
-        return Convert.ToInt32(result, provider: null);
-    }
-
-    private static async Task<int> CountBillingProcessedInboxAsync(
-        this IServiceProvider serviceProvider,
-        CancellationToken ct)
-    {
-        await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
-        NpgsqlDataSource dataSource =
-            scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>();
-        await using NpgsqlConnection connection =
-            await dataSource.OpenConnectionAsync(ct);
-        await using NpgsqlCommand command = connection.CreateCommand();
-        command.CommandText =
-            """
-            SELECT COUNT(*)
-            FROM billing.inbox_messages
-            WHERE "ProcessedAtUtc" IS NOT NULL
-            """;
-        object? result = await command.ExecuteScalarAsync(ct);
-
-        return Convert.ToInt32(result, provider: null);
     }
 }
 
@@ -353,11 +295,14 @@ public sealed record PlaceOrderRequest(
 
 public sealed record PlaceOrderResponse(
     Guid OrderId,
-    Guid DurableOperationId);
+    DurableOperationHandle Operation)
+{
+    public Guid DurableOperationId => Operation.DurableOperationId;
+}
 
 public sealed record OrderStatusResult(
     Guid OrderId,
-    Guid DurableOperationId,
+    DurableOperationHandle Operation,
     int OrderCount,
     int ReservationCount,
     int FulfillmentOrderEventCount,
@@ -369,4 +314,7 @@ public sealed record OrderStatusResult(
     string? FulfillmentDomainEventName,
     DurableOperationResultState ReservationResultState,
     Guid? ReservationId,
-    DurableOperationStatus? OperationStatus);
+    DurableOperationStatus? OperationStatus)
+{
+    public Guid DurableOperationId => Operation.DurableOperationId;
+}

@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
+using Bondstone.Tests;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -47,6 +49,52 @@ public sealed class DurableCommandSenderTests
         Assert.Equal("""{"orderId":"order-123"}""", envelope.Payload);
         Assert.Equal("order-123", envelope.PartitionKey);
         Assert.Equal(DateTimeOffset.Parse("2026-06-06T12:00:00+00:00"), envelope.CreatedAtUtc);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenCalledInsideModuleCommand_EmitsCommandSendActivity()
+    {
+        var outboxWriter = new CapturingOutboxWriter();
+        var activities = new List<Activity>();
+        using ActivityListener listener = ActivityTestHelper.CreateActivityListener(
+            "Bondstone.Modules",
+            activities);
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableOutboxWriter>(outboxWriter);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<SubmitOrderCommand, SubmitOrderHandler>();
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new SubmitOrderCommand("order-123"));
+
+        Assert.Single(outboxWriter.Envelopes);
+        Activity activity = Assert.Single(
+            activities,
+            candidate => candidate.OperationName == "bondstone.command.send");
+        Assert.Equal(ActivityKind.Producer, activity.Kind);
+        Assert.Equal("Command", ActivityTestHelper.GetTag(activity, "bondstone.message_kind"));
+        Assert.Equal("sales.order.reserve.v1", ActivityTestHelper.GetTag(activity, "bondstone.message_type"));
+        Assert.Equal("sales", ActivityTestHelper.GetTag(activity, "bondstone.source_module"));
+        Assert.Equal("fulfillment", ActivityTestHelper.GetTag(activity, "bondstone.target_module"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.message_id"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.operation_id"));
+        Assert.Null(ActivityTestHelper.GetTag(activity, "bondstone.partition_key"));
     }
 
     [Fact]
@@ -129,6 +177,52 @@ public sealed class DurableCommandSenderTests
         Assert.Equal(durableOperationId, state.DurableOperationId);
         Assert.Equal(DurableOperationStatus.Pending, state.Status);
         Assert.Equal(DateTimeOffset.Parse("2026-06-08T12:00:00+00:00"), state.UpdatedAtUtc);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task SendAsync_WhenDurableOperationIdIsSupplied_ReturnsOperationHandle()
+    {
+        var outboxWriter = new CapturingOutboxWriter();
+        var operationStore = new CapturingOperationStateStore();
+        var sendResultSink = new CapturingSendResultSink();
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var services = new ServiceCollection();
+        services.AddSingleton<IDurableOutboxWriter>(outboxWriter);
+        services.AddSingleton<IDurableOperationStateStore>(operationStore);
+        services.AddSingleton(sendResultSink);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("sales", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<
+                    SubmitTrackedCapturedOrderCommand,
+                    SubmitTrackedCapturedOrderHandler>();
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        await scope.ServiceProvider
+            .GetRequiredService<IModuleCommandExecutor>()
+            .ExecuteAsync(
+                "sales",
+                new SubmitTrackedCapturedOrderCommand("order-123", durableOperationId));
+
+        DurableCommandSendResult sendResult = Assert.Single(sendResultSink.Results);
+        Assert.Equal(DurableCommandSendStatus.Accepted, sendResult.Status);
+        Assert.Equal(durableOperationId, sendResult.DurableOperationId);
+        Assert.NotNull(sendResult.Operation);
+        Assert.Equal(durableOperationId, sendResult.Operation.DurableOperationId);
+        Assert.Equal("sales", sendResult.Operation.SourceModule);
+        Assert.Equal("fulfillment", sendResult.Operation.TargetModule);
+        Assert.Equal("sales", sendResult.SourceModule);
+        Assert.Equal("fulfillment", sendResult.TargetModule);
     }
 
     [Fact]
@@ -265,6 +359,8 @@ public sealed class DurableCommandSenderTests
             _ => new NoOpOperationStateStore()));
         RegisterOutboxDispatcher(services, "sales");
         RegisterOutboxDispatcher(services, "billing");
+        RegisterIncomingInboxDispatcher(services, "sales");
+        RegisterIncomingInboxDispatcher(services, "billing");
 
         services.AddBondstone(bondstone =>
         {
@@ -323,6 +419,8 @@ public sealed class DurableCommandSenderTests
             _ => billingStore));
         RegisterOutboxDispatcher(services, "sales");
         RegisterOutboxDispatcher(services, "billing");
+        RegisterIncomingInboxDispatcher(services, "sales");
+        RegisterIncomingInboxDispatcher(services, "billing");
 
         services.AddBondstone(bondstone =>
         {
@@ -396,6 +494,31 @@ public sealed class DurableCommandSenderTests
                 partitionKey: command.OrderId,
                 durableOperationId: command.DurableOperationId,
                 ct: ct);
+        }
+    }
+
+    [DurableCommandIdentity("sales.order.submit-tracked-captured.v1")]
+    public sealed record SubmitTrackedCapturedOrderCommand(
+        string OrderId,
+        Guid DurableOperationId) : IDurableCommand;
+
+    public sealed class SubmitTrackedCapturedOrderHandler(
+        IDurableCommandSender sender,
+        CapturingSendResultSink sendResultSink)
+        : ICommandHandler<SubmitTrackedCapturedOrderCommand>
+    {
+        public async ValueTask HandleAsync(
+            SubmitTrackedCapturedOrderCommand command,
+            CancellationToken ct = default)
+        {
+            DurableCommandSendResult result = await sender.SendAsync(
+                new ReserveOrderCommand(command.OrderId),
+                "fulfillment",
+                partitionKey: command.OrderId,
+                durableOperationId: command.DurableOperationId,
+                ct: ct);
+
+            sendResultSink.Results.Add(result);
         }
     }
 
@@ -486,6 +609,11 @@ public sealed class DurableCommandSenderTests
         }
     }
 
+    public sealed class CapturingSendResultSink
+    {
+        public List<DurableCommandSendResult> Results { get; } = [];
+    }
+
     private static void RegisterOutboxWriter(
         IServiceCollection services,
         DurableModuleOutboxWriterRegistration registration)
@@ -520,6 +648,16 @@ public sealed class DurableCommandSenderTests
             .AddOutboxDispatcher(new DurableModuleOutboxDispatcherRegistration(
                 moduleName,
                 _ => new NoOpOutboxDispatcher()));
+    }
+
+    private static void RegisterIncomingInboxDispatcher(
+        IServiceCollection services,
+        string moduleName)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddIncomingInboxDispatcher(new DurableModuleIncomingInboxDispatcherRegistration(
+                moduleName,
+                _ => new NoOpIncomingInboxDispatcher()));
     }
 
     private sealed class CapturingOperationStateStore : IDurableOperationStateStore
@@ -618,6 +756,19 @@ public sealed class DurableCommandSenderTests
         {
             return new ValueTask<DurableOutboxDispatchResult>(
                 new DurableOutboxDispatchResult(0, 0, 0, 0, 0));
+        }
+    }
+
+    private sealed class NoOpIncomingInboxDispatcher : IDurableIncomingInboxDispatcher
+    {
+        public ValueTask<DurableIncomingInboxProcessingResult> ProcessAsync(
+            string claimedBy,
+            TimeSpan leaseDuration,
+            int maxCount = 100,
+            CancellationToken ct = default)
+        {
+            return new ValueTask<DurableIncomingInboxProcessingResult>(
+                new DurableIncomingInboxProcessingResult(0, 0, 0, 0, 0));
         }
     }
 

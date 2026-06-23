@@ -1,7 +1,9 @@
+using System.Diagnostics.Metrics;
 using Bondstone.Configuration;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
+using Bondstone.Tests;
 using Bondstone.Tests.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -193,6 +195,31 @@ public sealed class ModuleReceivePipelineTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task CommandReceive_WhenInboxOutcomesAreKnown_EmitsDirectReceiveMetrics()
+    {
+        var measurements = new List<MetricMeasurement>();
+        using MeterListener listener = MetricTestHelper.CreateMeterListener(
+            "Bondstone.Modules",
+            measurements);
+
+        await HandleMetricCommandReceiveAsync(DurableInboxHandleStatus.Handled);
+        await HandleMetricCommandReceiveAsync(DurableInboxHandleStatus.AlreadyProcessed);
+        await Assert.ThrowsAsync<DurableInboxAlreadyReceivedException>(
+            async () => await HandleMetricCommandReceiveAsync(DurableInboxHandleStatus.AlreadyReceived));
+
+        AssertReceiveMetric(
+            measurements,
+            "bondstone.direct_receive.handled");
+        AssertReceiveMetric(
+            measurements,
+            "bondstone.direct_receive.already_processed");
+        AssertReceiveMetric(
+            measurements,
+            "bondstone.direct_receive.already_received");
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task EventReceive_WhenSubscriberExists_ExecutesModuleEventSubscriberThroughInbox()
     {
         var inboxExecutor = new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.Handled);
@@ -231,6 +258,71 @@ public sealed class ModuleReceivePipelineTests
             serviceProvider.GetRequiredService<EventCallLog>().Calls);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task EventReceive_WhenHandled_EmitsDirectReceiveHandledMetric()
+    {
+        var inboxExecutor = new CapturingInboxHandlerExecutor(DurableInboxHandleStatus.Handled);
+        var services = CreateServices(inboxExecutor);
+        var measurements = new List<MetricMeasurement>();
+        using MeterListener listener = MetricTestHelper.CreateMeterListener(
+            "Bondstone.Modules",
+            measurements);
+
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("metric-projection", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Events.RegisterSubscriber<OrderSubmittedEvent, OrderSubmittedHandler>(
+                    "metric-projection.order-submitted.v1");
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IModuleEventReceivePipeline pipeline =
+            scope.ServiceProvider.GetRequiredService<IModuleEventReceivePipeline>();
+
+        await pipeline.HandleOnceAsync(
+            CreateEventEnvelope(),
+            "metric-projection",
+            "metric-projection.order-submitted.v1");
+
+        MetricMeasurement measurement = Assert.Single(
+            measurements,
+            candidate =>
+                candidate.InstrumentName == "bondstone.direct_receive.handled"
+                && candidate.HasTag("bondstone.module", "metric-projection"));
+        Assert.Equal(1, measurement.Value);
+        Assert.Equal("Event", measurement.GetTag("bondstone.message_kind"));
+        Assert.Equal("sales", measurement.GetTag("bondstone.source_module"));
+    }
+
+    private static async ValueTask HandleMetricCommandReceiveAsync(
+        DurableInboxHandleStatus status)
+    {
+        var inboxExecutor = new CapturingInboxHandlerExecutor(status);
+        var services = CreateServices(inboxExecutor);
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("metric-fulfillment", module =>
+            {
+                module.UseDurableMessaging();
+                module.UsePersistence("test persistence");
+                module.Commands.RegisterHandler<ReserveOrderCommand, ReserveOrderHandler>();
+            });
+        });
+
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IModuleCommandReceivePipeline pipeline =
+            scope.ServiceProvider.GetRequiredService<IModuleCommandReceivePipeline>();
+
+        await pipeline.HandleOnceAsync(CreateCommandEnvelope(targetModule: "metric-fulfillment"));
+    }
+
     private static ServiceCollection CreateServices(
         CapturingInboxHandlerExecutor inboxExecutor)
     {
@@ -244,19 +336,35 @@ public sealed class ModuleReceivePipelineTests
     }
 
     private static DurableMessageEnvelope CreateCommandEnvelope(
-        string payload = """{"orderId":"A-100"}""")
+        string payload = """{"orderId":"A-100"}""",
+        string targetModule = "fulfillment")
     {
         return new DurableMessageEnvelope(
             Guid.Parse("e37baceb-4d6f-4c91-9870-6d209cd258a8"),
             MessageKind.Command,
             "receive.fulfillment.order.reserve.v1",
             "sales",
-            "fulfillment",
+            targetModule,
             payload,
             DateTimeOffset.Parse("2026-06-05T12:00:00+00:00"),
             traceContext: new MessageTraceContext(
                 "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00"),
             partitionKey: "orders/A-100");
+    }
+
+    private static void AssertReceiveMetric(
+        IEnumerable<MetricMeasurement> measurements,
+        string instrumentName)
+    {
+        MetricMeasurement measurement = Assert.Single(
+            measurements,
+            candidate =>
+                candidate.InstrumentName == instrumentName
+                && candidate.HasTag("bondstone.module", "metric-fulfillment"));
+        Assert.Equal(1, measurement.Value);
+        Assert.Equal("Command", measurement.GetTag("bondstone.message_kind"));
+        Assert.Equal("sales", measurement.GetTag("bondstone.source_module"));
+        Assert.Equal("metric-fulfillment", measurement.GetTag("bondstone.target_module"));
     }
 
     private static DurableMessageEnvelope CreateConvertedCommandEnvelope()

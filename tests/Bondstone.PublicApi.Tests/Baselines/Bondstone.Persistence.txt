@@ -1,3 +1,32 @@
+namespace Bondstone.Diagnostics
+{
+    public sealed class BondstoneSetupArgumentException : System.ArgumentException, Bondstone.Diagnostics.IBondstoneSetupException
+    {
+        public BondstoneSetupArgumentException(string setupCode, string message, string? paramName) { }
+        public string SetupCode { get; }
+    }
+    public static class BondstoneSetupCodes
+    {
+        public const string AmbiguousDispatchRoute = "bondstone.setup.ambiguous_dispatch_route";
+        public const string DuplicateDurableRegistration = "bondstone.setup.duplicate_durable_registration";
+        public const string InvalidDurableIdentity = "bondstone.setup.invalid_durable_identity";
+        public const string MissingDispatcher = "bondstone.setup.missing_dispatcher";
+        public const string MissingEfMapping = "bondstone.setup.missing_ef_mapping";
+        public const string MissingModulePersistence = "bondstone.setup.missing_module_persistence";
+        public const string MissingOutboxPersistence = "bondstone.setup.missing_outbox_persistence";
+        public const string MissingReceiveBinding = "bondstone.setup.missing_receive_binding";
+    }
+    public sealed class BondstoneSetupException : System.InvalidOperationException, Bondstone.Diagnostics.IBondstoneSetupException
+    {
+        public BondstoneSetupException(string setupCode, string message) { }
+        public BondstoneSetupException(string setupCode, string message, System.Exception innerException) { }
+        public string SetupCode { get; }
+    }
+    public interface IBondstoneSetupException
+    {
+        string SetupCode { get; }
+    }
+}
 namespace Bondstone.Messaging
 {
     public sealed class DurableMessageEnvelope : System.IEquatable<Bondstone.Messaging.DurableMessageEnvelope>
@@ -23,6 +52,13 @@ namespace Bondstone.Messaging
         public string? MessageTypeName { get; }
         public string? ModuleName { get; }
     }
+    public sealed class DurableOperationHandle : System.IEquatable<Bondstone.Messaging.DurableOperationHandle>
+    {
+        public DurableOperationHandle(System.Guid durableOperationId, string sourceModule, string targetModule) { }
+        public System.Guid DurableOperationId { get; }
+        public string SourceModule { get; }
+        public string TargetModule { get; }
+    }
     public sealed class DurableOperationState : System.IEquatable<Bondstone.Messaging.DurableOperationState>
     {
         public DurableOperationState(System.Guid durableOperationId, Bondstone.Messaging.DurableOperationStatus status, System.DateTimeOffset updatedAtUtc, string? resultPayload = null, string? failureReason = null, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null) { }
@@ -41,9 +77,18 @@ namespace Bondstone.Messaging
         Failed = 4,
         Cancelled = 5,
     }
+    public interface IDurableMessageEnvelopeSerializer
+    {
+        Bondstone.Messaging.DurableMessageEnvelope Deserialize(System.ReadOnlyMemory<byte> utf8Json);
+        Bondstone.Messaging.DurableMessageEnvelope Deserialize(string json);
+        string Serialize(Bondstone.Messaging.DurableMessageEnvelope envelope);
+        byte[] SerializeToUtf8Bytes(Bondstone.Messaging.DurableMessageEnvelope envelope);
+    }
     public interface IDurableOperationReader
     {
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(Bondstone.Messaging.DurableOperationHandle operation, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationState?> GetStateAsync(System.Guid durableOperationId, string moduleName, System.Threading.CancellationToken ct = default);
     }
     public enum MessageKind
     {
@@ -58,6 +103,14 @@ namespace Bondstone.Messaging
         public string? TraceState { get; }
         public bool TryGetW3CTraceId(out string? traceId) { }
         public static Bondstone.Messaging.MessageTraceContext? CaptureCurrent() { }
+    }
+    public sealed class SystemTextJsonDurableMessageEnvelopeSerializer : Bondstone.Messaging.IDurableMessageEnvelopeSerializer
+    {
+        public SystemTextJsonDurableMessageEnvelopeSerializer() { }
+        public Bondstone.Messaging.DurableMessageEnvelope Deserialize(System.ReadOnlyMemory<byte> utf8Json) { }
+        public Bondstone.Messaging.DurableMessageEnvelope Deserialize(string json) { }
+        public string Serialize(Bondstone.Messaging.DurableMessageEnvelope envelope) { }
+        public byte[] SerializeToUtf8Bytes(Bondstone.Messaging.DurableMessageEnvelope envelope) { }
     }
 }
 namespace Bondstone.Persistence
@@ -118,11 +171,116 @@ namespace Bondstone.Persistence
         AlreadyReceived = 2,
         AlreadyProcessed = 3,
     }
+    public sealed class DurableIncomingInboxFailureDecision : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxFailureDecision>
+    {
+        public System.DateTimeOffset FailedAtUtc { get; }
+        public string FailureReason { get; }
+        public Bondstone.Persistence.DurableIncomingInboxFailureDecisionKind Kind { get; }
+        public System.DateTimeOffset? NextAttemptAtUtc { get; }
+        public bool ShouldRetry { get; }
+        public bool ShouldTerminalFail { get; }
+        public static Bondstone.Persistence.DurableIncomingInboxFailureDecision Retry(string failureReason, System.DateTimeOffset failedAtUtc, System.DateTimeOffset nextAttemptAtUtc) { }
+        public static Bondstone.Persistence.DurableIncomingInboxFailureDecision TerminalFailure(string failureReason, System.DateTimeOffset failedAtUtc) { }
+    }
+    public enum DurableIncomingInboxFailureDecisionKind
+    {
+        Retry = 1,
+        TerminalFailure = 2,
+    }
+    public sealed class DurableIncomingInboxIngestionBoundary
+    {
+        public DurableIncomingInboxIngestionBoundary(Bondstone.Persistence.IDurableIncomingInboxIngestionStore store, Bondstone.Persistence.IDurableIncomingInboxIngestionPersistenceScope persistenceScope) { }
+        public Bondstone.Persistence.IDurableIncomingInboxIngestionPersistenceScope PersistenceScope { get; }
+        public Bondstone.Persistence.IDurableIncomingInboxIngestionStore Store { get; }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxIngestionResult> IngestAndSaveAsync(Bondstone.Persistence.DurableIncomingInboxRecord record, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class DurableIncomingInboxIngestionResult : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxIngestionResult>
+    {
+        public DurableIncomingInboxIngestionResult(Bondstone.Persistence.DurableIncomingInboxIngestionStatus status, Bondstone.Persistence.DurableIncomingInboxRecord record) { }
+        public Bondstone.Persistence.DurableIncomingInboxRecord Record { get; }
+        public Bondstone.Persistence.DurableIncomingInboxIngestionStatus Status { get; }
+        public bool WasAlreadyIngested { get; }
+        public bool WasIngested { get; }
+    }
+    public enum DurableIncomingInboxIngestionStatus
+    {
+        Ingested = 1,
+        AlreadyIngested = 2,
+    }
+    public sealed class DurableIncomingInboxKey : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxKey>
+    {
+        public DurableIncomingInboxKey(System.Guid messageId, string receiverModule, string handlerIdentity) { }
+        public string HandlerIdentity { get; }
+        public System.Guid MessageId { get; }
+        public string ReceiverModule { get; }
+        public static Bondstone.Persistence.DurableIncomingInboxKey ForCommandHandler(System.Guid messageId, string targetModule, string handlerIdentity) { }
+        public static Bondstone.Persistence.DurableIncomingInboxKey ForEventSubscriber(System.Guid messageId, string subscriberModule, string subscriberIdentity) { }
+    }
+    public sealed class DurableIncomingInboxProcessingResult : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxProcessingResult>
+    {
+        public DurableIncomingInboxProcessingResult(int claimedCount, int processedCount, int retryScheduledCount, int terminalFailedCount, int staleCount) { }
+        public int ClaimedCount { get; }
+        public int CompletedCount { get; }
+        public int ProcessedCount { get; }
+        public int RetryScheduledCount { get; }
+        public int StaleCount { get; }
+        public int TerminalFailedCount { get; }
+    }
+    public sealed class DurableIncomingInboxRecord : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxRecord>
+    {
+        public DurableIncomingInboxRecord(Bondstone.Persistence.DurableIncomingInboxKey key, Bondstone.Messaging.DurableMessageEnvelope envelope, System.DateTimeOffset ingestedAtUtc, Bondstone.Persistence.DurableIncomingInboxState? state = null, string? sourceTransportName = null) { }
+        public Bondstone.Messaging.DurableMessageEnvelope Envelope { get; }
+        public string HandlerIdentity { get; }
+        public System.DateTimeOffset IngestedAtUtc { get; }
+        public Bondstone.Persistence.DurableIncomingInboxKey Key { get; }
+        public string ReceiverModule { get; }
+        public string? SourceTransportName { get; }
+        public Bondstone.Persistence.DurableIncomingInboxState State { get; }
+    }
+    public sealed class DurableIncomingInboxState : System.IEquatable<Bondstone.Persistence.DurableIncomingInboxState>
+    {
+        public DurableIncomingInboxState(Bondstone.Persistence.DurableIncomingInboxStatus status, int attemptCount, System.DateTimeOffset? nextAttemptAtUtc = default, System.DateTimeOffset? processedAtUtc = default, System.DateTimeOffset? failedAtUtc = default, string? failureReason = null, string? claimedBy = null, System.DateTimeOffset? claimedUntilUtc = default) { }
+        public int AttemptCount { get; }
+        public string? ClaimedBy { get; }
+        public System.DateTimeOffset? ClaimedUntilUtc { get; }
+        public System.DateTimeOffset? FailedAtUtc { get; }
+        public string? FailureReason { get; }
+        public System.DateTimeOffset? NextAttemptAtUtc { get; }
+        public System.DateTimeOffset? ProcessedAtUtc { get; }
+        public Bondstone.Persistence.DurableIncomingInboxStatus Status { get; }
+        public static Bondstone.Persistence.DurableIncomingInboxState Pending { get; }
+    }
+    public enum DurableIncomingInboxStatus
+    {
+        Pending = 1,
+        Processing = 2,
+        Processed = 3,
+        RetryScheduled = 4,
+        TerminalFailed = 5,
+    }
     public sealed class DurableModuleInboxHandlerExecutorRegistration
     {
         public DurableModuleInboxHandlerExecutorRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableInboxHandlerExecutor> createExecutor) { }
         public string ModuleName { get; }
         public Bondstone.Persistence.IDurableInboxHandlerExecutor CreateExecutor(System.IServiceProvider serviceProvider) { }
+    }
+    public sealed class DurableModuleInboxInspectionStoreRegistration
+    {
+        public DurableModuleInboxInspectionStoreRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableInboxInspectionStore> createStore) { }
+        public string ModuleName { get; }
+        public Bondstone.Persistence.IDurableInboxInspectionStore CreateStore(System.IServiceProvider serviceProvider) { }
+    }
+    public sealed class DurableModuleIncomingInboxDispatcherRegistration
+    {
+        public DurableModuleIncomingInboxDispatcherRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableIncomingInboxDispatcher> createDispatcher) { }
+        public string ModuleName { get; }
+        public Bondstone.Persistence.IDurableIncomingInboxDispatcher CreateDispatcher(System.IServiceProvider serviceProvider) { }
+    }
+    public sealed class DurableModuleIncomingInboxIngestionBoundaryRegistration
+    {
+        public DurableModuleIncomingInboxIngestionBoundaryRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.DurableIncomingInboxIngestionBoundary> createBoundary) { }
+        public string ModuleName { get; }
+        public Bondstone.Persistence.DurableIncomingInboxIngestionBoundary CreateBoundary(System.IServiceProvider serviceProvider) { }
     }
     public sealed class DurableModuleOperationStateStoreRegistration
     {
@@ -141,6 +299,12 @@ namespace Bondstone.Persistence
         public string ModuleName { get; }
         public Bondstone.Persistence.IDurableOutboxDispatcher CreateDispatcher(System.IServiceProvider serviceProvider) { }
     }
+    public sealed class DurableModuleOutboxInspectionStoreRegistration
+    {
+        public DurableModuleOutboxInspectionStoreRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableOutboxInspectionStore> createStore) { }
+        public string ModuleName { get; }
+        public Bondstone.Persistence.IDurableOutboxInspectionStore CreateStore(System.IServiceProvider serviceProvider) { }
+    }
     public sealed class DurableModuleOutboxWriterRegistration
     {
         public DurableModuleOutboxWriterRegistration(string moduleName, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableOutboxWriter> createWriter) { }
@@ -151,12 +315,20 @@ namespace Bondstone.Persistence
     {
         public DurableModulePersistenceRegistrationRegistry() { }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleInboxHandlerExecutorRegistration> InboxHandlerExecutorRegistrations { get; }
+        public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleInboxInspectionStoreRegistration> InboxInspectionStoreRegistrations { get; }
+        public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleIncomingInboxDispatcherRegistration> IncomingInboxDispatcherRegistrations { get; }
+        public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleIncomingInboxIngestionBoundaryRegistration> IncomingInboxIngestionBoundaryRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOperationStateStoreRegistration> OperationStateStoreRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOutboxDispatcherRegistration> OutboxDispatcherRegistrations { get; }
+        public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOutboxInspectionStoreRegistration> OutboxInspectionStoreRegistrations { get; }
         public System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableModuleOutboxWriterRegistration> OutboxWriterRegistrations { get; }
         public void AddInboxHandlerExecutor(Bondstone.Persistence.DurableModuleInboxHandlerExecutorRegistration registration) { }
+        public void AddInboxInspectionStore(Bondstone.Persistence.DurableModuleInboxInspectionStoreRegistration registration) { }
+        public void AddIncomingInboxDispatcher(Bondstone.Persistence.DurableModuleIncomingInboxDispatcherRegistration registration) { }
+        public void AddIncomingInboxIngestionBoundary(Bondstone.Persistence.DurableModuleIncomingInboxIngestionBoundaryRegistration registration) { }
         public void AddOperationStateStore(Bondstone.Persistence.DurableModuleOperationStateStoreRegistration registration) { }
         public void AddOutboxDispatcher(Bondstone.Persistence.DurableModuleOutboxDispatcherRegistration registration) { }
+        public void AddOutboxInspectionStore(Bondstone.Persistence.DurableModuleOutboxInspectionStoreRegistration registration) { }
         public void AddOutboxWriter(Bondstone.Persistence.DurableModuleOutboxWriterRegistration registration) { }
     }
     public sealed class DurableOutboxDispatchResult : System.IEquatable<Bondstone.Persistence.DurableOutboxDispatchResult>
@@ -184,7 +356,7 @@ namespace Bondstone.Persistence
     }
     public sealed class DurableOutboxDispatcher : Bondstone.Persistence.IDurableOutboxDispatcher
     {
-        public DurableOutboxDispatcher(Bondstone.Persistence.IDurableOutboxClaimer claimer, Bondstone.Persistence.IDurableOutboxLeaseRenewer leaseRenewer, Bondstone.Persistence.IDurableOutboxTransport transport, Bondstone.Persistence.IDurableOutboxFailurePolicy failurePolicy, Bondstone.Persistence.IDurableOutboxDispatchRecorder dispatchRecorder, System.TimeProvider? timeProvider = null) { }
+        public DurableOutboxDispatcher(Bondstone.Persistence.IDurableOutboxClaimer claimer, Bondstone.Persistence.IDurableOutboxLeaseRenewer leaseRenewer, Bondstone.Persistence.IDurableEnvelopeDispatcher envelopeDispatcher, Bondstone.Persistence.IDurableOutboxFailurePolicy failurePolicy, Bondstone.Persistence.IDurableOutboxDispatchRecorder dispatchRecorder, System.TimeProvider? timeProvider = null) { }
         public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableOutboxDispatchResult> DispatchAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default) { }
     }
     public sealed class DurableOutboxFailureDecision : System.IEquatable<Bondstone.Persistence.DurableOutboxFailureDecision>
@@ -225,9 +397,27 @@ namespace Bondstone.Persistence
         Failed = 4,
         TerminalFailed = 5,
     }
+    public interface IDurableEnvelopeDispatchRoute
+    {
+        string TransportName { get; }
+        bool CanSend(Bondstone.Persistence.DurableOutboxRecord record);
+        System.Threading.Tasks.ValueTask DispatchAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableEnvelopeDispatcher
+    {
+        System.Threading.Tasks.ValueTask DispatchAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default);
+    }
     public interface IDurableInboxHandlerExecutor
     {
         System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> HandleOnceAsync(Bondstone.Persistence.DurableInboxRecord record, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> handler, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableInboxInspectionStore
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableInboxRecord>> FindUnprocessedAsync(int maxCount = 100, System.DateTimeOffset? receivedAtOrBeforeUtc = default, string? moduleName = null, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableInboxInspector
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableInboxRecord>> FindUnprocessedAsync(string moduleName, int maxCount = 100, System.DateTimeOffset? receivedAtOrBeforeUtc = default, System.Threading.CancellationToken ct = default);
     }
     public interface IDurableInboxRegistrar
     {
@@ -238,6 +428,47 @@ namespace Bondstone.Persistence
         System.Threading.Tasks.ValueTask AddAsync(Bondstone.Persistence.DurableInboxRecord record, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxRecord?> GetAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask MarkProcessedAsync(Bondstone.Persistence.DurableInboxMessageKey key, System.DateTimeOffset processedAtUtc, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxClaimer
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> ClaimAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxDispatcher
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxProcessingResult> ProcessAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxIngestionBoundaryResolver
+    {
+        Bondstone.Persistence.DurableIncomingInboxIngestionBoundary Resolve(string receiverModule);
+    }
+    public interface IDurableIncomingInboxIngestionPersistenceScope
+    {
+        System.Threading.Tasks.ValueTask<TResult> ExecuteAsync<TResult>(System.Func<Bondstone.Persistence.IDurableIncomingInboxIngestionPersistenceScope, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TResult>> operation, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask SaveChangesAsync(System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxIngestionStore
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxIngestionResult> IngestAsync(Bondstone.Persistence.DurableIncomingInboxRecord record, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxInspectionStore
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindAsync(Bondstone.Persistence.DurableIncomingInboxStatus? status = default, int maxCount = 100, System.DateTimeOffset? ingestedAtOrBeforeUtc = default, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindStaleProcessingAsync(System.DateTimeOffset claimedUntilAtOrBeforeUtc, int maxCount = 100, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableIncomingInboxRecord>> FindTerminalFailedAsync(int maxCount = 100, System.DateTimeOffset? failedAtOrBeforeUtc = default, string? receiverModule = null, string? sourceTransportName = null, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxLeaseRenewer
+    {
+        System.Threading.Tasks.ValueTask<bool> RenewAsync(Bondstone.Persistence.DurableIncomingInboxKey key, string claimedBy, System.TimeSpan leaseDuration, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableIncomingInboxOutcomeRecorder
+    {
+        System.Threading.Tasks.ValueTask<bool> MarkProcessedAsync(Bondstone.Persistence.DurableIncomingInboxKey key, string claimedBy, System.DateTimeOffset processedAtUtc, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<bool> MarkTerminalFailedAsync(Bondstone.Persistence.DurableIncomingInboxKey key, string claimedBy, string failureReason, System.DateTimeOffset failedAtUtc, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<bool> ScheduleRetryAsync(Bondstone.Persistence.DurableIncomingInboxKey key, string claimedBy, string failureReason, System.DateTimeOffset failedAtUtc, System.DateTimeOffset nextAttemptAtUtc, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableOperationExpirationStore
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Messaging.DurableOperationState>> FindExpirationCandidatesAsync(System.DateTimeOffset expiresBeforeUtc, int maxCount, System.Threading.CancellationToken ct = default);
     }
     public interface IDurableOperationStateStore : Bondstone.Messaging.IDurableOperationReader
     {
@@ -261,33 +492,25 @@ namespace Bondstone.Persistence
     {
         Bondstone.Persistence.DurableOutboxFailureDecision DecideFailure(Bondstone.Persistence.DurableOutboxRecord record, string failureReason, System.DateTimeOffset failedAtUtc);
     }
+    public interface IDurableOutboxInspectionStore
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableOutboxRecord>> FindTerminalFailedAsync(int maxCount = 100, System.DateTimeOffset? failedAtOrBeforeUtc = default, string? sourceModuleName = null, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableOutboxInspector
+    {
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Bondstone.Persistence.DurableOutboxRecord>> FindTerminalFailedAsync(string moduleName, int maxCount = 100, System.DateTimeOffset? failedAtOrBeforeUtc = default, System.Threading.CancellationToken ct = default);
+    }
     public interface IDurableOutboxLeaseRenewer
     {
         System.Threading.Tasks.ValueTask<bool> RenewAsync(System.Guid messageId, string claimedBy, System.TimeSpan leaseDuration, System.Threading.CancellationToken ct = default);
-    }
-    public interface IDurableOutboxTransport
-    {
-        System.Threading.Tasks.ValueTask SendAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default);
-    }
-    public interface IDurableOutboxTransportRoute
-    {
-        string TransportName { get; }
-        bool CanSend(Bondstone.Persistence.DurableOutboxRecord record);
-        System.Threading.Tasks.ValueTask SendAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default);
     }
     public interface IDurableOutboxWriter
     {
         System.Threading.Tasks.ValueTask WriteAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default);
     }
-    public interface IModuleTransactionFeature
+    public sealed class RoutedDurableEnvelopeDispatcher : Bondstone.Persistence.IDurableEnvelopeDispatcher
     {
-        bool ObservesCommit { get; }
-        void OnCommitted(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> callback);
-        void OnRolledBack(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> callback);
-    }
-    public sealed class RoutedDurableOutboxTransport : Bondstone.Persistence.IDurableOutboxTransport
-    {
-        public RoutedDurableOutboxTransport(System.Collections.Generic.IEnumerable<Bondstone.Persistence.IDurableOutboxTransportRoute> routes) { }
-        public System.Threading.Tasks.ValueTask SendAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default) { }
+        public RoutedDurableEnvelopeDispatcher(System.Collections.Generic.IEnumerable<Bondstone.Persistence.IDurableEnvelopeDispatchRoute> routes) { }
+        public System.Threading.Tasks.ValueTask DispatchAsync(Bondstone.Persistence.DurableOutboxRecord record, System.Threading.CancellationToken ct = default) { }
     }
 }

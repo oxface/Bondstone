@@ -26,6 +26,10 @@ public sealed partial class PostgreSqlPersistenceTests
         await using ServiceProvider serviceProvider = services.BuildServiceProvider();
         await using AsyncServiceScope scope = serviceProvider.CreateAsyncScope();
         IDurableOutboxWriter writer = scope.ServiceProvider.GetRequiredService<IDurableOutboxWriter>();
+        IDurableOutboxInspectionStore inspectionStore =
+            scope.ServiceProvider.GetRequiredService<IDurableOutboxInspectionStore>();
+        IDurableInboxInspectionStore inboxInspectionStore =
+            scope.ServiceProvider.GetRequiredService<IDurableInboxInspectionStore>();
         PostgreSqlTestDbContext context = scope.ServiceProvider.GetRequiredService<PostgreSqlTestDbContext>();
         DurableMessageEnvelope envelope = CreateEnvelope();
 
@@ -38,6 +42,10 @@ public sealed partial class PostgreSqlPersistenceTests
             .SingleAsync();
 
         Assert.Equal(envelope.MessageId, entity.MessageId);
+        Assert.IsType<EntityFrameworkCoreDurableOutboxInspectionStore<PostgreSqlTestDbContext>>(
+            inspectionStore);
+        Assert.IsType<EntityFrameworkCoreDurableInboxInspectionStore<PostgreSqlTestDbContext>>(
+            inboxInspectionStore);
     }
 
     [Fact]

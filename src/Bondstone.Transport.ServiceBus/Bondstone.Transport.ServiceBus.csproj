@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <PackageDescription>Azure Service Bus transport adapter integration for Bondstone durable messaging.</PackageDescription>
+    <PackageDescription>Thin Azure Service Bus adapter for Bondstone durable envelope dispatch and opt-in receive workers.</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Bondstone\Bondstone.csproj" />
     <ProjectReference Include="..\Bondstone.Persistence\Bondstone.Persistence.csproj" />
-    <ProjectReference Include="..\Bondstone.Transport\Bondstone.Transport.csproj" />
   </ItemGroup>
 
   <ItemGroup>

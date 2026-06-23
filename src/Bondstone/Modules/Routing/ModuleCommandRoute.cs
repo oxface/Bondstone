@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
 using Bondstone.Utility;
@@ -14,7 +15,7 @@ public sealed class ModuleCommandRoute
         string? handlerIdentity,
         Type handlerType,
         Type? resultType,
-        Func<IServiceProvider, object, ModuleCommandRoute, ModuleCommandReceiveContext?, CancellationToken, ValueTask<ModuleCommandRouteExecutionResult>> invoke)
+        ModuleCommandRouteInvoker invoke)
     {
         ArgumentNullException.ThrowIfNull(commandType);
         ArgumentNullException.ThrowIfNull(handlerType);
@@ -22,7 +23,8 @@ public sealed class ModuleCommandRoute
 
         if (!typeof(ICommand).IsAssignableFrom(commandType))
         {
-            throw new ArgumentException(
+            throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
                 $"Command type '{commandType.FullName}' must implement {nameof(ICommand)}.",
                 nameof(commandType));
         }
@@ -31,21 +33,21 @@ public sealed class ModuleCommandRoute
         {
             if (messageTypeRegistration.Kind != MessageKind.Command)
             {
-                throw new ArgumentException(
+                throw new BondstoneSetupArgumentException(
+                    BondstoneSetupCodes.InvalidDurableIdentity,
                     $"Message type '{messageTypeRegistration.MessageTypeName}' is registered as '{messageTypeRegistration.Kind}', not '{MessageKind.Command}'.",
                     nameof(messageTypeRegistration));
             }
 
             if (messageTypeRegistration.ClrType != commandType)
             {
-                throw new ArgumentException(
+                throw new BondstoneSetupArgumentException(
+                    BondstoneSetupCodes.InvalidDurableIdentity,
                     $"Message type '{messageTypeRegistration.MessageTypeName}' is registered for '{messageTypeRegistration.ClrType.FullName}', not '{commandType.FullName}'.",
                     nameof(messageTypeRegistration));
             }
 
-            handlerIdentity = handlerIdentity.NormalizeRequired(
-                nameof(handlerIdentity),
-                "Handler identity");
+            handlerIdentity = NormalizeHandlerIdentity(handlerIdentity);
         }
 
         ModuleName = moduleName.NormalizeRequired(nameof(moduleName), "Module name");
@@ -57,7 +59,17 @@ public sealed class ModuleCommandRoute
         _invoke = invoke;
     }
 
-    private readonly Func<IServiceProvider, object, ModuleCommandRoute, ModuleCommandReceiveContext?, CancellationToken, ValueTask<ModuleCommandRouteExecutionResult>> _invoke;
+    private static string NormalizeHandlerIdentity(string? handlerIdentity)
+    {
+        return string.IsNullOrWhiteSpace(handlerIdentity)
+            ? throw new BondstoneSetupArgumentException(
+                BondstoneSetupCodes.InvalidDurableIdentity,
+                "Handler identity is required.",
+                nameof(handlerIdentity))
+            : handlerIdentity.Trim();
+    }
+
+    private readonly ModuleCommandRouteInvoker _invoke;
 
     public string ModuleName { get; }
 
@@ -144,29 +156,25 @@ public sealed class ModuleCommandRoute
                 nameof(command));
         }
 
-        ModuleCommandPipelineNext handler = async handlerCt =>
+        Func<CancellationToken, ValueTask> handler = async handlerCt =>
         {
             THandler commandHandler = serviceProvider.GetRequiredService<THandler>();
             await commandHandler.HandleAsync(typedCommand, handlerCt);
         };
 
-        ModuleCommandPipelinePlan<TCommand> plan = serviceProvider
-            .GetRequiredService<ModuleCommandPipelinePlanner>()
-            .BuildPlan<TCommand>(
-                serviceProvider,
-                route);
-
-        ModuleCommandPipeline pipeline = BuildPipeline(
-            typedCommand,
+        var context = new ModuleCommandExecutionContext(
             route,
-            receiveContext,
-            plan,
-            handler);
+            receiveContext);
 
-        await pipeline.InvokeAsync(ct);
+        IModuleCommandRuntime runtime = serviceProvider.GetRequiredService<IModuleCommandRuntime>();
+        await runtime.ExecuteAsync(
+            typedCommand,
+            context,
+            handler,
+            ct);
         return new ModuleCommandRouteExecutionResult(
             Result: null,
-            pipeline.Context.ReceiveInboxResult);
+            context.ReceiveInboxResult);
     }
 
     private static async ValueTask<ModuleCommandRouteExecutionResult> InvokeAsync<TCommand, TResult, THandler>(
@@ -187,8 +195,10 @@ public sealed class ModuleCommandRoute
 
         TResult? result = default;
         bool hasResult = false;
-        ModuleCommandExecutionContext? executionContext = null;
-        ModuleCommandPipelineNext handler = async handlerCt =>
+        var context = new ModuleCommandExecutionContext(
+            route,
+            receiveContext);
+        Func<CancellationToken, ValueTask> handler = async handlerCt =>
         {
             THandler commandHandler = serviceProvider.GetRequiredService<THandler>();
             result = await commandHandler.HandleAsync(typedCommand, handlerCt);
@@ -198,34 +208,25 @@ public sealed class ModuleCommandRoute
             {
                 DurableOperationResultPayloadSerializer payloadSerializer =
                     serviceProvider.GetRequiredService<DurableOperationResultPayloadSerializer>();
-                executionContext!.SetDurableOperationResultPayload(
+                context.SetDurableOperationResultPayload(
                     payloadSerializer.Serialize(result));
             }
         };
 
-        ModuleCommandPipelinePlan<TCommand> plan = serviceProvider
-            .GetRequiredService<ModuleCommandPipelinePlanner>()
-            .BuildPlan<TCommand>(
-                serviceProvider,
-                route);
-
-        ModuleCommandPipeline pipeline = BuildPipeline(
+        IModuleCommandRuntime runtime = serviceProvider.GetRequiredService<IModuleCommandRuntime>();
+        await runtime.ExecuteAsync(
             typedCommand,
-            route,
-            receiveContext,
-            plan,
-            handler);
-
-        executionContext = pipeline.Context;
-        await pipeline.InvokeAsync(ct);
+            context,
+            handler,
+            ct);
         if (!hasResult)
         {
-            if (pipeline.Context.ReceiveInboxResult?.Status is DurableInboxHandleStatus.AlreadyProcessed
+            if (context.ReceiveInboxResult?.Status is DurableInboxHandleStatus.AlreadyProcessed
                 or DurableInboxHandleStatus.AlreadyReceived)
             {
                 return new ModuleCommandRouteExecutionResult(
                     Result: null,
-                    pipeline.Context.ReceiveInboxResult);
+                    context.ReceiveInboxResult);
             }
 
             throw new InvalidOperationException(
@@ -234,47 +235,17 @@ public sealed class ModuleCommandRoute
 
         return new ModuleCommandRouteExecutionResult(
             result,
-            pipeline.Context.ReceiveInboxResult);
-    }
-
-    private static ModuleCommandPipeline BuildPipeline<TCommand>(
-        TCommand command,
-        ModuleCommandRoute route,
-        ModuleCommandReceiveContext? receiveContext,
-        ModuleCommandPipelinePlan<TCommand> plan,
-        ModuleCommandPipelineNext handler)
-        where TCommand : ICommand
-    {
-        var context = new ModuleCommandExecutionContext(
-            route,
-            receiveContext);
-        ModuleCommandPipelineNext next = handler;
-
-        for (int index = plan.Steps.Count - 1; index >= 0; index--)
-        {
-            IModuleCommandPipelineBehavior<TCommand> behavior = plan.Steps[index].Behavior;
-            ModuleCommandPipelineNext current = next;
-            next = behaviorCt => behavior.HandleAsync(
-                command,
-                context,
-                current,
-                behaviorCt);
-        }
-
-        return new ModuleCommandPipeline(context, next);
-    }
-
-    private sealed record ModuleCommandPipeline(
-        ModuleCommandExecutionContext Context,
-        ModuleCommandPipelineNext Next)
-    {
-        public ValueTask InvokeAsync(CancellationToken ct)
-        {
-            return Next(ct);
-        }
+            context.ReceiveInboxResult);
     }
 }
 
 internal sealed record ModuleCommandRouteExecutionResult(
     object? Result,
     DurableInboxHandleResult? ReceiveInboxResult);
+
+internal delegate ValueTask<ModuleCommandRouteExecutionResult> ModuleCommandRouteInvoker(
+    IServiceProvider serviceProvider,
+    object command,
+    ModuleCommandRoute route,
+    ModuleCommandReceiveContext? receiveContext,
+    CancellationToken ct);

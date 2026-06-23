@@ -1,27 +1,27 @@
 # Bondstone.Transport.ServiceBus
 
-Azure Service Bus transport adapter integration for Bondstone durable
-messaging.
+Thin Azure Service Bus adapter for Bondstone durable envelopes.
 
-This package owns Service Bus-specific outbox sending, receive topology,
-message mapping, settlement helpers, and opt-in hosted receive worker
-composition.
+This package provides outbound `IDurableEnvelopeDispatcher` registration and
+opt-in receive workers over `Azure.Messaging.ServiceBus`. It does not create
+queues, topics, subscriptions, rules, retry policies, dead-letter policy,
+credentials, or monitoring.
 
-## Quick Path
+Use it only when the host already owns Azure Service Bus topology and wants
+small Bondstone envelope plumbing.
 
-Use this package when a host dispatches Bondstone durable outbox records
-through Azure Service Bus. Normal setup calls
-`bondstone.UseServiceBusTransport(...)` inside `AddBondstone`; namespaces,
-queues, topics, subscriptions, retry policy, and dead-letter behavior remain
-app-owned. See
-[the setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md).
-
-Install this package in hosts that send durable outbox messages to Azure
-Service Bus or run opt-in Service Bus receive workers. Projects that only
-declare message contracts or module handlers do not need the adapter package.
+The receive worker ingests native deliveries into the durable incoming inbox
+ledger with `ReceiveCommand()` or `ReceiveEvent(...)`. It requires manual
+completion by keeping `AutoCompleteMessages = false` and `ReceiveMode =
+PeekLock`, commits the incoming inbox row before Azure Service Bus message
+completion, and leaves the separate `Bondstone.Hosting` durable incoming inbox
+worker to process the row later.
 
 See:
 
-- [Azure Service Bus transport architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/transport-servicebus.md)
-- [Messaging architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/messaging.md)
-- [Azure Service Bus transport tests](https://github.com/oxface/Bondstone/tree/main/tests/Bondstone.Transport.ServiceBus.Tests)
+- [Setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md)
+- [Package discovery](https://github.com/oxface/Bondstone/blob/main/docs/package-discovery.md)
+- [Operations guide](https://github.com/oxface/Bondstone/blob/main/docs/operations.md)
+- [Observability guide](https://github.com/oxface/Bondstone/blob/main/docs/observability.md)
+- [Packaging, release, and migration policy](https://github.com/oxface/Bondstone/blob/main/docs/packaging.md)
+- [Bondstone architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture.md)

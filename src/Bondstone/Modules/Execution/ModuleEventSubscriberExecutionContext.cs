@@ -2,10 +2,10 @@ using Bondstone.Persistence;
 
 namespace Bondstone.Modules;
 
-public sealed class ModuleEventSubscriberExecutionContext(
+internal sealed class ModuleEventSubscriberExecutionContext(
     ModuleEventSubscriberRegistration subscriber,
     ModuleEventSubscriberReceiveContext? receiveContext = null)
-    : IModulePipelineExecutionContext
+    : ModuleRuntimeExecutionContextBase
 {
     public ModuleEventSubscriberRegistration Subscriber { get; } =
         subscriber ?? throw new ArgumentNullException(nameof(subscriber));
@@ -18,13 +18,11 @@ public sealed class ModuleEventSubscriberExecutionContext(
 
     public DurableInboxHandleResult? ReceiveInboxResult { get; private set; }
 
-    public string ModuleName => Subscriber.ModuleName;
+    public override string ModuleName => Subscriber.ModuleName;
 
     public string MessageTypeName => Subscriber.MessageTypeName;
 
     public string SubscriberIdentity => Subscriber.SubscriberIdentity;
-
-    public ModulePipelineFeatureCollection Features { get; } = new();
 
     internal void SetReceiveInboxResult(DurableInboxHandleResult result)
     {

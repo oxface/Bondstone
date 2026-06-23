@@ -29,6 +29,10 @@ public static class BondstoneServiceCollectionExtensions
             GetOrAddOwnedSingleton<IModuleCommandRouteRegistry, ModuleCommandRouteRegistry>(
                 services,
                 "Module command registration");
+        ModuleQueryRouteRegistry queryRouteRegistry =
+            GetOrAddOwnedSingleton<IModuleQueryRouteRegistry, ModuleQueryRouteRegistry>(
+                services,
+                "Module query registration");
         ModulePublishedEventRegistry publishedEventRegistry =
             GetOrAddOwnedSingleton<IModulePublishedEventRegistry, ModulePublishedEventRegistry>(
                 services,
@@ -41,10 +45,6 @@ public static class BondstoneServiceCollectionExtensions
             GetOrAddOwnedSingleton<IBondstoneModuleRegistry, BondstoneModuleRegistry>(
                 services,
                 "Module registration");
-        ModulePipelineContributionRegistry pipelineContributionRegistry =
-            GetOrAddOwnedSingleton<ModulePipelineContributionRegistry>(
-                services,
-                "Module pipeline contribution registration");
         ModuleCommandValidatorRegistry commandValidatorRegistry =
             GetOrAddOwnedSingleton<ModuleCommandValidatorRegistry>(
                 services,
@@ -55,11 +55,25 @@ public static class BondstoneServiceCollectionExtensions
         services.AddBondstoneDurablePayloadSerialization();
 
         services.TryAddScoped<IModuleCommandExecutor, ModuleCommandExecutor>();
+        services.TryAddScoped<IModuleQueryExecutor, ModuleQueryExecutor>();
         services.TryAddScoped<IModuleEventSubscriberExecutor, ModuleEventSubscriberExecutor>();
-        services.TryAddScoped<ModuleCommandPipelinePlanner>();
-        services.TryAddScoped<ModuleEventSubscriberPipelinePlanner>();
+        services.TryAddScoped<IModuleCommandRuntime, ModuleCommandRuntime>();
+        services.TryAddScoped<IModuleEventSubscriberRuntime, ModuleEventSubscriberRuntime>();
         services.TryAddScoped<IModuleCommandReceivePipeline, ModuleCommandReceivePipeline>();
         services.TryAddScoped<IModuleEventReceivePipeline, ModuleEventReceivePipeline>();
+        services.TryAddScoped<IDurableEnvelopeReceiver, DurableEnvelopeReceiver>();
+        services.TryAddSingleton(new DurableIncomingInboxProcessingOptions());
+        services.TryAddSingleton<IDurableIncomingInboxFailurePolicy>(serviceProvider =>
+            new DurableIncomingInboxFailurePolicy(
+                serviceProvider.GetRequiredService<DurableIncomingInboxProcessingOptions>()));
+        services.TryAddScoped<IDurableIncomingInboxIngestionBoundaryResolver>(
+            serviceProvider =>
+                new DurableIncomingInboxIngestionBoundaryResolver(
+                    () => CreateFallbackIncomingInboxIngestionBoundary(serviceProvider),
+                    serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
+        services.TryAddSingleton<
+            IDurableMessageEnvelopeSerializer,
+            SystemTextJsonDurableMessageEnvelopeSerializer>();
         services.TryAddSingleton<DurableOperationResultPayloadSerializer>();
         services.TryAddScoped<IDurableOperationResultReader>(serviceProvider =>
             new DurableOperationResultReader(
@@ -83,6 +97,20 @@ public static class BondstoneServiceCollectionExtensions
             new DurableModuleOperationStateStoreResolver(
                 () => serviceProvider.GetService<IDurableOperationStateStore>(),
                 serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
+        services.TryAddScoped<IDurableOperationFinalizer>(serviceProvider =>
+            new DurableOperationFinalizer(
+                serviceProvider.GetRequiredService<ModuleRuntimeRegistry>(),
+                serviceProvider.GetService<TimeProvider>()));
+        services.TryAddScoped<IDurableOperationExpirationProcessor>(serviceProvider =>
+            new DurableOperationExpirationProcessor(
+                serviceProvider.GetRequiredService<ModuleRuntimeRegistry>(),
+                serviceProvider.GetRequiredService<IDurableOperationFinalizer>()));
+        services.TryAddScoped<IDurableOutboxInspector>(serviceProvider =>
+            new DurableOutboxInspector(
+                serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
+        services.TryAddScoped<IDurableInboxInspector>(serviceProvider =>
+            new DurableInboxInspector(
+                serviceProvider.GetRequiredService<ModuleRuntimeRegistry>()));
         services.TryAddScoped<IDurableCommandSender>(serviceProvider =>
             new DurableCommandSender(
                 serviceProvider.GetRequiredService<DurableModuleOutboxWriterResolver>(),
@@ -99,58 +127,20 @@ public static class BondstoneServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IModuleExecutionContextAccessor>(),
                 serviceProvider.GetRequiredService<IDurablePayloadSerializer>(),
                 serviceProvider.GetService<TimeProvider>()));
-        pipelineContributionRegistry.AddGlobalCommandContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Command.ReceiveInbox",
-                ModulePipelineStepKind.System,
-                ModuleCommandSystemPipelineOrder.ReceiveInbox,
-                typeof(ModuleCommandReceiveInboxPipelineBehavior<>)));
-        pipelineContributionRegistry.AddGlobalCommandContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Command.OperationState",
-                ModulePipelineStepKind.System,
-                ModuleCommandSystemPipelineOrder.OperationState,
-                typeof(ModuleCommandOperationStatePipelineBehavior<>)));
-        pipelineContributionRegistry.AddGlobalCommandContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Command.ExecutionContext",
-                ModulePipelineStepKind.System,
-                ModuleCommandSystemPipelineOrder.ExecutionContext,
-                typeof(ModuleExecutionContextPipelineBehavior<>)));
-        pipelineContributionRegistry.AddGlobalCommandContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Command.Validation",
-                ModulePipelineStepKind.System,
-                ModuleCommandSystemPipelineOrder.Validation,
-                typeof(ValidationModuleCommandPipelineBehavior<>)));
-        pipelineContributionRegistry.AddGlobalEventSubscriberContribution(
-            new ModuleEventSubscriberPipelineContribution(
-                "Bondstone.EventSubscriber.ReceiveInbox",
-                ModulePipelineStepKind.System,
-                ModuleEventSubscriberSystemPipelineOrder.ReceiveInbox,
-                typeof(ModuleEventSubscriberReceiveInboxPipelineBehavior<>)));
-        pipelineContributionRegistry.AddGlobalEventSubscriberContribution(
-            new ModuleEventSubscriberPipelineContribution(
-                "Bondstone.EventSubscriber.ExecutionContext",
-                ModulePipelineStepKind.System,
-                ModuleEventSubscriberSystemPipelineOrder.ExecutionContext,
-                typeof(ModuleEventSubscriberExecutionContextPipelineBehavior<>)));
-
         var builder = new BondstoneBuilder(
             services,
             messageTypeRegistry,
             commandRouteRegistry,
+            queryRouteRegistry,
             publishedEventRegistry,
             eventSubscriberRegistry,
             moduleRegistry,
-            pipelineContributionRegistry,
             commandValidatorRegistry);
-        builder.AddConfigurationValidator(
-            new ModuleRuntimePipelineConfigurationValidator(pipelineContributionRegistry));
         builder.AddConfigurationValidator(
             new DurableModulePersistenceConfigurationValidator(
                 persistenceRegistrationRegistry));
         configure(builder);
+        AddDefaultDurableIncomingInboxDispatcherIfConfigured(services);
         ConfigureDurableOperationReader(services);
         builder.Validate();
 
@@ -185,6 +175,41 @@ public static class BondstoneServiceCollectionExtensions
         var registry = new MessageTypeRegistry();
         services.AddSingleton<IMessageTypeRegistry>(registry);
         return registry;
+    }
+
+    private static DurableIncomingInboxIngestionBoundary? CreateFallbackIncomingInboxIngestionBoundary(
+        IServiceProvider serviceProvider)
+    {
+        IDurableIncomingInboxIngestionStore? store =
+            serviceProvider.GetService<IDurableIncomingInboxIngestionStore>();
+        IDurableIncomingInboxIngestionPersistenceScope? persistenceScope =
+            serviceProvider.GetService<IDurableIncomingInboxIngestionPersistenceScope>();
+
+        return store is null || persistenceScope is null
+            ? null
+            : new DurableIncomingInboxIngestionBoundary(store, persistenceScope);
+    }
+
+    private static void AddDefaultDurableIncomingInboxDispatcherIfConfigured(
+        IServiceCollection services)
+    {
+        bool hasDispatcher = services.Any(static service =>
+            service.ServiceType == typeof(IDurableIncomingInboxDispatcher));
+        if (hasDispatcher)
+        {
+            return;
+        }
+
+        bool hasIncomingInboxProcessingStores = services.Any(static service =>
+                service.ServiceType == typeof(IDurableIncomingInboxClaimer))
+            && services.Any(static service =>
+                service.ServiceType == typeof(IDurableIncomingInboxOutcomeRecorder));
+        if (!hasIncomingInboxProcessingStores)
+        {
+            return;
+        }
+
+        services.TryAddScoped<IDurableIncomingInboxDispatcher, DurableIncomingInboxDefaultDispatcher>();
     }
 
     private static TImplementation GetOrAddOwnedSingleton<TService, TImplementation>(

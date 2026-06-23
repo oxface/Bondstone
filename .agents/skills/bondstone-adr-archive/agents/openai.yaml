@@ -1,4 +1,0 @@
-interface:
-  display_name: "Bondstone ADR Archive"
-  short_description: "Archive or remove obsolete Bondstone ADR material safely."
-  default_prompt: "Use $bondstone-adr-archive to archive or remove ADR material while preserving traceability."

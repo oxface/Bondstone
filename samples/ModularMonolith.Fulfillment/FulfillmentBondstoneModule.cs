@@ -1,4 +1,4 @@
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Modules;
 using Bondstone.Samples.ModularMonolith.Fulfillment.Contracts;

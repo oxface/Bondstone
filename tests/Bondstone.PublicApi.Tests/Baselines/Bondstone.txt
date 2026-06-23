@@ -5,7 +5,10 @@ namespace Bondstone.Configuration
         public Bondstone.Configuration.BondstoneOutboxBuilder Outbox { get; }
         public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
         public Bondstone.Configuration.BondstoneBuilder AddConfigurationValidator(Bondstone.Configuration.IBondstoneConfigurationValidator validator) { }
-        public Bondstone.Configuration.BondstoneBuilder AddTransportTopologyDiagnosticSource(Bondstone.Configuration.IDurableTransportTopologyDiagnosticSource diagnosticSource) { }
+        public Bondstone.Messaging.MessageTypeRegistration RegisterMessage<TMessage>()
+            where TMessage : Bondstone.Messaging.IMessage { }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> RegisterMessagesFromAssembly(System.Reflection.Assembly assembly) { }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Messaging.MessageTypeRegistration> RegisterMessagesFromAssemblyContaining<TMarker>() { }
     }
     public sealed class BondstoneConfigurationValidationContext
     {
@@ -24,6 +27,15 @@ namespace Bondstone.Configuration
     {
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBondstoneDurablePayloadSerialization(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection ConfigureBondstoneDurablePayloadJson(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<System.Text.Json.JsonSerializerOptions> configure) { }
+    }
+    public static class BondstoneEnvelopeDispatcherBuilderExtensions
+    {
+        public static Bondstone.Configuration.BondstoneBuilder UseDurableEnvelopeDispatcher(this Bondstone.Configuration.BondstoneBuilder builder, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableEnvelopeDispatcher> factory, string dispatcherName = "AppOwned", Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime = 0) { }
+        public static Bondstone.Configuration.BondstoneOutboxBuilder UseDurableEnvelopeDispatcher(this Bondstone.Configuration.BondstoneOutboxBuilder outbox, System.Func<System.IServiceProvider, Bondstone.Persistence.IDurableEnvelopeDispatcher> factory, string dispatcherName = "AppOwned", Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime = 0) { }
+        public static Bondstone.Configuration.BondstoneBuilder UseDurableEnvelopeDispatcher<TDispatcher>(this Bondstone.Configuration.BondstoneBuilder builder, string dispatcherName = "AppOwned", Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime = 0)
+            where TDispatcher :  class, Bondstone.Persistence.IDurableEnvelopeDispatcher { }
+        public static Bondstone.Configuration.BondstoneOutboxBuilder UseDurableEnvelopeDispatcher<TDispatcher>(this Bondstone.Configuration.BondstoneOutboxBuilder outbox, string dispatcherName = "AppOwned", Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime = 0)
+            where TDispatcher :  class, Bondstone.Persistence.IDurableEnvelopeDispatcher { }
     }
     public sealed class BondstoneOutboxBuilder
     {
@@ -44,11 +56,27 @@ namespace Bondstone.Configuration
     public static class DurableModulePersistenceServiceCollectionExtensions
     {
         public static Bondstone.Persistence.DurableModulePersistenceRegistrationRegistry GetOrAddDurableModulePersistenceRegistrationRegistry(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection UseDurableModuleIncomingInboxDispatcherAggregator(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection UseDurableModuleOutboxDispatchAggregator(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     public interface IBondstoneConfigurationValidator
     {
         void Validate(Bondstone.Configuration.BondstoneConfigurationValidationContext context);
+    }
+}
+namespace Bondstone.DomainEvents
+{
+    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct, Inherited=false)]
+    public sealed class DomainEventIdentityAttribute : System.Attribute
+    {
+        public DomainEventIdentityAttribute(string name) { }
+        public string Name { get; }
+    }
+    public interface IDomainEvent { }
+    public interface IDomainEventSource
+    {
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.DomainEvents.IDomainEvent> PendingDomainEvents { get; }
+        void ClearPendingDomainEvents();
     }
 }
 namespace Bondstone.Messaging
@@ -61,16 +89,26 @@ namespace Bondstone.Messaging
     }
     public sealed class DurableCommandSendResult : System.IEquatable<Bondstone.Messaging.DurableCommandSendResult>
     {
+        public DurableCommandSendResult(System.Guid sendId, Bondstone.Messaging.DurableOperationHandle? operation, Bondstone.Messaging.DurableCommandSendStatus status) { }
         public DurableCommandSendResult(System.Guid sendId, System.Guid? durableOperationId, Bondstone.Messaging.DurableCommandSendStatus status) { }
         public System.Guid? DurableOperationId { get; }
+        public Bondstone.Messaging.DurableOperationHandle? Operation { get; }
         public System.Guid SendId { get; }
+        public string? SourceModule { get; }
         public Bondstone.Messaging.DurableCommandSendStatus Status { get; }
+        public string? TargetModule { get; }
     }
     public enum DurableCommandSendStatus
     {
         Accepted = 1,
         Rejected = 2,
         Duplicate = 3,
+    }
+    public sealed class DurableEnvelopeReceiveBinding : System.IEquatable<Bondstone.Messaging.DurableEnvelopeReceiveBinding>
+    {
+        public DurableEnvelopeReceiveBinding(string SubscriberModule, string SubscriberIdentity) { }
+        public string SubscriberIdentity { get; init; }
+        public string SubscriberModule { get; init; }
     }
     public sealed class DurableEventPublishResult : System.IEquatable<Bondstone.Messaging.DurableEventPublishResult>
     {
@@ -84,6 +122,25 @@ namespace Bondstone.Messaging
         Accepted = 1,
         Rejected = 2,
         Duplicate = 3,
+    }
+    public sealed class DurableOperationExpirationResult : System.IEquatable<Bondstone.Messaging.DurableOperationExpirationResult>
+    {
+        public DurableOperationExpirationResult(string moduleName, System.DateTimeOffset expiresBeforeUtc, Bondstone.Messaging.DurableOperationStatus terminalStatus, System.Collections.Generic.IReadOnlyList<Bondstone.Messaging.DurableOperationFinalizationResult> finalizations) { }
+        public int CandidateCount { get; }
+        public System.DateTimeOffset ExpiresBeforeUtc { get; }
+        public System.Collections.Generic.IReadOnlyList<Bondstone.Messaging.DurableOperationFinalizationResult> Finalizations { get; }
+        public int FinalizedCount { get; }
+        public string ModuleName { get; }
+        public Bondstone.Messaging.DurableOperationStatus TerminalStatus { get; }
+    }
+    public sealed class DurableOperationFinalizationResult : System.IEquatable<Bondstone.Messaging.DurableOperationFinalizationResult>
+    {
+        public DurableOperationFinalizationResult(Bondstone.Messaging.DurableOperationState state, bool wasFinalized) { }
+        public System.Guid DurableOperationId { get; }
+        public bool IsTerminal { get; }
+        public Bondstone.Messaging.DurableOperationState State { get; }
+        public Bondstone.Messaging.DurableOperationStatus Status { get; }
+        public bool WasFinalized { get; }
     }
     public sealed class DurableOperationResultDeserializationFailure : System.IEquatable<Bondstone.Messaging.DurableOperationResultDeserializationFailure>
     {
@@ -121,6 +178,12 @@ namespace Bondstone.Messaging
         public Bondstone.Messaging.DurableOperationStatus? Status { get; }
         public System.DateTimeOffset? UpdatedAtUtc { get; }
     }
+    public sealed class DurableOperationWaitResult<TResult> : System.IEquatable<Bondstone.Messaging.DurableOperationWaitResult<TResult>>
+    {
+        public DurableOperationWaitResult(bool completedWithinTimeout, Bondstone.Messaging.DurableOperationResult<TResult> result) { }
+        public bool CompletedWithinTimeout { get; }
+        public Bondstone.Messaging.DurableOperationResult<TResult> Result { get; }
+    }
     public sealed class DurablePayloadJsonOptions
     {
         public DurablePayloadJsonOptions() { }
@@ -136,6 +199,14 @@ namespace Bondstone.Messaging
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableCommandSendResult> SendAsync<TCommand>(TCommand command, string targetModule, string? partitionKey, System.Guid? durableOperationId = default, Bondstone.Messaging.MessageTraceContext? traceContext = null, System.Guid? causationId = default, System.Threading.CancellationToken ct = default)
             where TCommand : Bondstone.Messaging.IDurableCommand;
     }
+    public interface IDurableEnvelopeReceiver
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, Bondstone.Messaging.DurableEnvelopeReceiveBinding? binding = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveAsync(System.ReadOnlyMemory<byte> utf8Json, Bondstone.Messaging.DurableEnvelopeReceiveBinding? binding = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveAsync(string json, Bondstone.Messaging.DurableEnvelopeReceiveBinding? binding = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveCommandAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> ReceiveEventAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, string subscriberModule, string subscriberIdentity, System.Threading.CancellationToken ct = default);
+    }
     public interface IDurableEventPublisher
     {
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableEventPublishResult> PublishAsync<TEvent>(TEvent integrationEvent, System.Threading.CancellationToken ct = default)
@@ -143,10 +214,26 @@ namespace Bondstone.Messaging
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableEventPublishResult> PublishAsync<TEvent>(TEvent integrationEvent, string? partitionKey, System.Guid? durableOperationId = default, Bondstone.Messaging.MessageTraceContext? traceContext = null, System.Guid? causationId = default, System.Threading.CancellationToken ct = default)
             where TEvent : Bondstone.Messaging.IIntegrationEvent;
     }
+    public interface IDurableOperationExpirationProcessor
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationExpirationResult> MarkExpiredAsync(string moduleName, System.DateTimeOffset expiresBeforeUtc, Bondstone.Messaging.DurableOperationStatus terminalStatus, string reason, int maxCount = 100, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null, System.Threading.CancellationToken ct = default);
+    }
+    public interface IDurableOperationFinalizer
+    {
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationFinalizationResult> MarkCancelledAsync(string moduleName, System.Guid durableOperationId, string cancellationReason, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationFinalizationResult> MarkFailedAsync(string moduleName, System.Guid durableOperationId, string failureReason, Bondstone.Messaging.DurableOperationDiagnosticContext? diagnosticContext = null, System.Threading.CancellationToken ct = default);
+    }
     public interface IDurableOperationResultReader
     {
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> GetResultAsync<TResult>(Bondstone.Messaging.DurableOperationHandle operation, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> GetResultAsync<TResult>(System.Guid durableOperationId, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> GetResultAsync<TResult>(System.Guid durableOperationId, string moduleName, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationWaitResult<TResult>> TryWaitForResultAsync<TResult>(Bondstone.Messaging.DurableOperationHandle operation, System.TimeSpan timeout, System.TimeSpan? pollInterval = default, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationWaitResult<TResult>> TryWaitForResultAsync<TResult>(System.Guid durableOperationId, System.TimeSpan timeout, System.TimeSpan? pollInterval = default, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationWaitResult<TResult>> TryWaitForResultAsync<TResult>(System.Guid durableOperationId, string moduleName, System.TimeSpan timeout, System.TimeSpan? pollInterval = default, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> WaitForResultAsync<TResult>(Bondstone.Messaging.DurableOperationHandle operation, System.TimeSpan timeout, System.TimeSpan? pollInterval = default, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> WaitForResultAsync<TResult>(System.Guid durableOperationId, System.TimeSpan timeout, System.TimeSpan? pollInterval = default, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<Bondstone.Messaging.DurableOperationResult<TResult>> WaitForResultAsync<TResult>(System.Guid durableOperationId, string moduleName, System.TimeSpan timeout, System.TimeSpan? pollInterval = default, System.Threading.CancellationToken ct = default);
     }
     public interface IDurablePayloadSerializer
     {
@@ -172,6 +259,7 @@ namespace Bondstone.Messaging
         System.Type ResolveClrType(string messageTypeName);
         bool TryResolveClrType(string messageTypeName, out System.Type? clrType);
     }
+    public interface IQuery<TResult> { }
     [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Struct, Inherited=false)]
     public sealed class IntegrationEventIdentityAttribute : System.Attribute
     {
@@ -217,9 +305,8 @@ namespace Bondstone.Modules
         public Bondstone.Modules.BondstoneModuleCommandBuilder Commands { get; }
         public Bondstone.Modules.BondstoneModuleEventBuilder Events { get; }
         public string Name { get; }
+        public Bondstone.Modules.BondstoneModuleQueryBuilder Queries { get; }
         public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
-        public Bondstone.Modules.BondstoneModuleBuilder AddCommandPipelineContribution(Bondstone.Modules.ModuleCommandPipelineContribution contribution) { }
-        public Bondstone.Modules.BondstoneModuleBuilder AddEventSubscriberPipelineContribution(Bondstone.Modules.ModuleEventSubscriberPipelineContribution contribution) { }
         public Bondstone.Modules.BondstoneModuleBuilder UseDurableMessaging() { }
         public Bondstone.Modules.BondstoneModuleBuilder UseOutboxPersistenceProvider(string providerName) { }
         public Bondstone.Modules.BondstoneModuleBuilder UsePersistence(string providerName, System.Type? contextType = null) { }
@@ -267,6 +354,16 @@ namespace Bondstone.Modules
         public Bondstone.Modules.ModuleEventSubscriberRegistration RegisterSubscriber<TEvent, THandler>(string messageTypeName, string subscriberIdentity)
             where TEvent : Bondstone.Messaging.IIntegrationEvent
             where THandler :  class, Bondstone.Modules.IIntegrationEventHandler<TEvent> { }
+    }
+    public sealed class BondstoneModuleQueryBuilder
+    {
+        public string ModuleName { get; }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleQueryRoute> RegisterFromAssembly(System.Reflection.Assembly assembly) { }
+        public System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleQueryRoute> RegisterFromAssemblyContaining<TMarker>() { }
+        public Bondstone.Modules.ModuleQueryRoute RegisterHandler<TQuery, TResult, THandler>()
+            where TQuery : Bondstone.Messaging.IQuery<TResult>
+            where THandler :  class, Bondstone.Modules.IQueryHandler<TQuery, TResult> { }
     }
     public sealed class BondstoneModuleRegistration
     {
@@ -319,11 +416,6 @@ namespace Bondstone.Modules
         System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleCommandExecutionResult<TResult>> ExecuteResultAsync<TResult>(string moduleName, Bondstone.Messaging.ICommand<TResult> command, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleCommandExecutionResult<TResult>> ExecuteResultAsync<TResult>(string moduleName, Bondstone.Messaging.ICommand<TResult> command, Bondstone.Modules.ModuleCommandReceiveContext receiveContext, System.Threading.CancellationToken ct = default);
     }
-    public interface IModuleCommandPipelineBehavior<TCommand>
-        where TCommand : Bondstone.Messaging.ICommand
-    {
-        System.Threading.Tasks.ValueTask HandleAsync(TCommand command, Bondstone.Modules.ModuleCommandExecutionContext context, Bondstone.Modules.ModuleCommandPipelineNext next, System.Threading.CancellationToken ct = default);
-    }
     public interface IModuleCommandReceivePipeline
     {
         System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableInboxHandleResult> HandleOnceAsync(Bondstone.Messaging.DurableMessageEnvelope envelope, System.Threading.CancellationToken ct = default);
@@ -349,11 +441,6 @@ namespace Bondstone.Modules
         System.Threading.Tasks.ValueTask<Bondstone.Modules.ModuleEventSubscriberExecutionResult> ExecuteAsync<TEvent>(string moduleName, string messageTypeName, string subscriberIdentity, TEvent integrationEvent, Bondstone.Modules.ModuleEventSubscriberReceiveContext receiveContext, System.Threading.CancellationToken ct = default)
             where TEvent : Bondstone.Messaging.IIntegrationEvent;
     }
-    public interface IModuleEventSubscriberPipelineBehavior<TEvent>
-        where TEvent : Bondstone.Messaging.IIntegrationEvent
-    {
-        System.Threading.Tasks.ValueTask HandleAsync(TEvent integrationEvent, Bondstone.Modules.ModuleEventSubscriberExecutionContext context, Bondstone.Modules.ModuleEventSubscriberPipelineNext next, System.Threading.CancellationToken ct = default);
-    }
     public interface IModuleEventSubscriberRegistry
     {
         System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleEventSubscriberRegistration> Subscribers { get; }
@@ -364,27 +451,42 @@ namespace Bondstone.Modules
     {
         Bondstone.Modules.ModuleExecutionContext? Current { get; }
     }
-    public interface IModulePipelineExecutionContext
+    public interface IModulePostHandlerAction
     {
-        Bondstone.Modules.ModulePipelineFeatureCollection Features { get; }
-        string ModuleName { get; }
+        System.Threading.Tasks.ValueTask RunAsync(Bondstone.Modules.IModuleRuntimeExecutionContext context, System.Threading.CancellationToken ct = default);
     }
     public interface IModulePublishedEventRegistry
     {
         System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModulePublishedEventRegistration> PublishedEvents { get; }
     }
-    public sealed class ModuleCommandExecutionContext : Bondstone.Modules.IModulePipelineExecutionContext
+    public interface IModuleQueryExecutor
     {
-        public ModuleCommandExecutionContext(Bondstone.Modules.ModuleCommandRoute route, Bondstone.Modules.ModuleCommandReceiveContext? receiveContext = null) { }
-        public System.Guid? DurableOperationId { get; }
-        public Bondstone.Modules.ModulePipelineFeatureCollection Features { get; }
-        public string? HandlerIdentity { get; }
-        public string? MessageTypeName { get; }
-        public string ModuleName { get; }
-        public Bondstone.Modules.ModuleCommandReceiveContext? ReceiveContext { get; }
-        public Bondstone.Persistence.DurableInboxRecord? ReceiveInboxRecord { get; }
-        public Bondstone.Persistence.DurableInboxHandleResult? ReceiveInboxResult { get; }
-        public Bondstone.Modules.ModuleCommandRoute Route { get; }
+        System.Threading.Tasks.ValueTask<TResult> ExecuteAsync<TResult>(string moduleName, Bondstone.Messaging.IQuery<TResult> query, System.Threading.CancellationToken ct = default);
+    }
+    public interface IModuleQueryRouteRegistry
+    {
+        System.Collections.Generic.IReadOnlyCollection<Bondstone.Modules.ModuleQueryRoute> Routes { get; }
+        Bondstone.Modules.ModuleQueryRoute GetByQueryType(string moduleName, System.Type queryType);
+        bool TryGetByQueryType(string moduleName, System.Type queryType, out Bondstone.Modules.ModuleQueryRoute? route);
+    }
+    public interface IModuleRuntimeExecutionContext
+    {
+        string ModuleName { get; }
+        bool ObservesTransactionOutcome { get; }
+        System.Threading.Tasks.ValueTask NotifyTransactionCommittedAsync(System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask NotifyTransactionRolledBackAsync(System.Threading.CancellationToken ct = default);
+        System.IDisposable ObserveTransactionOutcome();
+        void OnTransactionCommitted(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> callback);
+        void OnTransactionRolledBack(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> callback);
+    }
+    public interface IModuleTransactionRunner
+    {
+        System.Threading.Tasks.ValueTask ExecuteAsync(Bondstone.Modules.IModuleRuntimeExecutionContext context, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> operation, System.Threading.CancellationToken ct = default);
+    }
+    public interface IQueryHandler<in TQuery, TResult>
+        where in TQuery : Bondstone.Messaging.IQuery<TResult>
+    {
+        System.Threading.Tasks.ValueTask<TResult> HandleAsync(TQuery query, System.Threading.CancellationToken ct = default);
     }
     public sealed class ModuleCommandExecutionResult : System.IEquatable<Bondstone.Modules.ModuleCommandExecutionResult>
     {
@@ -397,16 +499,6 @@ namespace Bondstone.Modules
         public Bondstone.Persistence.DurableInboxHandleResult? ReceiveInboxResult { get; }
         public TResult Result { get; }
     }
-    public sealed class ModuleCommandPipelineContribution
-    {
-        public ModuleCommandPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool>? appliesToModule, System.Func<System.IServiceProvider, System.Type, object> createBehavior) { }
-        public ModuleCommandPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Type behaviorType, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool>? appliesToModule = null) { }
-        public Bondstone.Modules.ModulePipelineStepKind Kind { get; }
-        public string Name { get; }
-        public int Order { get; }
-        public bool AppliesTo(Bondstone.Modules.BondstoneModuleRegistration module) { }
-    }
-    public delegate System.Threading.Tasks.ValueTask ModuleCommandPipelineNext(System.Threading.CancellationToken ct = default);
     public sealed class ModuleCommandReceiveContext
     {
         public ModuleCommandReceiveContext(Bondstone.Persistence.DurableInboxRecord inboxRecord, System.Guid? durableOperationId = default) { }
@@ -425,42 +517,11 @@ namespace Bondstone.Modules
         public string ModuleName { get; }
         public System.Type? ResultType { get; }
     }
-    public static class ModuleCommandSystemPipelineOrder
-    {
-        public const int ExecutionContext = 100;
-        public const int OperationState = 25;
-        public const int ReceiveInbox = 50;
-        public const int Transaction = 0;
-        public const int Validation = 200;
-    }
-    public sealed class ModuleEventSubscriberExecutionContext : Bondstone.Modules.IModulePipelineExecutionContext
-    {
-        public ModuleEventSubscriberExecutionContext(Bondstone.Modules.ModuleEventSubscriberRegistration subscriber, Bondstone.Modules.ModuleEventSubscriberReceiveContext? receiveContext = null) { }
-        public System.Guid? DurableOperationId { get; }
-        public Bondstone.Modules.ModulePipelineFeatureCollection Features { get; }
-        public string MessageTypeName { get; }
-        public string ModuleName { get; }
-        public Bondstone.Modules.ModuleEventSubscriberReceiveContext? ReceiveContext { get; }
-        public Bondstone.Persistence.DurableInboxRecord? ReceiveInboxRecord { get; }
-        public Bondstone.Persistence.DurableInboxHandleResult? ReceiveInboxResult { get; }
-        public Bondstone.Modules.ModuleEventSubscriberRegistration Subscriber { get; }
-        public string SubscriberIdentity { get; }
-    }
     public sealed class ModuleEventSubscriberExecutionResult : System.IEquatable<Bondstone.Modules.ModuleEventSubscriberExecutionResult>
     {
         public ModuleEventSubscriberExecutionResult(Bondstone.Persistence.DurableInboxHandleResult? receiveInboxResult = null) { }
         public Bondstone.Persistence.DurableInboxHandleResult? ReceiveInboxResult { get; }
     }
-    public sealed class ModuleEventSubscriberPipelineContribution
-    {
-        public ModuleEventSubscriberPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool>? appliesToModule, System.Func<System.IServiceProvider, System.Type, object> createBehavior) { }
-        public ModuleEventSubscriberPipelineContribution(string name, Bondstone.Modules.ModulePipelineStepKind kind, int order, System.Type behaviorType, System.Func<Bondstone.Modules.BondstoneModuleRegistration, bool>? appliesToModule = null) { }
-        public Bondstone.Modules.ModulePipelineStepKind Kind { get; }
-        public string Name { get; }
-        public int Order { get; }
-        public bool AppliesTo(Bondstone.Modules.BondstoneModuleRegistration module) { }
-    }
-    public delegate System.Threading.Tasks.ValueTask ModuleEventSubscriberPipelineNext(System.Threading.CancellationToken ct = default);
     public sealed class ModuleEventSubscriberReceiveContext
     {
         public ModuleEventSubscriberReceiveContext(Bondstone.Persistence.DurableInboxRecord inboxRecord, System.Guid? durableOperationId = default) { }
@@ -476,30 +537,10 @@ namespace Bondstone.Modules
         public string ModuleName { get; }
         public string SubscriberIdentity { get; }
     }
-    public static class ModuleEventSubscriberSystemPipelineOrder
-    {
-        public const int ExecutionContext = 100;
-        public const int ReceiveInbox = 50;
-        public const int Transaction = 0;
-    }
     public sealed class ModuleExecutionContext
     {
         public ModuleExecutionContext(string moduleName) { }
         public string ModuleName { get; }
-    }
-    public sealed class ModulePipelineFeatureCollection
-    {
-        public ModulePipelineFeatureCollection() { }
-        public System.IDisposable Push<TFeature>(TFeature feature)
-            where TFeature :  class { }
-        public bool TryGet<TFeature>(out TFeature? feature)
-            where TFeature :  class { }
-    }
-    public enum ModulePipelineStepKind
-    {
-        System = 0,
-        Capability = 1,
-        Application = 2,
     }
     public sealed class ModulePublishedEventRegistration
     {
@@ -507,5 +548,42 @@ namespace Bondstone.Modules
         public string MessageTypeName { get; }
         public Bondstone.Messaging.MessageTypeRegistration MessageTypeRegistration { get; }
         public string ModuleName { get; }
+    }
+    public sealed class ModuleQueryRoute
+    {
+        public System.Type HandlerType { get; }
+        public string ModuleName { get; }
+        public System.Type QueryType { get; }
+        public System.Type ResultType { get; }
+    }
+}
+namespace Bondstone.Persistence
+{
+    public sealed class DurableIncomingInboxDispatcher : Bondstone.Persistence.IDurableIncomingInboxDispatcher
+    {
+        public DurableIncomingInboxDispatcher(Bondstone.Persistence.IDurableIncomingInboxClaimer claimer, Bondstone.Modules.IModuleCommandReceivePipeline commandReceivePipeline, Bondstone.Modules.IModuleEventReceivePipeline eventReceivePipeline, Bondstone.Persistence.IDurableIncomingInboxOutcomeRecorder outcomeRecorder, Bondstone.Persistence.IDurableIncomingInboxFailurePolicy failurePolicy, System.TimeProvider? timeProvider = null) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxProcessingResult> ProcessAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default) { }
+    }
+    public sealed class DurableIncomingInboxFailurePolicy : Bondstone.Persistence.IDurableIncomingInboxFailurePolicy
+    {
+        public DurableIncomingInboxFailurePolicy(Bondstone.Persistence.DurableIncomingInboxProcessingOptions? options = null) { }
+        public Bondstone.Persistence.DurableIncomingInboxFailureDecision DecideFailure(Bondstone.Persistence.DurableIncomingInboxRecord record, string failureReason, System.DateTimeOffset failedAtUtc) { }
+    }
+    public sealed class DurableIncomingInboxProcessingOptions
+    {
+        public const int DefaultMaxAttempts = 5;
+        public DurableIncomingInboxProcessingOptions(int maxAttempts = 5, System.Collections.Generic.IReadOnlyList<System.TimeSpan>? retryDelays = null) { }
+        public int MaxAttempts { get; }
+        public System.Collections.Generic.IReadOnlyList<System.TimeSpan> RetryDelays { get; }
+        public static System.Collections.Generic.IReadOnlyList<System.TimeSpan> DefaultRetryDelays { get; }
+    }
+    public sealed class DurableModuleIncomingInboxDispatcherAggregator : Bondstone.Persistence.IDurableIncomingInboxDispatcher
+    {
+        public DurableModuleIncomingInboxDispatcherAggregator(System.IServiceProvider serviceProvider, Bondstone.Persistence.DurableModulePersistenceRegistrationRegistry registrationRegistry) { }
+        public System.Threading.Tasks.ValueTask<Bondstone.Persistence.DurableIncomingInboxProcessingResult> ProcessAsync(string claimedBy, System.TimeSpan leaseDuration, int maxCount = 100, System.Threading.CancellationToken ct = default) { }
+    }
+    public interface IDurableIncomingInboxFailurePolicy
+    {
+        Bondstone.Persistence.DurableIncomingInboxFailureDecision DecideFailure(Bondstone.Persistence.DurableIncomingInboxRecord record, string failureReason, System.DateTimeOffset failedAtUtc);
     }
 }

@@ -52,6 +52,21 @@ public sealed class OutboxMessageEntityTests
         Assert.Equal(record, mapped);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void ToRecord_WhenEventEntityWasMapped_RoundTripsEventWithoutTargetModule()
+    {
+        DurableOutboxRecord record = CreateEventRecord();
+        OutboxMessageEntity entity = OutboxMessageEntity.FromRecord(record);
+
+        DurableOutboxRecord mapped = entity.ToRecord();
+
+        Assert.Equal(MessageKind.Event, entity.MessageKind);
+        Assert.Null(entity.TargetModule);
+        Assert.Equal(record, mapped);
+        Assert.Null(mapped.Envelope.TargetModule);
+    }
+
     private static DurableOutboxRecord CreateRecord()
     {
         var traceContext = new MessageTraceContext(
@@ -84,5 +99,22 @@ public sealed class OutboxMessageEntityTests
             envelope,
             DateTimeOffset.Parse("2026-06-04T00:00:01+00:00"),
             dispatchState);
+    }
+
+    private static DurableOutboxRecord CreateEventRecord()
+    {
+        var envelope = new DurableMessageEnvelope(
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            MessageKind.Event,
+            "sales.customer.registered.v1",
+            "sales",
+            targetModule: null,
+            """ {"customerId":"customer-123"} """,
+            DateTimeOffset.Parse("2026-06-04T00:00:00+00:00"),
+            partitionKey: "customer-123");
+
+        return new DurableOutboxRecord(
+            envelope,
+            DateTimeOffset.Parse("2026-06-04T00:00:01+00:00"));
     }
 }

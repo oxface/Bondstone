@@ -1,5 +1,6 @@
 using Bondstone.Messaging;
 using Bondstone.Modules;
+using Bondstone.Utility;
 
 namespace Bondstone.Persistence;
 
@@ -43,6 +44,43 @@ internal sealed class DurableModuleOperationReader : IDurableOperationReader
         }
 
         return bestState;
+    }
+
+    public async ValueTask<DurableOperationState?> GetStateAsync(
+        Guid durableOperationId,
+        string moduleName,
+        CancellationToken ct = default)
+    {
+        string normalizedModuleName = moduleName.NormalizeRequired(
+            nameof(moduleName),
+            "Module name");
+
+        if (!_moduleRuntimeRegistry.TryGetRuntime(
+                normalizedModuleName,
+                out ModuleRuntimeDescriptor? runtime)
+            || runtime is null)
+        {
+            throw new InvalidOperationException(
+                DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
+                    _moduleRuntimeRegistry,
+                    normalizedModuleName,
+                    "durable module operation-state store"));
+        }
+
+        if (runtime.TryGetDurableOperationStateStore(
+                out IDurableOperationStateStore? store)
+            && store is not null)
+        {
+            return await store.GetStateAsync(
+                durableOperationId,
+                ct);
+        }
+
+        throw new InvalidOperationException(
+            DurableModulePersistenceDiagnosticFormatter.MissingModuleRegistration(
+                _moduleRuntimeRegistry,
+                runtime.ModuleName,
+                "durable module operation-state store"));
     }
 
     private static int Compare(

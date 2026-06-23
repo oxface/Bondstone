@@ -1,4 +1,5 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Bondstone.Modules;
 using Bondstone.Persistence;
@@ -31,18 +32,37 @@ public sealed class BondstoneBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void AddBondstone_WhenDispatcherIsConfiguredWithoutPersistence_Throws()
+    public void AddBondstone_WhenDispatcherIsConfiguredWithoutPersistence_ThrowsSetupCode()
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(builder =>
             {
                 builder.Outbox.MarkTransport("test transport");
                 builder.Outbox.MarkDispatcher("test dispatcher");
             }));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingOutboxPersistence,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("persistence provider", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void AddBondstone_WhenDurableMessagingModuleHasNoPersistence_ThrowsSetupCode()
+    {
+        var services = new ServiceCollection();
+
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
+            () => services.AddBondstone(builder =>
+                builder.Module("sales", module => module.UseDurableMessaging())));
+
+        Assert.Equal(
+            BondstoneSetupCodes.MissingModulePersistence,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Contains("does not declare persistence", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -51,14 +71,17 @@ public sealed class BondstoneBuilderTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(builder =>
             {
                 builder.Outbox.MarkPersistenceProvider("test persistence");
                 builder.Outbox.MarkDispatcher("test dispatcher");
             }));
 
-        Assert.Contains("outbox transport", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            BondstoneSetupCodes.MissingDispatcher,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Contains("envelope dispatcher", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -79,6 +102,26 @@ public sealed class BondstoneBuilderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void AddBondstone_WhenAppOwnedDispatcherIsConfigured_ReturnsServices()
+    {
+        var services = new ServiceCollection();
+
+        IServiceCollection result = services.AddBondstone(builder =>
+        {
+            builder.Outbox.MarkPersistenceProvider("test persistence");
+            builder.UseDurableEnvelopeDispatcher<TestEnvelopeDispatcher>();
+            builder.Outbox.MarkDispatcher("test dispatcher");
+        });
+
+        Assert.Same(services, result);
+        ServiceDescriptor descriptor = Assert.Single(
+            services,
+            service => service.ServiceType == typeof(IDurableEnvelopeDispatcher));
+        Assert.Equal(typeof(TestEnvelopeDispatcher), descriptor.ImplementationType);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void AddBondstone_WhenTransportOnlyIsConfigured_AllowsManualComposition()
     {
         var services = new ServiceCollection();
@@ -87,6 +130,61 @@ public sealed class BondstoneBuilderTests
             builder => builder.Outbox.MarkTransport("test transport"));
 
         Assert.Same(services, result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void RegisterMessage_WhenRemoteContractIsRegistered_RegistersIdentityWithoutRoute()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstone(builder =>
+        {
+            builder.RegisterMessage<TestRemoteCommand>();
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IMessageTypeRegistry messageTypeRegistry =
+            serviceProvider.GetRequiredService<IMessageTypeRegistry>();
+        IModuleCommandRouteRegistry routeRegistry =
+            serviceProvider.GetRequiredService<IModuleCommandRouteRegistry>();
+
+        Assert.Equal(
+            "sales.test.remote-command.v1",
+            messageTypeRegistry.GetMessageTypeName<TestRemoteCommand>());
+        Assert.Empty(routeRegistry.Routes);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void RegisterMessagesFromAssemblyContaining_WhenRemoteContractsAreRegistered_RegistersIdentitiesOnly()
+    {
+        var services = new ServiceCollection();
+
+        services.AddBondstone(builder =>
+        {
+            builder.RegisterMessagesFromAssemblyContaining<BondstoneBuilderTests>();
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        IMessageTypeRegistry messageTypeRegistry =
+            serviceProvider.GetRequiredService<IMessageTypeRegistry>();
+        IModuleCommandRouteRegistry routeRegistry =
+            serviceProvider.GetRequiredService<IModuleCommandRouteRegistry>();
+        IModuleEventSubscriberRegistry subscriberRegistry =
+            serviceProvider.GetRequiredService<IModuleEventSubscriberRegistry>();
+        IBondstoneModuleRegistry moduleRegistry =
+            serviceProvider.GetRequiredService<IBondstoneModuleRegistry>();
+
+        Assert.Equal(
+            "sales.test.remote-command.v1",
+            messageTypeRegistry.GetMessageTypeName<TestRemoteCommand>());
+        Assert.Equal(
+            "sales.test.event.v1",
+            messageTypeRegistry.GetMessageTypeName<TestEvent>());
+        Assert.Empty(routeRegistry.Routes);
+        Assert.Empty(subscriberRegistry.Subscribers);
+        Assert.Empty(moduleRegistry.Modules);
     }
 
     [Fact]
@@ -119,7 +217,7 @@ public sealed class BondstoneBuilderTests
         var services = new ServiceCollection();
         services.AddSingleton<IBondstoneModuleRegistry, ConsumerModuleRegistry>();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(_ => { }));
 
         Assert.Contains(
@@ -135,7 +233,7 @@ public sealed class BondstoneBuilderTests
         var services = new ServiceCollection();
         services.AddSingleton<IModuleExecutionContextAccessor, ConsumerModuleExecutionContextAccessor>();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(_ => { }));
 
         Assert.Contains(
@@ -150,7 +248,7 @@ public sealed class BondstoneBuilderTests
     {
         var services = new ServiceCollection();
 
-        ArgumentException exception = Assert.Throws<ArgumentException>(
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
             () => services.AddBondstone(builder =>
                 builder.Outbox.MarkPersistenceProvider(" ")));
 
@@ -190,7 +288,7 @@ public sealed class BondstoneBuilderTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("sales", module =>
@@ -209,7 +307,7 @@ public sealed class BondstoneBuilderTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("sales", module =>
@@ -229,7 +327,7 @@ public sealed class BondstoneBuilderTests
     {
         var services = new ServiceCollection();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("fulfillment", module =>
@@ -255,7 +353,7 @@ public sealed class BondstoneBuilderTests
                 "sales",
                 _ => new CapturingOutboxWriter()));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(bondstone =>
             {
                 bondstone.Module("sales", module =>
@@ -281,7 +379,7 @@ public sealed class BondstoneBuilderTests
                 "unknown",
                 _ => new NoOpOutboxDispatcher()));
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => services.AddBondstone(_ => { }));
 
         Assert.Contains("unknown module", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -290,6 +388,9 @@ public sealed class BondstoneBuilderTests
 
     [DurableCommandIdentity("sales.test.command.v1")]
     public sealed record TestCommand : IDurableCommand;
+
+    [DurableCommandIdentity("sales.test.remote-command.v1")]
+    public sealed record TestRemoteCommand : IDurableCommand;
 
     public sealed class TestCommandHandler : ICommandHandler<TestCommand>
     {
@@ -318,6 +419,16 @@ public sealed class BondstoneBuilderTests
     {
         public ValueTask WriteAsync(
             DurableMessageEnvelope envelope,
+            CancellationToken ct = default)
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class TestEnvelopeDispatcher : IDurableEnvelopeDispatcher
+    {
+        public ValueTask DispatchAsync(
+            DurableOutboxRecord record,
             CancellationToken ct = default)
         {
             return ValueTask.CompletedTask;

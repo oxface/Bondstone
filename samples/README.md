@@ -6,15 +6,14 @@
 sample. It proves the current durable command and integration event loop with:
 
 - module registration for `ordering`, `fulfillment`, and `billing`;
-- mixed persistence with EF-backed ordering/fulfillment modules and a
-  `Bondstone.Persistence.Postgres` billing module;
+- EF-backed ordering, fulfillment, and billing modules;
 - module-owned assemblies with `IBondstoneModule` registration objects,
   assembly-scanned command handler registration, and explicit event
   registration;
 - ordering and fulfillment contract assemblies that publish
   `OrderPlacedEvent` and `InventoryReservedEvent`;
 - separate module-owned EF Core `DbContext` types and PostgreSQL schemas;
-- a billing schema using `Bondstone.Persistence.Postgres`;
+- a billing schema using EF Core/PostgreSQL persistence;
 - EF-backed module-local domain event persistence in fulfillment;
 - outbox-backed durable command sending from ordering to fulfillment;
 - outbox-backed durable event publishing from ordering and fulfillment;
@@ -56,20 +55,26 @@ The local transport is not a production broker adapter or hidden fallback.
 `UseModuleQueueConvention()` is complete local durable command topology for
 module-to-module command dispatch. Event routes still bind subscribers
 explicitly because subscriber module and subscriber identity are part of
-durable receive identity. The sample also exposes an explicit RabbitMQ
-registration path that keeps broker connection and topology setup app-owned.
+durable receive identity.
 
 ## Service-Split Path
 
-The current service-split proof is the modular-monolith sample shape, not a
-second sample host. The bounded extraction path is to keep the contract
-assemblies stable, keep module persistence isolated by schema, and treat
-`fulfillment` as the documented extraction candidate because it receives a
-durable command and publishes an integration event.
+The current service-split proof reuses the modular-monolith modules and runs
+ordering and fulfillment in separate service providers in
+`tests/Bondstone.Samples.Tests`. The bounded extraction path is to keep the
+contract assemblies stable, keep module persistence isolated by schema, and
+treat `fulfillment` as the documented extraction candidate because it receives
+a durable command and publishes an integration event.
 
-Use the RabbitMQ registration path when proving a broker boundary. Broker
-provisioning, deployment, authentication, product UI, and a provider matrix
-stay out of this sample.
+Source services that send commands handled by extracted modules register the
+remote contract identity with `BondstoneBuilder.RegisterMessage<T>()` without
+registering the remote handler. Target services register their owning handlers
+normally.
+
+When proving a broker boundary, keep broker provisioning, native consumers,
+acknowledgement, retry, and dead-letter policy in the app or chosen transport
+library. Use Bondstone's durable envelope serializer,
+`IDurableEnvelopeDispatcher`, and `IDurableEnvelopeReceiver` at the boundary.
 
 Run the app with a PostgreSQL connection string:
 
@@ -86,7 +91,8 @@ curl -X POST http://localhost:5000/orders \
   -d '{"sku":"coffee-mug","quantity":2}'
 ```
 
-Read durable state with the returned order and operation ids:
+The response includes the order id and durable operation handle. Read durable
+state with the returned order id and the handle's operation id:
 
 ```bash
 curl "http://localhost:5000/orders/<order-id>?operationId=<operation-id>"

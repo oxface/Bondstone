@@ -6,7 +6,7 @@ using Npgsql;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox;
 
-public sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
+internal sealed class PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
     TDbContext context,
     string? schema = null)
     : IDurableOutboxDispatchRecorder

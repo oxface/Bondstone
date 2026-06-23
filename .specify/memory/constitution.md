@@ -63,7 +63,7 @@ Bondstone uses a library-maintenance monorepo layout:
 - `.specify/memory/constitution.md` contains the SpecKit constitution.
 - `docs/architecture.md` contains durable runtime architecture and
   package-boundary direction.
-- `docs/project-profile.md` contains brownfield project profile facts.
+- `.specify/memory/project-profile.md` contains brownfield project profile facts.
 - `.specify/AGENTS.md`, `.specify/README.md`, and `.specify/extensions.yml`
   record source-controlled SpecKit routing and extension choices. Installed
   templates, scripts, and extension payloads are local tooling unless
@@ -87,7 +87,8 @@ including public APIs.
 
 ## Development Workflow
 
-Feature work SHOULD use SpecKit artifacts as change-scoped intent:
+Feature work SHOULD use SpecKit artifacts as change-scoped intent and use the
+Bondstone project profile as brownfield context:
 
 1. Create or refine a feature spec under `specs/`.
 2. Produce a plan that records affected packages, package-boundary impact,

@@ -14,7 +14,7 @@ Start with:
   before changing runtime architecture, durable messaging, persistence,
   hosting, transport behavior, package boundaries, public API strategy,
   documentation ownership, or verification strategy.
-- [docs/project-profile.md](docs/project-profile.md)
+- [.specify/memory/project-profile.md](.specify/memory/project-profile.md)
   before changing brownfield assumptions.
 - [.specify/README.md](.specify/README.md) before changing the SpecKit
   constitution, extension choices, or local SpecKit routing.

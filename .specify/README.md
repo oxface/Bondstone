@@ -11,11 +11,13 @@ paths.
   non-negotiable implementation principles.
 - [../docs/architecture.md](../docs/architecture.md) owns durable internal
   runtime architecture and package-boundary direction.
-- [../docs/project-profile.md](../docs/project-profile.md) records the
+- [memory/project-profile.md](memory/project-profile.md) records the
   brownfield scan used to seed SpecKit.
 - [extensions.yml](extensions.yml) records enabled extensions and hook policy.
-- Local ignored SpecKit tooling may include `templates/`, `scripts/`,
-  `extensions/`, `integrations/`, and `workflows/`.
+- [templates/](templates/) contains source-controlled Bondstone overrides for
+  SpecKit feature specs, plans, tasks, and checklists.
+- Local ignored SpecKit tooling may include extension caches or generated
+  integration state.
 
 Consumer-facing and repository-operation guidance remains in [docs/](../docs/).
 GitHub Issues and Projects remain the backlog and prioritization surface.

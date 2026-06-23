@@ -449,8 +449,9 @@ FodyWeavers.xsd
 !.agents/skills/README.md
 !.agents/skills/**
 
-# Keep SpecKit project memory and repo indexes reviewable, but do not commit
-# installed SpecKit tooling, templates, scripts, extension payloads, or caches.
+# Keep SpecKit project memory, repo indexes, and Bondstone template overrides
+# reviewable, but do not commit installed SpecKit scripts, extension payloads,
+# integration state, or caches.
 .specify/*
 !.specify/AGENTS.md
 !.specify/README.md
@@ -458,6 +459,13 @@ FodyWeavers.xsd
 !.specify/memory/
 .specify/memory/*
 !.specify/memory/constitution.md
+!.specify/memory/project-profile.md
+!.specify/templates/
+.specify/templates/*
+!.specify/templates/spec-template.md
+!.specify/templates/plan-template.md
+!.specify/templates/tasks-template.md
+!.specify/templates/checklist-template.md
 
 # Feature specs are project work artifacts and should remain source-controlled.
 !specs/

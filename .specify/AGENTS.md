@@ -13,14 +13,14 @@ Start with:
   architecture, durable messaging, persistence, hosting, transport behavior,
   package boundaries, public API strategy, documentation ownership, or
   verification strategy.
-- [../docs/project-profile.md](../docs/project-profile.md) before changing
+- [memory/project-profile.md](memory/project-profile.md) before changing
   brownfield assumptions.
 - [../docs/README.md](../docs/README.md) for consumer-facing and
   repository-operation documentation ownership.
 - [../docs/repository.md](../docs/repository.md) for the reference-based
   context-index convention.
 
-Keep durable project context in the SpecKit constitution, `/docs`, package
-READMEs, and scoped `AGENTS.md` files. Treat ignored
-templates/scripts/extensions as local SpecKit tooling, not as durable
-repository documentation.
+Keep durable project context in the SpecKit constitution, SpecKit memory,
+`/docs`, package READMEs, templates, and scoped `AGENTS.md` files. Treat
+extension caches and generated integration state as local tooling, not as
+durable repository documentation.

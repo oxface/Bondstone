@@ -1,12 +1,12 @@
 # Bondstone Documentation
 
 This folder contains consumer-facing documentation, repository-operation
-documentation, and durable architecture/profile references. SpecKit owns the
-constitution and feature artifacts:
+documentation, and durable architecture references. SpecKit owns the
+constitution, brownfield project profile, and feature artifacts:
 
 - [SpecKit constitution](../.specify/memory/constitution.md)
 - [Bondstone architecture](architecture.md)
-- [Bondstone project profile](project-profile.md)
+- [Bondstone project profile](../.specify/memory/project-profile.md)
 - Feature-local specs under `../specs/` when present
 
 ## Index
@@ -24,8 +24,6 @@ constitution and feature artifacts:
   capabilities to package IDs and namespaces.
 - [architecture.md](architecture.md) records durable runtime architecture and
   package-boundary direction.
-- [project-profile.md](project-profile.md) records brownfield project facts
-  discovered during SpecKit adoption.
 - [public-api.md](public-api.md) records public API surface classification used
   during cleanup work.
 - [repository.md](repository.md) records repository layout, tooling, and code
@@ -42,7 +40,7 @@ constitution and feature artifacts:
 - Bondstone architecture owns internal runtime architecture and durable
   boundary rules.
 - Bondstone project profile owns brownfield repository facts used by agents and
-  migration specs.
+  migration specs under `../.specify/memory/project-profile.md`.
 - SpecKit feature specs, plans, and tasks own change-scoped intent and
   implementation deltas.
 - `/docs` owns library-user and repository-operation guidance.
@@ -71,7 +69,6 @@ operations, keep it in this folder.
   tracking authorities.
 - `architecture.md` owns durable runtime architecture and package-boundary
   direction.
-- `project-profile.md` owns brownfield repository profile facts.
 - `public-api.md` owns current package public API classification notes.
 - `repository.md` owns repository layout, local tooling, CI, and C#
   conventions.
@@ -80,6 +77,7 @@ operations, keep it in this folder.
 
 ## Expanding Docs
 
-Add new `/docs` files for consumer-facing, repository-operation, architecture,
-or profile guidance. Add governance changes to the SpecKit constitution and
-change-scoped intent to feature specs.
+Add new `/docs` files for consumer-facing, repository-operation, or architecture
+guidance. Add governance changes to the SpecKit constitution, brownfield profile
+facts to `.specify/memory/project-profile.md`, and change-scoped intent to
+feature specs.

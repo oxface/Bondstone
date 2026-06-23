@@ -4,7 +4,7 @@ description: "Migrated task list for existing local transport feature"
 
 # Tasks: Local Transport
 
-**Input**: Migrated design documents from `specs/local-transport/`
+**Input**: Migrated design documents from `specs/001-local-transport/`
 
 **Prerequisites**: Existing implementation in `src/Bondstone.Transport.Local`; existing tests in `tests/Bondstone.Transport.Local.Tests`
 

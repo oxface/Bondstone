@@ -15,8 +15,8 @@ consumer-facing package docs, and operations docs live under `docs/`.
 - [Bondstone architecture](docs/architecture.md) owns internal runtime
   architecture, package-boundary rules, durable behavior, and documentation
   ownership.
-- [Bondstone project profile](docs/project-profile.md) records the brownfield
-  scan used to seed SpecKit.
+- [Bondstone project profile](.specify/memory/project-profile.md) records the
+  brownfield scan used to seed SpecKit.
 - Feature-local specs under `specs/` own change-scoped implementation intent
   when present.
 
@@ -42,6 +42,8 @@ behind a package.
 
 - [docs/README.md](docs/README.md) indexes consumer-facing and repository
   operation docs.
+- [.specify/memory/project-profile.md](.specify/memory/project-profile.md)
+  records brownfield project facts used by SpecKit workflows.
 - [docs/setup.md](docs/setup.md) is the primary user-facing setup example.
 - [docs/package-discovery.md](docs/package-discovery.md) maps capabilities to
   packages and namespaces.

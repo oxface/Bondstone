@@ -2,7 +2,7 @@
 
 **Branch**: `N/A - migrated existing functionality` | **Date**: 2026-06-23 | **Spec**: [spec.md](spec.md)
 
-**Input**: Migrated feature specification from `specs/local-transport/spec.md`
+**Input**: Migrated feature specification from `specs/001-local-transport/spec.md`
 
 ## Summary
 
@@ -56,7 +56,7 @@ _GATE: Passed for migrated behavior based on current implementation evidence._
 ### Documentation (this feature)
 
 ```text
-specs/local-transport/
+specs/001-local-transport/
 ├── spec.md
 ├── plan.md
 └── tasks.md

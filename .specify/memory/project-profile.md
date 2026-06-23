@@ -2,8 +2,8 @@
 
 Generated during the SpecKit brownfield bootstrap on 2026-06-23 from the
 current repository structure, package metadata, tests, docs, and surviving
-legacy planning artifacts. This is a repository profile document, not SpecKit
-constitution memory.
+legacy planning artifacts. This is SpecKit brownfield memory, not consumer
+documentation and not constitution governance.
 
 ## Tech Stack
 
@@ -29,8 +29,9 @@ constitution memory.
 - `docs/`: consumer-facing and repository-operation documentation.
 - `.agents/skills/`: agent workflows.
 - `.specify/`: source-controlled SpecKit constitution, indexes, and extension
-  choices; ignored local SpecKit tooling may provide templates, scripts,
-  extensions, integrations, and workflows.
+  choices; source-controlled Bondstone template overrides live under
+  `.specify/templates/`; ignored local SpecKit tooling may provide scripts,
+  extension payloads, integration state, and caches.
 
 ## Package Map
 

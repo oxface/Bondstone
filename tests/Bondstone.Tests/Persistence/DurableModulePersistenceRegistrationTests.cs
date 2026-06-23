@@ -30,7 +30,7 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void CommandPipelineBehavior_WhenDuplicateModuleInboxExecutorsAreRegistered_ThrowsClearError()
+    public void CommandRuntime_WhenDuplicateModuleInboxExecutorsAreRegistered_ThrowsClearError()
     {
         var services = new ServiceCollection();
         RegisterInboxHandlerExecutor(services, new DurableModuleInboxHandlerExecutorRegistration(
@@ -43,6 +43,25 @@ public sealed class DurableModulePersistenceRegistrationTests
                 _ => new TestModuleInboxHandlerExecutor(" fulfillment "))));
 
         Assert.Contains("durable module inbox handler executor", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("exactly one", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void InboxInspector_WhenDuplicateModuleInspectionStoresAreRegistered_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        RegisterInboxInspectionStore(services, new DurableModuleInboxInspectionStoreRegistration(
+            "fulfillment",
+            _ => new TestModuleInboxInspectionStore()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => RegisterInboxInspectionStore(services, new DurableModuleInboxInspectionStoreRegistration(
+                " fulfillment ",
+                _ => new TestModuleInboxInspectionStore())));
+
+        Assert.Contains("durable module inbox inspection store", exception.Message, StringComparison.Ordinal);
         Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
         Assert.Contains("exactly one", exception.Message, StringComparison.Ordinal);
     }
@@ -83,6 +102,103 @@ public sealed class DurableModulePersistenceRegistrationTests
         Assert.Contains("durable module outbox dispatcher", exception.Message, StringComparison.Ordinal);
         Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
         Assert.Contains("exactly one", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void IncomingInboxDispatcherAggregator_WhenDuplicateModuleDispatchersAreRegistered_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        RegisterIncomingInboxDispatcher(services, new DurableModuleIncomingInboxDispatcherRegistration(
+            "fulfillment",
+            _ => new TestModuleIncomingInboxDispatcher()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => RegisterIncomingInboxDispatcher(services, new DurableModuleIncomingInboxDispatcherRegistration(
+                " fulfillment ",
+                _ => new TestModuleIncomingInboxDispatcher())));
+
+        Assert.Contains("durable module incoming inbox dispatcher", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("exactly one", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void OutboxInspector_WhenDuplicateModuleInspectionStoresAreRegistered_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        RegisterOutboxInspectionStore(services, new DurableModuleOutboxInspectionStoreRegistration(
+            "sales",
+            _ => new TestModuleOutboxInspectionStore()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => RegisterOutboxInspectionStore(services, new DurableModuleOutboxInspectionStoreRegistration(
+                " sales ",
+                _ => new TestModuleOutboxInspectionStore())));
+
+        Assert.Contains("durable module outbox inspection store", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("sales", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("exactly one", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void IncomingInboxIngestion_WhenDuplicateModuleBoundariesAreRegistered_ThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        RegisterIncomingInboxIngestionBoundary(
+            services,
+            new DurableModuleIncomingInboxIngestionBoundaryRegistration(
+                "fulfillment",
+                _ => CreateTestIncomingInboxIngestionBoundary()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => RegisterIncomingInboxIngestionBoundary(
+                services,
+                new DurableModuleIncomingInboxIngestionBoundaryRegistration(
+                    " fulfillment ",
+                    _ => CreateTestIncomingInboxIngestionBoundary())));
+
+        Assert.Contains("durable module incoming inbox ingestion boundary", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("exactly one", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void IncomingInboxIngestion_WhenReceiverModuleBoundaryIsMissing_ThrowsProviderSpecificError()
+    {
+        var services = new ServiceCollection();
+        RegisterIncomingInboxIngestionBoundary(
+            services,
+            new DurableModuleIncomingInboxIngestionBoundaryRegistration(
+                "billing",
+                _ => CreateTestIncomingInboxIngestionBoundary()));
+        services.AddBondstone(bondstone =>
+        {
+            bondstone.Module("fulfillment", module =>
+            {
+                module.UsePersistence("test persistence");
+            });
+            bondstone.Module("billing", module =>
+            {
+                module.UsePersistence("test persistence");
+            });
+        });
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider(
+            validateScopes: true);
+        using IServiceScope scope = serviceProvider.CreateScope();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => scope.ServiceProvider
+                .GetRequiredService<IDurableIncomingInboxIngestionBoundaryResolver>()
+                .Resolve("fulfillment"));
+
+        Assert.Contains("durable module incoming inbox ingestion boundary", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("test persistence", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -253,6 +369,44 @@ public sealed class DurableModulePersistenceRegistrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void IncomingInboxDispatcher_WhenModuleDispatcherIsMissing_FailsAtStartup()
+    {
+        var fulfillmentWriter = new CapturingModuleOutboxWriter("fulfillment");
+        var fulfillmentInboxExecutor = new CapturingModuleInboxHandlerExecutor("fulfillment");
+        var services = new ServiceCollection();
+        RegisterOutboxWriter(services, new DurableModuleOutboxWriterRegistration(
+            fulfillmentWriter.ModuleName,
+            _ => fulfillmentWriter));
+        RegisterInboxHandlerExecutor(services, new DurableModuleInboxHandlerExecutorRegistration(
+            fulfillmentInboxExecutor.ModuleName,
+            _ => fulfillmentInboxExecutor));
+        RegisterOperationStateStore(services, new DurableModuleOperationStateStoreRegistration(
+            "fulfillment",
+            _ => new CapturingModuleOperationStateStore("fulfillment")));
+        RegisterOutboxDispatcher(services, new DurableModuleOutboxDispatcherRegistration(
+            "fulfillment",
+            _ => new TestModuleOutboxDispatcher()));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => services.AddBondstone(bondstone =>
+            {
+                bondstone.Module("fulfillment", module =>
+                {
+                    module.UseDurableMessaging();
+                    module.UsePersistence("test persistence");
+                    module.Commands.RegisterHandler<TestCommand, TestCommandHandler>();
+                });
+            }));
+
+        Assert.Contains("missing durable module persistence role registrations", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("fulfillment", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("incoming inbox dispatcher", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(fulfillmentWriter.Envelopes);
+        Assert.Equal(0, fulfillmentInboxExecutor.HandleCalls);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task CommandSender_WhenModuleOperationStoreIsMissing_ThrowsProviderSpecificError()
     {
         var services = new ServiceCollection();
@@ -367,6 +521,14 @@ public sealed class DurableModulePersistenceRegistrationTests
             .AddInboxHandlerExecutor(registration);
     }
 
+    private static void RegisterInboxInspectionStore(
+        IServiceCollection services,
+        DurableModuleInboxInspectionStoreRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddInboxInspectionStore(registration);
+    }
+
     private static void RegisterOutboxDispatcher(
         IServiceCollection services,
         DurableModuleOutboxDispatcherRegistration registration)
@@ -375,12 +537,43 @@ public sealed class DurableModulePersistenceRegistrationTests
             .AddOutboxDispatcher(registration);
     }
 
+    private static void RegisterIncomingInboxDispatcher(
+        IServiceCollection services,
+        DurableModuleIncomingInboxDispatcherRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddIncomingInboxDispatcher(registration);
+    }
+
+    private static void RegisterOutboxInspectionStore(
+        IServiceCollection services,
+        DurableModuleOutboxInspectionStoreRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddOutboxInspectionStore(registration);
+    }
+
     private static void RegisterOperationStateStore(
         IServiceCollection services,
         DurableModuleOperationStateStoreRegistration registration)
     {
         services.GetOrAddDurableModulePersistenceRegistrationRegistry()
             .AddOperationStateStore(registration);
+    }
+
+    private static void RegisterIncomingInboxIngestionBoundary(
+        IServiceCollection services,
+        DurableModuleIncomingInboxIngestionBoundaryRegistration registration)
+    {
+        services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddIncomingInboxIngestionBoundary(registration);
+    }
+
+    private static DurableIncomingInboxIngestionBoundary CreateTestIncomingInboxIngestionBoundary()
+    {
+        return new DurableIncomingInboxIngestionBoundary(
+            new TestIncomingInboxIngestionStore(),
+            new TestIncomingInboxIngestionScope());
     }
 
     private static DurableMessageEnvelope CreateTestCommandEnvelope()
@@ -509,6 +702,32 @@ public sealed class DurableModulePersistenceRegistrationTests
         }
     }
 
+    private sealed class TestModuleIncomingInboxDispatcher
+        : IDurableIncomingInboxDispatcher
+    {
+        public ValueTask<DurableIncomingInboxProcessingResult> ProcessAsync(
+            string claimedBy,
+            TimeSpan leaseDuration,
+            int maxCount = 100,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class TestModuleOutboxInspectionStore
+        : IDurableOutboxInspectionStore
+    {
+        public ValueTask<IReadOnlyList<DurableOutboxRecord>> FindTerminalFailedAsync(
+            int maxCount = 100,
+            DateTimeOffset? failedAtOrBeforeUtc = null,
+            string? sourceModuleName = null,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
     private sealed class CapturingInboxHandlerExecutor : IDurableInboxHandlerExecutor
     {
         public int HandleCalls { get; private set; }
@@ -555,6 +774,45 @@ public sealed class DurableModulePersistenceRegistrationTests
             DurableInboxRecord record,
             Func<CancellationToken, ValueTask> handler,
             CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class TestModuleInboxInspectionStore
+        : IDurableInboxInspectionStore
+    {
+        public ValueTask<IReadOnlyList<DurableInboxRecord>> FindUnprocessedAsync(
+            int maxCount = 100,
+            DateTimeOffset? receivedAtOrBeforeUtc = null,
+            string? moduleName = null,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class TestIncomingInboxIngestionStore : IDurableIncomingInboxIngestionStore
+    {
+        public ValueTask<DurableIncomingInboxIngestionResult> IngestAsync(
+            DurableIncomingInboxRecord record,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class TestIncomingInboxIngestionScope
+        : IDurableIncomingInboxIngestionPersistenceScope
+    {
+        public ValueTask<TResult> ExecuteAsync<TResult>(
+            Func<IDurableIncomingInboxIngestionPersistenceScope, CancellationToken, ValueTask<TResult>> operation,
+            CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public ValueTask SaveChangesAsync(CancellationToken ct = default)
         {
             throw new NotSupportedException();
         }

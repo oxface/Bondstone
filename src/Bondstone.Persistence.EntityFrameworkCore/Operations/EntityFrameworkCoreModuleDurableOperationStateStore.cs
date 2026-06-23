@@ -8,7 +8,8 @@ namespace Bondstone.Persistence.EntityFrameworkCore.Operations;
 public sealed class EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>(
     string moduleName,
     TDbContext context)
-    : IDurableOperationStateStore
+    : IDurableOperationStateStore,
+        IDurableOperationExpirationStore
     where TDbContext : DbContext
 {
     private readonly EntityFrameworkCoreDurableOperationStateStore<TDbContext> _store =
@@ -30,5 +31,16 @@ public sealed class EntityFrameworkCoreModuleDurableOperationStateStore<TDbConte
         CancellationToken ct = default)
     {
         await _store.SaveAsync(state, ct);
+    }
+
+    public async ValueTask<IReadOnlyList<DurableOperationState>> FindExpirationCandidatesAsync(
+        DateTimeOffset expiresBeforeUtc,
+        int maxCount,
+        CancellationToken ct = default)
+    {
+        return await _store.FindExpirationCandidatesAsync(
+            expiresBeforeUtc,
+            maxCount,
+            ct);
     }
 }

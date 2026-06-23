@@ -1,10 +1,13 @@
 using Bondstone.Configuration;
+using Bondstone.Persistence.EntityFrameworkCore.Inbox;
+using Bondstone.Persistence.EntityFrameworkCore.Postgres.IncomingInbox;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Inbox;
 using Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Persistence;
+using Bondstone.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -63,6 +66,20 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
             new PostgreSqlDurableOutboxDispatchRecorder<TDbContext>(
                 serviceProvider.GetRequiredService<TDbContext>(),
                 schema));
+        services.TryAddScoped<IDurableIncomingInboxClaimer>(serviceProvider =>
+            new PostgreSqlDurableIncomingInboxClaimer<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>(),
+                serviceProvider.GetService<TimeProvider>(),
+                schema));
+        services.TryAddScoped<IDurableIncomingInboxLeaseRenewer>(serviceProvider =>
+            new PostgreSqlDurableIncomingInboxLeaseRenewer<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>(),
+                serviceProvider.GetService<TimeProvider>(),
+                schema));
+        services.TryAddScoped<IDurableIncomingInboxOutcomeRecorder>(serviceProvider =>
+            new PostgreSqlDurableIncomingInboxOutcomeRecorder<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>(),
+                schema));
 
         return services;
     }
@@ -113,6 +130,7 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
         }
 
         services.UseDurableModuleOutboxDispatchAggregator();
+        services.UseDurableModuleIncomingInboxDispatcherAggregator();
         DurableModulePersistenceRegistrationRegistry registry =
             services.GetOrAddDurableModulePersistenceRegistrationRegistry();
         registry.AddOutboxWriter(new DurableModuleOutboxWriterRegistration(
@@ -121,6 +139,10 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
                 moduleName,
                 serviceProvider.GetRequiredService<TDbContext>(),
                 serviceProvider.GetService<TimeProvider>())));
+        registry.AddOutboxInspectionStore(new DurableModuleOutboxInspectionStoreRegistration(
+            moduleName,
+            serviceProvider => new EntityFrameworkCoreDurableOutboxInspectionStore<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>())));
         registry.AddInboxHandlerExecutor(new DurableModuleInboxHandlerExecutorRegistration(
             moduleName,
             serviceProvider => new PostgreSqlModuleDurableInboxHandlerExecutor<TDbContext>(
@@ -128,6 +150,10 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
                 serviceProvider.GetRequiredService<TDbContext>(),
                 serviceProvider.GetService<TimeProvider>(),
                 schema)));
+        registry.AddInboxInspectionStore(new DurableModuleInboxInspectionStoreRegistration(
+            moduleName,
+            serviceProvider => new EntityFrameworkCoreDurableInboxInspectionStore<TDbContext>(
+                serviceProvider.GetRequiredService<TDbContext>())));
         registry.AddOperationStateStore(new DurableModuleOperationStateStoreRegistration(
             moduleName,
             serviceProvider => new EntityFrameworkCoreModuleDurableOperationStateStore<TDbContext>(
@@ -138,10 +164,20 @@ public static class BondstonePostgreSqlServiceCollectionExtensions
             serviceProvider => new PostgreSqlModuleDurableOutboxDispatcher<TDbContext>(
                     moduleName,
                     serviceProvider.GetRequiredService<TDbContext>(),
-                    serviceProvider.GetRequiredService<IDurableOutboxTransport>(),
+                    serviceProvider.GetRequiredService<IDurableEnvelopeDispatcher>(),
                     serviceProvider.GetRequiredService<IDurableOutboxFailurePolicy>(),
                     serviceProvider.GetService<TimeProvider>(),
                     schema)));
+        registry.AddIncomingInboxDispatcher(new DurableModuleIncomingInboxDispatcherRegistration(
+            moduleName,
+            serviceProvider => new PostgreSqlModuleDurableIncomingInboxDispatcher<TDbContext>(
+                moduleName,
+                serviceProvider.GetRequiredService<TDbContext>(),
+                serviceProvider.GetRequiredService<IModuleCommandReceivePipeline>(),
+                serviceProvider.GetRequiredService<IModuleEventReceivePipeline>(),
+                serviceProvider.GetRequiredService<IDurableIncomingInboxFailurePolicy>(),
+                serviceProvider.GetService<TimeProvider>(),
+                schema)));
 
         return services;
     }

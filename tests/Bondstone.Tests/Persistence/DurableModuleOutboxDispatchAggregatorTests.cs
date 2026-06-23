@@ -9,6 +9,37 @@ public sealed class DurableModuleOutboxDispatchAggregatorTests
 {
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task DispatchAsync_InvokesModuleDispatchersInRegistrationOrder()
+    {
+        var callOrder = new List<string>();
+        var sales = new RecordingModuleOutboxDispatcher(
+            "sales",
+            new DurableOutboxDispatchResult(0, 0, 0, 0, 0),
+            callOrder);
+        var fulfillment = new RecordingModuleOutboxDispatcher(
+            "fulfillment",
+            new DurableOutboxDispatchResult(0, 0, 0, 0, 0),
+            callOrder);
+        var shipping = new RecordingModuleOutboxDispatcher(
+            "shipping",
+            new DurableOutboxDispatchResult(0, 0, 0, 0, 0),
+            callOrder);
+        DurableModuleOutboxDispatchAggregator aggregator = CreateAggregator(
+            sales,
+            fulfillment,
+            shipping);
+
+        DurableOutboxDispatchResult result = await aggregator.DispatchAsync(
+            "worker-1",
+            TimeSpan.FromMinutes(2),
+            maxCount: 5);
+
+        Assert.Equal(0, result.ClaimedCount);
+        Assert.Equal(new[] { "sales", "fulfillment", "shipping" }, callOrder);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task DispatchAsync_WhenModuleDispatchersClaimRows_SharesMaxCountSequentiallyAndAggregates()
     {
         var sales = new RecordingModuleOutboxDispatcher(
@@ -118,7 +149,8 @@ public sealed class DurableModuleOutboxDispatchAggregatorTests
 
     private sealed class RecordingModuleOutboxDispatcher(
         string moduleName,
-        object outcome)
+        object outcome,
+        List<string>? callOrder = null)
         : IDurableOutboxDispatcher
     {
         public string ModuleName { get; } = moduleName;
@@ -131,6 +163,7 @@ public sealed class DurableModuleOutboxDispatchAggregatorTests
             int maxCount = 100,
             CancellationToken ct = default)
         {
+            callOrder?.Add(ModuleName);
             Calls.Add(new DispatchCall(claimedBy, leaseDuration, maxCount));
 
             if (outcome is Exception exception)

@@ -3,18 +3,22 @@ using Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence;
 using Bondstone.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Outbox;
 
-public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
+internal sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
     TDbContext context,
     TimeProvider? timeProvider = null,
-    string? schema = null)
+    string? schema = null,
+    string? sourceModuleName = null)
     : IDurableOutboxClaimer
     where TDbContext : DbContext
 {
     private static readonly string MessageIdColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
         OutboxMessageEntityConfiguration.Columns.MessageId);
+    private static readonly string SourceModuleColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
+        OutboxMessageEntityConfiguration.Columns.SourceModule);
     private static readonly string StatusColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
         OutboxMessageEntityConfiguration.Columns.Status);
     private static readonly string AttemptCountColumn = PostgreSqlTableIdentifier.QuoteIdentifier(
@@ -30,6 +34,7 @@ public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
 
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     private readonly string _tableName = PostgreSqlOutboxTableIdentifier.BuildTableName(schema);
+    private readonly string? _sourceModuleName = NormalizeOptionalModuleName(sourceModuleName);
 
     public async ValueTask<IReadOnlyList<DurableOutboxRecord>> ClaimAsync(
         string claimedBy,
@@ -65,14 +70,17 @@ public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
             WITH candidates AS (
                 SELECT {{MessageIdColumn}}
                 FROM {{_tableName}}
-                WHERE (
-                    {{StatusColumn}} = @pending
-                    AND ({{NextAttemptAtUtcColumn}} IS NULL OR {{NextAttemptAtUtcColumn}} <= @nowUtc)
-                )
-                OR (
-                    {{StatusColumn}} = @processing
-                    AND {{ClaimedUntilUtcColumn}} IS NOT NULL
-                    AND {{ClaimedUntilUtcColumn}} <= @nowUtc
+                WHERE (@sourceModuleName IS NULL OR {{SourceModuleColumn}} = @sourceModuleName)
+                AND (
+                    (
+                        {{StatusColumn}} = @pending
+                        AND ({{NextAttemptAtUtcColumn}} IS NULL OR {{NextAttemptAtUtcColumn}} <= @nowUtc)
+                    )
+                    OR (
+                        {{StatusColumn}} = @processing
+                        AND {{ClaimedUntilUtcColumn}} IS NOT NULL
+                        AND {{ClaimedUntilUtcColumn}} <= @nowUtc
+                    )
                 )
                 ORDER BY {{StoredAtUtcColumn}}, {{MessageIdColumn}}
                 FOR UPDATE SKIP LOCKED
@@ -95,6 +103,10 @@ public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
                 sql,
                 new NpgsqlParameter("pending", pending),
                 new NpgsqlParameter("processing", processing),
+                new NpgsqlParameter("sourceModuleName", NpgsqlDbType.Text)
+                {
+                    Value = (object?)_sourceModuleName ?? DBNull.Value,
+                },
                 new NpgsqlParameter("nowUtc", nowUtc),
                 new NpgsqlParameter("maxCount", maxCount),
                 new NpgsqlParameter("claimedBy", normalizedClaimedBy),
@@ -105,6 +117,13 @@ public sealed class PostgreSqlDurableOutboxClaimer<TDbContext>(
         return entities
             .Select(static entity => entity.ToRecord())
             .ToArray();
+    }
+
+    private static string? NormalizeOptionalModuleName(string? moduleName)
+    {
+        return string.IsNullOrWhiteSpace(moduleName)
+            ? null
+            : moduleName.Trim();
     }
 
     private static string NormalizeClaimedBy(string claimedBy)

@@ -2,19 +2,24 @@
 
 This repository is the maintenance home for Bondstone, a .NET library for
 durable module boundaries, durable command sending, EF Core backed inbox/outbox
-persistence, and transport adapters.
+persistence, operation observation, and transport adapters.
 
 Start with:
 
-- [README.md](README.md) when it exists for package purpose, install examples,
-  and verification entrypoints.
-- [docs/README.md](docs/README.md) when it exists for durable developer and
-  architecture documentation.
-- [docs/adr/README.md](docs/adr/README.md) when it exists before creating,
-  updating, superseding, or archiving ADRs.
-- [docs/architecture/README.md](docs/architecture/README.md) before changing
-  runtime architecture, durable messaging, persistence, hosting, or transport
-  behavior.
+- [README.md](README.md) for package purpose, SpecKit artifact routing, and
+  verification entrypoints.
+- [.specify/memory/constitution.md](.specify/memory/constitution.md) before
+  changing governance, compatibility, package-boundary, or verification rules.
+- [docs/architecture.md](docs/architecture.md)
+  before changing runtime architecture, durable messaging, persistence,
+  hosting, transport behavior, package boundaries, public API strategy,
+  documentation ownership, or verification strategy.
+- [.specify/memory/project-profile.md](.specify/memory/project-profile.md)
+  before changing brownfield assumptions.
+- [.specify/README.md](.specify/README.md) before changing the SpecKit
+  constitution, extension choices, or local SpecKit routing.
+- [docs/README.md](docs/README.md) for consumer-facing and repository
+  operation documentation.
 - [docs/testing.md](docs/testing.md) before moving or writing tests.
 - [docs/samples.md](docs/samples.md) before adding or changing sample
   applications.
@@ -37,12 +42,12 @@ follow its references. The repository context-index convention is documented in
   freely.
 - Do not overwrite or revert user changes. Work with the current files and ask
   when local edits make the requested change ambiguous.
-- Keep generated artifacts, packed packages, temporary sample outputs, coverage,
-  and build artifacts out of committed source unless the user explicitly asks to
-  preserve them.
-- Do not use `InternalsVisibleTo` for production package collaboration. Reserve
-  friend assemblies for tests; runtime packages should collaborate through
-  explicit contracts or package-local implementation.
+- Keep generated artifacts, packed packages, temporary sample outputs,
+  coverage, and build artifacts out of committed source unless the user
+  explicitly asks to preserve them.
+- Do not use `InternalsVisibleTo` for production package collaboration.
+  Reserve friend assemblies for tests; runtime packages should collaborate
+  through explicit contracts or package-local implementation.
 - Treat public API cleanup as compatibility-sensitive. Normal setup APIs,
   documented advanced composition APIs, and public implementation types exposed
   for now must be inventoried before broad hiding, renaming, or removal.
@@ -56,43 +61,27 @@ documented in [docs/packaging.md](docs/packaging.md).
 
 ## Architecture Direction
 
-Runtime architecture is indexed from
-[docs/architecture/README.md](docs/architecture/README.md). Use that index and
-the nearest scoped `AGENTS.md` before changing messaging, modules,
-persistence, hosting, or transport behavior.
+Runtime architecture is owned by
+[docs/architecture.md](docs/architecture.md).
+Use that artifact and the nearest scoped `AGENTS.md` before changing
+messaging, modules, persistence, hosting, transport behavior, package
+boundaries, public API, samples, testing, or repository workflow.
 
-Durable behavior, public API shape, package boundaries, provider or transport
-support, migration strategy, compatibility policy, release/publishing, sample
-architecture, repository workflow, and agent harness behavior require ADR
-review before broad implementation.
+SpecKit constitution, `/docs`, and feature artifacts are the durable internal
+source of truth:
 
-Stable docs describe current behavior only. ADRs preserve the decision trail.
-Track backlog work, real-project findings, cleanup tasks, and prioritization in
-GitHub Issues or GitHub Projects using the conventions in
-[docs/github-workflow.md](docs/github-workflow.md). Move durable decisions into
-ADRs and current behavior into stable docs.
+- Constitution owns governance and non-negotiable implementation principles.
+- Bondstone architecture owns runtime and documentation design.
+- Feature specs, plans, and tasks own change-scoped implementation deltas.
+- Bondstone project profile records brownfield assumptions used by agents.
 
-## ADR And Planning Rules
+Consumer-facing docs under `docs/` should explain how to use and operate the
+library. They should link to Bondstone architecture for internal durable
+behavior instead of duplicating architecture rules.
 
-- Do not use SDD/spec-driven product workflow for Bondstone library work unless
-  an accepted ADR introduces it for a bounded purpose.
-- Before editing code or automation, check whether ADR work is required when a
-  change affects public API, package boundaries, target frameworks, provider or
-  transport support, migration policy, compatibility, release/publishing,
-  sample architecture, repository workflow, or agent harness behavior.
-- Use ADRs for durable technical decisions. Prefer small ADRs with a clear
-  status, application state, context, decision, consequences, and links to
-  applied docs.
-- Treat accepted ADR decision content as append-only. Do not rewrite accepted
-  `Context`, `Decision`, or `Consequences` except for mechanical fixes; add a
-  dated amendment for compatible clarification, or supersede when the decision
-  changes.
-- Updating, superseding, archiving, or removing an ADR must preserve the
-  decision trail and update the stable docs and agent instructions that depend
-  on it.
-- Reusable ADR workflows must become repository skills under `.agents/skills`.
-  Start with skills for creating ADRs, updating ADRs, superseding ADRs, and
-  archiving/removing ADRs.
+Track backlog work, real-project findings, cleanup tasks, and prioritization
+in GitHub Issues or GitHub Projects using the conventions in
+[docs/github-workflow.md](docs/github-workflow.md).
 
 ## Common Commands
 
@@ -114,3 +103,10 @@ The direct .NET equivalents are:
 - `dotnet pack Bondstone.slnx --configuration Release --no-build`
 
 Keep CI, Husky hooks, and docs aligned with the package-script entrypoints.
+
+<!-- SPECKIT START -->
+
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+
+<!-- SPECKIT END -->

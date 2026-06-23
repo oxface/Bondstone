@@ -6,10 +6,11 @@ Bondstone.
 ## Layout
 
 Bondstone uses a library-maintenance repository layout with repository
-automation at the root, stable docs under `docs/`, samples under `samples/`,
-package projects under `src/`, tests under `tests/`, and repository agent
-skills under `.agents/skills/`. Current package projects and dependency
-direction are recorded in [packaging.md](packaging.md).
+automation at the root, SpecKit constitution/routing support under `.specify/`,
+consumer and durable architecture docs under `docs/`, samples under `samples/`,
+package projects under `src/`, tests under `tests/`, and repository agent skills under
+`.agents/skills/`. Current package projects and dependency direction are
+recorded in [packaging.md](packaging.md).
 
 Tests live under `tests/`, grouped by package or integration boundary. Tests
 extracted from the previous root framework test project should be moved or
@@ -31,11 +32,11 @@ Significant folders should have:
 - `README.md` for humans navigating that folder.
 
 These files are indexes, not alternate architecture docs. Keep them short,
-name the folder's scope, and reference the stable docs, ADR workflows, sibling
-packages, tests, and verification entrypoints that matter for that area. Avoid
-copying durable rules from architecture, packaging, testing, or sample docs
-unless the local rule is unusually important and repeated agent misses justify
-duplication.
+name the folder's scope, and reference the SpecKit constitution, consumer docs,
+sibling packages, tests, and verification entrypoints that matter for that
+area. Avoid copying durable rules from architecture, packaging, testing, or
+sample docs unless the local rule is unusually important and repeated agent
+misses justify duplication.
 
 When adding a package, test boundary, sample, docs area, or agent workflow
 folder, add the local indexes in the same change or explain why an existing
@@ -43,13 +44,31 @@ parent index is enough.
 
 ## Work Tracking
 
-Repository docs describe current behavior. ADRs preserve durable decisions and
-decision history. Use GitHub Issues and GitHub Projects for backlog work,
-real-project findings, cleanup tasks, prioritization, and ownership. When an
-issue creates a durable technical decision, add or update an ADR. When an issue
-changes current behavior, update stable docs in the same change.
+The SpecKit constitution, durable docs, and feature artifacts describe durable
+requirements, architecture, governance, and implementation deltas. Repository
+docs describe consumer-facing behavior and repository operations. Use GitHub
+Issues and GitHub Projects for backlog work, real-project findings, cleanup
+tasks, prioritization, and ownership. When an issue changes durable
+requirements, architecture, governance, or sequencing, update the appropriate
+constitution, durable doc, or feature artifact. When an issue changes
+consumer-facing behavior, update docs in the same change.
 Issue formats, project statuses, label conventions, and completion comments
 are recorded in [github-workflow.md](github-workflow.md).
+
+Do not keep long-lived transitional plans under `docs/`. Once a plan is
+accepted or implemented, move durable requirements and architecture into stable
+docs, governance into the SpecKit constitution, sequence into archived feature
+artifacts, and remaining work into GitHub Issues or Projects.
+
+Runtime implementation stories that change messaging, persistence, hosting,
+transport, or package APIs must record review evidence for the product
+boundary they preserve. The evidence should explain how the change keeps
+durable module boundaries, service-extraction contracts, and handler patterns
+intact, keeps module durability module-owned, and leaves broker topology,
+provisioning, credentials, native retry, dead-letter policy,
+prefetch/concurrency, and monitoring host-owned. Do not describe runtime work
+as making Bondstone a generic bus, workflow engine, code generator, SaaS
+framework, application platform, or broker runtime owner.
 
 ## Tooling
 
@@ -82,7 +101,7 @@ tools. Avoid frontend-only devcontainer features unless samples later require
 them.
 
 Do not add frontend/browser tooling such as Playwright unless an accepted
-sample or documentation ADR creates a real need for it.
+sample direction or Bondstone architecture update creates a real need for it.
 
 Use Release Please for release pull requests, changelog updates, GitHub
 releases, and tags. Use GitHub Actions for package verification and NuGet

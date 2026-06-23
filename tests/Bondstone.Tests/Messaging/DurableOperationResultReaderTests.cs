@@ -160,6 +160,79 @@ public sealed class DurableOperationResultReaderTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public async Task GetResultAsync_WhenModuleHintIsProvided_ReadsOnlyHintedModuleStore()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var salesStore = new CapturingModuleOperationStateStore("sales")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+        };
+        var fulfillmentStore = new CapturingModuleOperationStateStore("fulfillment")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":"payload-A-100","accepted":true}"""),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            salesStore,
+            fulfillmentStore);
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .GetResultAsync<ReserveOrderResult>(
+                durableOperationId,
+                " sales ");
+
+        Assert.Equal(DurableOperationResultState.Pending, result.State);
+        Assert.Equal(1, salesStore.ReadCount);
+        Assert.Equal(0, fulfillmentStore.ReadCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task GetResultAsync_WhenOperationHandleIsProvided_ReadsOnlyTargetModuleStore()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var salesStore = new CapturingModuleOperationStateStore("sales")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+        };
+        var fulfillmentStore = new CapturingModuleOperationStateStore("fulfillment")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":"payload-A-100","accepted":true}"""),
+        };
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            salesStore,
+            fulfillmentStore);
+        var operation = new DurableOperationHandle(
+            durableOperationId,
+            "sales",
+            "fulfillment");
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .GetResultAsync<ReserveOrderResult>(operation);
+
+        Assert.Equal(DurableOperationResultState.CompletedWithResult, result.State);
+        Assert.Equal(new ReserveOrderResult(new DurableOrderId("A-100"), Accepted: true), result.Result);
+        Assert.Equal(0, salesStore.ReadCount);
+        Assert.Equal(1, fulfillmentStore.ReadCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public async Task GetResultAsync_WhenOperationCancelled_ReturnsTerminalCancelledWithoutResult()
     {
         Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
@@ -300,6 +373,345 @@ public sealed class DurableOperationResultReaderTests
         Assert.True(store.ReadCount >= 2);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task WaitForResultAsync_WhenOperationIsFailed_ReturnsFailureWithoutPollingForever()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Failed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                failureReason: "expired"));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .WaitForResultAsync<ReserveOrderResult>(
+                durableOperationId,
+                "fulfillment",
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromMilliseconds(1));
+
+        Assert.True(result.IsTerminal);
+        Assert.Equal(DurableOperationResultState.Failed, result.State);
+        Assert.Equal("expired", result.FailureReason);
+        Assert.Equal(1, store.ReadCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task WaitForResultAsync_WhenOperationDoesNotReachTerminalState_ThrowsTimeoutException()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = SequencedModuleOperationStateStore.AllowingSaveCount(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        TimeoutException exception = await Assert.ThrowsAsync<TimeoutException>(
+            async () => await serviceProvider
+                .GetRequiredService<IDurableOperationResultReader>()
+                .WaitForResultAsync<ReserveOrderResult>(
+                    durableOperationId,
+                    "fulfillment",
+                    TimeSpan.FromMilliseconds(20),
+                    TimeSpan.FromMilliseconds(1)));
+
+        Assert.Contains(durableOperationId.ToString(), exception.Message);
+        Assert.Contains("fulfillment", exception.Message);
+        Assert.True(store.ReadCount >= 1);
+        Assert.Equal(0, store.SaveCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task WaitForResultAsync_WhenOperationHandleIsProvided_PollsTargetModuleStore()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var salesStore = new CapturingModuleOperationStateStore("sales")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+        };
+        var fulfillmentStore = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":"payload-A-100","accepted":true}"""));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            salesStore,
+            fulfillmentStore);
+        var operation = new DurableOperationHandle(
+            durableOperationId,
+            "sales",
+            "fulfillment");
+
+        DurableOperationResult<ReserveOrderResult> result = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .WaitForResultAsync<ReserveOrderResult>(
+                operation,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromMilliseconds(1));
+
+        Assert.Equal(DurableOperationResultState.CompletedWithResult, result.State);
+        Assert.Equal(0, salesStore.ReadCount);
+        Assert.True(fulfillmentStore.ReadCount >= 2);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task TryWaitForResultAsync_WhenOperationEventuallyCompletes_ReturnsCompletedWaitResult()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":"payload-A-100","accepted":true}"""));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationWaitResult<ReserveOrderResult> waitResult = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .TryWaitForResultAsync<ReserveOrderResult>(
+                durableOperationId,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromMilliseconds(1));
+
+        Assert.True(waitResult.CompletedWithinTimeout);
+        Assert.Equal(DurableOperationResultState.CompletedWithResult, waitResult.Result.State);
+        Assert.Equal(
+            new ReserveOrderResult(new DurableOrderId("A-100"), Accepted: true),
+            waitResult.Result.Result);
+        Assert.True(store.ReadCount >= 2);
+    }
+
+    [Theory]
+    [InlineData(DurableOperationStatus.Failed, DurableOperationResultState.Failed, "expired")]
+    [InlineData(DurableOperationStatus.Cancelled, DurableOperationResultState.Cancelled, "caller cancelled")]
+    [Trait("Category", "Unit")]
+    public async Task TryWaitForResultAsync_WhenOperationIsTerminalFailureOrCancellation_ReturnsTerminalState(
+        DurableOperationStatus operationStatus,
+        DurableOperationResultState expectedState,
+        string failureReason)
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                operationStatus,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                failureReason: failureReason));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationWaitResult<ReserveOrderResult> waitResult = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .TryWaitForResultAsync<ReserveOrderResult>(
+                durableOperationId,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromMilliseconds(1));
+
+        Assert.True(waitResult.CompletedWithinTimeout);
+        Assert.True(waitResult.Result.IsTerminal);
+        Assert.Equal(expectedState, waitResult.Result.State);
+        Assert.Equal(operationStatus, waitResult.Result.Status);
+        Assert.Equal(failureReason, waitResult.Result.FailureReason);
+        Assert.Equal(1, store.ReadCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task TryWaitForResultAsync_WhenOperationDoesNotReachTerminalState_ReturnsLatestResultWithoutThrowing()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = SequencedModuleOperationStateStore.AllowingSaveCount(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Running,
+                DateTimeOffset.Parse("2026-06-08T12:00:05+00:00")));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationWaitResult<ReserveOrderResult> waitResult = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .TryWaitForResultAsync<ReserveOrderResult>(
+                durableOperationId,
+                "fulfillment",
+                TimeSpan.FromMilliseconds(20),
+                TimeSpan.FromMilliseconds(1));
+
+        Assert.False(waitResult.CompletedWithinTimeout);
+        Assert.Equal(durableOperationId, waitResult.Result.DurableOperationId);
+        Assert.Equal(DurableOperationResultState.Running, waitResult.Result.State);
+        Assert.False(waitResult.Result.IsTerminal);
+        Assert.True(store.ReadCount >= 2);
+        Assert.Equal(0, store.SaveCount);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task TryWaitForResultAsync_WhenOperationHandleIsProvided_PollsTargetModuleStore()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var salesStore = new CapturingModuleOperationStateStore("sales")
+        {
+            State = new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+        };
+        var fulfillmentStore = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":"payload-A-100","accepted":true}"""));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            salesStore,
+            fulfillmentStore);
+        var operation = new DurableOperationHandle(
+            durableOperationId,
+            "sales",
+            "fulfillment");
+
+        DurableOperationWaitResult<ReserveOrderResult> waitResult = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .TryWaitForResultAsync<ReserveOrderResult>(
+                operation,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromMilliseconds(1));
+
+        Assert.True(waitResult.CompletedWithinTimeout);
+        Assert.Equal(DurableOperationResultState.CompletedWithResult, waitResult.Result.State);
+        Assert.Equal(0, salesStore.ReadCount);
+        Assert.True(fulfillmentStore.ReadCount >= 2);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task TryWaitForResultAsync_WhenModuleHintIsProvided_PollsOnlyHintedModuleStore()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var salesStore = new SequencedModuleOperationStateStore(
+            "sales",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":"payload-A-100","accepted":true}"""));
+        var fulfillmentStore = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")),
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":"payload-A-100","accepted":true}"""));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(
+            salesStore,
+            fulfillmentStore);
+
+        DurableOperationWaitResult<ReserveOrderResult> waitResult = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .TryWaitForResultAsync<ReserveOrderResult>(
+                durableOperationId,
+                " fulfillment ",
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromMilliseconds(1));
+
+        Assert.True(waitResult.CompletedWithinTimeout);
+        Assert.Equal(DurableOperationResultState.CompletedWithResult, waitResult.Result.State);
+        Assert.Equal(0, salesStore.ReadCount);
+        Assert.True(fulfillmentStore.ReadCount >= 2);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task TryWaitForResultAsync_WhenCancellationIsRequested_ThrowsOperationCanceledException()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Pending,
+                DateTimeOffset.Parse("2026-06-08T12:00:00+00:00")));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(10));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            async () => await serviceProvider
+                .GetRequiredService<IDurableOperationResultReader>()
+                .TryWaitForResultAsync<ReserveOrderResult>(
+                    durableOperationId,
+                    TimeSpan.FromSeconds(5),
+                    TimeSpan.FromMilliseconds(100),
+                    cts.Token));
+
+        Assert.True(store.ReadCount >= 1);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task TryWaitForResultAsync_WhenResultDeserializationFails_ReturnsTerminalDeserializationFailure()
+    {
+        Guid durableOperationId = Guid.Parse("19a598fd-c659-4937-bdea-f4c7eb464766");
+        var store = new SequencedModuleOperationStateStore(
+            "fulfillment",
+            new DurableOperationState(
+                durableOperationId,
+                DurableOperationStatus.Completed,
+                DateTimeOffset.Parse("2026-06-08T12:01:00+00:00"),
+                """{"orderId":{"unexpected":true},"accepted":true}"""));
+        await using ServiceProvider serviceProvider = CreateServiceProvider(store);
+
+        DurableOperationWaitResult<ReserveOrderResult> waitResult = await serviceProvider
+            .GetRequiredService<IDurableOperationResultReader>()
+            .TryWaitForResultAsync<ReserveOrderResult>(
+                durableOperationId,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromMilliseconds(1));
+
+        Assert.True(waitResult.CompletedWithinTimeout);
+        Assert.True(waitResult.Result.IsTerminal);
+        Assert.Equal(
+            DurableOperationResultState.ResultDeserializationFailed,
+            waitResult.Result.State);
+        Assert.NotNull(waitResult.Result.DeserializationFailure);
+    }
+
     private static ServiceProvider CreateServiceProvider(
         params IModuleOperationStateStore[] stores)
     {
@@ -336,10 +748,15 @@ public sealed class DurableOperationResultReaderTests
 
         public DurableOperationState? State { get; init; }
 
+        public int ReadCount { get; private set; }
+
+        public int SaveCount { get; private set; }
+
         public ValueTask<DurableOperationState?> GetStateAsync(
             Guid durableOperationId,
             CancellationToken ct = default)
         {
+            ReadCount++;
             return ValueTask.FromResult(State);
         }
 
@@ -347,20 +764,43 @@ public sealed class DurableOperationResultReaderTests
             DurableOperationState state,
             CancellationToken ct = default)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException(
+                "Operation result reader tests should not write operation state.");
         }
     }
 
-    private sealed class SequencedModuleOperationStateStore(
-        string moduleName,
-        params DurableOperationState[] states)
-        : IModuleOperationStateStore
+    private sealed class SequencedModuleOperationStateStore : IModuleOperationStateStore
     {
-        private readonly Queue<DurableOperationState> _states = new(states);
+        private readonly bool _allowSaveCount;
+        private readonly Queue<DurableOperationState> _states;
 
-        public string ModuleName { get; } = moduleName;
+        public SequencedModuleOperationStateStore(
+            string moduleName,
+            params DurableOperationState[] states)
+            : this(moduleName, allowSaveCount: false, states)
+        {
+        }
+
+        private SequencedModuleOperationStateStore(
+            string moduleName,
+            bool allowSaveCount,
+            params DurableOperationState[] states)
+        {
+            ModuleName = moduleName;
+            _allowSaveCount = allowSaveCount;
+            _states = new Queue<DurableOperationState>(states);
+        }
+
+        public string ModuleName { get; }
 
         public int ReadCount { get; private set; }
+
+        public int SaveCount { get; private set; }
+
+        public static SequencedModuleOperationStateStore AllowingSaveCount(
+            string moduleName,
+            params DurableOperationState[] states) =>
+            new(moduleName, allowSaveCount: true, states);
 
         public ValueTask<DurableOperationState?> GetStateAsync(
             Guid durableOperationId,
@@ -379,7 +819,14 @@ public sealed class DurableOperationResultReaderTests
             DurableOperationState state,
             CancellationToken ct = default)
         {
-            throw new NotSupportedException();
+            if (!_allowSaveCount)
+            {
+                throw new NotSupportedException(
+                    "Operation result reader tests should not write operation state.");
+            }
+
+            SaveCount++;
+            return ValueTask.CompletedTask;
         }
     }
 }

@@ -4,24 +4,26 @@ This guide maps common Bondstone capabilities to NuGet package IDs and the
 namespaces that expose the setup APIs most consumers import. For a complete
 working host shape, start with the canonical setup path in [setup.md](setup.md).
 For package boundaries, dependency direction, target framework, and publishing
-policy, see [packaging.md](packaging.md).
+policy, including v2 replacement/migration guidance, see
+[packaging.md](packaging.md). For production operations and observability, see
+[operations.md](operations.md) and [observability.md](observability.md).
+
+This is the central "which package and namespace do I use?" reference.
+Package IDs listed as removed or non-current appear here only as migration
+notes, not as current install guidance.
 
 ## Capability Matrix
 
-| Capability                                                                                                                    | Package ID                                                | Common namespaces                                                               | Notes                                                                                                                                                      |
-| ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Host composition, module registration, command/event contracts, durable send/publish, module execution, payload serialization | `Bondstone`                                               | `Bondstone.Configuration`, `Bondstone.Modules`, `Bondstone.Messaging`           | The normal entrypoint is `services.AddBondstone(...)`; modules register commands, events, durable messaging, and optional persistence through the builder. |
-| Provider-neutral durable persistence contracts, envelopes, outbox, inbox, operation state, dispatcher contracts               | `Bondstone.Persistence`                                   | `Bondstone.Persistence`, `Bondstone.Messaging`                                  | Use directly for custom persistence, custom dispatch composition, low-level inbox/outbox work, and operation-state reads.                                  |
-| EF Core durable persistence mappings and module transaction behavior                                                          | `Bondstone.Persistence.EntityFrameworkCore`               | `Bondstone.Persistence.EntityFrameworkCore.Persistence`                         | Provides `ApplyBondstonePersistence(...)`, granular EF mapping helpers, and `UseEntityFrameworkCorePersistence<TDbContext>()`.                             |
-| EF Core plus PostgreSQL durable persistence helpers                                                                           | `Bondstone.Persistence.EntityFrameworkCore.Postgres`      | `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence`                | Preferred EF/PostgreSQL module setup is `module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: ...)`.                                      |
-| Non-EF PostgreSQL durable module persistence                                                                                  | `Bondstone.Persistence.Postgres`                          | `Bondstone.Persistence.Postgres.Persistence`                                    | Provides `UsePostgresPersistence(...)`, `IPostgresModuleSession`, and `PostgresSchema` proof/test helpers.                                                 |
-| Hosted durable outbox worker and default dispatcher registration                                                              | `Bondstone.Hosting`                                       | `Bondstone.Hosting.Outbox`                                                      | Normal hosts use `bondstone.Outbox.UseWorker(...)`; advanced schedulers can use the dispatcher registration separately.                                    |
-| Provider-neutral transport diagnostics and topology contracts                                                                 | `Bondstone.Transport`                                     | `Bondstone.Configuration`, `Bondstone.Messaging`                                | Used by transport adapters and custom diagnostics; normal app setup usually references a concrete transport package.                                       |
-| Explicit local in-process transport for samples, tests, and local development                                                 | `Bondstone.Transport.Local`                               | `Bondstone.Transport.Local.Outbox`                                              | Use `UseLocalTransport(...)` when the host intentionally routes through local queues and Bondstone receive pipelines.                                      |
-| RabbitMQ direct transport adapter                                                                                             | `Bondstone.Transport.RabbitMq`                            | `Bondstone.Transport.RabbitMq.Outbox`, `Bondstone.Transport.RabbitMq.Inbox`     | Production-oriented direct adapter with provider-native topology vocabulary and opt-in receive workers.                                                    |
-| Azure Service Bus direct transport adapter                                                                                    | `Bondstone.Transport.ServiceBus`                          | `Bondstone.Transport.ServiceBus.Outbox`, `Bondstone.Transport.ServiceBus.Inbox` | Production-oriented direct adapter with queue, topic, subscription, and receive-source vocabulary.                                                         |
-| Module-local domain event contracts                                                                                           | `Bondstone.Capabilities.DomainEvents`                     | `Bondstone.Capabilities.DomainEvents`                                           | Contains `IDomainEvent`, `DomainEventIdentityAttribute`, `IDomainEventSource`, and `IDomainEventHandler<TDomainEvent>`. It is not a transport bus.         |
-| EF Core module-local domain event persistence bridge                                                                          | `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` | `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence`           | Adds `UseEntityFrameworkCoreDomainEventPersistence()` and `ApplyBondstoneDomainEvents(...)` for EF-backed modules.                                         |
+| Capability                                                                                                                                                  | Package ID                                           | Common namespaces                                                                               | Notes                                                                                                                                                                                                                   |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Host composition, module registration, command/query/event contracts, durable send/publish, module execution, payload serialization, domain event contracts | `Bondstone`                                          | `Bondstone.Configuration`, `Bondstone.Modules`, `Bondstone.Messaging`, `Bondstone.DomainEvents` | The normal entrypoint is `services.AddBondstone(...)`; modules register commands, queries, events, durable messaging, and optional persistence through the builder.                                                     |
+| Provider-neutral durable persistence contracts, envelopes, outbox, inbox, operation state, dispatcher and inspection contracts                              | `Bondstone.Persistence`                              | `Bondstone.Persistence`, `Bondstone.Messaging`                                                  | Use directly for custom persistence, custom dispatch composition, terminal outbox inspection, low-level inbox/outbox work, and operation-state reads.                                                                   |
+| EF Core durable persistence mappings, module transaction behavior, and EF-backed domain event persistence                                                   | `Bondstone.Persistence.EntityFrameworkCore`          | `Bondstone.Persistence.EntityFrameworkCore.Persistence`                                         | Provides `ApplyBondstonePersistence(...)`, granular EF mapping helpers, `UseEntityFrameworkCorePersistence<TDbContext>()`, `UseEntityFrameworkCoreDomainEventPersistence()`, and `ApplyBondstoneDomainEvents(...)`.     |
+| EF Core plus PostgreSQL durable persistence helpers                                                                                                         | `Bondstone.Persistence.EntityFrameworkCore.Postgres` | `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence`                                | Preferred EF/PostgreSQL module setup is `module.UsePostgreSqlPersistence<TDbContext>(connectionString, schema: ...)`.                                                                                                   |
+| Hosted durable outbox worker and default dispatcher registration; opt-in durable incoming inbox processing worker                                           | `Bondstone.Hosting`                                  | `Bondstone.Hosting.Outbox`, `Bondstone.Hosting.IncomingInbox`                                   | Normal hosts use `bondstone.Outbox.UseWorker(...)`; hosts that process durable incoming inbox rows use `bondstone.UseDurableIncomingInboxWorker(...)`. Advanced schedulers can use lower-level registration separately. |
+| Explicit local in-process transport for samples, tests, and local development                                                                               | `Bondstone.Transport.Local`                          | `Bondstone.Transport.Local.Outbox`                                                              | Use `UseLocalTransport(...)` when the host intentionally routes through local queues and Bondstone receive pipelines.                                                                                                   |
+| Thin RabbitMQ envelope adapter                                                                                                                              | `Bondstone.Transport.RabbitMq`                       | `Bondstone.Transport.RabbitMq`                                                                  | Use `UseRabbitMqDispatcher(...)` and optional `UseRabbitMqReceiveWorker(...)` when the app already owns RabbitMQ topology and client/channel registration.                                                              |
+| Thin Azure Service Bus envelope adapter                                                                                                                     | `Bondstone.Transport.ServiceBus`                     | `Bondstone.Transport.ServiceBus`                                                                | Use `UseServiceBusDispatcher(...)` and optional `UseServiceBusReceiveWorker(...)` when the app already owns Service Bus topology and client registration.                                                               |
 
 Package IDs match project names. The full package inventory and dependency
 direction live in [packaging.md](packaging.md).
@@ -33,23 +35,25 @@ Most applications start with the core setup namespaces:
 ```csharp
 using Bondstone.Configuration; // AddBondstone, BondstoneBuilder
 using Bondstone.Modules; // IBondstoneModule, module builders, handlers
-using Bondstone.Messaging; // ICommand, IDurableCommand, IIntegrationEvent
+using Bondstone.Messaging; // ICommand, IQuery<TResult>, IDurableCommand, IIntegrationEvent
+using Bondstone.DomainEvents; // IDomainEvent, IDomainEventSource
 ```
 
 `Bondstone.Messaging` also contains durable message identity attributes,
 `IDurableCommandSender`, `IDurableEventPublisher`,
 `IDurableOperationResultReader`, durable send/publish results, operation
-result types, durable operation state records, durable message envelopes, and
-trace context records.
+result types, durable operation handles and state records, durable message
+envelopes, and trace context records.
 
 `Bondstone.Modules` contains module registration and execution contracts:
 `IBondstoneModule`, `BondstoneModuleBuilder`, `ICommandHandler<TCommand>`,
-`ICommandHandler<TCommand, TResult>`,
-`IIntegrationEventHandler<TEvent>`, command validators, pipeline behavior
-contracts, receive pipelines, module execution context contracts, and the
-module command/event execution result types.
+`ICommandHandler<TCommand, TResult>`, `IQueryHandler<TQuery, TResult>`,
+`IModuleQueryExecutor`, `IModuleQueryRouteRegistry`,
+`IIntegrationEventHandler<TEvent>`, command validators, receive pipelines,
+module execution context contracts, and the module command/event execution
+result types.
 
-## Core Module And Command APIs
+## Core Module Command And Query APIs
 
 Use these imports when declaring durable commands, integration events, module
 registrations, and handlers:
@@ -70,6 +74,9 @@ Common setup and registration APIs include:
   `module.Commands.RegisterHandler<TCommand, THandler>()`, and
   `module.Commands.RegisterValidator<TCommand, TValidator>()` from
   `Bondstone.Modules`;
+- `module.Queries.RegisterFromAssemblyContaining<TMarker>()`,
+  `module.Queries.RegisterHandler<TQuery, TResult, THandler>()`, and
+  `IModuleQueryExecutor` from `Bondstone.Modules`;
 - `module.Events.RegisterPublishedEvent<TEvent>()` and
   `module.Events.RegisterSubscriber<TEvent, THandler>(subscriberIdentity)`
   from `Bondstone.Modules`;
@@ -88,18 +95,72 @@ using Bondstone.Messaging;
 ```
 
 Common contracts include `IDurableOutboxWriter`,
-`IDurableOutboxDispatcher`, `IDurableOutboxTransport`,
-`IDurableOutboxTransportRoute`, `IDurableInboxHandlerExecutor`,
+`IDurableOutboxDispatcher`, `IDurableOutboxInspector`,
+`IDurableOutboxInspectionStore`, `IDurableEnvelopeDispatcher`,
+`IDurableEnvelopeDispatchRoute`, `IDurableInboxHandlerExecutor`,
+`IDurableInboxInspector`, `IDurableInboxInspectionStore`,
 `IDurableInboxRegistrar`, `IDurableInboxStore`,
 `IDurableOperationStateStore`, `IDurableOutboxClaimer`,
 `IDurableOutboxLeaseRenewer`, `IDurableOutboxDispatchRecorder`,
-`IDurableOutboxFailurePolicy`, `IModuleTransactionFeature`,
-`DurableInboxMessageKey`, `DurableInboxRecord`, `DurableOutboxRecord`,
+`IDurableOutboxFailurePolicy`, `DurableInboxMessageKey`,
+`DurableInboxRecord`, `DurableOutboxRecord`,
 `DurableOutboxDispatchState`, and `DurableInboxAlreadyReceivedException`.
 
 `DurableMessageEnvelope`, `MessageKind`, `MessageTraceContext`,
-`DurableOperationState`, `DurableOperationStatus`, and
-`IDurableOperationReader` are in `Bondstone.Messaging`.
+`DurableOperationState`, `DurableOperationStatus`,
+`DurableOperationHandle`, `IDurableOperationReader`, `IDurableOperationFinalizer`,
+`IDurableOperationExpirationProcessor`,
+`DurableOperationFinalizationResult`, and
+`DurableOperationExpirationResult` are in `Bondstone.Messaging`.
+`IDurableOperationReader` and `IDurableOperationResultReader` include
+module-hinted read overloads for callers that know the result-owning module.
+
+`IDurableOperationExpirationStore` is in `Bondstone.Persistence` for provider
+stores that support app-owned operation expiry jobs.
+
+## Broker Integration
+
+Bondstone ships thin RabbitMQ and Azure Service Bus packages for native-driver
+envelope plumbing. Those packages do not own topology, provisioning,
+subscription storage, retry, dead-letter policy, prefetch/concurrency, or
+monitoring.
+
+Normal hosts register one outbound `IDurableEnvelopeDispatcher`. If a host
+needs more than one outbound transport, compose one explicit aggregate
+dispatcher instead of registering multiple built-in dispatchers and expecting
+Bondstone to infer ownership.
+
+Custom or app-owned broker integrations normally use:
+
+- `UseDurableEnvelopeDispatcher<TDispatcher>()` from `Bondstone.Configuration`
+  to register the outbound dispatcher and satisfy outbox composition
+  validation;
+- `IDurableEnvelopeDispatcher` from `Bondstone.Persistence` to publish claimed
+  outbox records through the chosen transport;
+- `IDurableEnvelopeDispatchRoute` and `RoutedDurableEnvelopeDispatcher` from
+  `Bondstone.Persistence` when the app explicitly needs route-aware outbound
+  dispatch across more than one transport;
+- `IDurableMessageEnvelopeSerializer` from `Bondstone.Messaging` to write and
+  read `DurableMessageEnvelope` payloads;
+- durable incoming inbox ingestion contracts from `Bondstone.Persistence` to
+  record received command envelopes or explicitly selected event subscribers
+  before native broker settlement.
+
+The application or transport library owns broker topology, subscriptions,
+native consumers, ack/nack/settlement, retry, dead-letter policy, prefetch,
+and monitoring. Bondstone-owned receive, settlement, stale inbox, and terminal
+outbox guidance is centralized in [operations.md](operations.md).
+
+The built-in RabbitMQ receive worker consumes with manual acknowledgement and
+uses `RequeueOnFailure` only as the native nack requeue flag. The built-in
+Azure Service Bus receive worker exposes native `ServiceBusProcessorOptions`
+for advanced driver configuration, but requires `AutoCompleteMessages = false`
+and `PeekLock` receive mode so Bondstone completes messages only after
+durable incoming inbox ingestion succeeds.
+
+Rebus remains app-owned guidance rather than a Bondstone package because Rebus
+already owns bus routing, handlers, subscriptions, retries, error queues,
+serialization, and endpoint lifecycle.
 
 ## EF Core Mappings
 
@@ -111,10 +172,11 @@ using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 
 Common APIs include:
 
-- `modelBuilder.ApplyBondstonePersistence(schema)` for outbox, inbox, and
-  operation-state mappings;
+- `modelBuilder.ApplyBondstonePersistence(schema)` for outbox, direct receive
+  inbox, durable incoming inbox, and operation-state mappings;
 - `modelBuilder.ApplyBondstoneOutbox(schema)`;
 - `modelBuilder.ApplyBondstoneInbox(schema)`;
+- `modelBuilder.ApplyBondstoneIncomingInbox(schema)`;
 - `modelBuilder.ApplyBondstoneOperationState(schema)`;
 - `module.UseEntityFrameworkCorePersistence<TDbContext>()` for
   provider-neutral EF module transactions and root EF durable stores;
@@ -145,22 +207,13 @@ Common APIs include:
   `services.AddBondstonePostgreSqlModulePersistence<TDbContext>(...)` for
   advanced composition.
 
-For direct non-EF PostgreSQL module persistence, import:
+The direct non-EF `Bondstone.Persistence.Postgres` package was removed after
+MVP. EF Core plus `Bondstone.Persistence.EntityFrameworkCore.Postgres` is the
+supported PostgreSQL production durable persistence path. Bondstone packages
+provide EF mappings and PostgreSQL provider helpers; applications generate,
+review, and apply their own EF migrations and own schema rollout.
 
-```csharp
-using Bondstone.Persistence.Postgres.Persistence;
-```
-
-Common APIs include:
-
-- `module.UsePostgresPersistence(connectionString, schema: ...)`;
-- `bondstone.UsePostgresPersistence(moduleName, connectionString, schema: ...)`;
-- `IPostgresModuleSession` for handler SQL inside the current module
-  transaction;
-- `PostgresSchema.EnsureDurableMessagingTablesAsync(...)` for explicit
-  proof, test, or sample schema creation helpers.
-
-## Hosting And Outbox Worker
+## Hosting Workers
 
 Use this import for normal hosted outbox dispatch:
 
@@ -179,6 +232,26 @@ Common APIs include:
 - `services.AddBondstoneDurableOutboxWorker(...)` and
   `services.AddBondstoneDurableOutboxDispatcher()` for advanced or custom
   scheduler composition.
+
+Use this import for opt-in durable incoming inbox processing:
+
+```csharp
+using Bondstone.Hosting.IncomingInbox;
+```
+
+Common APIs include:
+
+- `bondstone.UseDurableIncomingInboxWorker(options => ...)` for the hosted
+  worker over `IDurableIncomingInboxDispatcher`;
+- `DurableIncomingInboxWorkerOptions` for worker id, batch size, polling
+  interval, lease duration, failure delay, max attempts, and retry delays;
+- `services.AddBondstoneDurableIncomingInboxWorker(...)` for advanced worker
+  registration when the host composes the dispatcher itself.
+
+The receive topology remains three separate loops: the outbox dispatch
+worker, a transport receive/ingestion worker or app-owned adapter loop, and
+the incoming inbox processing worker. Cleanup and retention remain
+application-owned.
 
 ## Local Transport
 
@@ -200,33 +273,36 @@ Common APIs include:
   `local.Queue(queueName).SubscribeEvent(messageTypeName, subscriberModule, subscriberIdentity)`
   for explicit event subscriber topology.
 
-Local transport is for samples, tests, and local development. It exercises
-the durable outbox and receive inbox semantics through Bondstone's neutral
-receive pipelines, but it is not broker durability or a production fallback.
-See [architecture/transport-local.md](architecture/transport-local.md).
+Local transport is explicit routing for samples, tests, and local development.
+It exercises durable outbox dispatch and module receive idempotency semantics
+through Bondstone's neutral receive pipelines, but it is not broker
+durability, a production fallback, topology management, retry, dead-letter
+handling, or durable inbox ingestion.
+See the [Bondstone architecture](architecture.md)
+for internal transport behavior and limitations.
 
 ## Domain Events
 
 Use this import for module-local domain event contracts:
 
 ```csharp
-using Bondstone.Capabilities.DomainEvents;
+using Bondstone.DomainEvents;
 ```
 
-Common contracts include `IDomainEvent`, `DomainEventIdentityAttribute`,
-`IDomainEventSource`, and `IDomainEventHandler<TDomainEvent>`. Domain events
+Common contracts include `IDomainEvent`, `DomainEventIdentityAttribute`, and
+`IDomainEventSource`. Domain events
 are module-local facts; they are not durable transport messages and are not
 automatically published as integration events.
 
 For EF-backed domain event persistence, import:
 
 ```csharp
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 ```
 
 Common APIs include:
 
-- `module.UseEntityFrameworkCoreDomainEventPersistence()` for the EF bridge
+- `module.UseEntityFrameworkCoreDomainEventPersistence()` for the EF behavior
   that collects and stages module-local domain event records inside the EF
   module transaction;
 - `modelBuilder.ApplyBondstoneDomainEvents(schema)` for the domain event
@@ -239,20 +315,13 @@ records, not outbox records.
 ## Related Docs
 
 - [setup.md](setup.md) is the canonical golden-path setup example.
-- [packaging.md](packaging.md) owns package IDs and dependency direction.
+- [packaging.md](packaging.md) owns package IDs, target framework, dependency
+  direction, versioning, publishing, package artifacts, and migration/release
+  policy.
+- [operations.md](operations.md) describes production receive, outbox, inbox,
+  operation-state, migration, retention, and app-owned recovery guidance.
+- [observability.md](observability.md) describes current diagnostics and the
+  OpenTelemetry-native direction.
 - [public-api.md](public-api.md) classifies the current public API surface.
-- [architecture/messaging.md](architecture/messaging.md) describes commands,
-  integration events, domain events, receive pipelines, and transport
-  boundaries.
-- [architecture/persistence-core.md](architecture/persistence-core.md)
-  describes provider-neutral persistence contracts.
-- [architecture/persistence-ef-core.md](architecture/persistence-ef-core.md)
-  describes EF Core mappings and transaction behavior.
-- [architecture/persistence-postgresql.md](architecture/persistence-postgresql.md)
-  describes EF/PostgreSQL provider behavior.
-- [architecture/persistence-postgres.md](architecture/persistence-postgres.md)
-  describes non-EF PostgreSQL persistence behavior.
-- [architecture/hosting.md](architecture/hosting.md) describes the durable
-  outbox worker.
-- [architecture/transport-local.md](architecture/transport-local.md)
-  describes local transport topology and receive semantics.
+- [Bondstone architecture](architecture.md) owns
+  internal runtime architecture, persistence, hosting, and transport behavior.

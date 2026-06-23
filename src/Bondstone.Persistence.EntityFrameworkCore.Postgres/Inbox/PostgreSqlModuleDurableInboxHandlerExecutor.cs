@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bondstone.Persistence.EntityFrameworkCore.Postgres.Inbox;
 
-public sealed class PostgreSqlModuleDurableInboxHandlerExecutor<TDbContext>(
+internal sealed class PostgreSqlModuleDurableInboxHandlerExecutor<TDbContext>(
     string moduleName,
     TDbContext context,
     TimeProvider? timeProvider = null,

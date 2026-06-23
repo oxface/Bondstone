@@ -44,10 +44,13 @@ Use these `Category` values consistently:
 - `Integration`: tests that require real infrastructure or provider behavior,
   including Testcontainers-backed databases, transports, concurrency,
   serialization, retry, inbox/outbox, or provider-specific behavior.
+- `Package`: package artifact tests that inspect produced `.nupkg` files.
+  These tests require `pnpm backend:pack` to produce a clean artifact directory
+  before they run.
 
 The default quality gate runs `Unit` and `Application` tests. `Integration`
-tests are explicit because they may require Docker or another container
-runtime.
+and `Package` tests are explicit because they may require Docker, another
+container runtime, or freshly produced package artifacts.
 
 ## Integration Tests
 
@@ -71,32 +74,29 @@ Keep tests grouped by package or integration boundary so they reveal package
 ownership and extraction seams.
 
 For transport adapters, prefer a layered shape: use fast in-process transport
-tests for the broad behavior matrix, and keep a small number of
-Testcontainers-backed transport tests for the real provider handoff contract:
-acknowledgement/completion after success, negative acknowledgement or abandon
-after failure, and broker-owned dead-letter behavior where the adapter promises
-that handoff.
+tests for local behavior and thin adapter contract tests for broker packages.
+RabbitMQ and Azure Service Bus adapter packages also have Testcontainers-backed
+integration tests that prove native-driver dispatcher publish and opt-in
+receive-worker handoff into Bondstone's receiver boundary. Broker receive
+retry, settlement exhaustion, delivery counts, and dead-letter topology belong
+to application or selected transport-library tests unless a narrower
+Bondstone-owned behavior is accepted.
 
-Receive retry-policy tests should assert Bondstone's provider boundary rather
-than expecting Bondstone to own broker retry policy. Fast tests should cover
-native mapping, dispatch, and settlement ordering. Provider-backed integration
-tests should prove the native handoff that Bondstone performs: RabbitMQ
-negative acknowledgement with the configured `requeue` value and Service Bus
-abandon/complete behavior. Broker retry schedules, max delivery count, and
-dead-letter topology are app/provider configuration and should be tested only
-where the adapter explicitly promises that handoff.
+The modular monolith sample integration suite also has broker-backed
+extraction proofs for RabbitMQ and Azure Service Bus. Those tests verify the
+sample's ordering-to-fulfillment durable command flow, event return path, and
+target-module operation result observation over the real adapter packages.
 
 For first-class events, keep the same split. Unit and application tests should
-cover event route/topic resolution, publish dispatch, subscriber registration,
-subscriber inbox-key identity, and diagnostics. Provider-backed delivery,
-acknowledgement, retry, dead-letter, or subscription-storage behavior belongs
-in explicit `Integration` tests.
+cover event destination resolution, publish dispatch, subscriber registration,
+and subscriber inbox-key identity. Provider-backed delivery, acknowledgement,
+retry, dead-letter, or subscription-storage behavior belongs in explicit
+`Integration` tests.
 
-Transport topology validation is fast startup behavior. Cover missing command
-routes, missing published-event destinations, ambiguous multi-transport route
-ownership, missing subscriber bindings, invalid receive bindings, and
-queue-destination event fan-out mismatches with `Unit` or `Application` tests
-unless the assertion depends on a real broker handoff.
+Transport adapter routing is fast behavior. Cover missing command routes,
+missing published-event destinations, ambiguous multi-adapter dispatch route
+ownership, and missing receive bindings at dispatch or receive time with
+`Unit` or `Application` tests unless the assertion depends on a real broker.
 
 ## Verification Surface
 
@@ -115,6 +115,7 @@ Additional test entrypoints are:
 
 - `pnpm backend:test:fast` for `Unit` and `Application` tests.
 - `pnpm backend:test:integration` for `Integration` tests.
+- `pnpm backend:pack` for package creation and `Package` artifact tests.
 - `pnpm backend:test:all` for every discovered test.
 
 `pnpm verify` is kept as an alias for `pnpm check`.
@@ -124,7 +125,7 @@ smoke test under `tests/Bondstone.Samples.Tests`. It is covered by
 `pnpm backend:test:integration` and intentionally stays out of the default
 fast test filter because it starts Testcontainers PostgreSQL.
 
-The PostgreSQL non-EF persistence package has explicit `Integration` tests under
-`tests/Bondstone.Persistence.Postgres.Tests` because the package depends
-on real PostgreSQL schema, transaction, inbox, outbox, and operation-state
-behavior.
+The non-EF PostgreSQL package tests were removed with that package after MVP.
+EF/PostgreSQL remains the provider-backed integration-test path. Thin
+RabbitMQ and Azure Service Bus package tests should stay fast until a real
+provider-backed adapter proof is explicitly accepted.

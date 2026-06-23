@@ -11,8 +11,15 @@ internal sealed class ModuleRuntimeRegistry
         _outboxWriterRegistrations;
     private readonly Lazy<IReadOnlyDictionary<string, DurableModuleInboxHandlerExecutorRegistration>>
         _inboxHandlerExecutorRegistrations;
+    private readonly Lazy<IReadOnlyDictionary<string, DurableModuleInboxInspectionStoreRegistration>>
+        _inboxInspectionStoreRegistrations;
+    private readonly Lazy<IReadOnlyDictionary<string,
+        DurableModuleIncomingInboxIngestionBoundaryRegistration>>
+        _incomingInboxIngestionBoundaryRegistrations;
     private readonly Lazy<IReadOnlyDictionary<string, DurableModuleOperationStateStoreRegistration>>
         _operationStateStoreRegistrations;
+    private readonly Lazy<IReadOnlyDictionary<string, DurableModuleOutboxInspectionStoreRegistration>>
+        _outboxInspectionStoreRegistrations;
 
     public ModuleRuntimeRegistry(
         IServiceProvider serviceProvider,
@@ -35,12 +42,31 @@ internal sealed class ModuleRuntimeRegistry
                     persistenceRegistrationRegistry.InboxHandlerExecutorRegistrations,
                     static registration => registration.ModuleName,
                     "durable module inbox handler executor"));
+        _inboxInspectionStoreRegistrations =
+            new Lazy<IReadOnlyDictionary<string, DurableModuleInboxInspectionStoreRegistration>>(
+                () => ToModuleMap(
+                    persistenceRegistrationRegistry.InboxInspectionStoreRegistrations,
+                    static registration => registration.ModuleName,
+                    "durable module inbox inspection store"));
+        _incomingInboxIngestionBoundaryRegistrations =
+            new Lazy<IReadOnlyDictionary<string,
+                DurableModuleIncomingInboxIngestionBoundaryRegistration>>(
+                () => ToModuleMap(
+                    persistenceRegistrationRegistry.IncomingInboxIngestionBoundaryRegistrations,
+                    static registration => registration.ModuleName,
+                    "durable module incoming inbox ingestion boundary"));
         _operationStateStoreRegistrations =
             new Lazy<IReadOnlyDictionary<string, DurableModuleOperationStateStoreRegistration>>(
                 () => ToModuleMap(
                     persistenceRegistrationRegistry.OperationStateStoreRegistrations,
                     static registration => registration.ModuleName,
                     "durable module operation-state store"));
+        _outboxInspectionStoreRegistrations =
+            new Lazy<IReadOnlyDictionary<string, DurableModuleOutboxInspectionStoreRegistration>>(
+                () => ToModuleMap(
+                    persistenceRegistrationRegistry.OutboxInspectionStoreRegistrations,
+                    static registration => registration.ModuleName,
+                    "durable module outbox inspection store"));
     }
 
     public bool HasDurableOutboxWriters => _outboxWriterRegistrations.Value.Count > 0;
@@ -48,13 +74,24 @@ internal sealed class ModuleRuntimeRegistry
     public bool HasDurableInboxHandlerExecutors =>
         _inboxHandlerExecutorRegistrations.Value.Count > 0;
 
+    public bool HasDurableInboxInspectionStores =>
+        _inboxInspectionStoreRegistrations.Value.Count > 0;
+
+    public bool HasDurableIncomingInboxIngestionBoundaries =>
+        _incomingInboxIngestionBoundaryRegistrations.Value.Count > 0;
+
     public bool HasDurableOperationStateStores =>
         _operationStateStoreRegistrations.Value.Count > 0;
+
+    public bool HasDurableOutboxInspectionStores =>
+        _outboxInspectionStoreRegistrations.Value.Count > 0;
 
     public bool HasDurableModulePersistenceRegistrations =>
         HasDurableOutboxWriters
         || HasDurableInboxHandlerExecutors
-        || HasDurableOperationStateStores;
+        || HasDurableInboxInspectionStores
+        || HasDurableOperationStateStores
+        || HasDurableOutboxInspectionStores;
 
     public void ValidateDurableOutboxWriters()
     {
@@ -66,9 +103,24 @@ internal sealed class ModuleRuntimeRegistry
         _ = _inboxHandlerExecutorRegistrations.Value;
     }
 
+    public void ValidateDurableInboxInspectionStores()
+    {
+        _ = _inboxInspectionStoreRegistrations.Value;
+    }
+
+    public void ValidateDurableIncomingInboxIngestionBoundaries()
+    {
+        _ = _incomingInboxIngestionBoundaryRegistrations.Value;
+    }
+
     public void ValidateDurableOperationStateStores()
     {
         _ = _operationStateStoreRegistrations.Value;
+    }
+
+    public void ValidateDurableOutboxInspectionStores()
+    {
+        _ = _outboxInspectionStoreRegistrations.Value;
     }
 
     public IReadOnlyList<IDurableOperationStateStore> CreateDurableOperationStateStores()
@@ -107,9 +159,24 @@ internal sealed class ModuleRuntimeRegistry
                     _inboxHandlerExecutorRegistrations.Value,
                     module.Name,
                     registration => registration.CreateExecutor(_serviceProvider))),
+            new Lazy<IDurableInboxInspectionStore?>(
+                () => CreateModuleService(
+                    _inboxInspectionStoreRegistrations.Value,
+                    module.Name,
+                    registration => registration.CreateStore(_serviceProvider))),
+            new Lazy<DurableIncomingInboxIngestionBoundary?>(
+                () => CreateModuleService(
+                    _incomingInboxIngestionBoundaryRegistrations.Value,
+                    module.Name,
+                    registration => registration.CreateBoundary(_serviceProvider))),
             new Lazy<IDurableOperationStateStore?>(
                 () => CreateModuleService(
                     _operationStateStoreRegistrations.Value,
+                    module.Name,
+                    registration => registration.CreateStore(_serviceProvider))),
+            new Lazy<IDurableOutboxInspectionStore?>(
+                () => CreateModuleService(
+                    _outboxInspectionStoreRegistrations.Value,
                     module.Name,
                     registration => registration.CreateStore(_serviceProvider))));
     }

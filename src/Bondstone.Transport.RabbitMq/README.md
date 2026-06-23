@@ -1,25 +1,28 @@
 # Bondstone.Transport.RabbitMq
 
-RabbitMQ transport adapter integration for Bondstone durable messaging.
+Thin RabbitMQ adapter for Bondstone durable envelopes.
 
-This package owns RabbitMQ-specific outbox publishing, receive topology,
-message mapping, settlement helpers, and opt-in hosted receive worker
-composition.
+This package provides outbound `IDurableEnvelopeDispatcher` registration and
+opt-in receive workers over `RabbitMQ.Client`. It does not declare exchanges,
+queues, bindings, retry policies, dead-letter exchanges, credentials,
+prefetch/concurrency strategy, or monitoring.
 
-## Quick Path
+Use it only when the host already owns RabbitMQ topology and wants small
+Bondstone envelope plumbing.
 
-Use this package when a host dispatches Bondstone durable outbox records
-through RabbitMQ. Normal setup registers the RabbitMQ connection and calls
-`bondstone.UseRabbitMqTransport(...)` inside `AddBondstone`; broker entities,
-bindings, retry policy, and dead-letter behavior remain app-owned. See
-[the setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md).
-
-Install this package in hosts that publish durable outbox messages to RabbitMQ
-or run opt-in RabbitMQ receive workers. Projects that only declare message
-contracts or module handlers do not need the adapter package.
+The receive worker ingests native deliveries into the durable incoming inbox
+ledger with `ReceiveCommand()` or `ReceiveEvent(...)`. The explicit
+`IngestCommandToDurableIncomingInbox()` and
+`IngestEventToDurableIncomingInbox(...)` aliases are available when a host
+wants the method name to emphasize the ingestion boundary. The worker commits
+the incoming inbox row before RabbitMQ acknowledgement; the separate
+`Bondstone.Hosting` durable incoming inbox worker processes the row later.
 
 See:
 
-- [RabbitMQ transport architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/transport-rabbitmq.md)
-- [Messaging architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture/messaging.md)
-- [RabbitMQ transport tests](https://github.com/oxface/Bondstone/tree/main/tests/Bondstone.Transport.RabbitMq.Tests)
+- [Setup guide](https://github.com/oxface/Bondstone/blob/main/docs/setup.md)
+- [Package discovery](https://github.com/oxface/Bondstone/blob/main/docs/package-discovery.md)
+- [Operations guide](https://github.com/oxface/Bondstone/blob/main/docs/operations.md)
+- [Observability guide](https://github.com/oxface/Bondstone/blob/main/docs/observability.md)
+- [Packaging, release, and migration policy](https://github.com/oxface/Bondstone/blob/main/docs/packaging.md)
+- [Bondstone architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture.md)

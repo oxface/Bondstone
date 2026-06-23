@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Utility;
 
 namespace Bondstone.Modules;
@@ -89,8 +90,14 @@ internal sealed class ModuleCommandRouteRegistry : IModuleCommandRouteRegistry
                     || existingRoute.HandlerIdentity != route.HandlerIdentity
                     || existingRoute.MessageTypeName != route.MessageTypeName)
                 {
-                    throw new InvalidOperationException(
-                        $"Module '{route.ModuleName}' already has a command route for '{route.CommandType.FullName}'.");
+                    string durableIdentityDetail =
+                        existingRoute.MessageTypeName is not null || route.MessageTypeName is not null
+                            ? $" Existing durable command message identity: '{existingRoute.MessageTypeName ?? "(none)"}'; attempted durable command message identity: '{route.MessageTypeName ?? "(none)"}'."
+                            : string.Empty;
+
+                    throw new BondstoneSetupException(
+                        BondstoneSetupCodes.DuplicateDurableRegistration,
+                        $"Module '{route.ModuleName}' already has a command route for '{route.CommandType.FullName}'.{durableIdentityDetail}");
                 }
 
                 return existingRoute;
@@ -102,8 +109,9 @@ internal sealed class ModuleCommandRouteRegistry : IModuleCommandRouteRegistry
 
                 if (_routesByMessageTypeName.TryGetValue(messageKey, out ModuleCommandRoute? existingMessageRoute))
                 {
-                    throw new InvalidOperationException(
-                        $"Module '{route.ModuleName}' already has a durable command route for message type '{route.MessageTypeName}' handled by '{existingMessageRoute.HandlerType.FullName}'.");
+                    throw new BondstoneSetupException(
+                        BondstoneSetupCodes.DuplicateDurableRegistration,
+                        $"Module '{route.ModuleName}' already has a durable command route for durable command message identity '{route.MessageTypeName}' handled by '{existingMessageRoute.HandlerType.FullName}'.");
                 }
 
                 _routesByMessageTypeName.Add(messageKey, route);

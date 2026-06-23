@@ -1,4 +1,6 @@
 using Bondstone.Configuration;
+using Bondstone.Diagnostics;
+using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Bondstone.Messaging;
@@ -122,13 +124,16 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
         await using ServiceProvider serviceProvider = services.BuildServiceProvider();
         using IServiceScope scope = serviceProvider.CreateScope();
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await scope.ServiceProvider
                 .GetRequiredService<IModuleCommandExecutor>()
                 .ExecuteAsync(
                     "fulfillment",
                     new StoreHandledCommand("A-100")));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("missing required Bondstone EF Core mappings: outbox", exception.Message, StringComparison.Ordinal);
         Assert.Contains("ApplyBondstoneOutbox()", exception.Message, StringComparison.Ordinal);
     }
@@ -158,13 +163,16 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
         await using ServiceProvider serviceProvider = services.BuildServiceProvider();
         using IServiceScope scope = serviceProvider.CreateScope();
 
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        InvalidOperationException exception = await Assert.ThrowsAnyAsync<InvalidOperationException>(
             async () => await scope.ServiceProvider
                 .GetRequiredService<IModuleCommandExecutor>()
                 .ExecuteAsync(
                     "fulfillment",
                     new StoreHandledCommand("A-100")));
 
+        Assert.Equal(
+            BondstoneSetupCodes.MissingEfMapping,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("missing required Bondstone EF Core mappings: inbox", exception.Message, StringComparison.Ordinal);
         Assert.Contains("ApplyBondstoneInbox()", exception.Message, StringComparison.Ordinal);
     }
@@ -395,7 +403,7 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void UseEntityFrameworkCorePersistence_WhenCalled_RegistersTransactionBehaviorContributions()
+    public void UseEntityFrameworkCorePersistence_WhenCalled_RegistersTransactionRuntimeBehaviors()
     {
         var services = new ServiceCollection();
 
@@ -407,113 +415,78 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
             });
         });
 
-        Assert.DoesNotContain(
+        Assert.Contains(
             services,
-            static descriptor => descriptor.ServiceType == typeof(ModuleCommandPipelineContribution));
-        Assert.DoesNotContain(
-            services,
-            static descriptor => descriptor.ServiceType == typeof(ModuleEventSubscriberPipelineContribution));
-        Assert.DoesNotContain(
-            services,
-            static descriptor => descriptor.ServiceType == typeof(IModuleCommandPipelineBehavior<>)
-                && descriptor.ImplementationType?.FullName == "Bondstone.Modules.ValidationModuleCommandPipelineBehavior`1");
+            static descriptor => descriptor.ServiceType == typeof(IModuleTransactionRunner)
+                && descriptor.ImplementationType?.FullName
+                == "Bondstone.Persistence.EntityFrameworkCore.Persistence.EntityFrameworkCoreModuleTransactionRunner");
     }
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task ModuleCommands_WhenSystemBehaviorsAreRegistered_RunsThemByOrderBeforeApplicationBehaviors()
+    public async Task IncomingInboxIngestionBoundary_WhenModuleUsesEntityFrameworkCorePersistence_UsesReceiverModuleDbContext()
     {
+        string fulfillmentDatabaseName = Guid.NewGuid().ToString("N");
+        string billingDatabaseName = Guid.NewGuid().ToString("N");
         var services = new ServiceCollection();
-        services.AddSingleton<CommandCallLog>();
-        services.AddScoped<IModuleCommandPipelineBehavior<StoreHandledCommand>, ApplicationBehavior>();
-
+        services.AddDbContext<FulfillmentIncomingInboxDbContext>(options =>
+            options
+                .UseInMemoryDatabase(fulfillmentDatabaseName)
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+        services.AddDbContext<BillingIncomingInboxDbContext>(options =>
+            options
+                .UseInMemoryDatabase(billingDatabaseName)
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
         services.AddBondstone(bondstone =>
         {
             bondstone.Module("fulfillment", module =>
             {
-                module.AddCommandPipelineContribution(
-                    new ModuleCommandPipelineContribution(
-                        "test.ef.system-late",
-                        ModulePipelineStepKind.System,
-                        10,
-                        typeof(LateSystemBehavior)));
-                module.AddCommandPipelineContribution(
-                    new ModuleCommandPipelineContribution(
-                        "test.ef.system-early",
-                        ModulePipelineStepKind.System,
-                        -10,
-                        typeof(EarlySystemBehavior)));
-                module.Commands.RegisterHandler<StoreHandledCommand, LoggingCommandHandler>();
+                module.UseEntityFrameworkCorePersistence<FulfillmentIncomingInboxDbContext>();
+            });
+            bondstone.Module("billing", module =>
+            {
+                module.UseEntityFrameworkCorePersistence<BillingIncomingInboxDbContext>();
             });
         });
 
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-        using IServiceScope scope = serviceProvider.CreateScope();
-
-        await scope.ServiceProvider
-            .GetRequiredService<IModuleCommandExecutor>()
-            .ExecuteAsync(
+        var record = new DurableIncomingInboxRecord(
+            DurableIncomingInboxKey.ForCommandHandler(
+                Guid.Parse("875c60be-d67f-475e-b84e-367f36f76c4c"),
+                "billing",
+                "billing.record-payment.v1"),
+            new DurableMessageEnvelope(
+                Guid.Parse("875c60be-d67f-475e-b84e-367f36f76c4c"),
+                MessageKind.Command,
+                "billing.record-payment.v1",
                 "fulfillment",
-                new StoreHandledCommand("A-100"));
+                "billing",
+                "{}",
+                DateTimeOffset.Parse("2026-06-18T10:15:00+00:00")),
+            DateTimeOffset.Parse("2026-06-18T10:16:00+00:00"),
+            sourceTransportName: "rabbitmq:billing.commands");
 
-        CommandCallLog log = serviceProvider.GetRequiredService<CommandCallLog>();
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider(
+            validateScopes: true);
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IDurableIncomingInboxIngestionBoundaryResolver resolver = scope.ServiceProvider
+            .GetRequiredService<IDurableIncomingInboxIngestionBoundaryResolver>();
+        DurableIncomingInboxIngestionBoundary boundary = resolver.Resolve("billing");
 
-        Assert.Equal(
-            [
-                "system-early:before",
-                "system-late:before",
-                "application:before",
-                "handle:A-100",
-                "application:after",
-                "system-late:after",
-                "system-early:after",
-            ],
-            log.Calls);
-    }
+        await boundary.IngestAndSaveAsync(record);
 
-    public sealed class EarlySystemBehavior(CommandCallLog log)
-        : IModuleCommandPipelineBehavior<StoreHandledCommand>
-    {
-        public async ValueTask HandleAsync(
-            StoreHandledCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
-            CancellationToken ct = default)
-        {
-            log.Calls.Add("system-early:before");
-            await next(ct);
-            log.Calls.Add("system-early:after");
-        }
-    }
+        using IServiceScope verificationScope = serviceProvider.CreateScope();
+        FulfillmentIncomingInboxDbContext fulfillmentContext = verificationScope.ServiceProvider
+            .GetRequiredService<FulfillmentIncomingInboxDbContext>();
+        BillingIncomingInboxDbContext billingContext = verificationScope.ServiceProvider
+            .GetRequiredService<BillingIncomingInboxDbContext>();
 
-    public sealed class LateSystemBehavior(CommandCallLog log)
-        : IModuleCommandPipelineBehavior<StoreHandledCommand>
-    {
-        public async ValueTask HandleAsync(
-            StoreHandledCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
-            CancellationToken ct = default)
-        {
-            log.Calls.Add("system-late:before");
-            await next(ct);
-            log.Calls.Add("system-late:after");
-        }
-    }
-
-    public sealed class ApplicationBehavior(CommandCallLog log)
-        : IModuleCommandPipelineBehavior<StoreHandledCommand>
-    {
-        public async ValueTask HandleAsync(
-            StoreHandledCommand command,
-            ModuleCommandExecutionContext context,
-            ModuleCommandPipelineNext next,
-            CancellationToken ct = default)
-        {
-            log.Calls.Add("application:before");
-            await next(ct);
-            log.Calls.Add("application:after");
-        }
+        Assert.Empty(await fulfillmentContext.Set<IncomingInboxMessageEntity>().ToListAsync());
+        IncomingInboxMessageEntity entity = Assert.Single(
+            await billingContext.Set<IncomingInboxMessageEntity>().ToListAsync());
+        Assert.Equal("billing", entity.ReceiverModule);
+        Assert.Equal("rabbitmq:billing.commands", entity.SourceTransportName);
     }
 
     public sealed class LoggingCommandHandler(CommandCallLog log)
@@ -669,6 +642,26 @@ public sealed class EntityFrameworkCoreModuleTransactionBehaviorTests
                 {
                     entity.HasKey(record => record.Id);
                 });
+        }
+    }
+
+    public sealed class FulfillmentIncomingInboxDbContext(
+        DbContextOptions<FulfillmentIncomingInboxDbContext> options)
+        : DbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.ApplyBondstoneIncomingInbox();
+        }
+    }
+
+    public sealed class BillingIncomingInboxDbContext(
+        DbContextOptions<BillingIncomingInboxDbContext> options)
+        : DbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.ApplyBondstoneIncomingInbox();
         }
     }
 

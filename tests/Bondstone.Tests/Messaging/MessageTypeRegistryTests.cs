@@ -1,3 +1,6 @@
+using System.Reflection;
+using System.Reflection.Emit;
+using Bondstone.Diagnostics;
 using Bondstone.Messaging;
 using Xunit;
 
@@ -64,9 +67,12 @@ public sealed class MessageTypeRegistryTests
         var registry = new MessageTypeRegistry();
         registry.Register<RegisterCustomerCommand>("sales.customer.register.v1");
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => registry.Register<RegisterCustomerCommand>("sales.customer.register.v2"));
 
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
     }
 
@@ -77,9 +83,12 @@ public sealed class MessageTypeRegistryTests
         var registry = new MessageTypeRegistry();
         registry.Register<RegisterCustomerCommand>("sales.customer.message.v1");
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             () => registry.Register<CustomerRegistered>("sales.customer.message.v1"));
 
+        Assert.Equal(
+            BondstoneSetupCodes.DuplicateDurableRegistration,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains("already registered", exception.Message, StringComparison.Ordinal);
     }
 
@@ -109,13 +118,47 @@ public sealed class MessageTypeRegistryTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void Register_WithBlankExplicitName_ThrowsSetupCode()
+    {
+        var registry = new MessageTypeRegistry();
+
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
+            () => registry.Register<RegisterCustomerCommand>(" "));
+
+        Assert.Equal(
+            BondstoneSetupCodes.InvalidDurableIdentity,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Equal("messageTypeName", exception.ParamName);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Register_WithBlankIdentityAttribute_ThrowsSetupCode()
+    {
+        var registry = new MessageTypeRegistry();
+        Type messageType = CreateAttributedCommandTypeWithBlankIdentity();
+
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
+            () => registry.Register(messageType));
+
+        Assert.Equal(
+            BondstoneSetupCodes.InvalidDurableIdentity,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
+        Assert.Equal(nameof(DurableCommandIdentityAttribute.Name), exception.ParamName);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void Register_WhenDurableCommandUsesIntegrationEventIdentity_Throws()
     {
         var registry = new MessageTypeRegistry();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             registry.Register<CommandWithEventIdentity>);
 
+        Assert.Equal(
+            BondstoneSetupCodes.InvalidDurableIdentity,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains(nameof(DurableCommandIdentityAttribute), exception.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(IntegrationEventIdentityAttribute), exception.Message, StringComparison.Ordinal);
     }
@@ -126,9 +169,12 @@ public sealed class MessageTypeRegistryTests
     {
         var registry = new MessageTypeRegistry();
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.ThrowsAny<InvalidOperationException>(
             registry.Register<EventWithCommandIdentity>);
 
+        Assert.Equal(
+            BondstoneSetupCodes.InvalidDurableIdentity,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains(nameof(IntegrationEventIdentityAttribute), exception.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(DurableCommandIdentityAttribute), exception.Message, StringComparison.Ordinal);
     }
@@ -173,9 +219,12 @@ public sealed class MessageTypeRegistryTests
     {
         var registry = new MessageTypeRegistry();
 
-        ArgumentException exception = Assert.Throws<ArgumentException>(
+        ArgumentException exception = Assert.ThrowsAny<ArgumentException>(
             () => registry.Register<AmbiguousMessage>("sales.customer.ambiguous.v1"));
 
+        Assert.Equal(
+            BondstoneSetupCodes.InvalidDurableIdentity,
+            Assert.IsAssignableFrom<IBondstoneSetupException>(exception).SetupCode);
         Assert.Contains(nameof(IDurableCommand), exception.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(IIntegrationEvent), exception.Message, StringComparison.Ordinal);
     }
@@ -200,4 +249,25 @@ public sealed class MessageTypeRegistryTests
     private sealed record EventWithCommandIdentity : IIntegrationEvent;
 
     private sealed record AmbiguousMessage : IDurableCommand, IIntegrationEvent;
+
+    private static Type CreateAttributedCommandTypeWithBlankIdentity()
+    {
+        AssemblyName assemblyName = new("Bondstone.Tests.DynamicMessages");
+        AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
+            assemblyName,
+            AssemblyBuilderAccess.Run);
+        ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule(
+            assemblyName.Name!);
+        TypeBuilder typeBuilder = moduleBuilder.DefineType(
+            "BlankIdentityCommand",
+            TypeAttributes.NotPublic | TypeAttributes.Class);
+        typeBuilder.AddInterfaceImplementation(typeof(IDurableCommand));
+
+        ConstructorInfo constructor =
+            typeof(DurableCommandIdentityAttribute).GetConstructor([typeof(string)])!;
+        typeBuilder.SetCustomAttribute(
+            new CustomAttributeBuilder(constructor, [" "]));
+
+        return typeBuilder.CreateType();
+    }
 }

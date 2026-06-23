@@ -1,5 +1,8 @@
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Bondstone.Messaging;
 using Bondstone.Persistence;
+using Bondstone.Tests;
 using Xunit;
 
 namespace Bondstone.Tests.Persistence;
@@ -14,7 +17,7 @@ public sealed class DurableOutboxDispatcherTests
         DurableOutboxRecord second = CreateRecord(Guid.Parse("7fc91fbb-7f01-4a9c-9e2c-cac014cb29ce"));
         var claimer = new FakeClaimer([first, second]);
         var leaseRenewer = new FakeLeaseRenewer();
-        var transport = new FakeTransport();
+        var transport = new FakeEnvelopeDispatcher();
         var recorder = new FakeDispatchRecorder();
         DurableOutboxDispatcher dispatcher = CreateDispatcher(claimer, leaseRenewer, transport, recorder: recorder);
 
@@ -34,11 +37,125 @@ public sealed class DurableOutboxDispatcherTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task DispatchAsync_WhenLeaseCannotBeRenewed_SkipsTransportSend()
+    public async Task DispatchAsync_WhenRecordsAreSent_EmitsOutboxDispatchActivities()
+    {
+        DurableOutboxRecord first = CreateRecord(Guid.Parse("40d76ea9-188f-4ed4-bd1d-a6bc65a58101"));
+        DurableOutboxRecord second = CreateRecord(Guid.Parse("7fc91fbb-7f01-4a9c-9e2c-cac014cb29ce"));
+        var activities = new List<Activity>();
+        using ActivityListener listener = ActivityTestHelper.CreateActivityListener(
+            "Bondstone.Persistence",
+            activities);
+        DurableOutboxDispatcher dispatcher = CreateDispatcher(
+            new FakeClaimer([first, second]),
+            new FakeLeaseRenewer(),
+            new FakeEnvelopeDispatcher());
+
+        await dispatcher.DispatchAsync(
+            " dispatcher-1 ",
+            TimeSpan.FromMinutes(5),
+            maxCount: 10);
+
+        Activity batchActivity = Assert.Single(
+            activities,
+            activity => activity.OperationName == "bondstone.outbox.dispatch");
+        Assert.Equal(ActivityKind.Internal, batchActivity.Kind);
+        Assert.Equal(10, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.max_count"));
+        Assert.Equal(2, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.claimed_count"));
+        Assert.Equal(2, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.dispatched_count"));
+        Assert.Equal(0, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.retry_scheduled_count"));
+        Assert.Equal(0, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.terminal_failed_count"));
+        Assert.Equal(0, ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.stale_count"));
+        Assert.Null(ActivityTestHelper.GetTag(batchActivity, "bondstone.outbox.claimed_by"));
+
+        Activity[] messageActivities = activities
+            .Where(activity => activity.OperationName == "bondstone.outbox.dispatch.message")
+            .ToArray();
+        Assert.Equal(2, messageActivities.Length);
+        Assert.All(messageActivities, messageActivity =>
+        {
+            Assert.Equal("Command", ActivityTestHelper.GetTag(messageActivity, "bondstone.message_kind"));
+            Assert.Equal("sales.customer.register.v1", ActivityTestHelper.GetTag(messageActivity, "bondstone.message_type"));
+            Assert.Equal("sales", ActivityTestHelper.GetTag(messageActivity, "bondstone.source_module"));
+            Assert.Equal("billing", ActivityTestHelper.GetTag(messageActivity, "bondstone.target_module"));
+            Assert.Null(ActivityTestHelper.GetTag(messageActivity, "bondstone.message_id"));
+        });
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task DispatchAsync_WhenOutcomesAreRecorded_EmitsOutboxMetrics()
+    {
+        DurableOutboxRecord dispatched = CreateRecord(
+            Guid.Parse("b7b384e0-5441-4b69-acdd-bce710a6d88a"),
+            sourceModule: "metric-sales",
+            targetModule: "metric-billing");
+        DurableOutboxRecord retry = CreateRecord(
+            Guid.Parse("0e2c05ee-45bc-457d-92c0-65c19ae6fb29"),
+            sourceModule: "metric-sales",
+            targetModule: "metric-fulfillment");
+        DurableOutboxRecord terminal = CreateRecord(
+            Guid.Parse("3ab4b560-0523-481f-bf4c-4970a4583ede"),
+            attemptCount: 5,
+            sourceModule: "metric-sales",
+            targetModule: "metric-warehouse");
+        DurableOutboxRecord stale = CreateRecord(
+            Guid.Parse("7e6463e3-79a9-4d4a-9851-97c48713e1d6"),
+            sourceModule: "metric-sales",
+            targetModule: "metric-support");
+        var measurements = new List<MetricMeasurement>();
+        using MeterListener listener = MetricTestHelper.CreateMeterListener(
+            "Bondstone.Persistence",
+            measurements);
+        var leaseRenewer = new FakeLeaseRenewer();
+        leaseRenewer.FailedRenewalMessageIds.Add(stale.Envelope.MessageId);
+        var transport = new FakeEnvelopeDispatcher();
+        transport.ExceptionsByMessageId[retry.Envelope.MessageId] =
+            new InvalidOperationException("temporary failure");
+        transport.ExceptionsByMessageId[terminal.Envelope.MessageId] =
+            new InvalidOperationException("terminal failure");
+        DurableOutboxDispatcher dispatcher = CreateDispatcher(
+            new FakeClaimer([dispatched, retry, terminal, stale]),
+            leaseRenewer,
+            transport,
+            failurePolicy: new DurableOutboxFailurePolicy(maxAttempts: 5));
+
+        await dispatcher.DispatchAsync(
+            "dispatcher-1",
+            TimeSpan.FromMinutes(5));
+
+        Assert.Equal(
+            4,
+            MetricTestHelper.FindMeasurements(
+                    measurements,
+                    "bondstone.outbox.claimed",
+                    "bondstone.source_module",
+                    "metric-sales")
+                .Sum(static measurement => measurement.Value));
+        AssertMetric(
+            measurements,
+            "bondstone.outbox.dispatched",
+            "metric-billing");
+        AssertMetric(
+            measurements,
+            "bondstone.outbox.retry_scheduled",
+            "metric-fulfillment");
+        AssertMetric(
+            measurements,
+            "bondstone.outbox.terminal_failed",
+            "metric-warehouse");
+        AssertMetric(
+            measurements,
+            "bondstone.outbox.stale",
+            "metric-support");
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task DispatchAsync_WhenLeaseCannotBeRenewed_SkipsEnvelopeDispatch()
     {
         DurableOutboxRecord record = CreateRecord(Guid.Parse("523eb5d5-f157-4a4d-abcf-d228d23703e9"));
         var leaseRenewer = new FakeLeaseRenewer { RenewResult = false };
-        var transport = new FakeTransport();
+        var transport = new FakeEnvelopeDispatcher();
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
             leaseRenewer,
@@ -55,10 +172,10 @@ public sealed class DurableOutboxDispatcherTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task DispatchAsync_WhenTransportFailsAndPolicyRetries_SchedulesRetry()
+    public async Task DispatchAsync_WhenEnvelopeDispatchFailsAndPolicyRetries_SchedulesRetry()
     {
         DurableOutboxRecord record = CreateRecord(Guid.Parse("79fffc4d-545d-46e4-b8df-e4e8b992ace1"));
-        var transport = new FakeTransport { Exception = new InvalidOperationException("transport unavailable") };
+        var transport = new FakeEnvelopeDispatcher { Exception = new InvalidOperationException("transport unavailable") };
         var recorder = new FakeDispatchRecorder();
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
@@ -82,7 +199,7 @@ public sealed class DurableOutboxDispatcherTests
     public async Task DispatchAsync_WhenRetryScheduleCannotBeRecorded_CountsStale()
     {
         DurableOutboxRecord record = CreateRecord(Guid.Parse("a42e4f2e-2f8b-4c8f-a119-bfffa93ae1de"));
-        var transport = new FakeTransport { Exception = new InvalidOperationException("transport unavailable") };
+        var transport = new FakeEnvelopeDispatcher { Exception = new InvalidOperationException("transport unavailable") };
         var recorder = new FakeDispatchRecorder { RecordResult = false };
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
@@ -103,12 +220,12 @@ public sealed class DurableOutboxDispatcherTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task DispatchAsync_WhenTransportFailsAndMaxAttemptsReached_MarksTerminalFailed()
+    public async Task DispatchAsync_WhenEnvelopeDispatchFailsAndMaxAttemptsReached_MarksTerminalFailed()
     {
         DurableOutboxRecord record = CreateRecord(
             Guid.Parse("4b6fdcfb-c8ad-4f50-b243-82cc3055fef7"),
             attemptCount: 5);
-        var transport = new FakeTransport { Exception = new InvalidOperationException("poison") };
+        var transport = new FakeEnvelopeDispatcher { Exception = new InvalidOperationException("poison") };
         var recorder = new FakeDispatchRecorder();
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
@@ -132,7 +249,7 @@ public sealed class DurableOutboxDispatcherTests
         DurableOutboxRecord record = CreateRecord(
             Guid.Parse("59b28340-bc5d-4a2d-a682-2bfc00f50b27"),
             attemptCount: 5);
-        var transport = new FakeTransport { Exception = new InvalidOperationException("poison") };
+        var transport = new FakeEnvelopeDispatcher { Exception = new InvalidOperationException("poison") };
         var recorder = new FakeDispatchRecorder { RecordResult = false };
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
@@ -160,7 +277,7 @@ public sealed class DurableOutboxDispatcherTests
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
             new FakeLeaseRenewer(),
-            new FakeTransport(),
+            new FakeEnvelopeDispatcher(),
             recorder: recorder);
 
         DurableOutboxDispatchResult result = await dispatcher.DispatchAsync(
@@ -178,7 +295,7 @@ public sealed class DurableOutboxDispatcherTests
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         DurableOutboxRecord record = CreateRecord(Guid.Parse("b23f236b-722c-4a91-b03e-75e658e8f3d9"));
-        var transport = new FakeTransport { Exception = new OperationCanceledException(cts.Token) };
+        var transport = new FakeEnvelopeDispatcher { Exception = new OperationCanceledException(cts.Token) };
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([record]),
             new FakeLeaseRenewer(),
@@ -198,7 +315,7 @@ public sealed class DurableOutboxDispatcherTests
         DurableOutboxDispatcher dispatcher = CreateDispatcher(
             new FakeClaimer([]),
             new FakeLeaseRenewer(),
-            new FakeTransport());
+            new FakeEnvelopeDispatcher());
 
         await Assert.ThrowsAsync<ArgumentException>(
             async () => await dispatcher.DispatchAsync(" ", TimeSpan.FromMinutes(5)));
@@ -207,7 +324,7 @@ public sealed class DurableOutboxDispatcherTests
     private static DurableOutboxDispatcher CreateDispatcher(
         FakeClaimer claimer,
         FakeLeaseRenewer leaseRenewer,
-        FakeTransport transport,
+        FakeEnvelopeDispatcher transport,
         IDurableOutboxFailurePolicy? failurePolicy = null,
         FakeDispatchRecorder? recorder = null)
     {
@@ -222,7 +339,9 @@ public sealed class DurableOutboxDispatcherTests
 
     private static DurableOutboxRecord CreateRecord(
         Guid messageId,
-        int attemptCount = 1)
+        int attemptCount = 1,
+        string sourceModule = "sales",
+        string targetModule = "billing")
     {
         var dispatchState = new DurableOutboxDispatchState(
             DurableOutboxStatus.Processing,
@@ -235,12 +354,27 @@ public sealed class DurableOutboxDispatcherTests
                 messageId,
                 MessageKind.Command,
                 "sales.customer.register.v1",
-                "sales",
-                "billing",
+                sourceModule,
+                targetModule,
                 "{}",
                 DateTimeOffset.Parse("2026-06-05T00:00:00+00:00")),
             DateTimeOffset.Parse("2026-06-05T00:00:01+00:00"),
             dispatchState);
+    }
+
+    private static void AssertMetric(
+        IEnumerable<MetricMeasurement> measurements,
+        string instrumentName,
+        string targetModule)
+    {
+        MetricMeasurement measurement = Assert.Single(
+            measurements,
+            candidate =>
+                candidate.InstrumentName == instrumentName
+                && candidate.HasTag("bondstone.target_module", targetModule));
+        Assert.Equal(1, measurement.Value);
+        Assert.Equal("Command", measurement.GetTag("bondstone.message_kind"));
+        Assert.Equal("metric-sales", measurement.GetTag("bondstone.source_module"));
     }
 
     private sealed class FakeClaimer(IReadOnlyList<DurableOutboxRecord> records)
@@ -265,6 +399,8 @@ public sealed class DurableOutboxDispatcherTests
 
         public List<Guid> RenewedMessageIds { get; } = [];
 
+        public HashSet<Guid> FailedRenewalMessageIds { get; } = [];
+
         public ValueTask<bool> RenewAsync(
             Guid messageId,
             string claimedBy,
@@ -272,20 +408,30 @@ public sealed class DurableOutboxDispatcherTests
             CancellationToken ct = default)
         {
             RenewedMessageIds.Add(messageId);
-            return ValueTask.FromResult(RenewResult);
+            bool result = RenewResult && !FailedRenewalMessageIds.Contains(messageId);
+            return ValueTask.FromResult(result);
         }
     }
 
-    private sealed class FakeTransport : IDurableOutboxTransport
+    private sealed class FakeEnvelopeDispatcher : IDurableEnvelopeDispatcher
     {
         public Exception? Exception { get; init; }
 
+        public Dictionary<Guid, Exception> ExceptionsByMessageId { get; } = [];
+
         public List<Guid> SentMessageIds { get; } = [];
 
-        public ValueTask SendAsync(
+        public ValueTask DispatchAsync(
             DurableOutboxRecord record,
             CancellationToken ct = default)
         {
+            if (ExceptionsByMessageId.TryGetValue(
+                    record.Envelope.MessageId,
+                    out Exception? exception))
+            {
+                throw exception;
+            }
+
             if (Exception is not null)
             {
                 throw Exception;

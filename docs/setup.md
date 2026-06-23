@@ -6,61 +6,72 @@ This document shows the current host setup shape for Bondstone.
 
 Install the packages needed for the host:
 
-- `Bondstone` for core module, command, integration-event, and module
-  execution contracts.
-- `Bondstone.Capabilities.DomainEvents` when domain model types expose
-  module-local domain events.
-- `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` when EF-backed
-  modules opt into domain event collection and persistence.
-- `Bondstone.Hosting` when the host runs the durable outbox worker.
+- `Bondstone` for core module, command, query, integration-event,
+  domain-event, and module execution contracts.
+- `Bondstone.Hosting` when the host runs the durable outbox worker or the
+  durable incoming inbox processing worker.
 - `Bondstone.Persistence` for provider-neutral durable envelopes, inbox,
   outbox, operation state, and persistence contracts used by custom
   persistence or dispatch composition.
-- `Bondstone.Persistence.EntityFrameworkCore` for EF Core durable persistence mappings and
-  module transaction behavior.
-- `Bondstone.Persistence.EntityFrameworkCore.Postgres` for PostgreSQL EF Core duplicate
-  classification and provider registration.
-- `Bondstone.Persistence.Postgres` for PostgreSQL non-EF durable module
+- `Bondstone.Persistence.EntityFrameworkCore` for EF Core durable persistence
+  mappings, module transaction behavior, and optional EF-backed domain event
   persistence.
-- `Bondstone.Transport` for provider-neutral topology diagnostics used by
-  custom transport adapters.
-- `Bondstone.Transport.RabbitMq` or `Bondstone.Transport.ServiceBus` when the
-  host dispatches durable outbox records through a direct provider adapter.
+- `Bondstone.Persistence.EntityFrameworkCore.Postgres` for the supported
+  EF/PostgreSQL production durable persistence path, duplicate
+  classification, and provider registration.
 - `Bondstone.Transport.Local` when a sample, test, or local development host
   explicitly wants in-process queue routing through the durable receive
   pipelines.
+- `Bondstone.Transport.RabbitMq` when a host already owns RabbitMQ topology and
+  wants thin native-driver envelope dispatch or an explicitly registered
+  receive worker.
+- `Bondstone.Transport.ServiceBus` when a host already owns Azure Service Bus
+  entities and wants thin native-driver envelope dispatch or an explicitly
+  registered receive worker.
 
 ## Adoption Path
 
 For a normal PostgreSQL-backed host, start with:
 
-- `Bondstone` for module registration, durable send/publish contracts, and
-  module receive pipelines;
-- `Bondstone.Hosting` for the durable outbox worker;
+- `Bondstone` for module registration, immediate command/query execution,
+  durable send/publish contracts, and module receive pipelines;
+- `Bondstone.Hosting` for hosted durable workers;
 - `Bondstone.Persistence.EntityFrameworkCore` and
   `Bondstone.Persistence.EntityFrameworkCore.Postgres` for EF-backed module
   persistence;
-- `Bondstone.Persistence.Postgres` only for modules that intentionally avoid
-  EF Core while still using PostgreSQL durable persistence;
-- one direct transport adapter, either `Bondstone.Transport.RabbitMq` or
-  `Bondstone.Transport.ServiceBus`, when messages leave the process through a
-  broker.
+- `Bondstone.Transport.Local` for samples, tests, and local development.
 
-Add optional capability packages only when the module uses that capability.
-For example, EF-backed module-local domain event persistence uses
-`Bondstone.Capabilities.DomainEvents` and
-`Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`.
+Domain event contracts are in the core `Bondstone` package. EF-backed
+module-local domain event persistence uses
+`Bondstone.Persistence.EntityFrameworkCore` and remains explicit opt-in.
 
-Use the provider transport extensions on `AddBondstone` for ordinary hosts.
-Those extensions register provider topology validation and diagnostics as well
-as outbox dispatch. Lower-level persistence, receive, dispatcher, and outbox
-transport types remain available for advanced composition and tests, but they
-are not the quick-start path.
+Use `Bondstone.Transport.Local` for the first local modular-monolith path:
+samples, tests, and local development hosts explicitly route through local
+queues and Bondstone receive pipelines. It is not a hidden fallback and not a
+production broker substitute. Broker integrations remain app-owned even when a
+host uses the thin RabbitMQ or Azure Service Bus adapter packages. For fully
+custom broker plumbing, register outbound
+publishing with `UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
+`IDurableEnvelopeDispatcher`, serialize `DurableMessageEnvelope` with
+`IDurableMessageEnvelopeSerializer`, and ingest inbound deliveries into the
+durable inbox before native settlement. Broker topology, consumers, retry, and
+dead-letter policy remain application-owned. The RabbitMQ receive worker
+acknowledges native messages only after Bondstone durable incoming inbox
+ingestion succeeds. The Azure Service Bus receive worker completes native
+messages only after Bondstone durable incoming inbox ingestion succeeds.
+RabbitMQ failure requeue and Service Bus processor settings remain native
+driver knobs, not Bondstone retry policy.
+Lower-level persistence, receive, dispatcher, and local transport types remain
+available for advanced composition and tests, but they are not the quick-start
+path.
 
 After composing a host, use the modular monolith sample as the adoption proof
-and [testing.md](testing.md) for verification entrypoints. The default quality
-gate is `pnpm check`; infrastructure-backed sample and provider coverage runs
-through `pnpm backend:test:integration`.
+and [testing.md](testing.md) for verification entrypoints. Use
+[operations.md](operations.md) for production receive, outbox, inbox,
+operation, migration, retention, and ownership guidance, and
+[observability.md](observability.md) for current diagnostics. The default
+quality gate is `pnpm check`; infrastructure-backed sample and provider
+coverage runs through `pnpm backend:test:integration`.
 
 ## Golden Path: EF/Postgres Local Modular Monolith
 
@@ -78,16 +89,6 @@ worker, use this package set in the projects that call the corresponding APIs:
 </ItemGroup>
 ```
 
-Add these only when a module uses EF-backed module-local domain event
-persistence:
-
-```xml
-<ItemGroup>
-  <PackageReference Include="Bondstone.Capabilities.DomainEvents" />
-  <PackageReference Include="Bondstone.Capabilities.DomainEvents.EntityFrameworkCore" />
-</ItemGroup>
-```
-
 Contracts projects that define durable commands or integration events need
 `Bondstone`. Module implementation projects that configure EF persistence need
 the EF Core and PostgreSQL packages. Host projects that configure local
@@ -101,26 +102,28 @@ Common namespaces for this path are:
 
 - `Bondstone.Configuration` for `AddBondstone` and `BondstoneBuilder`.
 - `Bondstone.Modules` for `IBondstoneModule`, `BondstoneModuleBuilder`,
-  command handlers, event handlers, and module registration.
-- `Bondstone.Messaging` for `ICommand`, `IDurableCommand`,
-  `IIntegrationEvent`, `DurableCommandIdentityAttribute`,
+  command handlers, query handlers, event handlers, and module registration.
+- `Bondstone.Messaging` for `ICommand`, `IQuery<TResult>`,
+  `IDurableCommand`, `IIntegrationEvent`, `DurableCommandIdentityAttribute`,
   `IntegrationEventIdentityAttribute`, `IDurableCommandSender`, and
   `IDurableEventPublisher`.
+- `Bondstone.DomainEvents` for optional `IDomainEvent` and
+  `IDomainEventSource`.
 - `Bondstone.Persistence.EntityFrameworkCore.Persistence` for
   `ApplyBondstonePersistence`, `ApplyBondstoneOutbox`,
-  `ApplyBondstoneInbox`, `ApplyBondstoneOperationState`, and
-  `UseEntityFrameworkCorePersistence`.
+  `ApplyBondstoneInbox`, `ApplyBondstoneIncomingInbox`,
+  `ApplyBondstoneOperationState`, and `UseEntityFrameworkCorePersistence`, and optional
+  `UseEntityFrameworkCoreDomainEventPersistence` and
+  `ApplyBondstoneDomainEvents`.
 - `Bondstone.Persistence.EntityFrameworkCore.Postgres.Persistence` for
   `UsePostgreSqlPersistence`.
-- `Bondstone.Capabilities.DomainEvents` for optional `IDomainEvent` and
-  `IDomainEventSource`.
-- `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence` for
-  optional `UseEntityFrameworkCoreDomainEventPersistence` and
-  `ApplyBondstoneDomainEvents`.
 - `Bondstone.Transport.Local.Outbox` for `UseLocalTransport` and local queue
   topology.
 - `Bondstone.Hosting.Outbox` for `UseWorker` and
   `DurableOutboxWorkerOptions`.
+- `Bondstone.Hosting.IncomingInbox` for optional
+  `UseDurableIncomingInboxWorker` and
+  `DurableIncomingInboxWorkerOptions`.
 
 Host composition wires modules, local transport, and the hosted outbox worker:
 
@@ -165,13 +168,52 @@ builder.Services.AddBondstone(bondstone =>
 `UseWorker(...)` registers the default durable dispatcher and the hosted
 outbox worker. Use `bondstone.Outbox.UseDurableDispatcher()` only for advanced
 manual dispatcher composition where the host does not want the built-in worker.
+Hosts that receive durable broker deliveries should also opt in to
+`bondstone.UseDurableIncomingInboxWorker(...)`. Transport listeners ingest
+native deliveries into the durable inbox first; the incoming inbox worker then
+claims those rows and invokes the module command or event subscriber pipeline.
 
-`Bondstone.Transport.Local` is explicit local development and sample
+RabbitMQ hosts that already own queue topology configure each receive worker
+as a module-aware binding into the durable inbox:
+
+```csharp
+bondstone.UseRabbitMqReceiveWorker(options =>
+{
+    options.QueueName = "fulfillment.commands";
+    options.ReceiveCommand();
+});
+
+bondstone.UseRabbitMqReceiveWorker(options =>
+{
+    options.QueueName = "billing.order-placed";
+    options.ReceiveEvent(
+        BillingModule.ModuleName,
+        "billing.order-placed-projection.v1");
+});
+```
+
+In this mode the RabbitMQ worker deserializes the native delivery body as a
+`DurableMessageEnvelope`, resolves the command route or event subscriber
+binding, resolves the receiver module's durable incoming inbox ingestion
+boundary, stages and commits a durable incoming inbox row, and only then
+acknowledges the RabbitMQ delivery. EF-backed module persistence writes this
+row through the receiver module's DbContext; single-store hosts with no module
+runtime registrations can use the root-level ingestion store/scope fallback.
+The explicit `IngestCommandToDurableIncomingInbox()` and
+`IngestEventToDurableIncomingInbox(...)` aliases remain available for hosts
+that prefer to name the ingestion boundary directly. The separate
+`UseDurableIncomingInboxWorker(...)` processing worker claims durable incoming
+rows and executes module handlers.
+
+`Bondstone.Transport.Local` is explicit sample, test, and local-development
 infrastructure. `local.UseModuleQueueConvention()` is complete command
 topology for local module-to-module durable command dispatch: target module
 `fulfillment` routes to `fulfillment.commands`, and that queue accepts the
 same module. Event routes still need explicit subscriber bindings because
-subscriber module and subscriber identity are durable receive identity.
+subscriber module and subscriber identity are durable receive identity. Local
+transport exercises outbox dispatch and inbox receive semantics without
+claiming broker durability, queue administration, retry, or dead-letter
+behavior.
 
 Module assemblies should expose a thin host extension and a module-owned
 `IBondstoneModule` registration object:
@@ -209,6 +251,7 @@ public sealed class FulfillmentBondstoneModule(string connectionString)
             schema: FulfillmentModule.ModuleName);
 
         module.Commands.RegisterFromAssemblyContaining<ReserveInventoryHandler>();
+        module.Queries.RegisterFromAssemblyContaining<GetInventoryAvailabilityHandler>();
         module.Events.RegisterPublishedEvent<InventoryReservedEvent>();
         module.Events.RegisterSubscriber<OrderPlacedEvent, RecordOrderPlacedHandler>(
             "fulfillment.order-placed-projection.v1");
@@ -217,12 +260,19 @@ public sealed class FulfillmentBondstoneModule(string connectionString)
 ```
 
 Assembly scanning registers concrete `ICommandHandler<TCommand>` and
-`ICommandHandler<TCommand, TResult>` implementations in the marker assembly.
-Use explicit registration when the module needs a visible handler identity or
-does not want assembly scanning:
+`ICommandHandler<TCommand, TResult>` implementations from
+`module.Commands`, and concrete `IQueryHandler<TQuery, TResult>`
+implementations from `module.Queries`, in the marker assembly. Use explicit
+command registration when the module needs a visible handler identity, or use
+explicit command/query registration when the module does not want assembly
+scanning:
 
 ```csharp
 module.Commands.RegisterHandler<ReserveInventoryCommand, ReserveInventoryHandler>();
+module.Queries.RegisterHandler<
+    GetInventoryAvailabilityQuery,
+    InventoryAvailability,
+    GetInventoryAvailabilityHandler>();
 ```
 
 Durable command contracts use stable message identity:
@@ -246,6 +296,23 @@ public sealed record ReserveInventoryResult(
     string Sku,
     int Quantity);
 ```
+
+When a service sends a durable command handled by another extracted service,
+register the remote contract identity without registering the remote handler:
+
+```csharp
+builder.Services.AddBondstone(bondstone =>
+{
+    bondstone.AddOrderingModule(connectionString);
+    bondstone.RegisterMessage<ReserveInventoryCommand>();
+    bondstone.UseDurableEnvelopeDispatcher<MyBrokerDispatcher>();
+    bondstone.Outbox.UseWorker();
+});
+```
+
+The receiving service still registers the command handler on the owning
+module. This keeps contract identity available for outbound serialization
+without making the source service reference the target module implementation.
 
 Handlers are ordinary module services. Bondstone's module transaction behavior
 commits handler state, inbox markers, operation state, and outgoing outbox rows
@@ -313,7 +380,6 @@ When the module also persists module-local domain events, opt in at module
 registration and map the domain event record shape explicitly:
 
 ```csharp
-using Bondstone.Capabilities.DomainEvents.EntityFrameworkCore.Persistence;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -333,12 +399,14 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
 }
 ```
 
-`ApplyBondstonePersistence(...)` maps the durable outbox, inbox, and operation
-state tables. `ApplyBondstoneDomainEvents(...)` is separate because domain
-events are optional module-local records, not transport messages or outgoing
-outbox records. Use the granular `ApplyBondstoneOutbox(...)`,
-`ApplyBondstoneInbox(...)`, and `ApplyBondstoneOperationState(...)` helpers
-only when a `DbContext` intentionally maps a smaller durable surface.
+`ApplyBondstonePersistence(...)` maps the durable outbox, direct receive
+idempotency inbox, durable incoming inbox, and operation-state tables.
+`ApplyBondstoneDomainEvents(...)` is separate because domain events are
+optional module-local records, not transport messages or outgoing outbox
+records. Use the granular `ApplyBondstoneOutbox(...)`,
+`ApplyBondstoneInbox(...)`, `ApplyBondstoneIncomingInbox(...)`, and
+`ApplyBondstoneOperationState(...)` helpers only when a `DbContext`
+intentionally maps a smaller durable surface.
 
 Hosts and migrators have different responsibilities:
 
@@ -374,33 +442,24 @@ serialization, EF mapping helpers for Bondstone tables, module-bound
 PostgreSQL durable infrastructure, local transport dispatch through the
 provider-neutral receive pipelines, and the hosted outbox polling loop.
 
-For deeper behavior and limitations, see [architecture/modules.md](architecture/modules.md),
-[architecture/persistence-ef-core.md](architecture/persistence-ef-core.md),
-[architecture/persistence-postgresql.md](architecture/persistence-postgresql.md),
-[architecture/transport-local.md](architecture/transport-local.md), and
-[architecture/hosting.md](architecture/hosting.md).
+For deeper internal behavior and limitations, see the
+[Bondstone architecture](architecture.md). For
+production runbooks and retention guidance, see [operations.md](operations.md).
 
 ## Host Composition
 
-Hosts compose modules, persistence, transport adapters, and hosted workers
-through `AddBondstone`. Provider connection, credentials, retry, dead-letter,
-topology declaration, and administration remain app-owned or provider-native.
+Hosts compose modules, persistence, local transport, and hosted workers through
+`AddBondstone`. Provider connection, credentials, retry, dead-letter, topology
+declaration, and administration remain app-owned or provider-native.
 
-RabbitMQ example:
+Local transport example:
 
 ```csharp
 using Bondstone.Configuration;
 using Bondstone.Hosting.Outbox;
-using Bondstone.Transport.RabbitMq.Outbox;
-using RabbitMQ.Client;
+using Bondstone.Transport.Local.Outbox;
 
 string connectionString = builder.Configuration.GetConnectionString("App")!;
-IConnection rabbitMqConnection = await new ConnectionFactory
-{
-    Uri = new Uri(builder.Configuration.GetConnectionString("RabbitMq")!),
-}.CreateConnectionAsync();
-
-builder.Services.AddBondstoneRabbitMqConnection(rabbitMqConnection);
 
 builder.Services.AddBondstone(bondstone =>
 {
@@ -408,18 +467,12 @@ builder.Services.AddBondstone(bondstone =>
     bondstone.AddFulfillmentModule(connectionString);
     bondstone.AddBillingModule(connectionString);
 
-    bondstone.UseRabbitMqTransport(rabbitMq =>
+    bondstone.UseLocalTransport(local =>
     {
-        rabbitMq.UseCommandExchange("bondstone.commands");
-
-        rabbitMq.RouteModule("fulfillment")
-            .ToRoutingKey("fulfillment.commands");
-        rabbitMq.ReceiveQueue("fulfillment.commands")
-            .AcceptModule("fulfillment");
-
-        rabbitMq.RouteEvent("ordering.order-placed.v1")
+        local.UseModuleQueueConvention();
+        local.RouteEvent("ordering.order-placed.v1")
             .ToQueue("ordering.order-placed");
-        rabbitMq.ReceiveQueue("ordering.order-placed")
+        local.Queue("ordering.order-placed")
             .SubscribeEvent(
                 "ordering.order-placed.v1",
                 "fulfillment",
@@ -428,11 +481,6 @@ builder.Services.AddBondstone(bondstone =>
                 "ordering.order-placed.v1",
                 "billing",
                 "billing.order-invoice-projection.v1");
-
-        rabbitMq.UseReceiveWorker(options =>
-        {
-            options.RequeueOnFailure = false;
-        });
     });
 
     bondstone.Outbox.UseWorker(options =>
@@ -444,34 +492,96 @@ builder.Services.AddBondstone(bondstone =>
 });
 ```
 
-Azure Service Bus uses the same Bondstone composition shape with
-`UseServiceBusTransport`, queues for commands, and topic or queue
-destinations for integration events.
+For a real broker, the host or chosen transport library owns topology,
+subscriptions, native consumers, acknowledgement, retry, and dead-letter
+policy. Register outbound publishing with
+`UseDurableEnvelopeDispatcher<TDispatcher>()`, implement
+`IDurableEnvelopeDispatcher` to publish claimed outbox records, and use
+`IDurableMessageEnvelopeSerializer` to write/read `DurableMessageEnvelope`.
+Inbound durable receive should ingest into the durable inbox before native
+settlement and then let the incoming inbox worker invoke module handlers.
+Commands route by `TargetModule`; event receive bindings must provide the
+selected subscriber module and stable subscriber identity. Normal host
+composition uses one outbound dispatcher per service provider. If a host needs
+more than one outbound transport, register one explicit aggregate dispatcher
+rather than stacking built-in dispatcher registrations.
 
-Provider transport route conventions are outbound-only. RabbitMQ
-`UseModuleRoutingKeyConvention()` and Service Bus `UseModuleQueueConvention()`
-resolve where commands are sent, but hosts that receive commands still need
-explicit receive bindings such as `ReceiveQueue(...).AcceptModule(...)`.
-`Bondstone.Transport.Local` is the local-development exception: its
-`UseModuleQueueConvention()` configures complete in-process command topology
-because there is no broker queue or binding to provision.
+RabbitMQ and Azure Service Bus have thin adapter packages when the app wants
+driver-level envelope plumbing without a transport DSL:
 
-Use provider transport extensions on the main `BondstoneBuilder` for normal
-host setup. The lower-level `bondstone.Outbox.UseRabbitMqTransport(...)` and
-`bondstone.Outbox.UseServiceBusTransport(...)` overloads are advanced
-composition APIs for manual outbox transport registration; they do not add the
-provider configuration validators and topology diagnostic sources that the
-normal setup path adds.
+```csharp
+bondstone.UseRabbitMqDispatcher(options =>
+{
+    options.ResolveDestination = envelope =>
+        envelope.MessageKind == MessageKind.Command
+            ? new RabbitMqEnvelopeDestination(
+                "bondstone.commands",
+                $"{envelope.TargetModule}.commands")
+            : new RabbitMqEnvelopeDestination(
+                "bondstone.events",
+                envelope.MessageTypeName);
+});
 
-When more than one direct transport is registered, Bondstone routes each
-claimed outbox record through the provider whose topology matches that
-message. If no provider or more than one provider matches, dispatch fails
-instead of guessing.
+bondstone.UseRabbitMqReceiveWorker(options =>
+{
+    options.QueueName = "fulfillment.commands";
+    options.ReceiveCommand();
+});
+```
+
+```csharp
+bondstone.UseServiceBusDispatcher(options =>
+{
+    options.ResolveEntityName = envelope =>
+        envelope.MessageKind == MessageKind.Command
+            ? $"{envelope.TargetModule}-commands"
+            : "integration-events";
+});
+
+bondstone.UseServiceBusReceiveWorker(options =>
+{
+    options.TopicName = "integration-events";
+    options.SubscriptionName = "billing-order-placed";
+    options.ReceiveEvent(
+        BillingModule.ModuleName,
+        "billing.order-invoice-projection.v1");
+});
+```
+
+The app still registers RabbitMQ `IChannel` or Azure `ServiceBusClient`, owns
+native entities and bindings, and chooses retry/dead-letter behavior. RabbitMQ
+receive workers perform durable incoming inbox ingestion before ack. The
+Service Bus receive worker performs durable incoming inbox ingestion before
+message completion. Rebus is not a
+Bondstone package; use Rebus-owned routing and handlers around
+`IDurableEnvelopeDispatcher`, `IDurableMessageEnvelopeSerializer`, and durable
+inbox ingestion if an app chooses Rebus. Advanced multi-transport hosts can compose
+`IDurableEnvelopeDispatchRoute` with `RoutedDurableEnvelopeDispatcher` so
+exactly one route owns each durable envelope based on envelope data such as
+message kind, stable message type identity, source module, target module, or
+partition metadata.
 
 Bondstone owns retry and terminal failure for outgoing persisted outbox
-records. Current outbox status semantics are described in
-[architecture/persistence-core.md](architecture/persistence-core.md); they are
-separate from provider-native receive DLQs.
+records. Current outbox status semantics are described in the
+[Bondstone architecture](architecture.md); they are
+separate from provider-native receive DLQs. Operators can inspect terminal
+outbox rows through `IDurableOutboxInspector`:
+
+```csharp
+IReadOnlyList<DurableOutboxRecord> failedRows = await inspector
+    .FindTerminalFailedAsync(
+        moduleName: FulfillmentModule.ModuleName,
+        maxCount: 50,
+        failedAtOrBeforeUtc: DateTimeOffset.UtcNow.AddMinutes(-5),
+        ct);
+```
+
+Inspection is read-only. Resetting a terminal row, replaying a message,
+purging old rows, archiving them, or issuing a compensating command remains an
+application/operator runbook decision because the application must prove
+whether the downstream side effect already happened. See
+[operations.md](operations.md) for production inspection, recovery, and
+retention guidance.
 
 ## Module Registration
 
@@ -513,57 +623,80 @@ public sealed class FulfillmentBondstoneModule(string connectionString)
 
 EF-backed module `DbContext` models must map the durable tables they use with
 `ApplyBondstonePersistence()` or the granular `ApplyBondstoneOutbox()`,
-`ApplyBondstoneInbox()`, and `ApplyBondstoneOperationState()` helpers.
+`ApplyBondstoneInbox()`, `ApplyBondstoneIncomingInbox()`, and
+`ApplyBondstoneOperationState()` helpers.
 
 Provider-specific module helpers are the preferred setup path because they
 record module persistence metadata and register the module-owned runtime
-factories in Bondstone runtime registries, plus transaction behavior and
+factories in Bondstone runtime registries, plus transaction runners and
 dispatch services used by durable messaging.
 
-Modules that do not use EF Core can use `Bondstone.Persistence.Postgres`:
+The direct non-EF `Bondstone.Persistence.Postgres` package was removed after
+MVP. New PostgreSQL modules should use EF Core persistence unless SpecKit
+architecture reintroduces a non-EF provider for a real consumer need.
+
+## Application Handler Concerns
+
+Bondstone does not provide public application pipeline behavior contracts.
+Keep command validation in `ICommandValidator<TCommand>`. Keep authorization,
+auditing, logging, metrics enrichment, and similar application concerns in
+ordinary handler code, DI decorators, endpoint filters, host-specific
+middleware, or the application framework chosen by the consumer app.
+
+## Immediate Module Queries
+
+Use module queries for immediate same-process reads that should respect module
+registration without durable command semantics. Query handlers return a typed
+result and do not receive Bondstone's command module execution context, so
+`IDurableCommandSender` and `IDurableEventPublisher` still reject durable
+send/publish attempts from query execution.
 
 ```csharp
-public sealed class BillingBondstoneModule(string connectionString)
-    : IBondstoneModule
-{
-    public string Name => BillingModule.ModuleName;
+public sealed record GetInventoryAvailabilityQuery(string Sku)
+    : IQuery<InventoryAvailability>;
 
-    public void Configure(BondstoneModuleBuilder module)
+public sealed record InventoryAvailability(string Sku, int Available);
+
+public sealed class GetInventoryAvailabilityHandler(FulfillmentDbContext dbContext)
+    : IQueryHandler<GetInventoryAvailabilityQuery, InventoryAvailability>
+{
+    public async ValueTask<InventoryAvailability> HandleAsync(
+        GetInventoryAvailabilityQuery query,
+        CancellationToken ct = default)
     {
-        module.UseDurableMessaging();
-        module.UsePostgresPersistence(
-            connectionString,
-            schema: BillingModule.ModuleName);
-        module.Events.RegisterSubscriber<OrderPlacedEvent, RecordBillingInvoiceHandler>(
-            "billing.order-invoice-projection.v1");
+        int available = await dbContext.Inventory
+            .Where(item => item.Sku == query.Sku)
+            .SumAsync(item => item.Available, ct);
+
+        return new InventoryAvailability(query.Sku, available);
     }
 }
 ```
 
-## Application Pipeline Behaviors
-
-Application-owned command and event subscriber behavior is registered with
-ordinary DI. Use `IModuleCommandPipelineBehavior<TCommand>` for command
-handler concerns and `IModuleEventSubscriberPipelineBehavior<TEvent>` for
-subscriber concerns.
+Register queries on the owning module and execute them through
+`IModuleQueryExecutor`:
 
 ```csharp
-builder.Services.AddScoped<
-    IModuleCommandPipelineBehavior<ReserveInventoryCommand>,
-    ReserveInventoryAuthorizationBehavior>();
+module.Queries.RegisterHandler<
+    GetInventoryAvailabilityQuery,
+    InventoryAvailability,
+    GetInventoryAvailabilityHandler>();
 
-builder.Services.AddScoped<
-    IModuleEventSubscriberPipelineBehavior<OrderPlacedEvent>,
-    OrderPlacedAuditBehavior>();
+InventoryAvailability availability =
+    await moduleQueryExecutor.ExecuteAsync(
+        FulfillmentModule.ModuleName,
+        new GetInventoryAvailabilityQuery(sku),
+        ct);
 ```
 
-These behaviors run after selected Bondstone/provider runtime contributions
-and inside the module execution context when command or subscriber execution
-establishes one. Passive pipeline contribution records are advanced
-provider/runtime composition contracts stored in Bondstone runtime metadata,
-not the normal application extension path. Bondstone does not provide
-module-scoped application behavior registration; prefer ordinary DI
-registration.
+Queries are read-only Bondstone boundaries. The query pipeline does not write
+durable inbox rows, outgoing outbox rows, operation state, domain-event
+records, or integration-event records, and query handlers do not receive the
+ambient command/subscriber module execution context that enables durable
+send/publish APIs. Keep query handlers from directly using low-level durable
+mutation services; use `IModuleCommandExecutor` for immediate state-changing
+module commands and `IDurableCommandSender` plus operation observation when
+work must survive restart or service extraction.
 
 ## Result-Returning Module Commands
 
@@ -641,24 +774,78 @@ DurableCommandSendResult sendResult = await durableCommandSender.SendAsync(
     durableOperationId: durableOperationId,
     ct: ct);
 
-DurableOperationResult<CreateOrderResult> durableResult =
-    await durableOperationResultReader.WaitForResultAsync<CreateOrderResult>(
-        sendResult.DurableOperationId!.Value,
+DurableOperationWaitResult<CreateOrderResult> waitResult =
+    await durableOperationResultReader.TryWaitForResultAsync<CreateOrderResult>(
+        sendResult.Operation!,
         timeout: TimeSpan.FromSeconds(30),
         pollInterval: TimeSpan.FromMilliseconds(250),
         ct: ct);
 
-if (durableResult is { IsCompleted: true, HasResult: true, Result: { } order })
+if (waitResult is
+    {
+        CompletedWithinTimeout: true,
+        Result: { IsCompleted: true, HasResult: true, Result: { } order }
+    })
 {
     Guid orderId = order.OrderId;
 }
 ```
 
 Use `GetResultAsync<TResult>()` when an API endpoint should read the current
-operation state once. Use `WaitForResultAsync<TResult>()` only where an
-explicit, timeout-bounded wait is acceptable for the caller. Applications still
-own endpoint policy, timeout choice, polling cadence, and what to do with
-unknown, pending, failed, or cancelled operation state.
+operation state once. Use `TryWaitForResultAsync<TResult>()` where an endpoint
+or workflow wants a timeout-bounded wait that returns the latest observed
+operation state instead of throwing on timeout. Use
+`WaitForResultAsync<TResult>()` only where exception-based timeout handling is
+acceptable for the caller. Applications still own endpoint policy, timeout
+choice, polling cadence, and what to do with unknown, pending, failed, or
+cancelled operation state. Neither wait form writes a terminal durable
+operation state when caller timeout expires.
+
+When application policy has enough evidence that a workflow should stop
+polling, use `IDurableOperationFinalizer` to mark the operation terminal in
+the module that owns the operation-state store:
+
+```csharp
+DurableOperationFinalizationResult finalization =
+    await durableOperationFinalizer.MarkFailedAsync(
+        OrderingModule.ModuleName,
+        durableOperationId,
+        "Order creation expired before completion.",
+        ct: ct);
+
+if (!finalization.WasFinalized)
+{
+    DurableOperationStatus existingStatus = finalization.Status;
+}
+```
+
+Use this for explicit application timeout, expiry, cancellation, or
+administrative policy. Do not treat outbox terminal dispatch failure, inbox
+idempotency, broker retry, or dead-letter behavior as automatic operation
+failure unless application or provider-specific code has made that terminal
+outcome explicit.
+
+For a recurring expiry job, calculate the cutoff in application code and call
+`IDurableOperationExpirationProcessor` for each module whose operation-state
+store should be scanned:
+
+```csharp
+DateTimeOffset expiresBeforeUtc = timeProvider.GetUtcNow()
+    .Subtract(TimeSpan.FromMinutes(30));
+
+DurableOperationExpirationResult expiration =
+    await durableOperationExpirationProcessor.MarkExpiredAsync(
+        OrderingModule.ModuleName,
+        expiresBeforeUtc,
+        DurableOperationStatus.Failed,
+        "Order creation expired before completion.",
+        maxCount: 100,
+        ct: ct);
+```
+
+Bondstone does not register a hosted expiry worker by default. Applications
+own the schedule, cutoff calculation, module list, terminal status choice,
+reason text, and alerting around `FinalizedCount`.
 
 For result polling, prefer switching on `DurableOperationResult<TResult>.State`
 when the caller needs to explain why a value is not available:
@@ -685,10 +872,12 @@ payload was successfully deserialized as `TResult`. A completed operation can
 therefore have `HasResult == false` when no payload was stored or when payload
 deserialization failed.
 
-Deserialization diagnostics include the operation id and requested result type.
-The current operation-state reader does not carry module name, durable message
-type name, or handler identity, so those values are not included in result
-reader diagnostics today.
+Deserialization diagnostics include the operation id and requested result
+type. When the stored operation state carries diagnostic context, result-reader
+diagnostics also include the module name, durable message type name, and
+handler identity. Old operation rows or schemas that have not added the
+nullable diagnostic columns still work; those diagnostics fall back to the
+operation id and requested result type.
 
 Bondstone intentionally keeps the in-process and durable result paths
 separate. If an application exposes one business-facing service method for
@@ -701,7 +890,9 @@ The durable operation id ties the send and result lookup together:
 
 - The caller supplies or records the operation id when sending durable work.
 - `IDurableCommandSender.SendAsync` returns `DurableCommandSendResult` with the
-  send id, accepted status, and the supplied `DurableOperationId`.
+  send id, accepted status, supplied `DurableOperationId`, and an `Operation`
+  handle containing the source and target module when an operation id was
+  supplied.
 - When the sending module has operation-state persistence, Bondstone stages
   the operation as `Pending` if the operation is not already known.
 - When the target module receives a durable `IDurableCommand` that also
@@ -710,8 +901,19 @@ The durable operation id ties the send and result lookup together:
 - After the handler and surrounding pipeline succeed, Bondstone stores
   `Completed` plus the serialized result payload inside the target module
   receive transaction.
+- Application policy may explicitly write `Failed` or `Cancelled` through
+  `IDurableOperationFinalizer` when the operation should stop being observed
+  as pending.
+- Application expiry jobs may use `IDurableOperationExpirationProcessor` to
+  query stale pending/running states from provider stores and finalize them
+  through the same finalizer.
 - `IDurableOperationResultReader` uses the same operation id to find operation
-  state and deserialize the completed result payload.
+  state and deserialize the completed result payload. Prefer passing
+  `sendResult.Operation` when it is available so the reader queries the target
+  module's operation-state store directly.
+- When the caller knows the result-owning module, pass that module name to
+  `IDurableOperationResultReader` so Bondstone queries only that module's
+  operation-state store instead of aggregating across every configured module.
 
 Durable command payload serialization uses `IDurablePayloadSerializer`. The
 default serializer and the built-in durable operation result payload serializer
@@ -764,52 +966,43 @@ await durableEventPublisher.PublishAsync(
 
 ## Receive Direction
 
-Core exposes provider-neutral module receive pipelines over
-`DurableMessageEnvelope`:
+Durable receive uses the durable incoming inbox. Durable receive adapters and
+app-owned native loops parse their provider-native message body into the
+neutral durable envelope, resolve the command or subscriber binding, insert
+the durable inbox row, acknowledge only after ingestion commits, and let
+ingestion failures flow to provider-native retry and dead-letter policy. The
+hosted incoming inbox processing worker then claims due rows and calls module
+receive. This creates the three-worker topology used by durable receive:
+outbox dispatch, transport receive/ingestion, and incoming inbox processing.
+Cleanup and retention remain app-owned. The built-in RabbitMQ receive worker
+and built-in Azure Service Bus receive worker follow this durable ingestion
+model.
 
-- `IModuleCommandReceivePipeline`
-- `IModuleEventReceivePipeline`
-
-Direct provider receive adapters should parse their provider-native message
-body into the neutral durable envelope, acknowledge only after the receive
-pipeline completes, and let failures flow to provider-native retry and
-dead-letter policy. RabbitMQ exposes `IRabbitMqReceivedMessageDispatcher`, and
-Service Bus exposes `IServiceBusReceivedMessageDispatcher`. Both providers
-also expose opt-in hosted receive helpers. Bondstone's receive responsibility
-is the native settlement handoff; broker retry schedules, delivery counts, and
-DLQ settings remain provider/app-owned.
-
-If a receive attempt finds an inbox row that was already received but not
-processed, Bondstone fails the module receive with
+If processing finds an implementation-detail idempotency row that was already
+received but not processed, Bondstone fails the module receive with
 `DurableInboxAlreadyReceivedException` instead of re-running the handler. The
-provider worker then uses its normal failure handoff, such as RabbitMQ negative
-acknowledgement or Service Bus abandon. Recovery of the stale inbox row is an
-operator or application procedure.
+incoming dispatcher then records retry or terminal failure for the durable
+inbox row. Recovery of the stale idempotency row is an operator or application
+procedure. Operators can inspect unprocessed idempotency rows through
+`IDurableInboxInspector`:
 
-Provider packages also expose native receive message mappers:
+```csharp
+IReadOnlyList<DurableInboxRecord> staleReceives = await inboxInspector
+    .FindUnprocessedAsync(
+        moduleName: FulfillmentModule.ModuleName,
+        maxCount: 50,
+        receivedAtOrBeforeUtc: DateTimeOffset.UtcNow.AddMinutes(-5),
+        ct);
+```
 
-- `RabbitMqReceivedMessageMapper` for RabbitMQ deliveries;
-- `ServiceBusReceivedMessageMapper` for Service Bus received messages.
+Inspection is read-only. Marking rows processed, deleting rows, re-running a
+handler, moving broker messages, or issuing a compensating action remains an
+application/operator runbook decision because the application must prove what
+happened during the ambiguous receive attempt. See [operations.md](operations.md)
+for the receive failure model.
 
-Use those mappers inside app-owned consumers/processors before calling the
-Bondstone dispatcher.
-
-Provider packages also expose small handler helpers:
-
-- `IRabbitMqReceivedMessageHandler`
-- `IServiceBusReceivedMessageHandler`
-
-These helpers call the mapper and dispatcher, then invoke a caller-supplied
-acknowledge/complete delegate only after dispatch succeeds. They still do not
-start hosted consumers or processors.
-
-For hosts that want Bondstone to run the native receive loop, RabbitMQ and
-Service Bus expose opt-in `UseReceiveWorker(...)` helpers on their transport
-builders. These helpers run consumers/processors for configured receive
-topology, but broker entities, credentials, bindings, retry policy, and
-dead-letter setup remain application-owned.
-
-The current sample uses explicit `Bondstone.Transport.Local` queue routing by
-default and also exposes `AddModularMonolithSampleWithRabbitMq(...)` for one
-preferred direct-provider sample path. The RabbitMQ sample path keeps
-connection and topology setup app-owned.
+The default modular monolith sample uses explicit `Bondstone.Transport.Local`
+queue routing for local development and fast adoption. RabbitMQ and Azure
+Service Bus examples use the thin native-driver adapter packages where the app
+still owns broker topology, retry, dead-letter policy, and operational
+monitoring.

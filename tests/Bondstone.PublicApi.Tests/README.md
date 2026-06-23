@@ -13,5 +13,5 @@ BONDSTONE_UPDATE_PUBLIC_API_BASELINE=1 dotnet test tests/Bondstone.PublicApi.Tes
 ```
 
 Review the resulting baseline diff before merging. Do not update baselines as
-a substitute for ADR review or release-note treatment when a public API change
-is compatibility-sensitive.
+a substitute for Bondstone architecture review or release-note treatment when a
+public API change is compatibility-sensitive.

@@ -1,3 +1,4 @@
+using Bondstone.Diagnostics;
 using Bondstone.Utility;
 
 namespace Bondstone.Modules;
@@ -136,7 +137,8 @@ internal sealed class BondstoneModuleRegistry : IBondstoneModuleRegistry
             if (PersistenceProviderName is not null
                 && !StringComparer.Ordinal.Equals(PersistenceProviderName, providerName))
             {
-                throw new InvalidOperationException(
+                throw new BondstoneSetupException(
+                    BondstoneSetupCodes.DuplicateDurableRegistration,
                     $"Module '{Name}' already uses persistence provider '{PersistenceProviderName}'.");
             }
 
@@ -144,7 +146,8 @@ internal sealed class BondstoneModuleRegistry : IBondstoneModuleRegistry
                 && contextType is not null
                 && PersistenceContextType != contextType)
             {
-                throw new InvalidOperationException(
+                throw new BondstoneSetupException(
+                    BondstoneSetupCodes.DuplicateDurableRegistration,
                     $"Module '{Name}' already uses persistence context '{PersistenceContextType.FullName}'.");
             }
 

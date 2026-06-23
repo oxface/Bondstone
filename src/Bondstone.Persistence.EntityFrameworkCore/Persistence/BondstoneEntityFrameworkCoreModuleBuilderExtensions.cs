@@ -1,4 +1,7 @@
+using Bondstone.Configuration;
 using Bondstone.Modules;
+using Bondstone.Persistence;
+using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -29,7 +32,7 @@ public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
     }
 
     /// <summary>
-    /// Marks a module as using EF Core persistence and adds EF Core transaction pipeline behavior.
+    /// Marks a module as using EF Core persistence and adds EF Core transaction runtime behavior.
     /// </summary>
     /// <typeparam name="TDbContext">The module DbContext type used for the module transaction.</typeparam>
     /// <param name="module">The module builder.</param>
@@ -43,9 +46,29 @@ public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
         module.UsePersistence(
             EntityFrameworkCoreModulePersistence.ProviderName,
             typeof(TDbContext));
+        module.RegisterEntityFrameworkCoreIncomingInboxIngestionBoundary<TDbContext>();
         module.TryAddEntityFrameworkCoreModuleTransactionSystemBehaviors();
 
         return module;
+    }
+
+    private static void RegisterEntityFrameworkCoreIncomingInboxIngestionBoundary<TDbContext>(
+        this BondstoneModuleBuilder module)
+        where TDbContext : DbContext
+    {
+        module.Services.GetOrAddDurableModulePersistenceRegistrationRegistry()
+            .AddIncomingInboxIngestionBoundary(
+                new DurableModuleIncomingInboxIngestionBoundaryRegistration(
+                    module.Name,
+                    serviceProvider =>
+                    {
+                        TDbContext context = serviceProvider.GetRequiredService<TDbContext>();
+                        return new DurableIncomingInboxIngestionBoundary(
+                            new EntityFrameworkCoreDurableIncomingInboxIngestionStore<TDbContext>(
+                                context),
+                            new EntityFrameworkCoreDurableIncomingInboxIngestionPersistenceScope(
+                                new EntityFrameworkCorePersistenceScope<TDbContext>(context)));
+                    }));
     }
 
     private static void TryAddEntityFrameworkCoreModuleTransactionSystemBehaviors(
@@ -54,27 +77,9 @@ public static class BondstoneEntityFrameworkCoreModuleBuilderExtensions
         module.Services.TryAddScoped(serviceProvider =>
             new EntityFrameworkCoreModuleRuntimeRegistry(
                 serviceProvider.GetRequiredService<IBondstoneModuleRegistry>()));
-        module.AddCommandPipelineContribution(
-            new ModuleCommandPipelineContribution(
-                "Bondstone.Persistence.EntityFrameworkCore.Command.Transaction",
-                ModulePipelineStepKind.System,
-                ModuleCommandSystemPipelineOrder.Transaction,
-                typeof(EntityFrameworkCoreModuleTransactionBehavior<>),
-                UsesEntityFrameworkCorePersistence));
-        module.AddEventSubscriberPipelineContribution(
-            new ModuleEventSubscriberPipelineContribution(
-                "Bondstone.Persistence.EntityFrameworkCore.EventSubscriber.Transaction",
-                ModulePipelineStepKind.System,
-                ModuleEventSubscriberSystemPipelineOrder.Transaction,
-                typeof(EntityFrameworkCoreModuleEventSubscriberTransactionBehavior<>),
-                UsesEntityFrameworkCorePersistence));
-    }
-
-    private static bool UsesEntityFrameworkCorePersistence(BondstoneModuleRegistration module)
-    {
-        return module.UsesPersistence
-            && StringComparer.Ordinal.Equals(
-                module.PersistenceProviderName,
-                EntityFrameworkCoreModulePersistence.ProviderName);
+        module.Services.TryAddEnumerable(
+            ServiceDescriptor.Scoped(
+                typeof(IModuleTransactionRunner),
+                typeof(EntityFrameworkCoreModuleTransactionRunner)));
     }
 }

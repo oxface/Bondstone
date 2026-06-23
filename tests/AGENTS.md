@@ -10,4 +10,6 @@ Start with:
 
 Use `Category=Unit` and `Category=Application` for fast tests that avoid
 external infrastructure. Use `Category=Integration` for provider-backed
-database, transport, sample, or infrastructure behavior.
+database, transport, sample, or infrastructure behavior. Use
+`Category=Package` only for tests that inspect freshly produced package
+artifacts from `pnpm backend:pack`.

@@ -1,4 +1,5 @@
 using Bondstone.Persistence.EntityFrameworkCore.Inbox;
+using Bondstone.Persistence.EntityFrameworkCore.IncomingInbox;
 using Bondstone.Persistence.EntityFrameworkCore.Operations;
 using Bondstone.Persistence.EntityFrameworkCore.Outbox;
 using Bondstone.Persistence.EntityFrameworkCore.Persistence;
@@ -29,13 +30,13 @@ public sealed partial class PostgreSqlPersistenceTests
                 SELECT table_name AS "Value"
                 FROM information_schema.tables
                 WHERE table_schema = 'public'
-                AND table_name IN ('outbox_messages', 'inbox_messages', 'operation_states')
+                AND table_name IN ('outbox_messages', 'inbox_messages', 'incoming_inbox_messages', 'operation_states')
                 ORDER BY table_name
                 """)
             .ToArrayAsync();
 
         Assert.Equal(
-            ["inbox_messages", "operation_states", "outbox_messages"],
+            ["inbox_messages", "incoming_inbox_messages", "operation_states", "outbox_messages"],
             tableNames);
     }
 
@@ -56,7 +57,7 @@ public sealed partial class PostgreSqlPersistenceTests
                 JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
                 WHERE con.contype = 'p'
                 AND nsp.nspname = 'public'
-                AND rel.relname IN ('outbox_messages', 'inbox_messages', 'operation_states')
+                AND rel.relname IN ('outbox_messages', 'inbox_messages', 'incoming_inbox_messages', 'operation_states')
                 ORDER BY rel.relname
                 """)
             .ToArrayAsync();
@@ -64,6 +65,7 @@ public sealed partial class PostgreSqlPersistenceTests
         Assert.Equal(
             [
                 $"inbox_messages:{InboxMessageEntityConfiguration.PrimaryKeyName}",
+                $"incoming_inbox_messages:{IncomingInboxMessageEntityConfiguration.PrimaryKeyName}",
                 "operation_states:PK_operation_states",
                 "outbox_messages:PK_outbox_messages",
             ],

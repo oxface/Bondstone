@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/oxface/Bondstone/compare/Bondstone-v1.2.1...Bondstone-v1.3.0) (2026-06-23)
+
+
+### Features
+
+* rework of transport model ([#35](https://github.com/oxface/Bondstone/issues/35)) ([d343a1b](https://github.com/oxface/Bondstone/commit/d343a1baca7ea7c891a3ebd1e8b473cb46047de6))
+
 ## [1.2.1](https://github.com/oxface/Bondstone/compare/Bondstone-v1.2.0...Bondstone-v1.2.1) (2026-06-15)
 
 

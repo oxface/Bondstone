@@ -445,4 +445,20 @@ FodyWeavers.xsd
 # Version the generated skills, but keep future local agent state private.
 .agents/*
 !.agents/skills/
+!.agents/skills/AGENTS.md
+!.agents/skills/README.md
 !.agents/skills/**
+
+# Keep SpecKit project memory and repo indexes reviewable, but do not commit
+# installed SpecKit tooling, templates, scripts, extension payloads, or caches.
+.specify/*
+!.specify/AGENTS.md
+!.specify/README.md
+!.specify/extensions.yml
+!.specify/memory/
+.specify/memory/*
+!.specify/memory/constitution.md
+
+# Feature specs are project work artifacts and should remain source-controlled.
+!specs/
+!specs/**

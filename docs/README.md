@@ -1,13 +1,13 @@
 # Bondstone Documentation
 
-This folder contains consumer-facing and repository-operation documentation.
-Internal product requirements, runtime architecture, implementation sequencing,
-and lean agent guardrails are owned by BMAD artifacts:
+This folder contains consumer-facing documentation, repository-operation
+documentation, and durable architecture/profile references. SpecKit owns the
+constitution and feature artifacts:
 
-- [PRD](../_bmad-output/planning-artifacts/prds/prd-Bondstone-2026-06-18/prd.md)
-- [Architecture](../_bmad-output/planning-artifacts/architecture.md)
-- [Epics](../_bmad-output/planning-artifacts/epics.md)
-- [Project context](../_bmad-output/project-context.md)
+- [SpecKit constitution](../.specify/memory/constitution.md)
+- [Bondstone architecture](architecture.md)
+- [Bondstone project profile](project-profile.md)
+- Feature-local specs under `../specs/` when present
 
 ## Index
 
@@ -22,6 +22,10 @@ and lean agent guardrails are owned by BMAD artifacts:
   artifact policy, dependency direction, versioning, and publishing policy.
 - [package-discovery.md](package-discovery.md) maps common consumer-facing
   capabilities to package IDs and namespaces.
+- [architecture.md](architecture.md) records durable runtime architecture and
+  package-boundary direction.
+- [project-profile.md](project-profile.md) records brownfield project facts
+  discovered during SpecKit adoption.
 - [public-api.md](public-api.md) records public API surface classification used
   during cleanup work.
 - [repository.md](repository.md) records repository layout, tooling, and code
@@ -33,19 +37,21 @@ and lean agent guardrails are owned by BMAD artifacts:
 
 ## Documentation Model
 
-- BMAD PRD owns requirements and scope.
-- BMAD architecture owns internal runtime architecture and durable boundary
-  rules.
-- BMAD epics own implementation sequence and story acceptance criteria.
-- `project-context.md` owns lean agent-facing rules.
+- SpecKit constitution owns governance and non-negotiable implementation
+  principles.
+- Bondstone architecture owns internal runtime architecture and durable
+  boundary rules.
+- Bondstone project profile owns brownfield repository facts used by agents and
+  migration specs.
+- SpecKit feature specs, plans, and tasks own change-scoped intent and
+  implementation deltas.
 - `/docs` owns library-user and repository-operation guidance.
 - GitHub Issues and GitHub Projects track backlog work, real-project findings,
   cleanup tasks, and prioritization.
 
-Prefer references over duplication. If a rule belongs to internal architecture,
-put it in the BMAD architecture artifact and link to it from consumer docs only
-when useful. If a rule belongs to library usage or operations, keep it in this
-folder.
+Prefer references over duplication. If a rule belongs to governance, put it in
+the SpecKit constitution. If a rule belongs to architecture, library usage, or
+operations, keep it in this folder.
 
 ## Document Ownership
 
@@ -61,8 +67,11 @@ folder.
 - `github-workflow.md` owns GitHub issue, project, label, and completion
   comment conventions.
 - `consumer-trial-handoff.md` owns the first-consumer trial route and links to
-  the stable setup, package, operations, testing, sample, BMAD, and GitHub
+  the stable setup, package, operations, testing, sample, SpecKit, and GitHub
   tracking authorities.
+- `architecture.md` owns durable runtime architecture and package-boundary
+  direction.
+- `project-profile.md` owns brownfield repository profile facts.
 - `public-api.md` owns current package public API classification notes.
 - `repository.md` owns repository layout, local tooling, CI, and C#
   conventions.
@@ -71,5 +80,6 @@ folder.
 
 ## Expanding Docs
 
-Add new `/docs` files for consumer-facing or repository-operation guidance.
-Add internal architecture or planning material to the BMAD artifacts instead.
+Add new `/docs` files for consumer-facing, repository-operation, architecture,
+or profile guidance. Add governance changes to the SpecKit constitution and
+change-scoped intent to feature specs.

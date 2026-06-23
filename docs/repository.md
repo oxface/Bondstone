@@ -6,9 +6,9 @@ Bondstone.
 ## Layout
 
 Bondstone uses a library-maintenance repository layout with repository
-automation at the root, BMAD planning artifacts under `_bmad-output/`,
-consumer docs under `docs/`, samples under `samples/`, package projects under
-`src/`, tests under `tests/`, and repository agent skills under
+automation at the root, SpecKit constitution/routing support under `.specify/`,
+consumer and durable architecture docs under `docs/`, samples under `samples/`,
+package projects under `src/`, tests under `tests/`, and repository agent skills under
 `.agents/skills/`. Current package projects and dependency direction are
 recorded in [packaging.md](packaging.md).
 
@@ -32,11 +32,11 @@ Significant folders should have:
 - `README.md` for humans navigating that folder.
 
 These files are indexes, not alternate architecture docs. Keep them short,
-name the folder's scope, and reference BMAD artifacts, consumer docs, sibling
-packages, tests, and verification entrypoints that matter for that area. Avoid
-copying durable rules from architecture, packaging, testing, or sample docs
-unless the local rule is unusually important and repeated agent misses justify
-duplication.
+name the folder's scope, and reference the SpecKit constitution, consumer docs,
+sibling packages, tests, and verification entrypoints that matter for that
+area. Avoid copying durable rules from architecture, packaging, testing, or
+sample docs unless the local rule is unusually important and repeated agent
+misses justify duplication.
 
 When adding a package, test boundary, sample, docs area, or agent workflow
 folder, add the local indexes in the same change or explain why an existing
@@ -44,19 +44,21 @@ parent index is enough.
 
 ## Work Tracking
 
-BMAD artifacts describe durable requirements, architecture, and implementation
-sequence. Repository docs describe consumer-facing behavior and repository
-operations. Use GitHub Issues and GitHub Projects for backlog work,
-real-project findings, cleanup tasks, prioritization, and ownership. When an
-issue changes durable requirements, architecture, or sequencing, update the
-appropriate BMAD artifact. When an issue changes consumer-facing behavior,
-update docs in the same change.
+The SpecKit constitution, durable docs, and feature artifacts describe durable
+requirements, architecture, governance, and implementation deltas. Repository
+docs describe consumer-facing behavior and repository operations. Use GitHub
+Issues and GitHub Projects for backlog work, real-project findings, cleanup
+tasks, prioritization, and ownership. When an issue changes durable
+requirements, architecture, governance, or sequencing, update the appropriate
+constitution, durable doc, or feature artifact. When an issue changes
+consumer-facing behavior, update docs in the same change.
 Issue formats, project statuses, label conventions, and completion comments
 are recorded in [github-workflow.md](github-workflow.md).
 
 Do not keep long-lived transitional plans under `docs/`. Once a plan is
-accepted or implemented, move durable requirements, architecture, and sequence
-into BMAD artifacts and remaining work into GitHub Issues or Projects.
+accepted or implemented, move durable requirements and architecture into stable
+docs, governance into the SpecKit constitution, sequence into archived feature
+artifacts, and remaining work into GitHub Issues or Projects.
 
 Runtime implementation stories that change messaging, persistence, hosting,
 transport, or package APIs must record review evidence for the product
@@ -99,7 +101,7 @@ tools. Avoid frontend-only devcontainer features unless samples later require
 them.
 
 Do not add frontend/browser tooling such as Playwright unless an accepted
-sample direction or BMAD architecture update creates a real need for it.
+sample direction or Bondstone architecture update creates a real need for it.
 
 Use Release Please for release pull requests, changelog updates, GitHub
 releases, and tags. Use GitHub Actions for package verification and NuGet

@@ -1,8 +1,8 @@
 # Consumer Trial Handoff
 
 This page is the first-consumer trial route for Bondstone. It links to the
-owning docs and BMAD artifacts instead of restating the full setup, package,
-operation, and verification guidance.
+owning docs and SpecKit constitution/specs instead of restating the full setup,
+package, operation, and verification guidance.
 
 ## Start Here
 
@@ -56,7 +56,8 @@ Use [operations.md](operations.md) and [observability.md](observability.md) for
 production receive, outbox, inbox, operation-state, migration, retention,
 recovery, and diagnostic guidance. Cleanup, retention, replay, purge,
 dead-letter movement, and topology management remain application-owned unless
-a future BMAD PRD and architecture add a native Bondstone feature.
+a future SpecKit feature and architecture update add a native Bondstone
+feature.
 
 ## Use The Sample Proof
 
@@ -79,10 +80,9 @@ preserves:
 
 ## Know What Remains
 
-Use the BMAD [epics](../_bmad-output/planning-artifacts/epics.md) and
-[sprint status](../_bmad-output/implementation-artifacts/sprint-status.yaml)
-to confirm implementation readiness. Epic 8 stories 8.1 through 8.4 are done
-in sprint status; story 8.5 creates this handoff.
+Use GitHub Issues and Projects to confirm implementation readiness and
+remaining backlog. SpecKit feature artifacts under `../specs/` may provide
+change-scoped implementation deltas when present.
 
 The first real-project migration trial is tracked in GitHub issue
 [#34](https://github.com/oxface/Bondstone/issues/34). Create separate GitHub

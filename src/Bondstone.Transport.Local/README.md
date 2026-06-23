@@ -31,5 +31,5 @@ See:
 - [Operations guide](https://github.com/oxface/Bondstone/blob/main/docs/operations.md)
 - [Observability guide](https://github.com/oxface/Bondstone/blob/main/docs/observability.md)
 - [Packaging, release, and migration policy](https://github.com/oxface/Bondstone/blob/main/docs/packaging.md)
-- [BMAD architecture](https://github.com/oxface/Bondstone/blob/main/_bmad-output/planning-artifacts/architecture.md)
+- [Bondstone architecture](https://github.com/oxface/Bondstone/blob/main/docs/architecture.md)
 - [Local transport tests](https://github.com/oxface/Bondstone/tree/main/tests/Bondstone.Transport.Local.Tests)

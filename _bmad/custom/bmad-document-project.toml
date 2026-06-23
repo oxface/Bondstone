@@ -1,5 +1,0 @@
-[workflow]
-
-persistent_facts = [
-  "file:{project-root}/_bmad/custom/bondstone-library-guardrails.md",
-]

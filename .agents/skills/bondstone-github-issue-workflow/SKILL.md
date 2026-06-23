@@ -6,36 +6,35 @@ description: Work with Bondstone GitHub Issues and GitHub Projects as the backlo
 # Bondstone GitHub Issue Workflow
 
 Use this skill for Bondstone issue and project work. GitHub Issues and
-Projects are the work tracker; repository docs describe current behavior; BMAD
-artifacts preserve durable requirements, architecture, and implementation
-sequence.
+Projects are the work tracker; repository docs describe current behavior;
+SpecKit memory and feature artifacts preserve durable requirements,
+architecture, governance, and implementation deltas.
 
 ## Read First
 
 - [AGENTS.md](../../../AGENTS.md)
 - [docs/README.md](../../../docs/README.md)
 - [docs/github-workflow.md](../../../docs/github-workflow.md)
-- [_bmad-output/planning-artifacts/prds/prd-Bondstone-2026-06-18/prd.md](../../../_bmad-output/planning-artifacts/prds/prd-Bondstone-2026-06-18/prd.md)
-  when the issue affects product requirements, scope, non-goals, or success
-  criteria.
-- [_bmad-output/planning-artifacts/architecture.md](../../../_bmad-output/planning-artifacts/architecture.md)
+- [.specify/memory/constitution.md](../../../.specify/memory/constitution.md)
+  when the issue affects governance, compatibility, package-boundary, or
+  verification rules.
+- [.specify/memory/architecture.md](../../../.specify/memory/architecture.md)
   when the issue affects runtime architecture, package boundaries,
   persistence, hosting, transport, public API strategy, docs ownership, or
   verification strategy.
-- [_bmad-output/planning-artifacts/epics.md](../../../_bmad-output/planning-artifacts/epics.md)
-  when the issue affects implementation sequence or story acceptance criteria.
-- [_bmad-output/project-context.md](../../../_bmad-output/project-context.md)
-  when the issue affects lean agent implementation guardrails.
+- [docs/repository.md](../../../docs/repository.md) when the issue affects
+  repository layout, tooling, or context-index structure.
 
 ## Workflow
 
 1. Read the issue body, labels, comments when useful, and project item status.
 2. Check live labels before inventing labels. Prefer existing `bug`,
    `enhancement`, `documentation`, `type:*`, `area:*`, and
-   `bmad-review-required` labels.
+   `architecture-review-required` labels.
 3. Move selected work to `In Progress` before implementation.
-4. Read relevant BMAD artifacts and stable docs before changing code, docs,
-   automation, public API, package boundaries, samples, or workflow.
+4. Read relevant SpecKit memory, feature artifacts, and stable docs before
+   changing code, docs, automation, public API, package boundaries, samples, or
+   workflow.
 5. Use the issue body formats in [docs/github-workflow.md](../../../docs/github-workflow.md)
    when creating bug, feature, cleanup, or trial issues.
 6. Keep local workspace paths, credentials, and handover-only details out of
@@ -43,9 +42,9 @@ sequence.
 7. Create separate follow-up issues for distinct findings instead of adding
    backlog notes to repository docs.
 8. Update stable docs when current behavior changes.
-9. Update the BMAD PRD, architecture, epics, or project-context when an issue
-   creates or changes durable requirements, architecture, implementation
-   sequencing, or lean agent guardrails.
+9. Update SpecKit memory, feature artifacts, or stable docs when an issue
+   creates or changes durable requirements, architecture, governance,
+   implementation sequencing, or lean agent guardrails.
 10. Add a completion comment with summary, verification, follow-up issues, and
     residual notes.
 11. Close the issue and move the project item to `Done` only after completion
@@ -62,10 +61,10 @@ Use the stable doc's templates rather than improvising long prose. Choose:
 - Trial: real-project, sample, or migration exercise with friction tracking.
 
 Apply labels that describe the issue type and area. Add
-`bmad-review-required` when the issue affects public API, package boundaries,
-target frameworks, provider or transport support, migration policy,
-compatibility, release/publishing, sample architecture, repository workflow,
-or agent harness behavior.
+`architecture-review-required` when the issue affects public API, package
+boundaries, target frameworks, provider or transport support, migration policy,
+compatibility, release/publishing, sample architecture, repository workflow, or
+agent harness behavior.
 
 ## Project Status Guidance
 
@@ -86,7 +85,7 @@ Report:
 
 - issue number and project status changes;
 - labels applied or intentionally left unchanged;
-- stable docs, BMAD artifacts, or follow-up issues created;
+- stable docs, SpecKit artifacts, or follow-up issues created;
 - verification performed;
 - remaining work, blockers, or residual risk.
 

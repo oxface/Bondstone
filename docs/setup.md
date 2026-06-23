@@ -443,7 +443,7 @@ PostgreSQL durable infrastructure, local transport dispatch through the
 provider-neutral receive pipelines, and the hosted outbox polling loop.
 
 For deeper internal behavior and limitations, see the
-[BMAD architecture](../_bmad-output/planning-artifacts/architecture.md). For
+[Bondstone architecture](architecture.md). For
 production runbooks and retention guidance, see [operations.md](operations.md).
 
 ## Host Composition
@@ -563,8 +563,8 @@ partition metadata.
 
 Bondstone owns retry and terminal failure for outgoing persisted outbox
 records. Current outbox status semantics are described in the
-[BMAD architecture](../_bmad-output/planning-artifacts/architecture.md); they
-are separate from provider-native receive DLQs. Operators can inspect terminal
+[Bondstone architecture](architecture.md); they are
+separate from provider-native receive DLQs. Operators can inspect terminal
 outbox rows through `IDurableOutboxInspector`:
 
 ```csharp
@@ -632,7 +632,7 @@ factories in Bondstone runtime registries, plus transaction runners and
 dispatch services used by durable messaging.
 
 The direct non-EF `Bondstone.Persistence.Postgres` package was removed after
-MVP. New PostgreSQL modules should use EF Core persistence unless BMAD
+MVP. New PostgreSQL modules should use EF Core persistence unless SpecKit
 architecture reintroduces a non-EF provider for a real consumer need.
 
 ## Application Handler Concerns

@@ -1,17 +1,18 @@
 # Agent Skills
 
 This folder contains repository-local agent skills for Bondstone maintainers.
-Skills are reusable workflows, not a substitute for BMAD planning artifacts.
+Skills are reusable workflows, not a substitute for SpecKit memory, feature
+artifacts, or stable repository docs.
 
 ## Skill Rules
 
 - If a workflow is repeated or likely to be repeated, make it a skill.
 - Keep skills narrow, named after the job they help with, and grounded in
-  versioned repository docs or BMAD artifacts.
-- Durable technical decisions belong in the BMAD PRD, architecture, epics, or
-  project-context according to their scope.
-- Skills may summarize rules, but they should link back to durable BMAD
-  artifacts instead of copying long architecture text.
+  versioned repository docs or SpecKit memory.
+- Durable technical decisions belong in SpecKit constitution, architecture
+  memory, feature artifacts, or stable docs according to their scope.
+- Skills may summarize rules, but they should link back to durable SpecKit
+  memory and stable docs instead of copying long architecture text.
 - Do not create broad catch-all skills. Prefer several small skills with clear
   trigger descriptions.
 - Do not embed stale package versions, current dates, or release-state guesses
@@ -31,7 +32,7 @@ example:
 - transport adapter additions;
 - sample scenario maintenance;
 - release and NuGet publishing validation;
-- BMAD artifact maintenance.
+- SpecKit artifact maintenance.
 
 ## Skill Shape
 

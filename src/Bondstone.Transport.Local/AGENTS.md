@@ -6,6 +6,6 @@ local development.
 Start with:
 
 - [README.md](README.md) for package scope.
-- [../../\_bmad-output/planning-artifacts/architecture.md](../../_bmad-output/planning-artifacts/architecture.md)
+- [../../docs/architecture.md](../../docs/architecture.md)
   before changing local transport behavior, receive pipeline behavior, or
   durable message behavior.

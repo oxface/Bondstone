@@ -7,10 +7,10 @@ Start with:
 - [README.md](README.md) for package navigation.
 - [../docs/packaging.md](../docs/packaging.md) for package IDs and dependency
   direction.
-- [../\_bmad-output/planning-artifacts/architecture.md](../_bmad-output/planning-artifacts/architecture.md)
+- [../docs/architecture.md](../docs/architecture.md)
   before changing runtime behavior.
 - [../docs/testing.md](../docs/testing.md) before adding or moving tests.
 
 Use the nearest package `AGENTS.md` for package-specific docs. Keep package
 boundaries aligned with `docs/packaging.md`; broad public API or package
-boundary changes need BMAD PRD/architecture review.
+boundary changes need SpecKit constitution and architecture review.

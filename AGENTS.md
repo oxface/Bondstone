@@ -6,18 +6,18 @@ persistence, operation observation, and transport adapters.
 
 Start with:
 
-- [README.md](README.md) for package purpose, BMAD artifact routing, and
+- [README.md](README.md) for package purpose, SpecKit artifact routing, and
   verification entrypoints.
-- [\_bmad-output/planning-artifacts/prds/prd-Bondstone-2026-06-18/prd.md](_bmad-output/planning-artifacts/prds/prd-Bondstone-2026-06-18/prd.md)
-  before changing product scope, requirements, non-goals, or success criteria.
-- [\_bmad-output/planning-artifacts/architecture.md](_bmad-output/planning-artifacts/architecture.md)
+- [.specify/memory/constitution.md](.specify/memory/constitution.md) before
+  changing governance, compatibility, package-boundary, or verification rules.
+- [docs/architecture.md](docs/architecture.md)
   before changing runtime architecture, durable messaging, persistence,
   hosting, transport behavior, package boundaries, public API strategy,
   documentation ownership, or verification strategy.
-- [\_bmad-output/planning-artifacts/epics.md](_bmad-output/planning-artifacts/epics.md)
-  before implementing planned work or creating sprint/story artifacts.
-- [\_bmad-output/project-context.md](_bmad-output/project-context.md) for lean
-  agent-facing implementation rules.
+- [docs/project-profile.md](docs/project-profile.md)
+  before changing brownfield assumptions.
+- [.specify/README.md](.specify/README.md) before changing the SpecKit
+  constitution, extension choices, or local SpecKit routing.
 - [docs/README.md](docs/README.md) for consumer-facing and repository
   operation documentation.
 - [docs/testing.md](docs/testing.md) before moving or writing tests.
@@ -62,21 +62,22 @@ documented in [docs/packaging.md](docs/packaging.md).
 ## Architecture Direction
 
 Runtime architecture is owned by
-[\_bmad-output/planning-artifacts/architecture.md](_bmad-output/planning-artifacts/architecture.md).
+[docs/architecture.md](docs/architecture.md).
 Use that artifact and the nearest scoped `AGENTS.md` before changing
 messaging, modules, persistence, hosting, transport behavior, package
 boundaries, public API, samples, testing, or repository workflow.
 
-BMAD artifacts are the durable internal source of truth:
+SpecKit constitution, `/docs`, and feature artifacts are the durable internal
+source of truth:
 
-- PRD owns requirements and scope.
-- Architecture owns runtime and documentation design.
-- Epics own sequencing and story acceptance criteria.
-- Project context owns lean implementation guardrails.
+- Constitution owns governance and non-negotiable implementation principles.
+- Bondstone architecture owns runtime and documentation design.
+- Feature specs, plans, and tasks own change-scoped implementation deltas.
+- Bondstone project profile records brownfield assumptions used by agents.
 
 Consumer-facing docs under `docs/` should explain how to use and operate the
-library. They should link to BMAD architecture for internal durable behavior
-instead of duplicating architecture rules.
+library. They should link to Bondstone architecture for internal durable
+behavior instead of duplicating architecture rules.
 
 Track backlog work, real-project findings, cleanup tasks, and prioritization
 in GitHub Issues or GitHub Projects using the conventions in
@@ -102,3 +103,10 @@ The direct .NET equivalents are:
 - `dotnet pack Bondstone.slnx --configuration Release --no-build`
 
 Keep CI, Husky hooks, and docs aligned with the package-script entrypoints.
+
+<!-- SPECKIT START -->
+
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+
+<!-- SPECKIT END -->

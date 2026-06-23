@@ -6,7 +6,7 @@ durable module boundary observable without turning Bondstone into a broker
 monitoring stack.
 
 This page describes current behavior only. The broader diagnostics direction
-is owned by the BMAD architecture artifact.
+is owned by [Bondstone architecture](architecture.md).
 
 ## Current Activity Sources
 

@@ -4,21 +4,21 @@ Bondstone is a .NET library for durable module boundaries, durable command
 sending, EF Core backed inbox/outbox persistence, operation observation, and
 transport adapters.
 
-Bondstone now uses native BMAD planning artifacts as the source of truth for
-internal product requirements, runtime architecture, and implementation
-sequencing. Consumer-facing package and operations docs remain under `docs/`.
+Bondstone uses the SpecKit constitution and feature artifacts for governance
+and change-scoped implementation intent. Durable architecture, project profile,
+consumer-facing package docs, and operations docs live under `docs/`.
 
-## BMAD Planning
+## SpecKit Planning
 
-- [PRD](_bmad-output/planning-artifacts/prds/prd-Bondstone-2026-06-18/prd.md)
-  owns product requirements, scope, non-goals, and success criteria.
-- [Architecture](_bmad-output/planning-artifacts/architecture.md) owns
-  internal runtime architecture, package-boundary rules, durable behavior, and
-  documentation ownership.
-- [Epics](_bmad-output/planning-artifacts/epics.md) owns implementation
-  sequencing and story acceptance criteria.
-- [Project context](_bmad-output/project-context.md) is the lean
-  agent-facing implementation rule set.
+- [Constitution](.specify/memory/constitution.md) owns governance and
+  non-negotiable implementation principles.
+- [Bondstone architecture](docs/architecture.md) owns internal runtime
+  architecture, package-boundary rules, durable behavior, and documentation
+  ownership.
+- [Bondstone project profile](docs/project-profile.md) records the brownfield
+  scan used to seed SpecKit.
+- Feature-local specs under `specs/` own change-scoped implementation intent
+  when present.
 
 ## Packages
 
@@ -35,7 +35,7 @@ Use [docs/consumer-trial-handoff.md](docs/consumer-trial-handoff.md) for the
 first consumer migration trial route and follow-up tracking.
 
 Use the package READMEs under [src/](src/) as quick package-purpose guides.
-Use the BMAD architecture artifact when you need the durable behavior contract
+Use the Bondstone architecture when you need the durable behavior contract
 behind a package.
 
 ## Repository Map
@@ -59,6 +59,9 @@ behind a package.
 - [src/](src/) contains package projects.
 - [tests/](tests/) contains package and integration-boundary test projects.
 - [samples/](samples/) is reserved for sample applications.
+- [.specify/](.specify/) contains the source-controlled SpecKit constitution,
+  extension choices, and local routing indexes. Installed SpecKit templates,
+  scripts, and extension payloads are local tooling.
 
 ## Verification
 
@@ -92,6 +95,6 @@ Required repository setup:
 Bondstone is built gradually as a durable module-boundary library. Do not
 bulk-copy implementation code from the historical template repository or
 preserve compatibility with it as a design constraint. Current implementation
-work should follow the BMAD PRD, BMAD architecture, BMAD epics, and
-project-context while keeping package boundaries, public API shape, tests, and
-consumer docs aligned.
+work should follow the SpecKit constitution, Bondstone architecture, feature
+artifacts, and stable docs while keeping package boundaries, public API shape,
+tests, and consumer docs aligned.

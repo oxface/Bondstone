@@ -5,7 +5,7 @@ Cross-package composition tests.
 Start with:
 
 - [README.md](README.md) for test scope.
-- [../../\_bmad-output/planning-artifacts/architecture.md](../../_bmad-output/planning-artifacts/architecture.md)
+- [../../docs/architecture.md](../../docs/architecture.md)
   for architecture topic routing.
 - [../../docs/packaging.md](../../docs/packaging.md) for package composition
   boundaries.

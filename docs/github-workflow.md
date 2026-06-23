@@ -1,9 +1,10 @@
 # GitHub Work Tracking
 
 This document records the current Bondstone GitHub Issues and Projects
-workflow. BMAD artifacts describe requirements, architecture, and
-implementation sequencing. GitHub Issues and GitHub Projects track backlog
-work, real-project findings, cleanup tasks, prioritization, and ownership.
+workflow. The SpecKit constitution, durable docs, and feature artifacts
+describe durable requirements, architecture, governance, and implementation
+deltas. GitHub Issues and GitHub Projects track backlog work, real-project
+findings, cleanup tasks, prioritization, and ownership.
 
 ## Project Status
 
@@ -28,15 +29,15 @@ Common label families:
 - General type: `bug`, `enhancement`, `documentation`.
 - Bondstone type: `type:cleanup`, `type:trial`.
 - Area: `area:api`, `area:transport`, `area:template`.
-- Decision signal: `bmad-review-required`.
+- Decision signal: `architecture-review-required`.
 
-Use `bmad-review-required` when the issue affects public API, package
+Use `architecture-review-required` when the issue affects public API, package
 boundaries, target frameworks, provider or transport support, migration
 policy, compatibility, release/publishing, sample architecture, repository
-workflow, or agent harness behavior. The label means the BMAD PRD,
-architecture, or epics may need to be updated before implementation.
-Ordinary issues outside those surfaces should proceed without this label; it
-is a BMAD review signal, not a blanket implementation blocker.
+workflow, or agent harness behavior. The label means the SpecKit constitution,
+a feature spec, or stable docs may need to be updated before implementation.
+Ordinary issues outside those surfaces should proceed without this label; it is
+an architecture review signal, not a blanket implementation blocker.
 
 ## Issue Formats
 
@@ -78,7 +79,7 @@ What check should pass after the fix?
 ```
 
 Suggested labels: `bug` plus the relevant `area:*` label. Add
-`bmad-review-required` only when the fix changes durable requirements,
+`architecture-review-required` only when the fix changes durable requirements,
 architecture, sequencing, or package/public API policy.
 
 ### Feature Or Enhancement
@@ -107,7 +108,7 @@ Preferred package, API, docs, sample, or workflow shape if known.
 ```
 
 Suggested labels: `enhancement` plus the relevant `area:*` label. Add
-`bmad-review-required` when the feature affects durable architecture, public
+`architecture-review-required` when the feature affects durable architecture, public
 API, or package boundaries.
 
 ### Cleanup
@@ -136,7 +137,7 @@ What public API, package, docs, migration, or release-note concerns apply?
 ```
 
 Suggested labels: `type:cleanup` plus relevant `area:*` labels. Use
-`bmad-review-required` for public API cleanup, package-boundary cleanup, or
+`architecture-review-required` for public API cleanup, package-boundary cleanup, or
 any other compatibility-sensitive cleanup.
 
 ### Trial
@@ -177,14 +178,16 @@ Suggested labels: `type:trial` plus relevant `area:*` labels.
 
 1. Read the issue and project item state.
 2. Move the item to `In Progress`.
-3. Read relevant BMAD artifacts and consumer docs before changing code, docs,
-   automation, public API, package boundaries, samples, or workflow.
+3. Read relevant SpecKit constitution, feature artifacts, and consumer docs
+   before changing code, docs, automation, public API, package boundaries,
+   samples, or workflow.
 4. Make the smallest coherent change or trial slice.
 5. Create separate follow-up issues for distinct findings instead of adding
    backlog notes to repository docs.
 6. Update consumer docs when user-facing behavior changes.
-7. Update BMAD PRD, architecture, or epics when durable requirements,
-   architecture, or implementation sequencing changes.
+7. Update the SpecKit constitution, feature artifacts, or stable docs when
+   durable requirements, architecture, governance, or implementation sequencing
+   changes.
 8. Verify with the narrow relevant command and, when needed, the repository
    quality gate.
 9. Add a completion comment.

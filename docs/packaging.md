@@ -45,7 +45,7 @@ advanced composition scenario, not implicit built-in adapter accumulation.
 `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore` were removed from
 the active package set after MVP. Reintroducing a separate provider-neutral
 transport package, broad broker runtime package, or capability package
-requires BMAD PRD/architecture review and a real consumer need.
+requires SpecKit constitution/architecture review and a real consumer need.
 
 Module-local domain event contracts now live in `Bondstone` under
 `Bondstone.DomainEvents`. EF Core domain event collection, EF domain event
@@ -85,8 +85,8 @@ non-current v1 surfaces include:
 - `Bondstone.Capabilities.DomainEvents.EntityFrameworkCore`;
 - broad broker runtime ownership, provider-neutral transport diagnostics, and
   Rebus-specific package ownership;
-- non-EF persistence providers until a real consumer need and BMAD architecture
-  update bring one back;
+- non-EF persistence providers until a real consumer need and SpecKit
+  architecture update bring one back;
 - finalized metric instruments and stable misconfiguration error codes, which
   are not current package behavior.
 
@@ -204,7 +204,7 @@ Public API cleanup highlights:
   APIs, as classified in [public-api.md](public-api.md).
 - Treat any further broad public type removal, visibility reduction, rename,
   or parameter-name churn as compatibility-sensitive and outside the v2
-  release-prep path unless BMAD PRD/architecture artifacts approve it.
+  release-prep path unless SpecKit constitution/architecture approve it.
 
 Migration and operations notes:
 
@@ -290,7 +290,7 @@ emit the same coded setup exception contract, and `Bondstone` may depend on
 that neutral contract package.
 EF Core domain event collection and persistence belongs in
 `Bondstone.Persistence.EntityFrameworkCore`. Changing that package split
-requires BMAD PRD/architecture review.
+requires SpecKit constitution/architecture review.
 
 `Bondstone` owns the lightweight `AddBondstone` service-composition builder.
 Provider, transport, and hosting packages add extension methods to that
@@ -326,9 +326,9 @@ The package-by-package classification inventory lives in
 
 After publication, broad public type removal, visibility reduction, renaming,
 or parameter-name churn is compatibility-sensitive. Do not perform that work
-without a public API inventory, a compatibility plan, and BMAD
-PRD/architecture review when the change affects public API shape or package
-boundaries.
+without a public API inventory, a compatibility plan, and SpecKit
+constitution/architecture review when the change affects public API shape or
+package boundaries.
 
 The repository also keeps an automated public API baseline under
 `tests/Bondstone.PublicApi.Tests`. Baseline diffs are review evidence for

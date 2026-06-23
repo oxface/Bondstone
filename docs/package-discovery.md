@@ -278,7 +278,7 @@ It exercises durable outbox dispatch and module receive idempotency semantics
 through Bondstone's neutral receive pipelines, but it is not broker
 durability, a production fallback, topology management, retry, dead-letter
 handling, or durable inbox ingestion.
-See the [BMAD architecture](../_bmad-output/planning-artifacts/architecture.md)
+See the [Bondstone architecture](architecture.md)
 for internal transport behavior and limitations.
 
 ## Domain Events
@@ -323,5 +323,5 @@ records, not outbox records.
 - [observability.md](observability.md) describes current diagnostics and the
   OpenTelemetry-native direction.
 - [public-api.md](public-api.md) classifies the current public API surface.
-- [BMAD architecture](../_bmad-output/planning-artifacts/architecture.md) owns
+- [Bondstone architecture](architecture.md) owns
   internal runtime architecture, persistence, hosting, and transport behavior.

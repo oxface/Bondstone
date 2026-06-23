@@ -19,7 +19,7 @@ BONDSTONE_UPDATE_PUBLIC_API_BASELINE=1 dotnet test tests/Bondstone.PublicApi.Tes
 
 Review the resulting baseline diff before merging. A baseline update records
 that a public API changed; it does not by itself approve breaking changes,
-replace BMAD architecture review, or replace release-note treatment.
+replace architecture review, or replace release-note treatment.
 
 ## Classification Labels
 
@@ -39,8 +39,8 @@ replace BMAD architecture review, or replace release-note treatment.
   placement should be reviewed before stronger compatibility expectations.
 
 Public API removal, visibility reduction, renaming, or broad contract movement
-requires BMAD PRD/architecture review before implementation when it changes the
-durable package or compatibility contract.
+requires SpecKit constitution/architecture review before implementation when
+it changes the durable package or compatibility contract.
 
 ## Decision Notes
 
